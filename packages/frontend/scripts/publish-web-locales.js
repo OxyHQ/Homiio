@@ -3,7 +3,7 @@
  * Copy `locales/*.json` into `public/locales/` so the WEB app can fetch the
  * active language instead of bundling all twelve into its JavaScript.
  *
- * It runs from `metro.config.js`, like `vendor-maplibre-worker.js`, so every
+ * It runs from `metro.config.js`, like the map's `withGoWayMaps`, so every
  * Metro process — `expo start`, `expo export` in CI and in deploy-frontends.yml —
  * serves or exports the locale files of the very checkout it is building.
  * `locales/` stays the only source of truth; `public/locales/` is gitignored.

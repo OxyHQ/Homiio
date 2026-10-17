@@ -1,5 +1,6 @@
-import React, { type MutableRefObject } from 'react';
-import type { MapApi, GeocodedAddress } from '@/components/Map';
+import type React from 'react';
+import type { GeoCoordinate } from '@goway.to/maps';
+import type { GeocodedAddress } from '@homiio/shared-types';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import type { StepValidationErrors } from '@/utils/propertyFormSchema';
 import { BasicInfoStep } from './BasicInfoStep';
@@ -38,11 +39,11 @@ interface CreatePropertyStepContentProps {
   isLoading: boolean;
   submitError: string | null;
   routeHasRail: boolean;
-  mapRef: MutableRefObject<MapApi | null>;
+  mapPoint: GeoCoordinate | null;
   updateFormField: UpdateFormField;
   setFormData: SetFormData;
   onPropertyTypeChange: (typeId: string) => void;
-  onAddressSelect: (address: GeocodedAddress, coordinates: [number, number]) => void;
+  onAddressSelect: (address: GeocodedAddress, coordinate: GeoCoordinate) => void;
   onOpenFullscreenMap: () => void;
   onFloorChange: (text: string) => void;
   onShowFloorToggle: (show: boolean) => void;
@@ -61,7 +62,7 @@ export function CreatePropertyStepContent({
   isLoading,
   submitError,
   routeHasRail,
-  mapRef,
+  mapPoint,
   updateFormField,
   setFormData,
   onPropertyTypeChange,
@@ -90,7 +91,7 @@ export function CreatePropertyStepContent({
       return (
         <LocationStep
           {...sharedProps}
-          mapRef={mapRef}
+          mapPoint={mapPoint}
           onAddressSelect={onAddressSelect}
           onOpenFullscreenMap={onOpenFullscreenMap}
           onFloorChange={onFloorChange}

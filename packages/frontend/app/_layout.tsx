@@ -27,7 +27,6 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProfileProvider } from '@/context/ProfileContext';
 import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
-import { MapStateProvider } from '@/context/MapStateContext';
 import { AskAgentProvider } from '@/context/AskAgentProvider';
 import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
@@ -377,11 +376,9 @@ export default function RootLayout() {
                                 <MenuProvider>
                                   <PortalProvider>
                                     <ErrorBoundary>
-                                      <MapStateProvider>
-                                        <AskAgentProvider>
-                                          <AppFrame />
-                                        </AskAgentProvider>
-                                      </MapStateProvider>
+                                      <AskAgentProvider>
+                                        <AppFrame />
+                                      </AskAgentProvider>
                                     </ErrorBoundary>
                                     {/*
                                 Root overlay outlet. `AppShell`'s navigation

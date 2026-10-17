@@ -13,7 +13,7 @@
  * prompt. The rule is about every screen in every configuration, and the way it
  * breaks is somebody adding an effect to a component nobody thought of as a
  * discovery surface. Two of the three call sites this gate was written against
- * were exactly that: `Map.tsx` prompted whenever it was mounted without initial
+ * were exactly that: the old `Map.tsx` prompted whenever it was mounted without initial
  * coordinates, and `useHomeFeed`'s `useUserCoordinates` prompted because
  * `/explore` mounts it to BIAS place suggestions — a refinement nobody asked
  * for, paid for with a system dialog.
@@ -162,12 +162,9 @@ describe('no location permission is requested because something mounted', () => 
   it('the discovery surfaces READ the permission instead', () => {
     // The positive half: the maps and the suggestion bias must still use a
     // position the user already granted. A gate that only forbade prompting
-    // would be satisfied by deleting the feature.
-    for (const path of [
-      'packages/frontend/components/Map.tsx',
-      'packages/frontend/components/Map.web.tsx',
-      'packages/frontend/hooks/useHomeFeed.ts',
-    ]) {
+    // would be satisfied by deleting the feature. The maps open on that same
+    // read (`components/map/useOpeningFix.ts` → `useUserCoordinates`).
+    for (const path of ['packages/frontend/hooks/useHomeFeed.ts']) {
       const code = stripComments(readFileSync(join(REPO_ROOT, path), 'utf8'));
       expect({ path, reads: code.includes('getForegroundPermissionsAsync') }).toEqual({
         path,

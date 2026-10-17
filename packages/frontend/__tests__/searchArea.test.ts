@@ -4,9 +4,9 @@
  * These are the rules #354 states as invariants 2 and 3 and as the acceptance
  * criteria "moving the map without confirming changes nothing" and "an initial
  * programmatic movement does not show the button". They are tested here, on the
- * pure reducer, because that is the ONE place both map adapters decide it: the
- * web component drives a MapLibre instance and the native one drives a WebView
- * document, and neither can be asked afterwards who moved the camera.
+ * pure reducer, because that is the ONE place the map's camera reports are
+ * decided on, on every platform — and the map cannot be asked afterwards who
+ * moved the camera.
  *
  * ## Every case below fails SILENTLY in production
  *

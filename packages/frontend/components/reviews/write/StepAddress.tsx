@@ -1,11 +1,11 @@
 /**
  * StepAddress — the reviewed address (street/number/building/unit + city/state/
  * postal/country/neighborhood) plus the map picker. Tapping the map drops a pin
- * and auto-fills the address via `onAddressSelect` (owned by `write.tsx` so it
- * can update several fields + navigate the map at once).
+ * and auto-fills the address via `onAddressSelect` (owned by `write.tsx`, which
+ * updates several fields at once); the map frames the point the form holds.
  */
 import type React from 'react';
-import type { RefObject } from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -13,22 +13,24 @@ import { Field } from '@oxy.so/bloom/field';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import Map, { type MapApi, type GeocodedAddress } from '@/components/Map';
+import type { GeoCoordinate } from '@goway.to/maps';
+import type { GeocodedAddress } from '@homiio/shared-types';
+
+import { AddressPickerMap } from '@/components/map/AddressPickerMap';
 import type { StepProps } from '@/components/reviews/write/types';
 import { radius, spacing } from '@/constants/styles';
 
 interface StepAddressProps extends StepProps {
-  mapRef: RefObject<MapApi | null>;
-  onAddressSelect: (address: GeocodedAddress, coordinates: [number, number]) => void;
+  onAddressSelect: (address: GeocodedAddress, coordinate: GeoCoordinate) => void;
 }
 
-export const StepAddress: React.FC<StepAddressProps> = ({
-  data,
-  update,
-  mapRef,
-  onAddressSelect,
-}) => {
+export const StepAddress: React.FC<StepAddressProps> = ({ data, update, onAddressSelect }) => {
   const { t } = useTranslation();
+  const { latitude, longitude } = data;
+  const mapPoint = useMemo<GeoCoordinate | null>(
+    () => (latitude !== undefined && longitude !== undefined ? { latitude, longitude } : null),
+    [latitude, longitude],
+  );
 
   return (
     <View style={styles.container}>
@@ -132,13 +134,10 @@ export const StepAddress: React.FC<StepAddressProps> = ({
       </Field>
 
       <View className="bg-muted" style={styles.mapWrapper}>
-        <Map
-          ref={mapRef}
-          style={styles.mapInner}
-          enableAddressLookup
-          showAddressInstructions
+        <AddressPickerMap
+          value={mapPoint}
           onAddressSelect={onAddressSelect}
-          screenId="write-review"
+          style={styles.mapInner}
         />
       </View>
       <BloomText className="text-center text-xs text-muted-foreground">

@@ -51,7 +51,10 @@ import {
   type EvictionBoardScope,
   type EvictionBoardSort,
 } from '@homiio/shared-types';
-import Map from '@/components/Map';
+import { MapView, Markers, type MapMarkerData } from '@goway.to/maps';
+
+import { DEVICE_ZOOM, HOMIIO_OPENING_VIEW } from '@/components/map/mapDefaults';
+import { useOpeningFix } from '@/components/map/useOpeningFix';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
@@ -163,20 +166,17 @@ export default function EvictionsBoardScreen() {
    */
   const markers = useMemo(
     () =>
-      cases
-        .map((eviction) => {
-          const coords = eviction.location.approximateCoordinates;
-          if (!coords) return null;
-          return {
+      cases.flatMap<MapMarkerData>((eviction) => {
+        const coords = eviction.location.approximateCoordinates;
+        if (!coords) return [];
+        return [
+          {
             id: eviction.id,
-            coordinates: [coords[0], coords[1]] as [number, number],
-            priceLabel: formatEvictionShortDate(eviction.scheduledAt, i18n.language),
-          };
-        })
-        .filter(
-          (marker): marker is { id: string; coordinates: [number, number]; priceLabel: string } =>
-            marker !== null,
-        ),
+            coordinate: { longitude: coords[0], latitude: coords[1] },
+            label: formatEvictionShortDate(eviction.scheduledAt, i18n.language),
+          },
+        ];
+      }),
     [cases, i18n.language],
   );
 
@@ -315,13 +315,7 @@ export default function EvictionsBoardScreen() {
     >
       {showMap && boardScope ? (
         <View className="relative h-[75vh]">
-          <Map
-            style={styles.mapFill}
-            screenId="evictions-map"
-            markers={markers}
-            onMarkerPress={({ id }) => openDetail(id)}
-            cluster={{ enabled: true }}
-          />
+          <EvictionsMap markers={markers} onOpen={openDetail} />
         </View>
       ) : (
         <ScreenScrollView contentContainerStyle={styles.content} onEndReached={handleEndReached}>
@@ -407,6 +401,29 @@ export default function EvictionsBoardScreen() {
         </ScreenScrollView>
       )}
     </Screen>
+  );
+}
+
+/**
+ * The board's cases on a map, clustered. Its own component so the device fix
+ * it opens on (read, never asked for) is only read while the map is shown.
+ */
+function EvictionsMap({
+  markers,
+  onOpen,
+}: {
+  markers: readonly MapMarkerData[];
+  onOpen: (id: string) => void;
+}) {
+  const openingFix = useOpeningFix();
+  return (
+    <MapView
+      style={styles.mapFill}
+      initialViewState={HOMIIO_OPENING_VIEW}
+      camera={openingFix ? { center: openingFix, zoom: DEVICE_ZOOM } : undefined}
+    >
+      <Markers data={markers} cluster onPress={({ id }) => onOpen(id)} />
+    </MapView>
   );
 }
 

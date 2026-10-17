@@ -148,7 +148,7 @@ a lift is not part of the address.
 | Result count | `FilterFooter` | **live** | From the real query |
 | Save this search | `useSavedSearches` | **live** | `saved_searches` table |
 | List / map switch | `store/exploreViewStore.ts` | **live** | #523 lifted it out of local state so it is reachable |
-| Map, price markers, selection | `components/Map.tsx` / `.web.tsx` | **live** | WebView + MapLibre; **not** the template's `MockMap` |
+| Map, price markers, selection | `@goway.to/maps` (`components/search/ResultsMap.tsx`, `components/map/*`) | **live** | GoWay maps SDK: MapLibre on web and native; **not** the template's `MockMap` |
 | "Search this area" | `pendingViewport` + `commitPendingViewport` | **live** | Panning changes nothing until confirmed |
 | Marker clustering | `cluster` prop | **partial** | Present; unverified against a large result set |
 

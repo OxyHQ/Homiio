@@ -1,6 +1,6 @@
 /**
  * LocationDisplay — refined "Where you'll be" section for the property
- * detail. Embeds the shared Map at a fixed height with a rounded
+ * detail. Embeds a map of the place at a fixed height with a rounded
  * surface, then a Bloom-typography neighborhood blurb below. Owns the
  * Airbnb-2026 visual for the property location block.
  */
@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import Map from '@/components/Map';
+import { PlaceMap } from '@/components/map/PlaceMap';
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
 import { radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
@@ -65,12 +65,9 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({ property }) =>
         ) : null}
         {coordinates ? (
           <View style={styles.mapWrapper}>
-            <Map
+            <PlaceMap
               style={styles.map}
-              initialCoordinates={coordinates}
-              initialZoom={15}
-              startFromCurrentLocation={false}
-              screenId={`property-location-${property?.id ?? 'unknown'}`}
+              coordinate={{ longitude: coordinates[0], latitude: coordinates[1] }}
             />
           </View>
         ) : null}
