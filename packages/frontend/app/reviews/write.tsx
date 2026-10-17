@@ -40,7 +40,11 @@ import { StepArea } from '@/components/reviews/write/StepArea';
 import { StepPriceDates } from '@/components/reviews/write/StepPriceDates';
 import { StepTexts } from '@/components/reviews/write/StepTexts';
 import { StepPhotosRecommend } from '@/components/reviews/write/StepPhotosRecommend';
-import { INITIAL_WIZARD_DATA, type ReviewWizardData } from '@/components/reviews/write/types';
+import {
+  type FieldUpdate,
+  INITIAL_WIZARD_DATA,
+  type ReviewWizardData,
+} from '@/components/reviews/write/types';
 import { reviewService } from '@/services/reviewService';
 import { api } from '@/utils/api';
 import type { CreateReviewPayload, CreateReviewAddressInput } from '@homiio/shared-types';
@@ -216,8 +220,15 @@ function WriteReviewWizard({ initialData }: { initialData: ReviewWizardData }) {
   );
 
   const update = useCallback(
-    <K extends keyof ReviewWizardData>(field: K, value: ReviewWizardData[K]) => {
-      setData((prev) => ({ ...prev, [field]: value }));
+    <K extends keyof ReviewWizardData>(field: K, value: FieldUpdate<ReviewWizardData[K]>) => {
+      setData((prev) => ({
+        ...prev,
+        // No field of the form holds a function, so a function is an update.
+        [field]:
+          typeof value === 'function'
+            ? (value as (current: ReviewWizardData[K]) => ReviewWizardData[K])(prev[field])
+            : value,
+      }));
     },
     [],
   );

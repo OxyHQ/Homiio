@@ -38,7 +38,6 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import MapView, { type MapApi } from '@/components/Map';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
@@ -496,15 +495,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     );
   }, [bottomSheet, canSaveSearch, onRequireAuth, query, savedName, t]);
 
-  // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
-  // uses the `<LoadMoreSentinel>` below. Both funnel through the same guarded
-  // loader, replacing the hand-rolled `ScrollView.onScroll` distance math.
+  // The list is its own scroller on every platform (the map beside it is
+  // pinned), so its own end detection pages it — on web as on native.
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  const { onScroll: handleListScroll } = useInfiniteScroll({
+  const listEnd = useInfiniteScroll({
     onEndReached: handleEndReached,
     enabled: hasNextPage,
   });
@@ -712,7 +710,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       nativeID={`search-list-${queryId}`}
       style={styles.listScroll}
       contentContainerStyle={styles.listScrollContent}
-      onScroll={handleListScroll}
+      onScroll={listEnd.onScroll}
+      onLayout={listEnd.onLayout}
+      onContentSizeChange={listEnd.onContentSizeChange}
       scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
     >
@@ -736,7 +736,6 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       {isFetchingNextPage ? (
         <PropertyResultsGridSkeleton count={NEXT_PAGE_SKELETON_COUNT} style={styles.gridPadding} />
       ) : null}
-      <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
     </ScrollView>
   );
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import type { ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +19,7 @@ import { useHasRightBar } from '@/components/RightBar';
 import { usePropertyCreateForm } from '@/hooks/usePropertyCreateForm';
 import { useCreatePropertyWizard } from '@/hooks/useCreatePropertyWizard';
 import { logger } from '@/utils/logger';
-import { deleteDraft, newDraftId, saveDraft, takeDraftToResume } from '@/utils/propertyDrafts';
+import { deleteDraft, newDraftId, saveDraft } from '@/utils/propertyDrafts';
 import {
   CreatePropertyStepContent,
   FullscreenMapModal,
@@ -46,7 +46,9 @@ import {
  * Drafts: advancing a step saves the form to the named, listable draft
  * (`utils/propertyDrafts`, what `/properties/drafts` shows), as does the "Save
  * draft" action; publishing deletes it. New listings only — an edit is not a
- * draft of anything.
+ * draft of anything. Continuing a draft puts it in the form before this screen
+ * opens (`openDraft`), and arriving here opens the form session
+ * (`usePropertyCreateForm`), so this screen has nothing to load on arrival.
  *
  * That is not what protects work in progress. The form store persists itself on
  * every change, so an interruption — backgrounding, a reload, a crash — restores
@@ -100,40 +102,6 @@ export default function CreatePropertyScreen() {
 
   // --- Drafts (new listings only) --------------------------------------------
   const draftId = useCreatePropertyFormStore((state) => state.draftId);
-  const hasHydrated = useCreatePropertyFormStore((state) => state.hasHydrated);
-
-  // On arrival: resume the draft the drafts screen handed over. Otherwise the
-  // form the store restored IS the resumption — everything typed since the last
-  // step transition, at the step it was typed on — and the only thing to do is
-  // leave it alone. A form still holding a listing opened for EDITING is the
-  // one case that must be cleared: "Create" never starts from somebody's home.
-  //
-  // Gated on `hasHydrated` because the restore is asynchronous: acting on the
-  // first render would read the defaults, see no draft, and reset over the very
-  // work being restored.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per visit to the create screen, after the restore has been attempted
-  useEffect(() => {
-    if (isEditMode || !hasHydrated) return;
-    let cancelled = false;
-    takeDraftToResume()
-      .then((resumed) => {
-        if (cancelled) return;
-        const store = useCreatePropertyFormStore.getState();
-        if (resumed) {
-          store.loadForm(resumed.formData, resumed.id, resumed.step);
-        } else if (store.editingPropertyId) {
-          store.resetForm();
-        }
-      })
-      .catch((error: unknown) => {
-        logger.error('Error resuming property draft', error);
-        toast.error(t('property.drafts.toastLoadFailed'));
-      });
-    return () => {
-      cancelled = true;
-    };
-    // Once per visit to the create screen, after the restore has been attempted.
-  }, [isEditMode, hasHydrated]);
 
   const persistDraft = useCallback(async (): Promise<boolean> => {
     const store = useCreatePropertyFormStore.getState();

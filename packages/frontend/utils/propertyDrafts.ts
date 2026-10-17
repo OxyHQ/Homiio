@@ -3,7 +3,6 @@
  * keys the publish flow and `/properties/drafts` share.
  *
  *   `property_drafts`  every saved draft, newest first — what the drafts screen lists
- *   `current_draft`    the draft the drafts screen asked the publish flow to resume
  *
  * A draft is the publish flow's FORM (`CreatePropertyFormData`), the STEP the
  * host had reached, and a summary the drafts screen draws without understanding
@@ -25,10 +24,13 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
+import {
+  type CreatePropertyFormData,
+  useCreatePropertyFormStore,
+  whenFormRestored,
+} from '@/store/createPropertyFormStore';
 
 const DRAFTS_KEY = 'property_drafts';
-const CURRENT_DRAFT_KEY = 'current_draft';
 
 export interface PropertyDraft {
   id: string;
@@ -58,14 +60,6 @@ export interface PropertyDraft {
 }
 
 type StoredPropertyDraft = Omit<PropertyDraft, 'lastSaved'> & { lastSaved: string };
-
-/** The draft the publish flow resumes: its id, so saving again replaces it. */
-export interface ResumedDraft {
-  id: string;
-  formData: CreatePropertyFormData;
-  /** Where the host was. `0` for a draft saved before steps were recorded. */
-  step: number;
-}
 
 export function newDraftId(): string {
   return `draft-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -126,23 +120,17 @@ export async function deleteDraft(id: string): Promise<PropertyDraft[]> {
   return next;
 }
 
-/** Called by the drafts screen before it opens the publish flow. */
-export async function markDraftForResume(draft: PropertyDraft): Promise<void> {
-  const resumed: ResumedDraft = {
-    id: draft.id,
-    formData: draft.formData,
-    step: draft.step ?? 0,
-  };
-  await AsyncStorage.setItem(CURRENT_DRAFT_KEY, JSON.stringify(resumed));
-}
-
-/** Reads and clears the draft to resume, so it is applied once. */
-export async function takeDraftToResume(): Promise<ResumedDraft | null> {
-  const raw = await AsyncStorage.getItem(CURRENT_DRAFT_KEY);
-  if (!raw) return null;
-  await AsyncStorage.removeItem(CURRENT_DRAFT_KEY);
-  const parsed = JSON.parse(raw) as Partial<ResumedDraft>;
-  if (!parsed || typeof parsed !== 'object' || !parsed.formData || !parsed.id) return null;
-  const step = typeof parsed.step === 'number' && parsed.step > 0 ? Math.floor(parsed.step) : 0;
-  return { id: parsed.id, formData: parsed.formData, step };
+/**
+ * Puts a saved draft in the publish form, at the step it was left on.
+ *
+ * The drafts screen's "Continue" calls it before opening the flow, so the flow
+ * arrives already holding the draft and has nothing to look up. It waits for
+ * the form's own restore first, which could otherwise land after the draft and
+ * put the previous session back over it. A draft saved before steps were
+ * recorded has no step and opens at the first one.
+ */
+export async function openDraft(draft: PropertyDraft): Promise<void> {
+  await whenFormRestored();
+  const step = typeof draft.step === 'number' && draft.step > 0 ? Math.floor(draft.step) : 0;
+  useCreatePropertyFormStore.getState().loadForm(draft.formData, draft.id, step);
 }

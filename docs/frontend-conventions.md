@@ -289,7 +289,8 @@ A paginated page passes its guarded loader
 from the window in a web `Screen documentScroll`, and re-arms when the content
 grows. Never hand-roll scroll distance math or an end-of-list sentinel in a page.
 `/explore`'s results list, which scrolls beside the pinned map, is the one surface
-that still keeps `LoadMoreSentinel` + `useInfiniteScroll`.
+with its own `ScrollView`; it pages through `hooks/useInfiniteScroll`, whose
+scroll, layout and content-size handlers work the same on web and native.
 
 - Canonical data hooks, to reuse rather than writing a new pagination engine:
   `hooks/usePropertySearch.ts` (search, browse, home feed) and

@@ -11,6 +11,11 @@
  * Every assertion is on what the caller RECEIVES, not on the request having been
  * made: an ambiguous lookup that returned a place would satisfy a test that only
  * checked "we called the API".
+ *
+ * The mocked responses carry the real API envelope (`{ success, data }`). They
+ * once returned the bare union, so the suite passed while `lookupCity` handed
+ * callers the envelope itself: `status` was undefined and
+ * `/explore?city=Barcelona` threw inside React Query.
  */
 
 import { ApiError } from '@/utils/api';
@@ -71,19 +76,24 @@ const barcelonaVe = {
   propertiesCount: 1,
 };
 
+/** What `api.get` resolves with: the HTTP body is the API's `{ success, data }` envelope. */
+function envelope(data: unknown) {
+  return { data: { success: true, data } };
+}
+
 beforeEach(() => {
   mockGet.mockReset();
 });
 
 describe('cityService.lookupCity', () => {
   it('passes an ambiguous result through with BOTH candidates and no place', async () => {
-    mockGet.mockResolvedValue({
-      data: {
+    mockGet.mockResolvedValue(
+      envelope({
         status: 'ambiguous',
         code: 'AMBIGUOUS_LOCATION',
         candidates: [barcelonaEs, barcelonaVe],
-      },
-    });
+      }),
+    );
 
     const result = await cityService.lookupCity('barcelona');
 
@@ -112,7 +122,7 @@ describe('cityService.lookupCity', () => {
   });
 
   it('sends every discriminator it is given, and nothing it is not', async () => {
-    mockGet.mockResolvedValue({ data: { status: 'resolved', place: barcelonaVe } });
+    mockGet.mockResolvedValue(envelope({ status: 'resolved', place: barcelonaVe }));
 
     await cityService.lookupCity('barcelona', {
       countryCode: 'VE',

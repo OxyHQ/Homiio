@@ -20,13 +20,7 @@ import {
   createDefaultFormData,
   useCreatePropertyFormStore,
 } from '@/store/createPropertyFormStore';
-import {
-  deleteDraft,
-  markDraftForResume,
-  readDrafts,
-  saveDraft,
-  takeDraftToResume,
-} from '@/utils/propertyDrafts';
+import { deleteDraft, openDraft, readDrafts, saveDraft } from '@/utils/propertyDrafts';
 
 /** Echoes the key and its options, so assertions read what was asked for. */
 const t = ((key: string, options?: Record<string, unknown>) =>
@@ -152,9 +146,13 @@ describe('draftQualityItems', () => {
 });
 
 describe('property drafts', () => {
-  beforeEach(() => AsyncStorage.clear());
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    useCreatePropertyFormStore.getState().resetForm();
+    useCreatePropertyFormStore.setState({ hasHydrated: true });
+  });
 
-  it('saves over the same draft, resumes it once and deletes it', async () => {
+  it('saves over the same draft, opens it in the form and deletes it', async () => {
     const form = createDefaultFormData();
     form.basicInfo.propertyType = 'house';
     await saveDraft('draft-a', form);
@@ -166,25 +164,39 @@ describe('property drafts', () => {
     expect(drafts[0].formData.basicInfo.description).toBe('Second save');
     expect(drafts[0].lastSaved).toBeInstanceOf(Date);
 
-    await markDraftForResume(drafts[0]);
-    const resumed = await takeDraftToResume();
-    expect(resumed?.id).toBe('draft-a');
-    expect(resumed?.formData.basicInfo.propertyType).toBe('house');
-    expect(await takeDraftToResume()).toBeNull();
+    await openDraft(drafts[0]);
+    const opened = useCreatePropertyFormStore.getState();
+    expect(opened.draftId).toBe('draft-a');
+    expect(opened.formData.basicInfo.propertyType).toBe('house');
+    expect(opened.isDirty).toBe(false);
 
     expect(await deleteDraft('draft-a')).toEqual([]);
   });
 
-  it('resumes at the step the draft was left on, not at step one', async () => {
+  it('opens at the step the draft was left on, not at step one', async () => {
     await saveDraft('draft-b', createDefaultFormData(), 5);
     const [draft] = await readDrafts();
     expect(draft.step).toBe(5);
 
-    await markDraftForResume(draft);
-    expect((await takeDraftToResume())?.step).toBe(5);
+    await openDraft(draft);
+    expect(useCreatePropertyFormStore.getState().currentStep).toBe(5);
   });
 
-  it('resumes a draft saved before steps were recorded at the first step', async () => {
+  it('waits for the form restore, so the restore cannot land over the draft', async () => {
+    await saveDraft('draft-late', createDefaultFormData(), 2);
+    const [draft] = await readDrafts();
+    useCreatePropertyFormStore.setState({ hasHydrated: false });
+
+    const opening = openDraft(draft);
+    await Promise.resolve();
+    expect(useCreatePropertyFormStore.getState().draftId).toBeNull();
+
+    useCreatePropertyFormStore.setState({ hasHydrated: true });
+    await opening;
+    expect(useCreatePropertyFormStore.getState().draftId).toBe('draft-late');
+  });
+
+  it('opens a draft saved before steps were recorded at the first step', async () => {
     // Written the way `saveDraft` used to write it: no `step` at all.
     await AsyncStorage.setItem(
       'property_drafts',
@@ -203,8 +215,9 @@ describe('property drafts', () => {
       ]),
     );
     const [draft] = await readDrafts();
-    await markDraftForResume(draft);
-    expect((await takeDraftToResume())?.step).toBe(0);
+    useCreatePropertyFormStore.getState().setCurrentStep(3);
+    await openDraft(draft);
+    expect(useCreatePropertyFormStore.getState().currentStep).toBe(0);
   });
 });
 

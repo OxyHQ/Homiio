@@ -147,8 +147,19 @@ export const INITIAL_WIZARD_DATA: ReviewWizardData = {
   authorIdentity: ReviewAuthorIdentity.PSEUDONYMOUS,
 };
 
+/**
+ * A field's next value, or — like `setState` — a function from its value at the
+ * time the update is applied. The function form is for answers that arrive
+ * after a render (an upload finishing), when the value read at render may
+ * already be out of date.
+ */
+export type FieldUpdate<T> = T | ((current: T) => T);
+
 /** Every step receives the current data + a typed field updater. */
 export interface StepProps {
   data: ReviewWizardData;
-  update: <K extends keyof ReviewWizardData>(field: K, value: ReviewWizardData[K]) => void;
+  update: <K extends keyof ReviewWizardData>(
+    field: K,
+    value: FieldUpdate<ReviewWizardData[K]>,
+  ) => void;
 }

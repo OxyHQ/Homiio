@@ -1,22 +1,24 @@
 /**
- * useInfiniteScroll — the NATIVE half of Homiio's Mention-style infinite-scroll
- * primitive.
+ * useInfiniteScroll — end-of-list detection for a surface that owns its own
+ * `ScrollView`, on every platform.
  *
- * Pages no longer own a vertical scroll view: Bloom's `AppShell` scrolls the
- * document on web and its own container on native, and a page paginates with a
- * {@link LoadMoreSentinel} at the list's end (an `IntersectionObserver` on web).
- * This hook is for the surfaces that legitimately keep their OWN `ScrollView`
- * (e.g. the explore results list beside the pinned map): it returns an
- * `onScroll` handler the `ScrollView` spreads onto its own `onScroll`, detecting
- * that it is near the bottom and calling `onEndReached`, so no surface
- * re-derives the distance math.
+ * Pages paginate through Bloom's `ScreenScrollView onEndReached`. This hook is
+ * for the one surface that legitimately keeps its OWN scroller: the explore
+ * results list, which scrolls beside the pinned map. It returns the three
+ * handlers that `ScrollView` spreads on — `onScroll`, `onLayout` and
+ * `onContentSizeChange` — and they work the same on native and on web, where
+ * RN-Web's `ScrollView` is a scrolling element that reports all three.
+ *
+ * The scroll handler alone is not enough: content shorter than its viewport
+ * never scrolls, so a first page that does not fill the list would never ask
+ * for the second. The layout and content-size handlers run the same check, so
+ * such a list keeps asking until it is full or there is nothing more.
  *
  * The guarded `loadMore` (`if (hasNextPage && !isFetchingNextPage) fetchNextPage()`)
- * lives in each consumer, matching Mention's `handleLoadMore`; this hook only
- * decides WHEN the end is reached.
+ * lives in the consumer; this hook only decides WHEN the end is reached.
  */
 import { useCallback, useRef } from 'react';
-import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
 /**
  * Fraction of the scroll extent past which the surface is treated as "at the
@@ -25,6 +27,9 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
  * bottom.
  */
 const END_REACHED_THRESHOLD = 0.7;
+
+/** `sentFor` while nothing has been reported since the reader left the end. */
+const ARMED = -1;
 
 interface UseInfiniteScrollOptions {
   /** Guarded next-page loader — invoked once each time the end is approached. */
@@ -37,6 +42,8 @@ interface UseInfiniteScrollOptions {
 
 interface UseInfiniteScrollResult {
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onLayout: (event: LayoutChangeEvent) => void;
+  onContentSizeChange: (width: number, height: number) => void;
 }
 
 export function useInfiniteScroll({
@@ -44,29 +51,59 @@ export function useInfiniteScroll({
   enabled,
   threshold = END_REACHED_THRESHOLD,
 }: UseInfiniteScrollOptions): UseInfiniteScrollResult {
-  // Re-arm only after the user scrolls back above the threshold, so the burst of
-  // `onScroll` events fired while lingering near the bottom triggers `onEndReached`
-  // at most once per approach (the consumer's own guard is the second line of
-  // defence, but this keeps us from spamming it every frame).
-  const armedRef = useRef(true);
+  const metrics = useRef({ offset: 0, viewport: 0, content: 0 });
+  /**
+   * The content height the end was last reported for, as `FlatList` keeps it:
+   * one report per approach, re-armed when the reader scrolls back out, and
+   * repeated while still at the end only once the content has changed height
+   * (a page arrived and still did not fill the list).
+   */
+  const sentFor = useRef(ARMED);
+
+  const check = useCallback(() => {
+    const { offset, viewport, content } = metrics.current;
+    if (content <= 0 || viewport <= 0) return;
+    // As tall as its own content: the parent gave the scroll view no height, so
+    // it scrolls nothing and every page would grow it to "the end" again —
+    // asking on each one would page through the whole result set unbidden.
+    if (Math.abs(viewport - content) < 1) return;
+    if (offset + viewport < content * threshold) {
+      sentFor.current = ARMED;
+      return;
+    }
+    if (!enabled || sentFor.current === content) return;
+    sentFor.current = content;
+    onEndReached();
+  }, [enabled, threshold, onEndReached]);
 
   const onScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
-      if (contentSize.height <= 0) return;
-      const reachedEnd =
-        contentOffset.y + layoutMeasurement.height >= contentSize.height * threshold;
-      if (!reachedEnd) {
-        armedRef.current = true;
-        return;
-      }
-      if (enabled && armedRef.current) {
-        armedRef.current = false;
-        onEndReached();
-      }
+      metrics.current = {
+        offset: contentOffset.y,
+        viewport: layoutMeasurement.height,
+        content: contentSize.height,
+      };
+      check();
     },
-    [enabled, threshold, onEndReached],
+    [check],
   );
 
-  return { onScroll };
+  const onLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      metrics.current = { ...metrics.current, viewport: event.nativeEvent.layout.height };
+      check();
+    },
+    [check],
+  );
+
+  const onContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      metrics.current = { ...metrics.current, content: height };
+      check();
+    },
+    [check],
+  );
+
+  return { onScroll, onLayout, onContentSizeChange };
 }
