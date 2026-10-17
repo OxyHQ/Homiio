@@ -274,6 +274,26 @@ works now" is neither:
 generate a migration will do this, and neither author can see it from their own
 branch. The check is what makes it visible at merge time.
 
+## Every migration keeps its locks short
+
+Homiio's database lives on the one RDS every Oxy app shares. `@oxy.so/db` ≥ 1.3.0
+commits each migration on its own under `lock_timeout` 3 s (retried with backoff)
+and `statement_timeout` 120 s; a migration that needs longer says so in its file
+(`-- oxy:statement-timeout=600s`). CI runs `db:check-locks`
+(`oxy-db-check-migration-locks`, migrations after 0036; hot tables `addresses`,
+`profiles`, `properties`, `property_images`):
+
+- a foreign key onto an existing table is added `NOT VALID` and validated with
+  `VALIDATE CONSTRAINT` in a later migration;
+- DDL that locks a hot table sits in its own migration, with no backfill or index
+  build beside it;
+- an index on a hot table is `CREATE INDEX IF NOT EXISTS`, built `CONCURRENTLY`
+  out of band first.
+
+A reviewed exception says why in its own file: `-- oxy:lock-review=<reason>`.
+This journal's `when` is not monotonic (0013), so it must never run on
+`@oxy.so/db` 1.2.0, which skips such an entry; 1.3.0 applies it.
+
 ## Open — the deploy runs migrations, and the interlock is the workflow's
 
 **There is still no cross-process advisory lock.** drizzle's migrator takes no
