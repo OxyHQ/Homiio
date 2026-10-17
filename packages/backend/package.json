@@ -27,8 +27,8 @@
     "backfill:price-ethics": "ts-node --transpile-only scripts/backfillPriceEthics.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1148.0",
-    "@aws-sdk/s3-request-presigner": "^3.1148.0",
+    "@aws-sdk/client-s3": "^3.1151.0",
+    "@aws-sdk/s3-request-presigner": "^3.1151.0",
     "@crowdsource.you/contracts": "1.1.0",
     "@crowdsource.you/core": "3.0.0",
     "@homiio/listing-providers": "workspace:*",
