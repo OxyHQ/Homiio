@@ -26,6 +26,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { Textarea } from '@oxy.so/bloom/textarea';
@@ -206,47 +207,53 @@ export default function NotesScreen() {
   );
 
   return (
-    <>
-      <PageHeader
-        title={t('saved.notes.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.tabs}>
-        <Tabs value={filter} onValueChange={(next) => setFilter(next as NotesFilter)}>
-          <TabsTrigger value="all" label={t('common.all')} />
-          <TabsTrigger value="active" label={t('saved.notes.filters.active')} />
-          <TabsTrigger value="pinned" label={t('saved.notes.filters.pinned')} />
-          <TabsTrigger value="archived" label={t('saved.notes.filters.archived')} />
-        </Tabs>
-      </View>
-      <View style={styles.content}>
-        {visibleNotes.length === 0 ? (
-          <View className="w-full">
-            <EmptyState
-              icon={RiFileTextLine}
-              title={t('saved.notes.emptyTitle')}
-              description={t('saved.notes.emptyDescription')}
-            />
-          </View>
-        ) : (
-          visibleNotes.map((item) => (
-            <NoteCard
-              key={`${item.propertyId}-${item.note.id}`}
-              item={item}
-              onEdit={() => {
-                setEditing({ propertyId: item.propertyId, note: item.note });
-                setText(item.note.text);
-              }}
-              onTogglePin={() => void handleToggle(item.propertyId, item.note.id, 'pin')}
-              onToggleArchive={() => void handleToggle(item.propertyId, item.note.id, 'archive')}
-              onDelete={() => void handleDeleteNote(item.propertyId, item.note.id)}
-            />
-          ))
-        )}
-      </View>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('saved.notes.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView>
+        <View style={styles.tabs}>
+          <Tabs value={filter} onValueChange={(next) => setFilter(next as NotesFilter)}>
+            <TabsTrigger value="all" label={t('common.all')} />
+            <TabsTrigger value="active" label={t('saved.notes.filters.active')} />
+            <TabsTrigger value="pinned" label={t('saved.notes.filters.pinned')} />
+            <TabsTrigger value="archived" label={t('saved.notes.filters.archived')} />
+          </Tabs>
+        </View>
+        <View style={styles.content}>
+          {visibleNotes.length === 0 ? (
+            <View className="w-full">
+              <EmptyState
+                icon={RiFileTextLine}
+                title={t('saved.notes.emptyTitle')}
+                description={t('saved.notes.emptyDescription')}
+              />
+            </View>
+          ) : (
+            visibleNotes.map((item) => (
+              <NoteCard
+                key={`${item.propertyId}-${item.note.id}`}
+                item={item}
+                onEdit={() => {
+                  setEditing({ propertyId: item.propertyId, note: item.note });
+                  setText(item.note.text);
+                }}
+                onTogglePin={() => void handleToggle(item.propertyId, item.note.id, 'pin')}
+                onToggleArchive={() => void handleToggle(item.propertyId, item.note.id, 'archive')}
+                onDelete={() => void handleDeleteNote(item.propertyId, item.note.id)}
+              />
+            ))
+          )}
+        </View>
+      </ScreenScrollView>
 
       <Dialog
         placement="center"
@@ -282,7 +289,7 @@ export default function NotesScreen() {
           editable={!saving}
         />
       </Dialog>
-    </>
+    </Screen>
   );
 }
 

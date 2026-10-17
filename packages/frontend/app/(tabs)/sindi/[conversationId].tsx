@@ -18,6 +18,7 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { RiLockLine, RiLoginBoxLine, RiShare2Line } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { openAccountDialog, useAuth } from '@oxy.so/services';
@@ -103,39 +104,49 @@ export default function ConversationDetail() {
 
   if (!canUsePrivateApi) {
     return (
-      <>
-        <PageHeader
-          title={t('sindi.conversation.title')}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-          onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
-        />
-        <EmptyState
-          icon={RiLockLine}
-          title={t('sindi.auth.required')}
-          description={t('sindi.auth.message')}
-          actionText={t('common.signIn')}
-          actionIcon={RiLoginBoxLine}
-          onAction={() => openAccountDialog()}
-          iconColor={colors.primarySubtleForeground}
-        />
-      </>
+      <Screen
+        documentScroll
+        header={
+          <PageHeader
+            title={t('sindi.conversation.title')}
+            titleAlign="center"
+            leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+            onBack={router.canGoBack() ? router.back : undefined}
+            backLabel={t('goBack')}
+          />
+        }
+      >
+        <ScreenScrollView>
+          <EmptyState
+            icon={RiLockLine}
+            title={t('sindi.auth.required')}
+            description={t('sindi.auth.message')}
+            actionText={t('common.signIn')}
+            actionIcon={RiLoginBoxLine}
+            onAction={() => openAccountDialog()}
+            iconColor={colors.primarySubtleForeground}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
+  // The chat fills the screen and scrolls its own thread, so it is a plain View
+  // in the Screen rather than a ScreenScrollView; its header is the chat's chrome.
   return (
-    <View style={styles.container}>
-      <SindiConversation
-        key={isNew ? NEW_SINDI_CONVERSATION : conversationId}
-        host="screen"
-        conversationId={isNew ? undefined : conversationId}
-        openConversation={openConversation}
-        closeConversation={closeConversation}
-        chrome={chrome}
-        initialTurn={initialTurn}
-      />
-    </View>
+    <Screen documentScroll>
+      <View style={styles.container}>
+        <SindiConversation
+          key={isNew ? NEW_SINDI_CONVERSATION : conversationId}
+          host="screen"
+          conversationId={isNew ? undefined : conversationId}
+          openConversation={openConversation}
+          closeConversation={closeConversation}
+          chrome={chrome}
+          initialTurn={initialTurn}
+        />
+      </View>
+    </Screen>
   );
 }
 

@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { parseISO } from 'date-fns';
 
 import { Button } from '@oxy.so/bloom/button';
@@ -164,9 +165,8 @@ export default function ExchangeRequestDetailScreen() {
 
   if (!id) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             icon={RiAlertLine}
             title={t('listing.exchange.invalidId')}
@@ -174,35 +174,33 @@ export default function ExchangeRequestDetailScreen() {
             retryLabel={t('goBack')}
             onRetry={() => router.back()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (requestQuery.isPending) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (requestQuery.isError || !request) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('listing.exchange.unavailable')}
             description={requestQuery.error?.message ?? t('listing.exchange.unavailableBody')}
             retryLabel={t('goBack')}
             onRetry={() => router.back()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -230,9 +228,8 @@ export default function ExchangeRequestDetailScreen() {
     !alreadyReviewed;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundTertiary }]}>
           {imageSource ? (
             <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
@@ -355,8 +352,8 @@ export default function ExchangeRequestDetailScreen() {
             {t('listing.exchange.review.alreadyLeft')}
           </BloomText>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -366,7 +363,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing['2xl'],

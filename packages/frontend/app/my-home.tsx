@@ -41,11 +41,12 @@
  */
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
 import {
@@ -125,49 +126,47 @@ export default function MyHomeScreen() {
     includeViewings: true,
   });
 
-  const frame = (body: React.ReactNode) => (
-    <>
-      <PageHeader
-        title={t('sidebar.navigation.myHome')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-      />
-      {body}
-    </>
+  const frame = (contentStyle: StyleProp<ViewStyle>, body: React.ReactNode) => (
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('sidebar.navigation.myHome')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={contentStyle}>{body}</ScreenScrollView>
+    </Screen>
   );
 
   if (!isAuthed) {
     return frame(
-      <View style={styles.centerWrap}>
-        <EmptyState
-          icon={RiHomeHeartLine}
-          title={t('myHome.signInTitle')}
-          description={t('myHome.signInDescription')}
-          actionText={t('applications.list.signIn')}
-          actionIcon={RiLoginBoxLine}
-          onAction={() => openAccountDialog()}
-        />
-      </View>,
+      styles.centerWrap,
+      <EmptyState
+        icon={RiHomeHeartLine}
+        title={t('myHome.signInTitle')}
+        description={t('myHome.signInDescription')}
+        actionText={t('applications.list.signIn')}
+        actionIcon={RiLoginBoxLine}
+        onAction={() => openAccountDialog()}
+      />,
     );
   }
 
   if (leasesQuery.isPending) {
-    return frame(
-      <View style={styles.content}>
-        <ListSkeleton rows={3} rowHeight={180} />
-      </View>,
-    );
+    return frame(styles.content, <ListSkeleton rows={3} rowHeight={180} />);
   }
 
   if (leasesQuery.isError) {
     return frame(
-      <View style={styles.centerWrap}>
-        <ErrorState
-          title={t('contracts.list.loadError')}
-          description={leasesQuery.error?.message}
-          onRetry={() => void leasesQuery.refetch()}
-        />
-      </View>,
+      styles.centerWrap,
+      <ErrorState
+        title={t('contracts.list.loadError')}
+        description={leasesQuery.error?.message}
+        onRetry={() => void leasesQuery.refetch()}
+      />,
     );
   }
 
@@ -190,13 +189,14 @@ export default function MyHomeScreen() {
     const bookingsHaveSomethingToSay =
       !bookings.isPending && (bookings.isError || bookings.items.length > 0);
     if (!bookingsHaveSomethingToSay) {
-      return frame(<View style={styles.centerWrap}>{noTenancy}</View>);
+      return frame(styles.centerWrap, noTenancy);
     }
     return frame(
-      <View style={styles.content}>
+      styles.content,
+      <>
         <UpcomingBookingsSection bookings={bookings} />
         {noTenancy}
-      </View>,
+      </>,
     );
   }
 
@@ -267,7 +267,8 @@ export default function MyHomeScreen() {
   );
 
   return frame(
-    <View style={styles.content}>
+    styles.content,
+    <>
       {homes.length > 1 ? (
         <View style={styles.chipRow}>
           {homes.map((home) => (
@@ -290,7 +291,7 @@ export default function MyHomeScreen() {
           <LeaseHistorySection lease={lease} format={format} compact />
         </View>
       </View>
-    </View>,
+    </>,
   );
 }
 
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['4xl'],
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing['2xl'],

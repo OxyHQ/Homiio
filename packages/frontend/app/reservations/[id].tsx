@@ -18,6 +18,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
@@ -150,9 +151,8 @@ export default function ReservationDetailScreen() {
 
   if (!id) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             icon={RiAlertLine}
             title={t('reservations.detail.invalidId')}
@@ -160,27 +160,25 @@ export default function ReservationDetailScreen() {
             retryLabel={t('reservations.detail.goBack')}
             onRetry={() => router.back()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (reservationQuery.isPending) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (reservationQuery.isError || !reservation) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('reservations.detail.unavailable')}
             description={
@@ -189,8 +187,8 @@ export default function ReservationDetailScreen() {
             retryLabel={t('reservations.detail.goBack')}
             onRetry={() => router.back()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -211,9 +209,8 @@ export default function ReservationDetailScreen() {
     role === 'host' && reservation.status === ReservationStatus.PENDING;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View className="bg-muted" style={styles.thumbWrap}>
           {imageSource ? (
             <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
@@ -331,8 +328,8 @@ export default function ReservationDetailScreen() {
             })}
           </BloomText>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -354,7 +351,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing['2xl'],

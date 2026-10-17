@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -26,15 +27,19 @@ export default function ReviewExploreCityScreen() {
   const neighborhoods = cityQuery.data ?? [];
 
   return (
-    <>
-      <PageHeader
-        title={t('reviews.explore.neighborhoodsTitle')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('reviews.explore.neighborhoodsTitle')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         {cityQuery.isLoading ? (
           <View style={styles.list}>
             {Array.from({ length: 5 }).map((_, idx) => (
@@ -68,8 +73,8 @@ export default function ReviewExploreCityScreen() {
             ))}
           </ExploreList>
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

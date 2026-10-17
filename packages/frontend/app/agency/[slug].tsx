@@ -8,8 +8,8 @@ import { ApiError } from '@/utils/api';
  * Bloom `Tabs`: Reviews
  * (paginated `useAgencyReviews`, each review linking to its address page) and
  * Listings (paginated `useAgencyProperties` rendered with the shared
- * `PropertyResultsGrid`). Infinite scroll via `LoadMoreSentinel` at the end of
- * each list (the shell owns scrolling).
+ * `PropertyResultsGrid`). The active tab's list pages through
+ * `ScreenScrollView`'s `onEndReached`.
  */
 import type React from 'react';
 import { useState } from 'react';
@@ -28,6 +28,7 @@ import {
   RiMapPinLine,
 } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Rating } from '@oxy.so/bloom/rating';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
@@ -43,7 +44,6 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { useAgency, useAgencyReviews, useAgencyProperties } from '@/hooks/useAgencyReviews';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import type { ReviewDTO } from '@homiio/shared-types';
@@ -136,32 +136,32 @@ export default function AgencyProfileScreen() {
 
   if (agencyQuery.isLoading) {
     return (
-      <>
-        {header}
-        <View style={styles.content}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.content}>
           <Skeleton.Box width="60%" height={28} borderRadius={radius.md} />
           <Skeleton.Box width="100%" height={80} borderRadius={radius.md} />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (agencyQuery.isError || !agency || !stats) {
     return (
-      <>
-        {header}
-        <ErrorState
-          icon={RiBuilding2Line}
-          title={t('agency.notFound')}
-          description={
-            agencyQuery.error instanceof ApiError && agencyQuery.error.status === 409
-              ? t('agencyDirectory.unresolved')
-              : t('agency.notFoundDescription')
-          }
-          retryLabel={t('common.goBack')}
-          onRetry={() => router.back()}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiBuilding2Line}
+            title={t('agency.notFound')}
+            description={
+              agencyQuery.error instanceof ApiError && agencyQuery.error.status === 409
+                ? t('agencyDirectory.unresolved')
+                : t('agency.notFoundDescription')
+            }
+            retryLabel={t('common.goBack')}
+            onRetry={() => router.back()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -178,9 +178,11 @@ export default function AgencyProfileScreen() {
     (stats.distinctAuthors ?? 0) >= AGGREGATE_MIN_AUTHORS;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView
+        contentContainerStyle={styles.content}
+        onEndReached={tab === 'reviews' ? loadMoreReviews : loadMoreProperties}
+      >
         <View style={styles.headerBlock}>
           <View style={[styles.agencyIcon, { backgroundColor: theme.colors.primarySubtle }]}>
             <RiBuilding2Line width={28} height={28} fill={theme.colors.primary} />
@@ -248,10 +250,6 @@ export default function AgencyProfileScreen() {
                   onPressAddress={() => router.push(`/addresses/${review.addressId}?tab=reviews`)}
                 />
               ))}
-              <LoadMoreSentinel
-                onLoadMore={loadMoreReviews}
-                enabled={Boolean(reviewsQuery.hasNextPage)}
-              />
             </View>
           )
         ) : propertiesQuery.isLoading ? (
@@ -263,19 +261,13 @@ export default function AgencyProfileScreen() {
             description={t('agency.emptyListingsDescription')}
           />
         ) : (
-          <View>
-            <PropertyResultsGrid
-              properties={properties}
-              onPropertyPress={(property) => router.push(`/properties/${property.id}`)}
-            />
-            <LoadMoreSentinel
-              onLoadMore={loadMoreProperties}
-              enabled={Boolean(propertiesQuery.hasNextPage)}
-            />
-          </View>
+          <PropertyResultsGrid
+            properties={properties}
+            onPropertyPress={(property) => router.push(`/properties/${property.id}`)}
+          />
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

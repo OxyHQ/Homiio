@@ -89,6 +89,7 @@ import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import {
   type AvailabilityWindow,
   AvailabilityWindowStatus,
@@ -403,9 +404,8 @@ export default function HostCalendarScreen() {
 
   if (!isAuthed) {
     return (
-      <>
-        {header}
-        <View style={styles.emptyWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiCalendarLine}
             title={t('host.calendar.signInTitle')}
@@ -414,16 +414,15 @@ export default function HostCalendarScreen() {
             actionIcon={RiLoginBoxLine}
             onAction={() => openAccountDialog()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (propertiesQuery.isLoading) {
     return (
-      <>
-        {header}
-        <View style={styles.content}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.content}>
           <View style={styles.stack}>
             <Skeleton.Text style={{ width: 120, lineHeight: 14 }} />
             <Skeleton.Box height={48} borderRadius={radius.md} />
@@ -433,34 +432,34 @@ export default function HostCalendarScreen() {
             <Skeleton.Text style={{ width: 160, lineHeight: 16 }} />
           </View>
           <Skeleton.Box height={320} borderRadius={radius.lg} />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (propertiesQuery.error) {
     return (
-      <>
-        {header}
-        <ErrorState
-          icon={RiAlertLine}
-          title={t('host.calendar.loadPropertiesError')}
-          description={
-            typeof propertiesQuery.error === 'string'
-              ? propertiesQuery.error
-              : t('host.calendar.tryAgain')
-          }
-          onRetry={() => propertiesQuery.refetch()}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('host.calendar.loadPropertiesError')}
+            description={
+              typeof propertiesQuery.error === 'string'
+                ? propertiesQuery.error
+                : t('host.calendar.tryAgain')
+            }
+            onRetry={() => propertiesQuery.refetch()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (properties.length === 0) {
     return (
-      <>
-        {header}
-        <View style={styles.emptyWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiHomeLine}
             title={t('host.calendar.emptyTitle')}
@@ -469,14 +468,14 @@ export default function HostCalendarScreen() {
             actionIcon={RiAddLine}
             onAction={() => router.push('/properties/create')}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   const blockRange = blockState.range;
   const body = (
-    <View style={styles.content}>
+    <ScreenScrollView contentContainerStyle={styles.content}>
       <Card radius="radius-16" className="p-4" appearance="outline">
         <View style={styles.stack}>
           <SectionEyebrow>{t('host.calendar.property')}</SectionEyebrow>
@@ -586,12 +585,11 @@ export default function HostCalendarScreen() {
           </View>
         </>
       ) : null}
-    </View>
+    </ScreenScrollView>
   );
 
   return (
-    <>
-      {header}
+    <Screen documentScroll header={header}>
       {body}
 
       <Dialog
@@ -646,7 +644,7 @@ export default function HostCalendarScreen() {
           />
         </View>
       </Dialog>
-    </>
+    </Screen>
   );
 }
 
@@ -664,7 +662,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   pickerButton: {

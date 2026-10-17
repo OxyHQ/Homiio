@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { toast } from '@oxy.so/bloom/toast';
 
 import { Admonition } from '@oxy.so/bloom/admonition';
@@ -79,9 +80,8 @@ export default function NewContractScreen() {
 
   if (!applicationId) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiFileTextLine}
             title={t('contracts.new.noApplicationTitle')}
@@ -90,27 +90,25 @@ export default function NewContractScreen() {
             actionIcon={RiGalleryLine}
             onAction={() => router.replace('/applications')}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (applicationQuery.isPending) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (applicationQuery.isError || !application) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('contracts.new.applicationUnavailableTitle')}
             description={
@@ -119,8 +117,8 @@ export default function NewContractScreen() {
             retryLabel={t('contracts.new.goBack')}
             onRetry={() => router.back()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -129,9 +127,8 @@ export default function NewContractScreen() {
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={[styles.thumbWrap, { backgroundColor: themeColors.backgroundSecondary }]}>
           {imageSource ? (
             <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
@@ -161,9 +158,7 @@ export default function NewContractScreen() {
         {!isApproved ? (
           <Admonition type="warning">{t('contracts.new.notApprovedWarning')}</Admonition>
         ) : null}
-      </View>
 
-      <View style={styles.footer}>
         <Button
           size="lg"
           onPress={handleCreate}
@@ -175,8 +170,8 @@ export default function NewContractScreen() {
         >
           {t('contracts.new.createButton')}
         </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -186,7 +181,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing['2xl'],
@@ -208,9 +203,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-  },
-  footer: {
-    padding: spacing.lg,
   },
   footerButton: {
     alignSelf: 'stretch',

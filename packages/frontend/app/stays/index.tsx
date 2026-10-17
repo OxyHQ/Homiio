@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 
 import {
   SegmentedControl,
@@ -130,9 +131,8 @@ export default function StaysScreen() {
 
   if (!isAuthed) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiHotelBedLine}
             title={t('stays.list.signInTitle')}
@@ -141,43 +141,40 @@ export default function StaysScreen() {
             actionIcon={RiLoginBoxLine}
             onAction={() => openAccountDialog()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (reservationsQuery.isPending) {
     return (
-      <>
-        {header}
-        <View style={styles.content}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.content}>
           <FilterRow value={filter} onChange={setFilter} t={t} />
           <ListSkeleton rows={4} rowHeight={140} />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (reservationsQuery.isError) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('stays.list.loadError')}
             description={reservationsQuery.error?.message ?? t('stays.list.tryAgain')}
             retryLabel={t('applications.list.retry')}
             onRetry={() => reservationsQuery.refetch()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <FilterRow value={filter} onChange={setFilter} t={t} />
 
         {filteredGroups.length === 0 ? (
@@ -211,8 +208,8 @@ export default function StaysScreen() {
             </View>
           ))
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -244,7 +241,7 @@ const styles = StyleSheet.create({
     gap: spacing['2xl'],
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   emptyWrap: {

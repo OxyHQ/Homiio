@@ -2,10 +2,11 @@
  * Properties browse screen — the full-width "explore all listings" surface.
  *
  * Structurally and visually a sibling of the search results screen
- * (`components/search/SearchResultsView`), minus the map: a sticky top bar with
- * Bloom's `StaySearchCompact` trigger (tap → opens `/explore`) plus Bloom's
- * `FilterTriggerButton`, the `SortMenu` and a Recently viewed button, over a
- * responsive `PropertyResultsGrid` of `PropertyCard`s.
+ * (`components/search/SearchResultsView`), minus the map: a Bloom `Screen`
+ * whose header is a top bar with Bloom's `StaySearchCompact` trigger (tap →
+ * opens `/explore`) plus Bloom's `FilterTriggerButton`, the `SortMenu` and a
+ * Recently viewed button, over a responsive `PropertyResultsGrid` of
+ * `PropertyCard`s. Paginates through `ScreenScrollView`'s `onEndReached`.
  *
  * Data comes from `usePropertySearch` keyed by a *local* browse query (seeded
  * from `DEFAULT_SEARCH_QUERY`). This is the SAME endpoint + infinite-scroll +
@@ -15,21 +16,21 @@
  * truth, so the browse refinements never clobber an in-flight search. No
  * `useEffect` — the grid is pure derived/React-Query state.
  */
-import React, { useCallback, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Fab } from '@oxy.so/bloom/fab';
 import { RiAddLine, RiEqualizerLine, RiHomeLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
 import { StaySearchCompact } from '@oxy.so/bloom/stay-search';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SortMenu } from '@/components/search/SortMenu';
@@ -96,8 +97,6 @@ export default function PropertiesScreen() {
   );
   const handleFiltersPress = useCallback(() => setFiltersOpen(true), []);
 
-  // Infinite scroll: the shell owns the scroll, so the `<LoadMoreSentinel>` at
-  // the grid's end triggers the guarded loader.
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
@@ -221,26 +220,10 @@ export default function PropertiesScreen() {
   );
 
   return (
-    <View>
-      {topBar}
-      <SearchFiltersDialog
-        open={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        query={query}
-        onApply={patchQuery}
-      />
-      <View style={styles.listContent}>
-        <View style={styles.resultsHeader}>
-          <BloomText className="text-xl font-bold text-foreground">{resultsHeading}</BloomText>
-        </View>
-        {body}
-        {isFetchingNextPage ? (
-          <PropertyResultsGridSkeleton count={2} style={styles.gridPadding} />
-        ) : null}
-        <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
-      </View>
-      {/* Bloom 6 leaves a FAB's position to its parent: this anchor is it. */}
-      <View style={styles.fabAnchor}>
+    <Screen
+      documentScroll
+      header={topBar}
+      primaryAction={
         <Fab
           icon={RiAddLine}
           size="lg"
@@ -249,29 +232,31 @@ export default function PropertiesScreen() {
           appearance="solid"
           tone="accent"
         />
-      </View>
-    </View>
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.listContent} onEndReached={handleEndReached}>
+        <View style={styles.resultsHeader}>
+          <BloomText className="text-xl font-bold text-foreground">{resultsHeading}</BloomText>
+        </View>
+        {body}
+        {isFetchingNextPage ? (
+          <PropertyResultsGridSkeleton count={2} style={styles.gridPadding} />
+        ) : null}
+      </ScreenScrollView>
+      <SearchFiltersDialog
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        query={query}
+        onApply={patchQuery}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  fabAnchor: {
-    position: 'absolute',
-    right: spacing['2xl'],
-    bottom: spacing['3xl'],
-    pointerEvents: 'box-none',
+  topBar: {
+    borderBottomWidth: hairline.width,
   },
-  topBar: Platform.select<ViewStyle>({
-    web: {
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      borderBottomWidth: hairline.width,
-    } as unknown as ViewStyle,
-    default: {
-      borderBottomWidth: hairline.width,
-    },
-  }) as ViewStyle,
   topBarContent: {
     flexDirection: 'row',
     alignItems: 'center',

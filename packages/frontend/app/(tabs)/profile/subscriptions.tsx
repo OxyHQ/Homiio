@@ -21,6 +21,7 @@ import { Card } from '@oxy.so/bloom/card';
 import { IconCircle } from '@oxy.so/bloom/icon-circle';
 import { RiCheckboxCircleFill, RiFileTextLine, RiHeartLine, RiStarLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useTheme } from '@oxy.so/bloom/theme';
@@ -224,15 +225,19 @@ export default function SubscriptionsScreen() {
       : t('subscriptions.page.plus.subscribeNow');
 
   return (
-    <>
-      <PageHeader
-        title={t('subscriptions.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.scroll}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('subscriptions.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <IconCircle icon={RiStarLine} size="lg" />
           <H1 style={styles.heroTitle}>{t('subscriptions.page.headerTitle')}</H1>
@@ -383,8 +388,8 @@ export default function SubscriptionsScreen() {
             </SettingsListGroup>
           </View>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -432,7 +437,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  scroll: {
+  content: {
     width: '100%',
     maxWidth: contentClamp.copy,
     alignSelf: 'center',

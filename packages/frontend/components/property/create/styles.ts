@@ -1,4 +1,4 @@
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { spacing } from '@/constants/styles';
 
 /**
@@ -11,13 +11,6 @@ export const createPropertyStyles = StyleSheet.create({
    * At least a viewport tall on web, where the document scrolls: the scroll view
    * grows into it, so a short step still has the wizard footer at the bottom.
    */
-  container: {
-    flex: 1,
-    ...(Platform.OS === 'web' ? { minHeight: '100dvh' as unknown as number } : null),
-  },
-  scrollView: {
-    flexGrow: 1,
-  },
   /** The step column: Bloom's housing publish template's 680 column, the progress 32 above the step. */
   scrollContent: {
     width: '100%',

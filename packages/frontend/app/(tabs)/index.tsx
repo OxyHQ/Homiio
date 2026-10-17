@@ -62,6 +62,7 @@ import { EmptyState } from '@oxy.so/bloom/empty-state';
 import { SurfaceFade } from '@oxy.so/bloom/fill';
 import { Shelf, ShelfSkeleton } from '@oxy.so/bloom/media-shelf';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { H1, P } from '@oxy.so/bloom/typography';
 
 import { formatRelativeDate, serializeLocationToken, type Property } from '@homiio/shared-types';
@@ -170,154 +171,161 @@ export default function HomePage() {
     ));
 
   return (
-    <>
-      {/* Over the hero: the photo runs behind it (and behind the notch). */}
-      <PageHeader
-        placement="overlap"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-      />
-
-      {/* The hero does NOT clip: the wide search bar's panel drops below it,
+    <Screen
+      documentScroll
+      header={
+        // Over the hero: the photo runs behind it (and behind the notch).
+        <PageHeader
+          placement="overlap"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        />
+      }
+    >
+      <ScreenScrollView>
+        {/* The hero does NOT clip: the wide search bar's panel drops below it,
           over the sections. The photo clips in its own layer instead, and the
           hero lifts above the sections while a panel is open (RN-Web gives
           every View `z-index: 0`, so a later sibling would paint over it). */}
-      <View
-        className="relative h-[320px] w-full justify-end md:h-[360px] xl:h-[400px]"
-        style={{ zIndex: searchStep !== null ? 10 : 0 }}
-      >
-        <View className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
-          <Image
-            source={heroPhoto}
-            className="absolute inset-0"
-            contentFit="cover"
-            transition={300}
-          />
-          {/* The photo ends in the panel's own colour, not a black scrim. */}
-          <SurfaceFade edge="bottom" size={0.6} />
+        <View
+          className="relative h-[320px] w-full justify-end md:h-[360px] xl:h-[400px]"
+          style={{ zIndex: searchStep !== null ? 10 : 0 }}
+        >
+          <View className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
+            <Image
+              source={heroPhoto}
+              className="absolute inset-0"
+              contentFit="cover"
+              transition={300}
+            />
+            {/* The photo ends in the panel's own colour, not a black scrim. */}
+            <SurfaceFade edge="bottom" size={0.6} />
+          </View>
+
+          <View className="w-full items-start gap-3 px-4 pb-4 md:items-center md:px-8">
+            <H1 className="text-display-4-bold text-foreground md:text-center lg:text-display-3-bold">
+              {t(`home.hero.title.${browseMode}`)}
+            </H1>
+            <View className="z-20 w-full max-w-[880px] self-center">
+              <HomeSearch
+                query={heroSearchSeed}
+                openStep={searchStep}
+                onOpenStepChange={setSearchStep}
+                // Explore by mode: the tabs switch the offering Home browses — the
+                // same selection as the sidebar — and the scoped sections follow.
+                modeTabs="segmented"
+                onModeChange={setBrowseMode}
+                // The first segment IS the scope statement (see the header).
+                where="scope"
+                onSubmit={(query) => {
+                  const href = exploreHref(query);
+                  if (!href) return;
+                  useSearchQueryStore.getState().replaceSearch(query);
+                  router.push(href);
+                }}
+                // Closing the bar keeps what it shows: the edited query becomes
+                // the live one without navigating.
+                onApply={(query) => useSearchQueryStore.getState().replaceSearch(query)}
+              />
+            </View>
+          </View>
         </View>
 
-        <View className="w-full items-start gap-3 px-4 pb-4 md:items-center md:px-8">
-          <H1 className="text-display-4-bold text-foreground md:text-center lg:text-display-3-bold">
-            {t(`home.hero.title.${browseMode}`)}
-          </H1>
-          <View className="z-20 w-full max-w-[880px] self-center">
-            <HomeSearch
-              query={heroSearchSeed}
-              openStep={searchStep}
-              onOpenStepChange={setSearchStep}
-              // Explore by mode: the tabs switch the offering Home browses — the
-              // same selection as the sidebar — and the scoped sections follow.
-              modeTabs="segmented"
-              onModeChange={setBrowseMode}
-              // The first segment IS the scope statement (see the header).
-              where="scope"
-              onSubmit={(query) => {
-                const href = exploreHref(query);
-                if (!href) return;
-                useSearchQueryStore.getState().replaceSearch(query);
-                router.push(href);
-              }}
-              // Closing the bar keeps what it shows: the edited query becomes
-              // the live one without navigating.
-              onApply={(query) => useSearchQueryStore.getState().replaceSearch(query)}
+        <View className="gap-10 pb-14 pt-6" style={{ paddingHorizontal: GUTTER }}>
+          {/* Where an area came from, when Homiio inferred it rather than being
+            told. Above the sections it describes, said once, with the one-tap
+            way to change it. */}
+          <ApproximateAreaNotice scope={scope} onChangeArea={() => setSearchStep('where')} />
+
+          {/* NO mandatory picker: with no area, Home offers real destinations. */}
+          {surface === 'discovery' ? (
+            <HomeDiscoveryBoard onChoose={scope.choose} contentInset={GUTTER} />
+          ) : null}
+
+          {/* Served from the offline snapshot: said once, above what it describes. */}
+          {home.staleAt && surface === 'sections' ? (
+            <P className="text-sm text-muted-foreground">
+              {t('location.scope.showingCached', {
+                when: formatRelativeDate(home.staleAt, locale),
+              })}
+            </P>
+          ) : null}
+
+          {surface === 'loading' ? (
+            <>
+              <ShelfSkeleton itemWidth={CARD_WIDTH} count={4} />
+              <ShelfSkeleton itemWidth={CARD_WIDTH} count={4} />
+            </>
+          ) : null}
+
+          {surface === 'failed' ? (
+            <EmptyState
+              title={t('home.sections.error')}
+              action={{ label: t('common.retry'), onPress: home.refresh }}
+            />
+          ) : null}
+
+          {sections.map((section) => (
+            <Shelf
+              key={section.id}
+              title={t(`home.sections.${section.id}.title`)}
+              itemWidth={CARD_WIDTH}
+              contentInset={GUTTER}
+              onTitlePress={exploreScopedHref ? openExplore : undefined}
+            >
+              {propertyCards(section.items)}
+            </Shelf>
+          ))}
+
+          {surface === 'empty' ? (
+            <EmptyState
+              title={t('home.empty.title')}
+              description={t('home.empty.body')}
+              action={{ label: t('home.empty.changeFilters'), onPress: openExplore }}
+              secondaryAction={
+                scope.isGlobal
+                  ? undefined
+                  : { label: t('location.scope.exploreGlobal'), onPress: scope.exploreGlobal }
+              }
+            />
+          ) : null}
+
+          {/* Your own things. Deliberately NOT scoped: a home you were looking at
+            last week is yours wherever you are standing today. */}
+          {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
+            <Shelf
+              title={t('home.recentlyViewed.continue')}
+              itemWidth={CARD_WIDTH}
+              contentInset={GUTTER}
+            >
+              {propertyCards(recentlyViewedProperties)}
+            </Shelf>
+          ) : null}
+
+          {savedHomes && savedHomes.length > 0 ? (
+            <Shelf title={t('home.saved.title')} itemWidth={CARD_WIDTH} contentInset={GUTTER}>
+              {propertyCards(savedHomes)}
+            </Shelf>
+          ) : null}
+
+          <View className="gap-6 md:flex-row md:gap-8">
+            <CtaBanner
+              title={t(`home.hostCta.${browseMode}.title`)}
+              subtitle={t(`home.hostCta.${browseMode}.subtitle`)}
+              ctaLabel={t(`home.hostCta.${browseMode}.cta`)}
+              image={HOST_CTA_IMAGE}
+              onPress={() => router.push('/properties/create')}
+            />
+            <CtaBanner
+              title={t('agent.banner.title')}
+              subtitle={t('agent.banner.subtitle')}
+              ctaLabel={t('agent.banner.cta')}
+              image={AGENT_CTA_IMAGE}
+              trustLine={t('agent.banner.trust')}
+              onPress={() => router.push('/agent')}
             />
           </View>
         </View>
-      </View>
-
-      <View className="gap-10 pb-14 pt-6" style={{ paddingHorizontal: GUTTER }}>
-        {/* Where an area came from, when Homiio inferred it rather than being
-            told. Above the sections it describes, said once, with the one-tap
-            way to change it. */}
-        <ApproximateAreaNotice scope={scope} onChangeArea={() => setSearchStep('where')} />
-
-        {/* NO mandatory picker: with no area, Home offers real destinations. */}
-        {surface === 'discovery' ? (
-          <HomeDiscoveryBoard onChoose={scope.choose} contentInset={GUTTER} />
-        ) : null}
-
-        {/* Served from the offline snapshot: said once, above what it describes. */}
-        {home.staleAt && surface === 'sections' ? (
-          <P className="text-sm text-muted-foreground">
-            {t('location.scope.showingCached', { when: formatRelativeDate(home.staleAt, locale) })}
-          </P>
-        ) : null}
-
-        {surface === 'loading' ? (
-          <>
-            <ShelfSkeleton itemWidth={CARD_WIDTH} count={4} />
-            <ShelfSkeleton itemWidth={CARD_WIDTH} count={4} />
-          </>
-        ) : null}
-
-        {surface === 'failed' ? (
-          <EmptyState
-            title={t('home.sections.error')}
-            action={{ label: t('common.retry'), onPress: home.refresh }}
-          />
-        ) : null}
-
-        {sections.map((section) => (
-          <Shelf
-            key={section.id}
-            title={t(`home.sections.${section.id}.title`)}
-            itemWidth={CARD_WIDTH}
-            contentInset={GUTTER}
-            onTitlePress={exploreScopedHref ? openExplore : undefined}
-          >
-            {propertyCards(section.items)}
-          </Shelf>
-        ))}
-
-        {surface === 'empty' ? (
-          <EmptyState
-            title={t('home.empty.title')}
-            description={t('home.empty.body')}
-            action={{ label: t('home.empty.changeFilters'), onPress: openExplore }}
-            secondaryAction={
-              scope.isGlobal
-                ? undefined
-                : { label: t('location.scope.exploreGlobal'), onPress: scope.exploreGlobal }
-            }
-          />
-        ) : null}
-
-        {/* Your own things. Deliberately NOT scoped: a home you were looking at
-            last week is yours wherever you are standing today. */}
-        {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
-          <Shelf
-            title={t('home.recentlyViewed.continue')}
-            itemWidth={CARD_WIDTH}
-            contentInset={GUTTER}
-          >
-            {propertyCards(recentlyViewedProperties)}
-          </Shelf>
-        ) : null}
-
-        {savedHomes && savedHomes.length > 0 ? (
-          <Shelf title={t('home.saved.title')} itemWidth={CARD_WIDTH} contentInset={GUTTER}>
-            {propertyCards(savedHomes)}
-          </Shelf>
-        ) : null}
-
-        <View className="gap-6 md:flex-row md:gap-8">
-          <CtaBanner
-            title={t(`home.hostCta.${browseMode}.title`)}
-            subtitle={t(`home.hostCta.${browseMode}.subtitle`)}
-            ctaLabel={t(`home.hostCta.${browseMode}.cta`)}
-            image={HOST_CTA_IMAGE}
-            onPress={() => router.push('/properties/create')}
-          />
-          <CtaBanner
-            title={t('agent.banner.title')}
-            subtitle={t('agent.banner.subtitle')}
-            ctaLabel={t('agent.banner.cta')}
-            image={AGENT_CTA_IMAGE}
-            trustLine={t('agent.banner.trust')}
-            onPress={() => router.push('/agent')}
-          />
-        </View>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }

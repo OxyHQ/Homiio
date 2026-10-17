@@ -37,6 +37,7 @@ import {
   RiWrenchLine,
 } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { RadioCard } from '@oxy.so/bloom/radio';
 import { useTheme, withAlpha } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
@@ -188,15 +189,19 @@ export default function DonatePage() {
   };
 
   return (
-    <>
-      <PageHeader
-        title={t('donations.page.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.scrollContent}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('donations.page.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.scrollContent}>
         {/* Hero — preserved. */}
         <LinearGradient
           colors={[colors.info, withAlpha(colors.info, 0.56)]}
@@ -312,8 +317,8 @@ export default function DonatePage() {
             </View>
           </Section>
         </View>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

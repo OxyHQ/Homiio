@@ -30,6 +30,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { PhoneInput, findCountry } from '@oxy.so/bloom/phone-input';
 import { TextField, TextFieldIcon, TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
@@ -380,15 +381,19 @@ export default function ApplyToRentScreen() {
   };
 
   return (
-    <>
-      <PageHeader
-        title={t('applications.apply.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.scrollContent}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('applications.apply.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {property && (
           <Card radius="radius-16" appearance="outline">
             <CardHeader>
@@ -652,8 +657,8 @@ export default function ApplyToRentScreen() {
         >
           {t('applications.actions.submit')}
         </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -674,7 +679,7 @@ function Section({
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
+  content: {
     width: '100%',
     maxWidth: 720,
     alignSelf: 'center',

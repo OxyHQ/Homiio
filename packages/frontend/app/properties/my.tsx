@@ -15,7 +15,7 @@
  * to each card via the grid's `renderFooter` slot. Delete confirmation uses the
  * Bloom `confirm()` surface (the RN `Alert` it replaced is a no-op on web).
  */
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -30,6 +30,7 @@ import {
   RiHomeLine,
 } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -282,24 +283,28 @@ export default function MyPropertiesScreen() {
   })();
 
   return (
-    <>
-      <PropertyListHeader
-        title={t('properties.my.title')}
-        right={
-          <Button
-            size="sm"
-            onPress={handleCreateProperty}
-            leadingIcon={RiAddLine}
-            accessibilityLabel={t('properties.my.createFirst')}
-            tone="accent"
-            appearance="solid"
-          >
-            {t('common.add')}
-          </Button>
-        }
-      />
-      <View style={styles.scrollContent}>{body}</View>
-    </>
+    <Screen
+      documentScroll
+      header={
+        <PropertyListHeader
+          title={t('properties.my.title')}
+          right={
+            <Button
+              size="sm"
+              onPress={handleCreateProperty}
+              leadingIcon={RiAddLine}
+              accessibilityLabel={t('properties.my.createFirst')}
+              tone="accent"
+              appearance="solid"
+            >
+              {t('common.add')}
+            </Button>
+          }
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.scrollContent}>{body}</ScreenScrollView>
+    </Screen>
   );
 }
 

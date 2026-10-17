@@ -5,7 +5,7 @@
  * Homiio's `AppShell` and a Bloom `PageHeader` stay the frame; the template's
  * `HousingHeader` is not adopted. The header leads to Notes and to the alert history.
  */
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +18,7 @@ import {
   RiNotification3Line,
 } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 
 import { SavedPageBody } from '@/components/saved/SavedPageBody';
@@ -29,40 +30,44 @@ export default function SavedScreen() {
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
   return (
-    <>
-      <PageHeader
-        title={t('saved.header')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        actions={
-          isAuthed ? (
-            <>
-              <Button
-                iconOnly
-                leadingIcon={RiFileTextLine}
-                accessibilityLabel={t('saved.notes.title')}
-                onPress={() => router.push('/saved/notes')}
-                tone="accent"
-                appearance="subtle"
-              />
-              {/* The alert history spans every saved search, so it lives on
-                  the page header; one search's settings open from its card. */}
-              <Button
-                iconOnly
-                leadingIcon={RiNotification3Line}
-                accessibilityLabel={t('alerts.history.title')}
-                onPress={() => router.push('/saved/alerts')}
-                tone="accent"
-                appearance="subtle"
-              />
-            </>
-          ) : undefined
-        }
-      />
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('saved.header')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          actions={
+            isAuthed ? (
+              <>
+                <Button
+                  iconOnly
+                  leadingIcon={RiFileTextLine}
+                  accessibilityLabel={t('saved.notes.title')}
+                  onPress={() => router.push('/saved/notes')}
+                  tone="accent"
+                  appearance="subtle"
+                />
+                {/* The alert history spans every saved search, so it lives on
+                      the page header; one search's settings open from its card. */}
+                <Button
+                  iconOnly
+                  leadingIcon={RiNotification3Line}
+                  accessibilityLabel={t('alerts.history.title')}
+                  onPress={() => router.push('/saved/alerts')}
+                  tone="accent"
+                  appearance="subtle"
+                />
+              </>
+            ) : undefined
+          }
+        />
+      }
+    >
       {isAuthed ? (
         <SavedPageBody enabled />
       ) : (
-        <View style={styles.centerWrap}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiLockLine}
             title={t('profile.signInRequired')}
@@ -71,12 +76,12 @@ export default function SavedScreen() {
             actionIcon={RiLoginBoxLine}
             onAction={() => openAccountDialog()}
           />
-        </View>
+        </ScreenScrollView>
       )}
-    </>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  centerWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  centerWrap: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
 });

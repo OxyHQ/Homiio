@@ -17,6 +17,7 @@ import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
 import { RiAlertLine, RiCalendarLine, RiNewspaperLine, RiTimeLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
@@ -155,15 +156,19 @@ export default function TipsScreen() {
   );
 
   return (
-    <>
-      <PageHeader
-        title={t('home.tips.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('home.tips.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
           <SectionEyebrow>{t('home.tips.eyebrow')}</SectionEyebrow>
           <H2 style={styles.title}>{t('home.tips.title')}</H2>
@@ -237,8 +242,8 @@ export default function TipsScreen() {
             ) : null}
           </View>
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

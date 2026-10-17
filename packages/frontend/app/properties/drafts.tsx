@@ -38,6 +38,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H4, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
@@ -284,13 +285,17 @@ export default function PropertyDraftsScreen() {
   })();
 
   return (
-    <>
-      <PropertyListHeader
-        title={t('property.drafts.title')}
-        subtitle={drafts.length > 0 ? `${drafts.length} saved` : undefined}
-      />
-      <View style={styles.scrollContent}>{body}</View>
-    </>
+    <Screen
+      documentScroll
+      header={
+        <PropertyListHeader
+          title={t('property.drafts.title')}
+          subtitle={drafts.length > 0 ? `${drafts.length} saved` : undefined}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.scrollContent}>{body}</ScreenScrollView>
+    </Screen>
   );
 }
 

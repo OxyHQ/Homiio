@@ -13,6 +13,7 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { RiAlertLine, RiEditBoxLine, RiMapPinLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H1, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
@@ -29,15 +30,19 @@ export default function ReviewExploreScreen() {
   const cities = citiesQuery.data ?? [];
 
   return (
-    <>
-      <PageHeader
-        title={t('reviews.explore.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('reviews.explore.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.intro}>
           <H1 style={styles.introTitle}>{t('reviews.explore.heroTitle')}</H1>
           <BloomText className="text-muted-foreground" style={styles.introText}>
@@ -90,8 +95,8 @@ export default function ReviewExploreScreen() {
             ))}
           </ExploreList>
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

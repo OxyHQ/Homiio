@@ -12,12 +12,13 @@
  * old `SearchBar` + view-mode toggle were removed. The "clear history" action is
  * preserved as a header action.
  */
-import React, { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback } from 'react';
+import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
 import { Button } from '@oxy.so/bloom/button';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -88,30 +89,34 @@ export default function RecentlyViewedScreen() {
   })();
 
   return (
-    <>
-      <PropertyListHeader
-        title={t('home.recentlyViewed.title')}
-        subtitle={
-          properties.length > 0
-            ? `${t('home.recentlyViewed.results')}: ${properties.length}`
-            : undefined
-        }
-        right={
-          properties.length > 0 ? (
-            <Button
-              size="sm"
-              onPress={handleClear}
-              accessibilityLabel={t('common.clear')}
-              tone="accent"
-              appearance="subtle"
-            >
-              {t('common.clear')}
-            </Button>
-          ) : undefined
-        }
-      />
-      <View style={styles.scrollContent}>{body}</View>
-    </>
+    <Screen
+      documentScroll
+      header={
+        <PropertyListHeader
+          title={t('home.recentlyViewed.title')}
+          subtitle={
+            properties.length > 0
+              ? `${t('home.recentlyViewed.results')}: ${properties.length}`
+              : undefined
+          }
+          right={
+            properties.length > 0 ? (
+              <Button
+                size="sm"
+                onPress={handleClear}
+                accessibilityLabel={t('common.clear')}
+                tone="accent"
+                appearance="subtle"
+              >
+                {t('common.clear')}
+              </Button>
+            ) : undefined
+          }
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.scrollContent}>{body}</ScreenScrollView>
+    </Screen>
   );
 }
 

@@ -24,11 +24,11 @@ import { Card } from '@oxy.so/bloom/card';
 import { RiMapPinLine, RiNotification3Line, RiPauseLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AlertExplanationText } from '@/components/watches/AlertExplanationText';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { useHousingAlerts, type HousingAlert } from '@/hooks/useHousingAlerts';
 import { contentClamp, spacing } from '@/constants/styles';
 import { useFormatting } from '@/utils/format';
@@ -89,27 +89,27 @@ export default function AlertHistoryScreen() {
     }));
   }, [data, locale, timeZone]);
 
+  const header = (
+    <PageHeader
+      title={t('alerts.history.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+    />
+  );
+
   if (isLoading) {
     return (
-      <>
-        <PageHeader
-          title={t('alerts.history.title')}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        />
-        <Loading style={styles.loading} />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <Loading style={styles.loading} />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      <PageHeader
-        title={t('alerts.history.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-      />
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content} onEndReached={loadMore}>
         {groups.length === 0 ? (
           <EmptyState
             icon={RiNotification3Line}
@@ -128,9 +128,8 @@ export default function AlertHistoryScreen() {
             </View>
           ))
         )}
-        <LoadMoreSentinel onLoadMore={loadMore} enabled={Boolean(hasNextPage)} />
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

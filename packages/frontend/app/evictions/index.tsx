@@ -26,7 +26,7 @@
  * note → the filter row, led by the area chip (`AreaChip`: the area stated, its
  * picker behind it) beside the count → status and help-need filters → sort →
  * `EvictionCard` list (Bloom `EvictionReportCard`s). Paginates through
- * `LoadMoreSentinel` at the end of the list (the shell owns scrolling).
+ * `ScreenScrollView`'s `onEndReached`.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native';
@@ -40,6 +40,7 @@ import { Chip } from '@oxy.so/bloom/chip';
 import { RiAddLine, RiAlertLine, RiListUnordered, RiMapPinLine } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
@@ -54,7 +55,6 @@ import Map from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { AreaChip } from '@/components/location/AreaChip';
 import { useLocationScope } from '@/hooks/useLocationScope';
 import { useEvictions } from '@/hooks/useEvictionQueries';
@@ -281,35 +281,38 @@ export default function EvictionsBoardScreen() {
           />
         ))}
         {isFetchingNextPage ? <ListSkeleton rows={1} rowHeight={240} /> : null}
-        <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
       </View>
     );
   };
 
   return (
-    <>
-      <PageHeader
-        title={t('evictions.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        actions={
-          <>
-            {boardScope ? (
-              <Button
-                size="sm"
-                onPress={() => setShowMap((prev) => !prev)}
-                leadingIcon={showMap ? RiListUnordered : RiMapPinLine}
-                accessibilityLabel={showMap ? t('evictions.showList') : t('evictions.showMap')}
-                tone="neutral"
-                appearance="outline"
-              >
-                {showMap ? t('evictions.showList') : t('evictions.showMap')}
-              </Button>
-            ) : null}
-            {publishButton}
-          </>
-        }
-      />
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('evictions.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          actions={
+            <>
+              {boardScope ? (
+                <Button
+                  size="sm"
+                  onPress={() => setShowMap((prev) => !prev)}
+                  leadingIcon={showMap ? RiListUnordered : RiMapPinLine}
+                  accessibilityLabel={showMap ? t('evictions.showList') : t('evictions.showMap')}
+                  tone="neutral"
+                  appearance="outline"
+                >
+                  {showMap ? t('evictions.showList') : t('evictions.showMap')}
+                </Button>
+              ) : null}
+              {publishButton}
+            </>
+          }
+        />
+      }
+    >
       {showMap && boardScope ? (
         <View className="relative h-[75vh]">
           <Map
@@ -321,7 +324,7 @@ export default function EvictionsBoardScreen() {
           />
         </View>
       ) : (
-        <View style={styles.content}>
+        <ScreenScrollView contentContainerStyle={styles.content} onEndReached={handleEndReached}>
           <View style={styles.titleBlock}>
             <SectionEyebrow>{t('evictions.eyebrow')}</SectionEyebrow>
             <H2 style={styles.title}>{t('evictions.title')}</H2>
@@ -401,9 +404,9 @@ export default function EvictionsBoardScreen() {
           ) : null}
 
           {listBody()}
-        </View>
+        </ScreenScrollView>
       )}
-    </>
+    </Screen>
   );
 }
 

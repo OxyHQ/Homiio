@@ -6,7 +6,8 @@
  * address), and the submit → `CreateReviewPayload`. Each step is a component
  * under `components/reviews/write/`. Bloom's `wizard` draws the frame: the
  * `WizardProgress` bar names the step at the top of the page, and the
- * `WizardFooter` under it is Back / Next (Submit on the last step).
+ * `WizardFooter` pinned as the Screen's bottom bar is Back / Next (Submit on
+ * the last step).
  *
  * Hard-required steps gate `Next`/`Submit` (address, price + dates, title +
  * opinion, rating + recommendation); every dimension step is skippable. On
@@ -24,6 +25,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { WizardFooter, WizardProgress, type WizardStep } from '@oxy.so/bloom/wizard';
 import { useOxy } from '@oxy.so/services';
@@ -61,7 +63,7 @@ const MIN_TITLE_LENGTH = 5;
 const MIN_OPINION_LENGTH = 10;
 
 const WriteReviewSkeleton: React.FC = () => (
-  <View style={styles.content}>
+  <>
     {Array.from({ length: 3 }).map((_, idx) => (
       <View key={idx} style={styles.skeletonBlock}>
         <Skeleton.Text style={{ width: 200, lineHeight: 20 }} />
@@ -69,7 +71,7 @@ const WriteReviewSkeleton: React.FC = () => (
         <Skeleton.Box width="100%" height={48} borderRadius={radius.md} />
       </View>
     ))}
-  </View>
+  </>
 );
 
 /** The fields of `GET /api/addresses/:id` the prefill reads. */
@@ -155,25 +157,27 @@ export default function WriteReviewPage() {
 
   if (addressQuery.isLoading) {
     return (
-      <>
-        <WriteReviewHeader />
-        <WriteReviewSkeleton />
-      </>
+      <Screen documentScroll header={<WriteReviewHeader />}>
+        <ScreenScrollView contentContainerStyle={styles.content}>
+          <WriteReviewSkeleton />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (addressQuery.isError) {
     return (
-      <>
-        <WriteReviewHeader />
-        <ErrorState
-          icon={RiAlertLine}
-          title={t('reviews.write.loadAddressFailed')}
-          description={t('reviews.write.loadAddressFailed')}
-          retryLabel={t('common.goBack')}
-          onRetry={() => router.back()}
-        />
-      </>
+      <Screen documentScroll header={<WriteReviewHeader />}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('reviews.write.loadAddressFailed')}
+            description={t('reviews.write.loadAddressFailed')}
+            retryLabel={t('common.goBack')}
+            onRetry={() => router.back()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -376,9 +380,24 @@ function WriteReviewWizard({ initialData }: { initialData: ReviewWizardData }) {
   };
 
   return (
-    <>
-      <WriteReviewHeader />
-      <View style={styles.content}>
+    <Screen
+      documentScroll
+      header={<WriteReviewHeader />}
+      bottomBar={
+        <WizardFooter
+          sticky={false}
+          onBack={step > 0 ? goBack : undefined}
+          backLabel={t('common.back')}
+          backDisabled={submitting}
+          onNext={step === LAST_STEP ? handleSubmit : goNext}
+          nextLabel={step === LAST_STEP ? t('reviews.write.submit') : t('common.next')}
+          nextDisabled={!canProceed}
+          loading={step === LAST_STEP && submitting}
+          testID="review-wizard-footer"
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <WizardProgress
           steps={wizardSteps}
           current={step}
@@ -389,18 +408,8 @@ function WriteReviewWizard({ initialData }: { initialData: ReviewWizardData }) {
         />
         {renderStep()}
         {submitError ? <Admonition type="error">{submitError}</Admonition> : null}
-      </View>
-      <WizardFooter
-        onBack={step > 0 ? goBack : undefined}
-        backLabel={t('common.back')}
-        backDisabled={submitting}
-        onNext={step === LAST_STEP ? handleSubmit : goNext}
-        nextLabel={step === LAST_STEP ? t('reviews.write.submit') : t('common.next')}
-        nextDisabled={!canProceed}
-        loading={step === LAST_STEP && submitting}
-        testID="review-wizard-footer"
-      />
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

@@ -10,6 +10,7 @@ import { Button } from '@oxy.so/bloom/button';
 import { Field } from '@oxy.so/bloom/field';
 import { RiDeleteBinLine, RiFolderOpenLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { toast } from '@oxy.so/bloom/toast';
@@ -44,26 +45,32 @@ export default function EditFolderScreen() {
 
   if (!folder) {
     return (
-      <>
-        <PageHeader
-          title={t('saved.title')}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-          onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
-        />
-        {isLoading ? (
-          <View style={styles.form}>
-            <ListSkeleton rows={3} rowHeight={56} />
-          </View>
-        ) : (
-          <EmptyState
-            icon={RiFolderOpenLine}
-            title={t('saved.noFolder')}
-            description={t('saved.noFolderDescription')}
+      <Screen
+        documentScroll
+        header={
+          <PageHeader
+            title={t('saved.title')}
+            titleAlign="center"
+            leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+            onBack={router.canGoBack() ? router.back : undefined}
+            backLabel={t('goBack')}
           />
-        )}
-      </>
+        }
+      >
+        <ScreenScrollView>
+          {isLoading ? (
+            <View style={styles.form}>
+              <ListSkeleton rows={3} rowHeight={56} />
+            </View>
+          ) : (
+            <EmptyState
+              icon={RiFolderOpenLine}
+              title={t('saved.noFolder')}
+              description={t('saved.noFolderDescription')}
+            />
+          )}
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -140,15 +147,19 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
   };
 
   return (
-    <>
-      <PageHeader
-        title={`${emoji} ${folder.isDefault ? t('saved.defaultFolder') : t('saved.editFolder')}`}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.form}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={`${emoji} ${folder.isDefault ? t('saved.defaultFolder') : t('saved.editFolder')}`}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.form}>
         <Field label={t('common.emoji')}>
           <TextFieldInput
             label={t('common.emoji')}
@@ -194,8 +205,8 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
             {t('saved.folders.deleteTitle')}
           </Button>
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

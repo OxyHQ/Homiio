@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -270,9 +271,8 @@ export default function ViewingsPage() {
 
   if (!isAuthed) {
     return (
-      <>
-        {header}
-        <View style={styles.emptyWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiCalendarLine}
             title="Sign in to see your viewings"
@@ -281,15 +281,14 @@ export default function ViewingsPage() {
             actionIcon={RiLoginBoxLine}
             onAction={() => openAccountDialog()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
           <SectionEyebrow>Upcoming visits</SectionEyebrow>
           <H2 style={styles.title}>Your viewings</H2>
@@ -351,8 +350,8 @@ export default function ViewingsPage() {
             ))}
           </View>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -373,7 +372,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   emptyWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   listWrap: {

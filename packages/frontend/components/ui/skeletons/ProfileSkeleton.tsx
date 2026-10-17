@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { TextLines } from './TextLines';
 
@@ -10,7 +10,7 @@ interface ProfileSkeletonProps {
 
 export function ProfileSkeleton({ showHeader = true, showActions = true }: ProfileSkeletonProps) {
   return (
-    <ScrollView className="flex-1 bg-background">
+    <View>
       {showHeader && (
         <View style={{ padding: 16, alignItems: 'center' }}>
           {/* Profile Picture */}
@@ -100,6 +100,6 @@ export function ProfileSkeleton({ showHeader = true, showActions = true }: Profi
           ))}
         </View>
       </View>
-    </ScrollView>
+    </View>
   );
 }

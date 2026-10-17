@@ -7,8 +7,7 @@
  * and the recency chips narrow the whole set before it is grouped.
  *
  * Saved has no paginated list endpoint, so the groups reveal the in-memory list
- * a window at a time: the shared sentinel on web, and on native the screen's
- * own `onScroll`, which bumps `loadMoreSignal`.
+ * a window at a time: the page's `onEndReached` bumps `loadMoreSignal`.
  */
 import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
@@ -24,7 +23,6 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
 import type { Property } from '@homiio/shared-types';
 
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -105,15 +103,10 @@ export function SavedHomesSection({
 
   const [visibleCount, setVisibleCount] = useState(INITIAL_WINDOW);
   const hasMore = visibleCount < filtered.length;
-  const loadMore = useCallback(() => {
-    setVisibleCount((count) =>
-      count < filtered.length ? Math.min(count + WINDOW_STEP, filtered.length) : count,
-    );
-  }, [filtered.length]);
 
   // Both adjustments use the "adjust state during render" pattern, so neither
-  // needs an effect: a new filter set resets the window, and a new native
-  // end-of-scroll signal grows it.
+  // needs an effect: a new filter set resets the window, and a new
+  // end-of-page signal grows it.
   const signature = `${searchQuery}|${recency}`;
   const [prevSignature, setPrevSignature] = useState(signature);
   if (signature !== prevSignature) {
@@ -225,7 +218,6 @@ export function SavedHomesSection({
                 />
               </View>
             ))}
-            <LoadMoreSentinel enabled={hasMore} onLoadMore={loadMore} />
           </View>
         )}
       </>

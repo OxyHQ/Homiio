@@ -10,7 +10,6 @@
  * `FileManagement` in Settings). This screen no longer hand-rolls a picker.
  */
 import { useCallback } from 'react';
-import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';
@@ -18,6 +17,7 @@ import { getNativeLanguageName } from '@oxy.so/core';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { RiGlobalLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
 import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
@@ -40,15 +40,19 @@ export default function LanguageSettingsScreen() {
     .join(', ');
 
   return (
-    <>
-      <PageHeader
-        title={t('settings.language.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={settingsScreenStyles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('settings.language.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={settingsScreenStyles.content}>
         <SettingsListGroup title={t('settings.language.choose')}>
           <SettingsListItem
             icon={<SettingsRowIcon icon={RiGlobalLine} />}
@@ -57,7 +61,7 @@ export default function LanguageSettingsScreen() {
             onPress={openLanguageSelector}
           />
         </SettingsListGroup>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }

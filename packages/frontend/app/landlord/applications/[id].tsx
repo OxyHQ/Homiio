@@ -19,6 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useFormatting } from '@/utils/format';
 import { toast } from '@oxy.so/bloom/toast';
 import { Button } from '@oxy.so/bloom/button';
@@ -217,56 +218,60 @@ export default function LandlordApplicationDetailScreen() {
 
   if (!id) {
     return (
-      <>
-        {header}
-        <ErrorState
-          icon={RiErrorWarningFill}
-          title={t('applications.landlord.invalidTitle')}
-          description={t('applications.landlord.invalidDescription')}
-          onRetry={() => router.back()}
-          retryLabel={t('goBack')}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiErrorWarningFill}
+            title={t('applications.landlord.invalidTitle')}
+            description={t('applications.landlord.invalidDescription')}
+            onRetry={() => router.back()}
+            retryLabel={t('goBack')}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (applicationQuery.isPending) {
     return (
-      <>
-        {header}
-        <DetailSkeleton />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <DetailSkeleton />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (applicationQuery.isError || !application) {
     return (
-      <>
-        {header}
-        <ErrorState
-          icon={RiAlertLine}
-          title={t('applications.landlord.unavailableTitle')}
-          description={
-            applicationQuery.error?.message ?? t('applications.landlord.unavailableDescription')
-          }
-          onRetry={() => applicationQuery.refetch()}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('applications.landlord.unavailableTitle')}
+            description={
+              applicationQuery.error?.message ?? t('applications.landlord.unavailableDescription')
+            }
+            onRetry={() => applicationQuery.refetch()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (!isLandlord) {
     return (
-      <>
-        {header}
-        <ErrorState
-          icon={RiLockLine}
-          title={t('applications.landlord.notAuthorisedTitle')}
-          description={t('applications.landlord.notAuthorisedDescription')}
-          onRetry={() => router.back()}
-          retryLabel={t('goBack')}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiLockLine}
+            title={t('applications.landlord.notAuthorisedTitle')}
+            description={t('applications.landlord.notAuthorisedDescription')}
+            onRetry={() => router.back()}
+            retryLabel={t('goBack')}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -290,9 +295,8 @@ export default function LandlordApplicationDetailScreen() {
     application.status === TenantApplicationStatus.REVIEWING;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.applicantHeader}>
           <Avatar size={56} name={applicantName} source={applicantAvatar ?? null} variant="thumb" />
           <View style={styles.applicantHeaderText}>
@@ -388,7 +392,7 @@ export default function LandlordApplicationDetailScreen() {
             </Button>
           </View>
         ) : null}
-      </View>
+      </ScreenScrollView>
 
       <Dialog
         placement="center"
@@ -427,7 +431,7 @@ export default function LandlordApplicationDetailScreen() {
           placeholder={t('applications.landlord.notesPlaceholder')}
         />
       </Dialog>
-    </>
+    </Screen>
   );
 }
 

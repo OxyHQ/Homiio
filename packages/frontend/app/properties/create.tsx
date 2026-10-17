@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useReferralStore } from '@/store/referralStore';
@@ -10,6 +10,7 @@ import { Button } from '@oxy.so/bloom/button';
 import { RiArrowLeftLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { WizardFooter, WizardProgress, type WizardStep } from '@oxy.so/bloom/wizard';
@@ -38,9 +39,8 @@ import {
  * under `components/property/create`.
  *
  * Frame: `WizardProgress` names the step at the top of the page, and
- * `WizardFooter` (Back / Next, Publish on the last step) follows the step
- * content; on web it is sticky to the bottom of the document scroll. The live preview and
- * the quality checklist are the right rail's (`PropertyPreviewWidget`); below
+ * `WizardFooter` (Back / Next, Publish on the last step) is the screen's pinned
+ * bottom bar. The live preview and the quality checklist are the right rail's (`PropertyPreviewWidget`); below
  * the rail's breakpoint the Preview step draws them.
  *
  * Drafts: advancing a step saves the form to the named, listable draft
@@ -167,10 +167,10 @@ export default function CreatePropertyScreen() {
   });
 
   // --- Navigation -------------------------------------------------------------
-  // The shell owns the scroll: on web that is the document (`scrollTo` is a
-  // no-op where there is no window to scroll).
+  // The screen's scroller: the window on web, the scroll view on native.
+  const scrollRef = useRef<ScrollView>(null);
   const scrollToTop = useCallback(() => {
-    globalThis.scrollTo?.(0, 0);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, []);
 
   const isLastStep = stepIndex === steps.length - 1;
@@ -231,59 +231,70 @@ export default function CreatePropertyScreen() {
   );
 
   const title = isEditMode ? t('propertyCreate.title.edit') : t('propertyCreate.title.create');
+  const header = (
+    <PageHeader
+      title={title}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
 
   // Show loading state when in edit mode and property is loading
   if (isEditMode && propertyLoading) {
     return (
-      <>
-        <PageHeader
-          title={title}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-          onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
-        />
-        <View style={styles.centeredState}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centeredState}>
           <Loading size="lg" text={t('propertyCreate.loading')} />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   // Show error state if property failed to load in edit mode
   if (isEditMode && propertyError) {
     return (
-      <>
-        <PageHeader
-          title={title}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-          onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
-        />
-        <View style={styles.centeredState}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centeredState}>
           <Admonition type="error">
             {t('propertyCreate.loadError', { error: propertyError || t('property.notFound') })}
           </Admonition>
           <Button leadingIcon={RiArrowLeftLine} onPress={() => router.back()}>
             {t('common.goBack')}
           </Button>
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      <PageHeader
-        title={title}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-
-      <View style={styles.scrollContent}>
+    <Screen
+      documentScroll
+      header={header}
+      bottomBar={
+        <WizardFooter
+          onBack={stepIndex > 0 ? handleBack : undefined}
+          backLabel={t('common.back')}
+          backDisabled={isLoading}
+          onNext={handleNext}
+          nextLabel={
+            isLastStep
+              ? isEditMode
+                ? t('propertyCreate.saveChanges')
+                : t('propertyCreate.publish')
+              : t('common.next')
+          }
+          loading={isLastStep && isLoading}
+          status={!isEditMode && draftId ? t('propertyCreate.draftSaved') : undefined}
+          // The page's own surface (the shell's card), not Bloom's default background.
+          style={theme.isDark ? undefined : { backgroundColor: theme.colors.card }}
+          sticky={false}
+          testID="create-property-footer"
+        />
+      }
+    >
+      <ScreenScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent}>
         <WizardProgress
           steps={wizardSteps}
           current={stepIndex}
@@ -323,26 +334,7 @@ export default function CreatePropertyScreen() {
           onShowFloorToggle={handleShowFloorToggle}
           onAmenityToggle={handleAmenityToggle}
         />
-      </View>
-
-      <WizardFooter
-        onBack={stepIndex > 0 ? handleBack : undefined}
-        backLabel={t('common.back')}
-        backDisabled={isLoading}
-        onNext={handleNext}
-        nextLabel={
-          isLastStep
-            ? isEditMode
-              ? t('propertyCreate.saveChanges')
-              : t('propertyCreate.publish')
-            : t('common.next')
-        }
-        loading={isLastStep && isLoading}
-        status={!isEditMode && draftId ? t('propertyCreate.draftSaved') : undefined}
-        // The page's own surface (the shell's card), not Bloom's default background.
-        style={theme.isDark ? undefined : { backgroundColor: theme.colors.card }}
-        testID="create-property-footer"
-      />
+      </ScreenScrollView>
 
       <FullscreenMapModal
         visible={showFullscreenMap}
@@ -350,6 +342,6 @@ export default function CreatePropertyScreen() {
         onClose={closeFullscreenMap}
         onAddressSelect={handleFullscreenAddressSelect}
       />
-    </>
+    </Screen>
   );
 }

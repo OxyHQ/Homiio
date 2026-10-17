@@ -18,6 +18,7 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Button } from '@oxy.so/bloom/button';
@@ -106,15 +107,16 @@ export default function ReportRepairScreen(): React.ReactElement {
 
   if (!isAuthenticated) {
     return (
-      <>
-        {header}
-        <EmptyState
-          title={t('sindi.auth.required')}
-          description={t('sindi.auth.message')}
-          actionText={t('common.signIn')}
-          onAction={() => openAccountDialog()}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <EmptyState
+            title={t('sindi.auth.required')}
+            description={t('sindi.auth.message')}
+            actionText={t('common.signIn')}
+            onAction={() => openAccountDialog()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -122,22 +124,22 @@ export default function ReportRepairScreen(): React.ReactElement {
     // A repair is filed against a TENANCY. With no lease there is nothing to
     // file it against, and inventing one is not available.
     return (
-      <>
-        {header}
-        <EmptyState
-          title={t('maintenance.report.noLeaseTitle')}
-          description={t('maintenance.report.noLeaseBody')}
-          actionText={t('maintenance.report.goToMyHome')}
-          onAction={() => router.replace('/my-home')}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <EmptyState
+            title={t('maintenance.report.noLeaseTitle')}
+            description={t('maintenance.report.noLeaseBody')}
+            actionText={t('maintenance.report.goToMyHome')}
+            onAction={() => router.replace('/my-home')}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <Field label={t('maintenance.field.title')}>
           <TextField>
             {/* The accessible name goes on the INPUT, which is what Bloom's
@@ -186,8 +188,8 @@ export default function ReportRepairScreen(): React.ReactElement {
             {t('maintenance.report.submit')}
           </Button>
         </View>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

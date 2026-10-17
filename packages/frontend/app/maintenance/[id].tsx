@@ -26,6 +26,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -196,30 +197,31 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
 
   if (isLoading) {
     return (
-      <>
-        {header}
-        <ListSkeleton rows={3} />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ListSkeleton rows={3} />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (error || !request) {
     return (
-      <>
-        {header}
-        <ErrorState
-          title={t('maintenance.errors.loadFailed')}
-          onRetry={() => void refetch()}
-          retryLabel={t('common.retry')}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            title={t('maintenance.errors.loadFailed')}
+            onRetry={() => void refetch()}
+            retryLabel={t('common.retry')}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <MaintenanceRequestCard
           {...maintenanceCardProps(request, { t })}
           actions={
@@ -349,8 +351,8 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
             {t('maintenance.report.goToMyHome')}
           </Button>
         </View>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

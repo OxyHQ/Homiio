@@ -26,6 +26,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@oxy.so/bloom/card
 import { Field } from '@oxy.so/bloom/field';
 import { RiMailLine, RiShieldCheckLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { RadioGroup, type RadioOption } from '@oxy.so/bloom/radio';
 import { TextField, TextFieldIcon, TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
@@ -170,15 +171,19 @@ export default function ReportListingScreen() {
   };
 
   return (
-    <>
-      <PageHeader
-        title={t('property.report.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.scrollContent}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('property.report.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.intro, { color: theme.colors.textSecondary }]}>
           {t('property.report.intro')}
         </Text>
@@ -257,8 +262,8 @@ export default function ReportListingScreen() {
         >
           {t('property.report.actions.submit')}
         </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

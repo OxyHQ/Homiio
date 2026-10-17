@@ -8,12 +8,12 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card } from '@oxy.so/bloom/card';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { spacing } from '@/constants/styles';
 
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { type Property, formatNumber } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useCity } from '@/hooks/useCityQueries';
@@ -91,8 +91,7 @@ export default function CityPropertiesPage() {
     refetch,
   } = useInfiniteCityProperties(cityId, filters.sortBy, propertyFilters);
 
-  // The shell owns the scroll: the `<LoadMoreSentinel>` at the grid's end
-  // triggers the guarded loader.
+  // The page's `ScreenScrollView` asks for the next page as its end nears.
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
@@ -120,39 +119,49 @@ export default function CityPropertiesPage() {
 
   if (cityLoading) {
     return (
-      <>
-        <PageHeader
-          title={t('app.loading')}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-          onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
-        />
-        <View style={styles.loadingContainer}>
+      <Screen
+        documentScroll
+        header={
+          <PageHeader
+            title={t('app.loading')}
+            titleAlign="center"
+            leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+            onBack={router.canGoBack() ? router.back : undefined}
+            backLabel={t('goBack')}
+          />
+        }
+      >
+        <ScreenScrollView contentContainerStyle={styles.loadingContainer}>
           <Loading variant="spinner" size="lg" text={t('properties.city.loadingProperties')} />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (cityError || !city) {
     return (
-      <>
-        <PageHeader
-          title={t('common.error')}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-          onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
-        />
-        <EmptyState
-          icon={RiErrorWarningFill}
-          title={t('properties.city.notFound')}
-          actionText={t('common.goBack')}
-          actionIcon={RiArrowLeftLine}
-          onAction={() => router.back()}
-        />
-      </>
+      <Screen
+        documentScroll
+        header={
+          <PageHeader
+            title={t('common.error')}
+            titleAlign="center"
+            leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+            onBack={router.canGoBack() ? router.back : undefined}
+            backLabel={t('goBack')}
+          />
+        }
+      >
+        <ScreenScrollView>
+          <EmptyState
+            icon={RiErrorWarningFill}
+            title={t('properties.city.notFound')}
+            actionText={t('common.goBack')}
+            actionIcon={RiArrowLeftLine}
+            onAction={() => router.back()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -189,21 +198,24 @@ export default function CityPropertiesPage() {
             <PropertyResultsGridSkeleton count={2} />
           </View>
         ) : null}
-        <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
       </>
     );
   };
 
   return (
-    <>
-      <PageHeader
-        title={city.name}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={city.name}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content} onEndReached={handleEndReached}>
         {/* Hero Section — DB-stored cover image (self-hosted) behind a scrim,
             falling back to a brand gradient when the city has no cover image. */}
         <View style={styles.heroSection}>
@@ -299,8 +311,8 @@ export default function CityPropertiesPage() {
 
           <View style={styles.propertiesList}>{propertiesBody()}</View>
         </View>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -309,7 +321,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['4xl'],
   },
   loadingContainer: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

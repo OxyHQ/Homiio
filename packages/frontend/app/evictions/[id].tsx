@@ -53,6 +53,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { EvictionReportCard, EvictionTimeline, type EvictionEvent } from '@oxy.so/bloom/eviction';
@@ -63,7 +64,6 @@ import Map from '@/components/Map';
 import { IconButton } from '@/components/ui/IconButton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import {
   useCreateEvictionComment,
@@ -298,24 +298,26 @@ export default function EvictionDetailScreen() {
 
   if (isLoading) {
     return (
-      <>
-        {header()}
-        <DetailSkeleton />
-      </>
+      <Screen documentScroll header={header()}>
+        <ScreenScrollView>
+          <DetailSkeleton />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (isError || !eviction) {
     return (
-      <>
-        {header()}
-        <ErrorState
-          icon={RiAlertLine}
-          title={t('evictions.loadError')}
-          description={error?.message ?? t('common.tryAgain')}
-          onRetry={() => void refetch()}
-        />
-      </>
+      <Screen documentScroll header={header()}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('evictions.loadError')}
+            description={error?.message ?? t('common.tryAgain')}
+            onRetry={() => void refetch()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -329,14 +331,51 @@ export default function EvictionDetailScreen() {
   const hasPin = Array.isArray(coords) && coords.length === 2;
 
   return (
-    <>
-      {header(
+    <Screen
+      documentScroll
+      header={header(
         <>
           {shareButton}
           {reportButton}
         </>,
       )}
-      <View style={styles.content}>
+      bottomBar={
+        <View className="border-t border-border bg-card p-4">
+          <Button
+            appearance={eviction.isAttending ? 'outline' : 'solid'}
+            tone={eviction.isAttending ? 'neutral' : 'accent'}
+            size="lg"
+            onPress={handleRSVP}
+            loading={toggleAttend.isPending}
+            accessibilityLabel={
+              eviction.isAttending ? t('evictions.attending') : t('evictions.attend')
+            }
+            leadingIcon={eviction.isAttending ? RiCheckboxCircleFill : RiMegaphoneLine}
+            style={styles.footerButton}
+          >
+            {`${eviction.isAttending ? t('evictions.attending') : t('evictions.attend')} · ${t('evictions.attendeesCount', { count: eviction.attendeeCount })}`}
+          </Button>
+          {/* Following is a SEPARATE statement from attending: "tell me if the
+                  date moves" is not "I will be there", and folding them together
+                  either spams watchers or inflates the turnout number the page
+                  exists to report. */}
+          <Button
+            size="lg"
+            onPress={handleFollow}
+            loading={toggleFollow.isPending}
+            accessibilityLabel={
+              eviction.isFollowing ? t('evictions.unfollow') : t('evictions.follow')
+            }
+            leadingIcon={eviction.isFollowing ? RiNotification3Fill : RiNotification3Line}
+            tone="neutral"
+            appearance="outline"
+          >
+            {eviction.isFollowing ? t('evictions.following') : t('evictions.follow')}
+          </Button>
+        </View>
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content} onEndReached={handleEndReached}>
         {coverUrl ? (
           <ZoomableImage borderRadius={radius.lg} aspectRatio={16 / 9} style={styles.cover}>
             <Image
@@ -363,7 +402,7 @@ export default function EvictionDetailScreen() {
 
         {/* Status, the day, the time and how far off it is, the PUBLISHED
               area, the description and the turnout. The attend toggle stays
-              in the sticky footer, where it carries its loading state. */}
+              in the pinned bottom bar, where it carries its loading state. */}
         <EvictionReportCard
           {...evictionReportCardProps(eviction, i18n.language, t)}
           description={eviction.description}
@@ -569,7 +608,6 @@ export default function EvictionDetailScreen() {
               {isFetchingNextPage ? (
                 <Loading variant="inline" size="sm" text={t('common.loading')} />
               ) : null}
-              <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
             </View>
           )}
 
@@ -607,42 +645,8 @@ export default function EvictionDetailScreen() {
             </Button>
           )}
         </Card>
-      </View>
-
-      <View className="border-t border-border bg-card p-4">
-        <Button
-          appearance={eviction.isAttending ? 'outline' : 'solid'}
-          tone={eviction.isAttending ? 'neutral' : 'accent'}
-          size="lg"
-          onPress={handleRSVP}
-          loading={toggleAttend.isPending}
-          accessibilityLabel={
-            eviction.isAttending ? t('evictions.attending') : t('evictions.attend')
-          }
-          leadingIcon={eviction.isAttending ? RiCheckboxCircleFill : RiMegaphoneLine}
-          style={styles.footerButton}
-        >
-          {`${eviction.isAttending ? t('evictions.attending') : t('evictions.attend')} · ${t('evictions.attendeesCount', { count: eviction.attendeeCount })}`}
-        </Button>
-        {/* Following is a SEPARATE statement from attending: "tell me if the
-              date moves" is not "I will be there", and folding them together
-              either spams watchers or inflates the turnout number the page
-              exists to report. */}
-        <Button
-          size="lg"
-          onPress={handleFollow}
-          loading={toggleFollow.isPending}
-          accessibilityLabel={
-            eviction.isFollowing ? t('evictions.unfollow') : t('evictions.follow')
-          }
-          leadingIcon={eviction.isFollowing ? RiNotification3Fill : RiNotification3Line}
-          tone="neutral"
-          appearance="outline"
-        >
-          {eviction.isFollowing ? t('evictions.following') : t('evictions.follow')}
-        </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

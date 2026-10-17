@@ -17,6 +17,7 @@ import { useQueries } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { Chip } from '@oxy.so/bloom/chip';
 import { Avatar } from '@oxy.so/bloom/avatar';
@@ -444,9 +445,8 @@ export default function LandlordApplicationsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <>
-        {header}
-        <View style={styles.emptyWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiGroupLine}
             title={t('applications.landlord.signInTitle')}
@@ -455,43 +455,40 @@ export default function LandlordApplicationsScreen() {
             actionIcon={RiLoginBoxLine}
             onAction={() => openAccountDialog()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (hostLoading) {
     return (
-      <>
-        {header}
-        <View style={styles.content}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.content}>
           <ApplicationsSkeleton />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (!isHost) {
     return (
-      <>
-        {header}
-        <View style={styles.emptyWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiLockLine}
             title={t('applications.landlord.hostsOnlyTitle')}
             description={t('applications.landlord.hostsOnlyDescription')}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   const listReady = !applicationsQuery.isPending && !applicationsQuery.isError;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
           <SectionEyebrow>{t('applications.landlord.inboxEyebrow')}</SectionEyebrow>
           <H2 style={styles.title}>{t('applications.landlord.title')}</H2>
@@ -568,8 +565,8 @@ export default function LandlordApplicationsScreen() {
             )}
           </View>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -593,7 +590,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   emptyWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   groupBlock: {

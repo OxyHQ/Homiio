@@ -25,6 +25,7 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card } from '@oxy.so/bloom/card';
 import { RiChat3Line, RiDiscussLine, RiHomeLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { WriteReviewPrompt } from '@oxy.so/bloom/place-reviews';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3 } from '@oxy.so/bloom/typography';
@@ -157,27 +158,27 @@ export default function AddressDetailsPage() {
 
   if (addressQuery.isLoading) {
     return (
-      <>
-        {header}
-        <View style={styles.content}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.content}>
           <PropertyListSkeleton viewMode="list" />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (!address) {
     return (
-      <>
-        {header}
-        <ErrorState
-          icon={RiSearchLine}
-          title={t('addresses.detail.notFound')}
-          description={t('addresses.detail.notFoundDescription')}
-          onRetry={() => router.back()}
-          retryLabel={t('common.goBack')}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiSearchLine}
+            title={t('addresses.detail.notFound')}
+            description={t('addresses.detail.notFoundDescription')}
+            onRetry={() => router.back()}
+            retryLabel={t('common.goBack')}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -193,9 +194,8 @@ export default function AddressDetailsPage() {
   };
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
           <AddressDisplay address={addressForDisplay} variant="detailed" showActions />
         </Card>
@@ -309,8 +309,8 @@ export default function AddressDetailsPage() {
             )}
           </Card>
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

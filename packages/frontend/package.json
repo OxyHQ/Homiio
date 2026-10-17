@@ -28,7 +28,7 @@
     "@expo/vector-icons": "^15.1.1",
     "@homiio/shared-types": "workspace:*",
     "@oxy.so/app-preset": "^3.2.1",
-    "@oxy.so/bloom": "^10.16.0",
+    "@oxy.so/bloom": "^10.17.0",
     "@oxy.so/core": "4.21.0",
     "@oxy.so/expo-splash": "^1.0.0",
     "@oxy.so/services": "11.12.0",

@@ -42,6 +42,7 @@ import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import {
   type Reservation,
   ReservationStatus,
@@ -436,9 +437,8 @@ export default function HostReservationsScreen() {
 
   if (!isAuthed) {
     return (
-      <>
-        {header}
-        <View style={styles.emptyWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiMailLine}
             title={t('host.reservations.signInTitle')}
@@ -447,8 +447,8 @@ export default function HostReservationsScreen() {
             actionIcon={RiLoginBoxLine}
             onAction={() => openAccountDialog()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -461,9 +461,8 @@ export default function HostReservationsScreen() {
   const isError = reservationsQuery.isError;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View className="lg:hidden">
           <ScrollView
             horizontal
@@ -532,8 +531,8 @@ export default function HostReservationsScreen() {
             ))}
           </View>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -548,7 +547,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   emptyWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   listWrap: {

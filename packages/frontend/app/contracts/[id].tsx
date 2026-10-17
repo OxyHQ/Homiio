@@ -25,6 +25,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as DocumentPicker from 'expo-document-picker';
 import { toast } from '@oxy.so/bloom/toast';
 
@@ -245,9 +246,8 @@ export default function ContractDetailScreen() {
 
   if (!id) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             icon={RiAlertLine}
             title={t('contracts.detail.invalidIdTitle')}
@@ -255,35 +255,33 @@ export default function ContractDetailScreen() {
             retryLabel={t('contracts.detail.goBack')}
             onRetry={() => router.back()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (leaseQuery.isPending) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (leaseQuery.isError || !lease) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('contracts.detail.unavailableTitle')}
             description={leaseQuery.error?.message ?? t('contracts.detail.unavailableDescription')}
             retryLabel={t('contracts.detail.goBack')}
             onRetry={() => router.back()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -420,9 +418,8 @@ export default function ContractDetailScreen() {
   );
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View className="gap-4 lg:flex-row lg:items-start lg:gap-6">
           {thumbnail ? <View className="lg:hidden">{thumbnail}</View> : null}
           {main}
@@ -431,8 +428,8 @@ export default function ContractDetailScreen() {
             <LeaseHistorySection lease={lease} format={format} compact />
           </View>
         </View>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -442,7 +439,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['4xl'],
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing['2xl'],

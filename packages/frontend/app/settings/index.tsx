@@ -7,7 +7,6 @@
  * Data → Support → About → Sign out.
  */
 import { useState } from 'react';
-import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';
@@ -36,6 +35,7 @@ import {
   RiWrenchLine,
 } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Switch } from '@oxy.so/bloom/switch';
 import { useBloomTheme, useTheme } from '@oxy.so/bloom/theme';
 import {
@@ -113,15 +113,19 @@ export default function SettingsScreen() {
   };
 
   return (
-    <>
-      <PageHeader
-        title={t('settings.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={settingsScreenStyles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('settings.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={settingsScreenStyles.content}>
         <SettingsListGroup title={t('settings.sections.account')}>
           <SettingsListItem
             icon={<SettingsRowIcon icon={RiUserLine} />}
@@ -278,7 +282,7 @@ export default function SettingsScreen() {
             onPress={() => void handleSignOut()}
           />
         </SettingsListGroup>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }

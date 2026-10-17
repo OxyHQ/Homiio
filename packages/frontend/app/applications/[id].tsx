@@ -20,6 +20,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { toast } from '@oxy.so/bloom/toast';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { RiAlertLine, RiCloseLine, RiEditLine } from '@oxy.so/bloom/icons';
@@ -123,9 +124,8 @@ export default function ApplicationDetailScreen() {
 
   if (!id) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             icon={RiAlertLine}
             title="Invalid application id"
@@ -133,35 +133,33 @@ export default function ApplicationDetailScreen() {
             retryLabel="Go back"
             onRetry={() => router.back()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (applicationQuery.isPending) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (applicationQuery.isError || !application) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title="Application unavailable"
             description={applicationQuery.error?.message ?? 'This application could not be loaded.'}
             retryLabel="Go back"
             onRetry={() => router.back()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -170,9 +168,8 @@ export default function ApplicationDetailScreen() {
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundSecondary }]}>
           {imageSource ? (
             <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
@@ -236,8 +233,8 @@ export default function ApplicationDetailScreen() {
             ) : null}
           </View>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -247,7 +244,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing['2xl'],

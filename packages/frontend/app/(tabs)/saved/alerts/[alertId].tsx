@@ -28,6 +28,7 @@ import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -47,46 +48,43 @@ export default function AlertReasonScreen() {
 
   const { data, isLoading, isError } = useAlertReason(alertId);
 
+  const header = (
+    <PageHeader
+      title={t('alerts.reason.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+    />
+  );
+
   if (isLoading) {
     return (
-      <>
-        <PageHeader
-          title={t('alerts.reason.title')}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        />
-        <Loading style={styles.loading} />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <Loading style={styles.loading} />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (isError || !data) {
     return (
-      <>
-        <PageHeader
-          title={t('alerts.reason.title')}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        />
-        <EmptyState
-          icon={RiQuestionLine}
-          title={t('alerts.reason.missingTitle')}
-          description={t('alerts.reason.missingDescription')}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <EmptyState
+            icon={RiQuestionLine}
+            title={t('alerts.reason.missingTitle')}
+            description={t('alerts.reason.missingDescription')}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   const { alert, watch, event } = data;
 
   return (
-    <>
-      <PageHeader
-        title={t('alerts.reason.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-      />
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3>{t('alerts.reason.whatChanged')}</H3>
           <AlertExplanationText
@@ -143,8 +141,8 @@ export default function AlertReasonScreen() {
             {t('alerts.reason.adjustRules')}
           </Button>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
