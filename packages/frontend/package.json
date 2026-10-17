@@ -30,7 +30,7 @@
     "@homiio/shared-types": "workspace:*",
     "@oxy.so/app-preset": "^3.2.1",
     "@oxy.so/bloom": "^10.18.1",
-    "@oxy.so/core": "5.2.0",
+    "@oxy.so/core": "5.4.0",
     "@oxy.so/expo-splash": "^1.0.0",
     "@oxy.so/services": "11.14.0",
     "@react-native-async-storage/async-storage": "^2.2.0",

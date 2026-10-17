@@ -47,7 +47,7 @@
     "node": "22.x"
   },
   "overrides": {
-    "@oxy.so/core": "5.2.0",
+    "@oxy.so/core": "5.4.0",
     "@oxy.so/bloom": "10.18.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -66,12 +66,12 @@
     "@oxy.so/allo-contracts": "0.1.0"
   },
   "resolutions": {
-    "@oxy.so/core": "5.2.0",
+    "@oxy.so/core": "5.4.0",
     "react-native-css": "3.1.0-rc.0"
   },
   "cacheDirectories": [],
   "dependencies": {
-    "@oxy.so/core": "5.2.0",
+    "@oxy.so/core": "5.4.0",
     "@oxy.so/bloom": "10.18.1",
     "zod": "3.25.76"
   }
