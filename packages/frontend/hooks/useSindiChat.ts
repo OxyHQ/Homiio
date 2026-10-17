@@ -1,11 +1,6 @@
 /**
- * Everything a Homiio surface hands Alia's SDK, for one host.
- *
- * The sheet (`context/AskAgentProvider.tsx`), the panel and the full-screen chat
- * (`components/sindi/SindiConversation.tsx`) all open the same conversation
- * runtime; what differs between them is only the host, and with it what acting
- * on the app means (`components/sindi/sindiHost.ts`). So the configuration is
- * built here once per host and nowhere else:
+ * Everything Homiio hands Alia's SDK for its one sheet
+ * (`context/AskAgentProvider.tsx`), built here and nowhere else:
  *
  *  - `hostTools` + `runtime` — the executor (`hooks/useSindiActions.ts`);
  *  - `clientContext` — what the screen shows (`hooks/useSindiAppContext.ts`);
@@ -24,7 +19,6 @@ import { Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
-import { type SindiChatHost, useSindiControlCapability } from '@/components/sindi/sindiHost';
 import { SINDI_TOOL_RENDERERS } from '@/components/sindi/sindiToolRenderers';
 import { serializeSindiAppContext, useSindiAppContext } from '@/hooks/useSindiAppContext';
 import { useSindiActions } from '@/hooks/useSindiActions';
@@ -104,12 +98,14 @@ export function useSindiChatLabels(): Partial<AliaChatLabels> {
   );
 }
 
-/** The SDK configuration of one Homiio surface. */
-export function useSindiChat(host: SindiChatHost) {
+/**
+ * The sheet's SDK configuration. `closeSheet` is the sheet's own dismiss, run
+ * by the executor once a turn that acted on the page has been written.
+ */
+export function useSindiChat(closeSheet: () => void) {
   const { t } = useTranslation();
-  const capability = useSindiControlCapability(host);
-  const appContext = useSindiAppContext(capability);
-  const { hostTools, runtime } = useSindiActions(host);
+  const appContext = useSindiAppContext();
+  const { hostTools, runtime } = useSindiActions(closeSheet);
   const { openUpsell } = useSindiUpsell();
   const labels = useSindiChatLabels();
 

@@ -47,7 +47,7 @@ import { useHostStatus } from '@/hooks/useHostStatus';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useUIStore } from '@/store/uiStore';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { SindiIcon } from '@/assets/icons';
+import { SindiAvatar } from '@/components/sindi/SindiAvatar';
 import type { BrowseMode } from '@/components/search/types';
 
 /** What `AppShell` takes as `sidebar`: the drawer-only props are the shell's. */
@@ -60,9 +60,9 @@ const PRIVACY_URL = 'https://oxy.so/company/transparency/policies/privacy';
 const MAX_FOLDERS = 5;
 const MAX_RECENT = 10;
 
-/** Sindi's brand glyph (`size` / `color`) as a Bloom icon (`width` / `fill`). */
+/** Sindi's own character (`components/sindi/SindiAvatar.tsx`) as a Bloom icon. */
 const SindiSidebarIcon: SidebarIcon = ({ width, height, fill }) => (
-  <SindiIcon size={width ?? height ?? 20} color={fill} />
+  <SindiAvatar size={width ?? height ?? 20} color={fill} />
 );
 
 /**
@@ -119,7 +119,6 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
   const closeMobileDrawer = useUIStore((s) => s.closeMobileDrawer);
-  const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
 
   const { mode, browseMode, setBrowseMode } = useRentalMode();
   const { canAccessRoommates } = useProfile();
@@ -144,11 +143,12 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     [pathname, router, closeMobileDrawer],
   );
 
-  // Sindi opens its full-screen `/sindi` route at every width: whether the
-  // panel exists is a viewport decision the sidebar no longer makes.
-  const handleSindi = React.useCallback(() => handleNavigate('/sindi'), [handleNavigate]);
+  // Sindi's sheet (and Alia's below), or the sign-in dialog when signed out.
+  const handleSindi = React.useCallback(() => {
+    closeMobileDrawer();
+    ask('sindi');
+  }, [closeMobileDrawer, ask]);
 
-  // Alia's sheet, or the sign-in dialog when signed out.
   const handleAskAlia = React.useCallback(() => {
     closeMobileDrawer();
     ask('alia');
@@ -243,7 +243,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
 
     entries.push(
       { key: 'saved', label: t('sidebar.navigation.saved'), icon: RiBookmarkLine, href: '/saved' },
-      // An action row: opens the `/sindi` route (closing the drawer first).
+      // An action row: opens Sindi's sheet (closing the drawer first).
       {
         key: 'sindi',
         label: t('sidebar.navigation.sindi'),
@@ -332,10 +332,8 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     const exact = items.find((item) => item.href === pathname);
     if (exact) return exact.key;
     if (pathname.startsWith('/saved')) return 'saved';
-    // Bloom highlights a single row: a route match wins, otherwise the Sindi
-    // row reflects the open docked panel.
-    return sindiPanelOpen ? 'sindi' : undefined;
-  }, [items, pathname, sindiPanelOpen]);
+    return undefined;
+  }, [items, pathname]);
 
   const modes = React.useMemo<SidebarMode[]>(
     () =>

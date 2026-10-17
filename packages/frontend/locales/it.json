@@ -223,7 +223,6 @@
     "emoji": "Emoji",
     "color": "Colore",
     "month": "month",
-    "reset": "Reset",
     "decreaseItem": "Diminuisci {{title}}",
     "increaseItem": "Aumenta {{title}}"
   },
@@ -1725,18 +1724,8 @@
     }
   },
   "sindi": {
-    "name": "Sindi",
-    "title": "Sindi",
-    "subtitle": "Difensore della Giustizia Abitativa con Informazioni in Tempo Reale",
     "panel": {
-      "title": "Sindi",
-      "subtitle": "Assistente immobiliare IA",
-      "intro": "Il tuo assistente immobiliare IA. Chiedi dei diritti degli inquilini, dei contratti di affitto e dei problemi abitativi, proprio qui, senza lasciare la pagina.",
-      "newChat": "Nuova chat",
-      "startNew": "Avvia una nuova conversazione",
-      "close": "Chiudi",
-      "conversations": "Conversazioni",
-      "empty": "Avvia una nuova conversazione per ricevere aiuto."
+      "newChat": "Nuova chat"
     },
     "auth": {
       "required": "Autenticazione Richiesta",
@@ -1773,21 +1762,8 @@
         "failed": "Failed to generate share link. Please try again."
       }
     },
-    "conversation": {
-      "title": "Conversation"
-    },
     "settings": {
-      "resetMessage": "Le tue conversazioni con Sindi verranno eliminate e le sue preferenze torneranno ai valori predefiniti.",
-      "resetTitle": "Reset Sindi?",
-      "reset": "Elimina le conversazioni e reimposta",
-      "actions": "Actions",
-      "tipsDescription": "Suggerisci domande quando inizi una conversazione.",
-      "tips": "Show tips & hints",
-      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
-      "behavior": "Behavior",
-      "title": "Sindi preferences",
-      "resetDone": "Sindi è stata reimpostata.",
-      "resetFailed": "Impossibile reimpostare Sindi. Riprova."
+      "actions": "Actions"
     },
     "voice": {
       "unsupportedDevice": "L'input vocale non è disponibile su questo dispositivo",

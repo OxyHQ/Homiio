@@ -1344,23 +1344,12 @@
     "goBack": "Go Back",
     "signIn": "Sign in",
     "month": "month",
-    "reset": "Reset",
     "decreaseItem": "Diminuer : {{title}}",
     "increaseItem": "Augmenter : {{title}}"
   },
   "sindi": {
-    "name": "Sindi",
-    "title": "Sindi",
-    "subtitle": "Housing Justice Advocate with Real-Time Info",
     "panel": {
-      "title": "Sindi",
-      "subtitle": "AI housing assistant",
-      "intro": "Your AI housing assistant. Ask about tenant rights, leases, and housing issues — right here, without leaving the page.",
-      "newChat": "New chat",
-      "startNew": "Start new conversation",
-      "close": "Close",
-      "conversations": "Conversations",
-      "empty": "Start a new conversation to get help."
+      "newChat": "New chat"
     },
     "auth": {
       "required": "Authentication Required",
@@ -1397,21 +1386,8 @@
         "failed": "Failed to generate share link. Please try again."
       }
     },
-    "conversation": {
-      "title": "Conversation"
-    },
     "settings": {
-      "resetMessage": "Vos conversations avec Sindi seront supprimées et ses préférences reviendront aux valeurs par défaut.",
-      "resetTitle": "Reset Sindi?",
-      "reset": "Supprimer les conversations et réinitialiser",
-      "actions": "Actions",
-      "tipsDescription": "Suggérer des questions au début d’une conversation.",
-      "tips": "Show tips & hints",
-      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
-      "behavior": "Behavior",
-      "title": "Sindi preferences",
-      "resetDone": "Sindi a été réinitialisée.",
-      "resetFailed": "Impossible de réinitialiser Sindi. Réessayez."
+      "actions": "Actions"
     },
     "voice": {
       "unsupportedDevice": "La saisie vocale n'est pas disponible sur cet appareil",

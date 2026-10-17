@@ -46,7 +46,6 @@ import {
 } from '@homiio/shared-types';
 
 import { locationDisplayLabel } from '@/components/search/types';
-import type { SindiControlCapability } from '@/components/sindi/sindiHost';
 import { useSearchQueryStore } from '@/store/searchQueryStore';
 
 /**
@@ -101,16 +100,11 @@ export function revisionOf(value: unknown): number {
   return hash;
 }
 
-/**
- * The capability is PASSED IN rather than derived here: it depends on the host
- * (`components/sindi/sindiHost.ts`), which only the surface rendering the chat
- * knows.
- */
-export function useSindiAppContext(capability: SindiControlCapability): SindiAppContext {
+/** What the page under the sheet shows, for every turn. */
+export function useSindiAppContext(): SindiAppContext {
   const { t } = useTranslation();
   const pathname = usePathname();
   const query = useSearchQueryStore((s) => s.query);
-  const { presentation } = capability;
 
   return useMemo(() => {
     const token = query.location ? serializeLocationToken(query.location) : null;
@@ -121,7 +115,6 @@ export function useSindiAppContext(capability: SindiControlCapability): SindiApp
       // invalidate an action — "show me flats under 1200" is still the same
       // request whether it was typed on Home or on Explore.
       revision: revisionOf(query),
-      presentation,
       destination: destinationOfPath(pathname),
       ...(listingOfPath(pathname) ? { listingId: listingOfPath(pathname) } : {}),
       offering: query.offering,
@@ -140,7 +133,7 @@ export function useSindiAppContext(capability: SindiControlCapability): SindiApp
         : {}),
     };
     return context;
-  }, [query, presentation, pathname, t]);
+  }, [query, pathname, t]);
 }
 
 /**
@@ -151,11 +144,7 @@ export function useSindiAppContext(capability: SindiControlCapability): SindiApp
  */
 export function serializeSindiAppContext(intro: string, context: SindiAppContext): string {
   const facts: string[] = [
-    `Presentation: ${
-      context.presentation === 'side_by_side'
-        ? 'the chat is docked beside the app, which stays visible'
-        : 'the chat covers or replaces the app'
-    }.`,
+    'Presentation: the chat is a sheet over the app; an action changes the page under it, and the sheet closes once your answer is written.',
     `Screen: ${context.destination ?? (context.listingId ? 'a listing' : 'another screen')}.`,
   ];
   if (context.listingId) facts.push(`Listing open on screen: ${context.listingId}.`);

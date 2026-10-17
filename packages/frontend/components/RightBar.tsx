@@ -20,7 +20,6 @@ import { View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
 import { railForPathname } from './widgets/routeRail';
-import { useSindiPanelLayout } from './sindi/sindiPanelLayout';
 
 /** The column's width, handed to `AppShell` as `asideWidth`. */
 export const RIGHT_BAR_WIDTH = 350;
@@ -32,15 +31,12 @@ export const RIGHT_BAR_WIDTH = 350;
  * decided BEFORE the element is created — a `RightBar` that renders `null`
  * would still leave a 350px hole.
  *
- * - No rail for this route (its `ROUTE_RAIL` entry says so, or the pathname is
- *   not a route at all) → no column.
- * - The docked Sindi panel is the aside while it is open: the shell has one.
+ * No rail for this route (its `ROUTE_RAIL` entry says so, or the pathname is
+ * not a route at all) → no column.
  */
 export function useHasRightBar(): boolean {
   const pathname = usePathname() || '/';
-  const sindiDocked = useSindiPanelLayout().docked;
-  const hasRail = useMemo(() => railForPathname(pathname).screenId !== null, [pathname]);
-  return hasRail && !sindiDocked;
+  return useMemo(() => railForPathname(pathname).screenId !== null, [pathname]);
 }
 
 export const RightBar = React.memo(function RightBar() {

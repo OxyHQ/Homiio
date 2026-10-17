@@ -38,9 +38,8 @@ export function actionOfHostCall(call: AliaHostAction): SindiAction | null {
  * follows cannot claim a change the executor did not make (#519 §8.4).
  */
 const OUTCOME_DETAIL: Readonly<Record<SindiActionOutcome, string>> = {
-  applied: 'Done: the app on the person’s screen now shows it.',
-  inline:
-    'Not performed: this chat is over the page, so the app was not moved. Answer in the conversation (searchListings results are drawn as cards).',
+  applied:
+    'Done: the page under this chat now shows it, and the chat closes once your answer is written.',
   rejected: 'Refused: the input is outside the tool’s contract. Nothing changed.',
   stale:
     'Not performed: the person changed the search themselves during this turn, and their change wins. Nothing was overridden.',

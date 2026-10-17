@@ -210,7 +210,7 @@ describe('the patch validator drops what it does not recognise', () => {
 });
 
 describe('what the model reads back', () => {
-  it.each(['applied', 'inline', 'rejected', 'stale', 'failed'] as const)(
+  it.each(['applied', 'rejected', 'stale', 'failed'] as const)(
     'reports %s as itself, with a line no longer than the wire carries',
     (outcome) => {
       const reported = hostOutcomeOf(outcome);
@@ -221,7 +221,7 @@ describe('what the model reads back', () => {
   );
 
   it('never tells the model a refused action happened', () => {
-    for (const outcome of ['inline', 'rejected', 'stale', 'failed'] as const) {
+    for (const outcome of ['rejected', 'stale', 'failed'] as const) {
       expect(hostOutcomeOf(outcome).detail).not.toMatch(/^Done/);
     }
   });

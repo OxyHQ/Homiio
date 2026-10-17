@@ -2,8 +2,8 @@
  * SindiSection — the single "Ask Sindi about this home" block on the
  * property detail page.
  *
- * Sindi is Homiio's AI rental assistant (the `(tabs)/sindi` chat). On this
- * screen we surface it as a flat Airbnb-2026 section that:
+ * Sindi is Homiio's AI rental assistant, an Alia agent that lives in the SDK's
+ * one sheet. On this screen we surface her as a flat Airbnb-2026 section that:
  *  - states the value proposition (a 24/7 assistant that knows THIS listing),
  *  - folds in the verification trust signal when the listing is verified
  *    (Sindi reviewed it for authenticity), and
@@ -19,9 +19,8 @@
  *
  * Flat aesthetic (matches the other detail sections via the `Section`
  * primitive): no card, no shadow, content sits on the page background and
- * aligns to `SECTION_GUTTER`. The only filled surface is the brand-gold
- * primary CTA — its label/icon use `colors.primaryForeground` (BLACK on the
- * `yellow` preset), resolved automatically by the Bloom `Button`.
+ * aligns to `SECTION_GUTTER`. Sindi is drawn as her own Oxy character
+ * (`components/sindi/SindiAvatar.tsx`), the same face the sheet shows.
  */
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -34,8 +33,8 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
 
 import { SECTION_GUTTER } from '@/components/property/Section';
-import { SindiIcon } from '@/assets/icons';
-import { radius, spacing } from '@/constants/styles';
+import { SindiAvatar } from '@/components/sindi/SindiAvatar';
+import { spacing } from '@/constants/styles';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import type { Property } from '@homiio/shared-types';
 
@@ -43,7 +42,7 @@ interface SindiSectionProps {
   property: Property;
 }
 
-const SINDI_ICON_SIZE = 28;
+const SINDI_AVATAR_SIZE = 44;
 /** The quick prompts, kept to four so the row stays a tidy two lines on phones. */
 const PROMPT_KEYS = [
   'sindi.property.prompts.budget',
@@ -76,9 +75,7 @@ export function SindiSection({ property }: SindiSectionProps) {
   return (
     <View>
       <View style={styles.header}>
-        <View className="bg-primary" style={styles.iconBadge}>
-          <SindiIcon size={SINDI_ICON_SIZE} color={colors.primaryForeground} />
-        </View>
+        <SindiAvatar size={SINDI_AVATAR_SIZE} color={colors.textSecondary} />
         <View style={styles.headerText}>
           <Text variant="title-3-bold">{t('sindi.property.title')}</Text>
           <Text variant="body-2-regular" style={{ color: colors.textSecondary }}>
@@ -111,8 +108,6 @@ export function SindiSection({ property }: SindiSectionProps) {
         <Button
           onPress={() => askSindi(t('sindi.property.defaultQuestion'))}
           size="lg"
-          icon={<SindiIcon size={18} color={colors.primaryForeground} />}
-          iconPosition="left"
           accessibilityLabel={t('sindi.property.askAccessible')}
           accessibilityHint={t('sindi.property.askHint')}
           tone="accent"
@@ -136,13 +131,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.md,
     paddingHorizontal: SECTION_GUTTER,
-  },
-  iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerText: {
     flex: 1,

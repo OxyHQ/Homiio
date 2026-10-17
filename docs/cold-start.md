@@ -63,11 +63,6 @@ in `app.config.js`), so separate the two kinds before "fixing" anything:
 `immutability`, `refs` and `preserve-manual-memoization` reason about a
 transformation that does not run here.
 
-`react-hooks/immutability` is switched off for
-`components/SindiExplanationBottomSheet.tsx` in `eslint.config.js`, with the
-premise and a revisit condition written there and beside `experiments` in
-`app.config.js`. Do not widen it.
-
 The frontend lint script is `expo lint .`. Bare `expo lint` never read
 `hooks/` or `context/`, so it reported none of the findings below. Each one
 that is still open carries an `eslint-disable-next-line` with its reason,
@@ -89,6 +84,5 @@ stay.
 **It was not done because it cannot be verified without an authenticated
 session.** Unauthenticated, `loadNotifications` returns at its guard and the path
 never executes, so the cold-start check above cannot reach it. Get a session
-first; do not ship it on reasoning alone. The same applies to
-`SindiExplanationBottomSheet:136`.
+first; do not ship it on reasoning alone.
 

@@ -1,38 +1,30 @@
 /**
- * WHEN the executor does each part of an action, per host.
- *
- * `controlCapability.test.ts` pins the decision; this pins the consequence, and
- * the two halves are separate because the interesting property here is a
- * TIMING, which a pure function cannot express.
+ * WHEN the executor does each part of an action.
  *
  * ## The timing
  *
- * A host-tool call arrives MID-STREAM: Alia emits `alia.host_action` when the
- * model calls `host_homiio__<name>`, and the model then keeps writing. Two of
- * the three acting modes end with the chat's own surface gone: the overlay
- * panel closes (`SindiPanel` renders null once `sindiPanelOpen` is false) and
- * the full-screen chat navigates away (it is the routed screen, inside
- * `app/_layout.tsx`'s `<Slot/>`; the panel by contrast is mounted BESIDE the
- * slot and survives navigation). Doing either on arrival unmounts a streaming
- * chat: the app moves and the answer the person asked for never appears.
+ * Sindi lives in one surface, the SDK's sheet, mounted above the app frame. A
+ * host-tool call arrives MID-STREAM: Alia emits `alia.host_action` when the
+ * model calls `host_homiio__<name>`, and the model then keeps writing. The page
+ * UNDER the sheet changes at once — the sheet survives any navigation — but the
+ * sheet itself only gets out of the way once the turn stops streaming, or the
+ * person would lose the answer they asked for.
  *
- * So those steps wait for the turn to stop streaming, which the SDK's own
- * conversation store announces (`streamingConversationId`). The tests drive
- * that real store rather than calling a settle function, so they fail if the
- * executor stops listening to it.
+ * The turn's end is the SDK's own conversation store (`streamingConversationId`).
+ * The tests drive that real store rather than calling a settle function, so they
+ * fail if the executor stops listening to it.
  */
 
 import { act, renderHook } from '@testing-library/react-native';
 import { type AliaHostAction, useConversationStore } from '@alia.onl/sdk/runtime';
 
-import type { SindiChatHost } from '@/components/sindi/sindiHost';
 import { SINDI_HOST_APP } from '@/components/sindi/sindiHostTools';
 import { DESTINATION_ROUTES, useSindiActions } from '@/hooks/useSindiActions';
 import { useExploreViewStore } from '@/store/exploreViewStore';
 import { DEFAULT_SEARCH_QUERY, useSearchQueryStore } from '@/store/searchQueryStore';
 
 const mockPush = jest.fn();
-const mockClosePanel = jest.fn();
+const mockCloseSheet = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
@@ -42,23 +34,6 @@ jest.mock('expo-router', () => ({
   }),
 }));
 
-/** The panel tier the shell would produce. Set per test; see `useSindiPanelLayout`. */
-let mockPanelLayout = { visible: true, docked: true, width: 380 };
-
-// Only the hook is replaced: the rest of the module is the real thing, so this
-// file cannot pass by mocking away the very layout rules it is reasoning about.
-jest.mock('@/components/sindi/sindiPanelLayout', () => ({
-  ...jest.requireActual('@/components/sindi/sindiPanelLayout'),
-  useSindiPanelLayout: () => mockPanelLayout,
-}));
-
-jest.mock('@/store/uiStore', () => {
-  const state = { closeSindiPanel: (...args: unknown[]) => mockClosePanel(...args) };
-  const useUIStore = (selector: (value: typeof state) => unknown) => selector(state);
-  useUIStore.getState = () => state;
-  return { useUIStore };
-});
-
 let calls = 0;
 const call = (name: string, input: Record<string, unknown>): AliaHostAction => {
   calls += 1;
@@ -66,8 +41,8 @@ const call = (name: string, input: Record<string, unknown>): AliaHostAction => {
 };
 const toExplore = () => call('navigate', { destination: 'explore' });
 
-function executor(host: SindiChatHost) {
-  const hook = renderHook(() => useSindiActions(host));
+function executor() {
+  const hook = renderHook(() => useSindiActions(mockCloseSheet));
   const run = async (action: AliaHostAction) => {
     let outcome: string | undefined;
     await act(async () => {
@@ -85,166 +60,75 @@ const settled = () => act(() => useConversationStore.getState().setStreamingConv
 
 beforeEach(() => {
   mockPush.mockClear();
-  mockClosePanel.mockClear();
-  mockPanelLayout = { visible: true, docked: true, width: 380 };
+  mockCloseSheet.mockClear();
   useConversationStore.getState().setStreamingConversationId(null);
   useSearchQueryStore.getState().replaceSearch(DEFAULT_SEARCH_QUERY);
   useExploreViewStore.getState().setResultsView('list');
 });
 
-describe('the docked panel acts at once, because nothing it does hides the chat', () => {
-  it('navigates the page column on arrival', async () => {
-    const { run } = executor('panel');
+describe('the page under the sheet changes at once', () => {
+  it('navigates on arrival, while the answer is still streaming', async () => {
+    const { run } = executor();
     streaming();
     expect(await run(toExplore())).toBe('applied');
     expect(mockPush).toHaveBeenCalledWith('/explore');
   });
 
-  it('leaves the panel open — it is the surface the person is talking in', async () => {
-    const { run } = executor('panel');
-    streaming();
-    await run(toExplore());
-    settled();
-    expect(mockClosePanel).not.toHaveBeenCalled();
-  });
-});
-
-describe('the overlay panel acts at once and steps aside when the turn ends', () => {
-  beforeEach(() => {
-    mockPanelLayout = { visible: true, docked: false, width: 380 };
-  });
-
-  it('navigates the page under the scrim immediately', async () => {
-    // Safe on arrival: the panel is mounted beside `<Slot/>`, so changing the
-    // route does not unmount the chat that is still streaming.
-    const { run } = executor('panel');
-    streaming();
-    expect(await run(toExplore())).toBe('applied');
-    expect(mockPush).toHaveBeenCalledWith('/explore');
-  });
-
-  it('does NOT close the panel while the answer is still streaming', async () => {
-    const { run } = executor('panel');
-    streaming();
-    await run(toExplore());
-    expect(mockClosePanel).not.toHaveBeenCalled();
-  });
-
-  it('closes it once the turn settles, exactly once', async () => {
-    const { run } = executor('panel');
-    streaming();
-    await run(toExplore());
-    settled();
-    streaming();
-    settled();
-    expect(mockClosePanel).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('the full-screen chat leaves for the destination, after it has spoken', () => {
-  it('does not navigate while the answer is still streaming', async () => {
-    const { run } = executor('screen');
-    streaming();
-    // The whole point: this screen IS the route, so pushing here replaces a
-    // chat that has not finished its sentence.
-    expect(await run(toExplore())).toBe('applied');
-    expect(mockPush).not.toHaveBeenCalled();
-  });
-
-  it('navigates when the turn settles — after Stop as much as after the last word', async () => {
-    const { run } = executor('screen');
-    streaming();
-    await run(toExplore());
-    settled();
-    expect(mockPush).toHaveBeenCalledWith('/explore');
-  });
-
-  it('acts whatever the side panel happens to be doing', async () => {
-    // `sindiPanelOpen` is persisted, and it used to decide this. All three
-    // tiers must produce the same navigation.
-    for (const tier of [
-      { visible: true, docked: true, width: 380 },
-      { visible: true, docked: false, width: 380 },
-      { visible: false, docked: false, width: 380 },
-    ]) {
-      mockPush.mockClear();
-      mockPanelLayout = tier;
-      const { run, unmount } = executor('screen');
-      streaming();
-      await run(toExplore());
-      settled();
-      expect(mockPush).toHaveBeenCalledWith('/explore');
-      unmount();
-    }
-  });
-
-  it('applies the search to the store at once and only the navigation waits', async () => {
-    // The split that keeps the reported outcome honest: by the time the model
-    // reads "applied", the query really has changed — what is outstanding is the
-    // screen the person is about to be taken to.
-    const { run } = executor('screen');
+  it('applies the search to the store and navigates in one go', async () => {
+    const { run } = executor();
     streaming();
     await run(call('apply_search', { priceMax: 1200 }));
 
     expect(useSearchQueryStore.getState().query.priceMax).toBe(1200);
-    expect(mockPush).not.toHaveBeenCalled();
-
-    settled();
     expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/explore?'));
   });
 
-  it('goes at once when nothing is streaming — there is no answer left to cut off', async () => {
-    const { run } = executor('screen');
+  it('brings Explore with the list/map switch — a store write nobody can see is no action', async () => {
+    const { run } = executor();
+    await run(call('set_results_view', { view: 'map' }));
+
+    expect(useExploreViewStore.getState().resultsView).toBe('map');
+    expect(mockPush).toHaveBeenCalledWith('/explore');
+  });
+});
+
+describe('the sheet steps aside once the answer is written', () => {
+  it('does NOT close while the answer is still streaming', async () => {
+    const { run } = executor();
+    streaming();
     await run(toExplore());
-    expect(mockPush).toHaveBeenCalledWith('/explore');
-  });
-});
-
-describe('the list/map switch: the one action that changes nothing on its own', () => {
-  it('stays put for the docked panel, whose main pane is already on screen', async () => {
-    const { run } = executor('panel');
-    streaming();
-    await run(call('set_results_view', { view: 'map' }));
-    settled();
-
-    expect(useExploreViewStore.getState().resultsView).toBe('map');
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockCloseSheet).not.toHaveBeenCalled();
   });
 
-  it('brings Explore with it from a host that is covering the app', async () => {
-    // A store write nobody can see is the invisible action this exists to stop.
-    mockPanelLayout = { visible: false, docked: false, width: 380 };
-    const { run } = executor('screen');
+  it('closes when the turn settles — after Stop as much as after the last word — exactly once', async () => {
+    const { run } = executor();
     streaming();
-    await run(call('set_results_view', { view: 'map' }));
+    await run(toExplore());
     settled();
-
-    expect(useExploreViewStore.getState().resultsView).toBe('map');
-    expect(mockPush).toHaveBeenCalledWith('/explore');
+    streaming();
+    settled();
+    expect(mockCloseSheet).toHaveBeenCalledTimes(1);
   });
-});
 
-describe('the sheet moves nothing', () => {
-  it('answers inline, now and when the turn settles', async () => {
-    const { run } = executor('sheet');
-    streaming();
-    expect(await run(toExplore())).toBe('inline');
-    settled();
-    expect(mockPush).not.toHaveBeenCalled();
+  it('closes at once when nothing is streaming — there is no answer left to cut off', async () => {
+    const { run } = executor();
+    await run(toExplore());
+    expect(mockCloseSheet).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('the refusals', () => {
-  it('rejects a call outside the contract and moves nothing', async () => {
-    const { run } = executor('panel');
+  it('rejects a call outside the contract, moves nothing and keeps the sheet', async () => {
+    const { run } = executor();
     expect(await run(call('navigate', { destination: 'https://example.com' }))).toBe('rejected');
     expect(await run(call('pay_rent', { leaseId: 'x' }))).toBe('rejected');
     expect(mockPush).not.toHaveBeenCalled();
+    expect(mockCloseSheet).not.toHaveBeenCalled();
   });
 
   it('answers stale when the person changed the search after sending the turn', async () => {
     // #519 §8.8: their change wins, and the model is told so.
-    const { result, run } = executor('screen');
+    const { result, run } = executor();
     act(() => result.current.runtime.onTurnStart?.());
     act(() =>
       useSearchQueryStore.getState().replaceSearch({ ...DEFAULT_SEARCH_QUERY, priceMax: 700 }),
@@ -255,10 +139,11 @@ describe('the refusals', () => {
 
     expect(useSearchQueryStore.getState().query.bedrooms).not.toBe(3);
     expect(mockPush).not.toHaveBeenCalled();
+    expect(mockCloseSheet).not.toHaveBeenCalled();
   });
 
   it('applies when the search is as it was when the turn was sent', async () => {
-    const { result, run } = executor('panel');
+    const { result, run } = executor();
     act(() => result.current.runtime.onTurnStart?.());
     expect(await run(call('apply_search', { bedrooms: 3 }))).toBe('applied');
     expect(useSearchQueryStore.getState().query.bedrooms).toBe(3);
@@ -267,30 +152,30 @@ describe('the refusals', () => {
   it('answers failed for an area Explore cannot carry, and navigates nowhere', async () => {
     // A polygon has no `loc` wire format yet (ADR 0002 §2.1): navigating anyway
     // would drop the scope and answer globally under a local heading.
-    const { run } = executor('panel');
+    const { run } = executor();
     expect(await run(call('apply_search', { location: { kind: 'polygon', rings: [] } }))).toBe(
       'failed',
     );
     expect(mockPush).not.toHaveBeenCalled();
+    expect(mockCloseSheet).not.toHaveBeenCalled();
   });
 });
 
 describe('what settling does not do', () => {
-  it('drains nothing for a turn that produced no action', () => {
-    executor('screen');
+  it('closes nothing for a turn that produced no action', () => {
+    executor();
     streaming();
     settled();
-    expect(mockPush).not.toHaveBeenCalled();
-    expect(mockClosePanel).not.toHaveBeenCalled();
+    expect(mockCloseSheet).not.toHaveBeenCalled();
   });
 
-  it('discards a deferred navigation when its surface leaves', async () => {
-    const { run, unmount } = executor('screen');
+  it('discards a deferred close when the executor leaves', async () => {
+    const { run, unmount } = executor();
     streaming();
     await run(toExplore());
     unmount();
     settled();
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockCloseSheet).not.toHaveBeenCalled();
   });
 });
 

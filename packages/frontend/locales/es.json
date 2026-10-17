@@ -1709,23 +1709,12 @@
     "goBack": "Go Back",
     "signIn": "Iniciar sesión",
     "month": "month",
-    "reset": "Reset",
     "decreaseItem": "Reducir {{title}}",
     "increaseItem": "Aumentar {{title}}"
   },
   "sindi": {
-    "name": "Sindi",
-    "title": "Sindi",
-    "subtitle": "Defensor de Justicia Habitacional con Información en Tiempo Real",
     "panel": {
-      "title": "Sindi",
-      "subtitle": "Asistente de vivienda con IA",
-      "intro": "Tu asistente de vivienda con IA. Pregúntale sobre derechos de inquilinos, contratos y problemas de vivienda, aquí mismo, sin salir de la página.",
-      "newChat": "Nuevo chat",
-      "startNew": "Iniciar nueva conversación",
-      "close": "Cerrar",
-      "conversations": "Conversaciones",
-      "empty": "Inicia una nueva conversación para recibir ayuda."
+      "newChat": "Nuevo chat"
     },
     "auth": {
       "required": "Autenticación Requerida",
@@ -1762,21 +1751,8 @@
         "failed": "Error al generar enlace de compartir. Por favor, inténtalo de nuevo."
       }
     },
-    "conversation": {
-      "title": "Conversación"
-    },
     "settings": {
-      "resetMessage": "Se borrarán tus conversaciones con Sindi y sus preferencias volverán a los valores predeterminados.",
-      "resetTitle": "Reset Sindi?",
-      "reset": "Borrar conversaciones y restablecer",
-      "actions": "Actions",
-      "tipsDescription": "Sugerir preguntas al empezar una conversación.",
-      "tips": "Show tips & hints",
-      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
-      "behavior": "Behavior",
-      "title": "Sindi preferences",
-      "resetDone": "Sindi se ha restablecido.",
-      "resetFailed": "No se pudo restablecer Sindi. Inténtalo de nuevo."
+      "actions": "Actions"
     },
     "voice": {
       "unsupportedDevice": "La entrada de voz no está disponible en este dispositivo",

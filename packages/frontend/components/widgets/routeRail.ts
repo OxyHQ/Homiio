@@ -202,8 +202,6 @@ export const ROUTE_RAIL: Readonly<Record<string, RailAssignment>> = {
 
   // ---- Sindi, inbox, notifications ---------------------------------------
   // Conversation surfaces own their full width.
-  '/sindi': NO_RAIL,
-  '/sindi/[conversationId]': NO_RAIL,
   '/sindi/shared/[token]': NO_RAIL,
   '/inbox': NO_RAIL,
   '/notifications': NO_RAIL,
@@ -213,7 +211,6 @@ export const ROUTE_RAIL: Readonly<Record<string, RailAssignment>> = {
   '/settings/currency': NO_RAIL,
   '/settings/language': NO_RAIL,
   '/settings/notifications': NO_RAIL,
-  '/settings/sindi': NO_RAIL,
   '/tips': NO_RAIL,
   '/tips/[slug]': NO_RAIL,
   '/donate': NO_RAIL,

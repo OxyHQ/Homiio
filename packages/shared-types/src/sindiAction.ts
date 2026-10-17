@@ -122,20 +122,12 @@ export type SindiActionKind = SindiAction['kind'];
 export type SindiActionOutcome =
   /** Applied to the app. */
   | 'applied'
-  /** Not performed: the surface cannot show a result; the answer stays in the conversation. */
-  | 'inline'
   /** Refused: bad payload, unknown destination. */
   | 'rejected'
   /** Superseded: the person changed the search by hand during the turn. */
   | 'stale'
   /** Attempted and failed. */
   | 'failed';
-
-/**
- * How Sindi may present a result, derived from the surface and the layout — not
- * from the platform (#519 §8.2). `side_by_side` is the docked panel alone.
- */
-export type SindiPresentation = 'side_by_side' | 'chat_only';
 
 /**
  * What the app shows, sent with every turn as Alia's `clientContext`.
@@ -149,7 +141,6 @@ export type SindiPresentation = 'side_by_side' | 'chat_only';
 export interface SindiAppContext {
   /** A hash of the live query. The executor compares it to detect a manual change mid-turn. */
   readonly revision: number;
-  readonly presentation: SindiPresentation;
   /** Where the person is now, as an enumerated destination, or null for anywhere else. */
   readonly destination: SindiDestination | null;
   /** The listing open on screen, when the person is reading one. */
