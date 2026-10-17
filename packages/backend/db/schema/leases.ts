@@ -205,7 +205,7 @@ export const leases = pgTable(
      * PROTECTED (`protectedColumns.ts`), and DEAD since #518 §7.4.
      *
      * It held whatever string the client posted — `'accepted-in-app'`, a
-     * literal in `app/contracts/[id].tsx` — and was excluded from every read,
+     * literal in `app/(pages)/contracts/[id].tsx` — and was excluded from every read,
      * so nothing could ever display what was supposedly signed. What actually
      * happened is now recorded as `lease_signatures.method`, and nothing writes
      * this column any more.

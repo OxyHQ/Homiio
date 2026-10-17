@@ -133,6 +133,9 @@ describe('routeFromFile follows expo-router, not a guess', () => {
   it('treats a (group) segment as transparent and index as its directory', () => {
     expect(routeFromFile('(tabs)/index.tsx')).toBe('/');
     expect(routeFromFile('(tabs)/saved/index.tsx')).toBe('/saved');
+    // Nested groups are transparent too: every page but explore is in `(pages)`.
+    expect(routeFromFile('(pages)/(tabs)/saved/index.tsx')).toBe('/saved');
+    expect(routeFromFile('(pages)/_layout.tsx')).toBeNull();
     expect(routeFromFile('settings/index.tsx')).toBe('/settings');
   });
 

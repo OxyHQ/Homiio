@@ -1,7 +1,7 @@
 /**
  * Static configuration for the property creation wizard.
  *
- * Extracted verbatim from `app/properties/create.tsx` so the orchestrator and
+ * Extracted verbatim from `app/(pages)/properties/create.tsx` so the orchestrator and
  * the per-step components share a single source of truth. The shapes and values
  * are unchanged to preserve the exact wizard behaviour (step order, which
  * fields are visible per type/step, and picker options).

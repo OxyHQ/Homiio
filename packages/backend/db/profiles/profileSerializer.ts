@@ -125,7 +125,7 @@ function toReferenceDTO(row: ProfileReferenceRow): Record<string, unknown> {
  * either way round:
  *
  *  - **`landlordContact` ⇢ `settings.privacy.showContactInfo` (default TRUE).**
- *    `app/properties/[id]` fetches an owner's PUBLIC profile and dials
+ *    `app/(pages)/properties/[id]` fetches an owner's PUBLIC profile and dials
  *    `personalProfile.rentalHistory[0].landlordContact.phone`, gating on exactly
  *    this flag. So gating the contact on `showRentalHistory` would silently kill
  *    "call the owner" for every user, since that flag defaults to FALSE.

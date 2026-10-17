@@ -2,7 +2,7 @@
  * What a saved collection contains.
  *
  * One rule, in one place, because two surfaces answer the question: the folder
- * screen (`app/(tabs)/saved/[folderId]`) and Sindi's inline answer to "show me
+ * screen (`app/(pages)/(tabs)/saved/[folderId]`) and Sindi's inline answer to "show me
  * my saved homes" (#519 §8). A chat that listed a different set from the screen
  * it is offering to open would be worse than a chat that listed nothing.
  *

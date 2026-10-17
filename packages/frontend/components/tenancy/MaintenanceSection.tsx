@@ -3,7 +3,7 @@
  *
  * ## What this replaces
  *
- * `app/my-home.tsx` used to say, in its own header: "The template also draws
+ * `app/(pages)/my-home.tsx` used to say, in its own header: "The template also draws
  * repair requests, 'Pay rent' and 'Message landlord'; Homiio has no
  * maintenance, rent-payment or tenant–landlord messaging endpoint, so those are
  * absent rather than buttons that do nothing." Both epics reject that as an

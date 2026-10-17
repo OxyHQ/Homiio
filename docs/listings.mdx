@@ -338,7 +338,7 @@ which is where it can be kept current without a doc release.
 ## Creating and editing
 
 **Current state:** a first-party listing is created through
-`POST /api/properties` from `app/properties/create.tsx`, and edited through
+`POST /api/properties` from `app/(pages)/properties/create.tsx`, and edited through
 `PUT /api/properties/:propertyId`. Both go through
 `controllers/property/create.ts` and `updateDelete.ts` onto Postgres
 (`db/properties/propertyWrites.ts`).

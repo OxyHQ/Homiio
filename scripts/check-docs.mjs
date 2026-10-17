@@ -261,7 +261,10 @@ function frontendSegments() {
     .filter(Boolean);
   const segments = new Set();
   for (const file of files) {
-    const relativePath = file.replace('packages/frontend/app/', '');
+    // `(pages)` is a LAYOUT group — it gives every page but explore its one
+    // reading panel and adds nothing to a URL — so the sections are the
+    // segments under it. (`(tabs)` stays a segment of its own: the doc names it.)
+    const relativePath = file.replace('packages/frontend/app/', '').replace(/^\(pages\)\//, '');
     const [head] = relativePath.split('/');
     // `_layout.tsx`, `+html.tsx`, `+not-found.tsx` are framework files, not routes.
     if (head.startsWith('_') || head.startsWith('+')) continue;

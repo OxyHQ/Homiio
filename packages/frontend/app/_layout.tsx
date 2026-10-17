@@ -4,7 +4,7 @@ import { Platform, View, AppState } from 'react-native';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { preventNativeSplashAutoHide, useHideNativeSplashWhenReady } from '@oxy.so/expo-splash';
-import { Slot, ThemeProvider, usePathname } from 'expo-router';
+import { Slot, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useHomiioSidebarProps } from '@/components/SideBar';
 import { RightBar, RIGHT_BAR_WIDTH, useHasRightBar } from '@/components/RightBar';
@@ -211,18 +211,19 @@ function MediaResolverProvider({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The frame is Bloom's `AppShell`, composed as Noted's: the sidebar in flow
- * from `lg` and a drawer below it, every page inside the shell's framed
- * `ContentPanel`, the route's right rail as the `aside`, and Bloom's
- * `BottomBar` while the sidebar is a drawer.
+ * The frame is Bloom's `AppShell` with `panels`: the sidebar in flow from `lg`
+ * and a drawer below it, the route's right rail as the `aside`, Bloom's
+ * `BottomBar` while the sidebar is a drawer — and the routes made of PANELS the
+ * shell frames (the gutter on all four sides, full-bleed below `lg`). Which
+ * panels is the routes' own business: `app/(pages)/_layout.tsx` makes every
+ * page one reading panel, and `/explore` renders two (results and a map).
  *
- * `scroll="page"`: every route is a Bloom `Screen` whose `ScreenScrollView`
- * scrolls the document on web and is the scroller on native. Each page puts its
- * Bloom `PageHeader`, led by `AppShellMenuButton`, in the Screen's header.
- * `/explore` is `fixed`: its map pins one screen and scrolls only its list.
+ * `scroll="page"` for every route: each page is a Bloom `Screen` whose
+ * `ScreenScrollView` scrolls the document on web and is the scroller on native.
+ * Explore needs no mode of its own — its panels are one viewport tall and each
+ * scrolls itself, so the document has nothing to scroll.
  */
 function AppFrame() {
-  const pathname = usePathname() || '/';
   const sidebar = useHomiioSidebarProps();
   const drawerOpen = useUIStore((s) => s.mobileDrawerOpen);
   const openMobileDrawer = useUIStore((s) => s.openMobileDrawer);
@@ -232,13 +233,12 @@ function AppFrame() {
     [openMobileDrawer, closeMobileDrawer],
   );
   const hasRightBar = useHasRightBar();
-  const isExploreRoute = pathname === '/explore' || pathname.startsWith('/explore/');
 
   return (
     <AppShell
       variant="feed"
-      panel
-      scroll={isExploreRoute ? 'fixed' : 'page'}
+      panels
+      scroll="page"
       sidebar={sidebar}
       drawer="reveal"
       drawerOpen={drawerOpen}

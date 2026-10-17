@@ -402,6 +402,16 @@ await mutation(
   commit(root);
 }
 
+// A section inside the `(pages)` layout group is still a section: the group is
+// transparent, so a page moved under it cannot drop out of the route table.
+await mutation(
+  'undocumented segment inside the (pages) layout group',
+  root,
+  'packages/frontend/app/(pages)/zzz-undocumented/index.tsx',
+  'export default function S() { return null; }\n',
+  ['zzz-undocumented'],
+);
+
 // ── 4. Final control ───────────────────────────────────────────────────────
 {
   const final = run(root);

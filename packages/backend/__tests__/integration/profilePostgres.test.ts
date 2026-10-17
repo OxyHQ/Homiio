@@ -459,7 +459,7 @@ describe('the public read — what a stranger gets', () => {
   });
 
   it('discloses the landlord contact when showContactInfo is on, and nothing else', async () => {
-    // This is the "call the owner" path: `app/properties/[id]` reads a PUBLIC
+    // This is the "call the owner" path: `app/(pages)/properties/[id]` reads a PUBLIC
     // profile's `rentalHistory[0].landlordContact.phone` and gates on
     // `showContactInfo`. Gating the contact on `showRentalHistory` (default
     // FALSE) would silently kill that feature for every user.

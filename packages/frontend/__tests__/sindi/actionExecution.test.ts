@@ -208,14 +208,19 @@ describe('every destination the executor can reach is a real route', () => {
   const frontend = join(__dirname, '..', '..');
   const appDir = join(frontend, 'app');
 
+  // Every page but explore lives in the `(pages)` route group (one reading
+  // panel each); a group adds no URL segment.
   const ROUTE_FILES: ReadonlyArray<[string, readonly string[]]> = [
     ['/explore', ['explore/index.tsx']],
-    ['/saved', ['(tabs)/saved/index.tsx']],
-    ['/saved/[folderId]', ['(tabs)/saved/[folderId]/index.tsx', '(tabs)/saved/[folderId].tsx']],
-    ['/', ['(tabs)/index.tsx']],
-    ['/my-home', ['my-home.tsx']],
-    ['/evictions', ['evictions/index.tsx']],
-    ['/properties/[id]', ['properties/[id]/index.tsx', 'properties/[id].tsx']],
+    ['/saved', ['(pages)/(tabs)/saved/index.tsx']],
+    [
+      '/saved/[folderId]',
+      ['(pages)/(tabs)/saved/[folderId]/index.tsx', '(pages)/(tabs)/saved/[folderId].tsx'],
+    ],
+    ['/', ['(pages)/(tabs)/index.tsx']],
+    ['/my-home', ['(pages)/my-home.tsx']],
+    ['/evictions', ['(pages)/evictions/index.tsx']],
+    ['/properties/[id]', ['(pages)/properties/[id]/index.tsx', '(pages)/properties/[id].tsx']],
   ];
 
   it.each(ROUTE_FILES)('%s exists', (route, candidates) => {

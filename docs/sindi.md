@@ -49,7 +49,7 @@ no chat, no conversation list and no Sindi page of its own.
 | Sidebar "Sindi" row | `components/SideBar/index.tsx` | `ask('sindi')` |
 | Sidebar "Ask Alia", phone bottom bar | `components/SideBar/index.tsx`, `components/HomiioBottomBar.tsx` | `ask('alia')` |
 | "Ask Sindi about this home" | `components/property/SindiSection.tsx` | `ask('sindi', turn)`, the listing named in the turn |
-| Shared conversation | `app/(tabs)/sindi/shared/[token].tsx` | `AliaSharedConversation`, read-only, no session — the one page, because a link needs an address and Alia's own app serves none |
+| Shared conversation | `app/(pages)/(tabs)/sindi/shared/[token].tsx` | `AliaSharedConversation`, read-only, no session — the one page, because a link needs an address and Alia's own app serves none |
 
 Sindi's face outside the sheet (the sidebar row, the listing section) is
 `components/sindi/SindiAvatar.tsx`: her character from `useAgentProfile`, the

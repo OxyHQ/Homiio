@@ -31,6 +31,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { AppShellPanel } from '@oxy.so/bloom/app-shell';
 import { useOxy } from '@oxy.so/services';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -256,26 +257,29 @@ export default function SearchScreen() {
   // happened.
   if (unshareableLocation) {
     return (
-      <View style={styles.root}>
-        {searchPanel}
-        <ErrorState
-          title={
-            t('search.location.unshareable.title', 'This area cannot be opened by link') ??
-            undefined
-          }
-          description={
-            t(
-              'search.location.unshareable.description',
-              'Try choosing a place or drawing a smaller area.',
-            ) ?? undefined
-          }
-          retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
-          onRetry={() => {
-            setUnshareableLocation(null);
-            setOpenStep('where');
-          }}
-        />
-      </View>
+      // An error is ONE panel; the results are two (`SearchResultsView`).
+      <AppShellPanel>
+        <View style={styles.root}>
+          {searchPanel}
+          <ErrorState
+            title={
+              t('search.location.unshareable.title', 'This area cannot be opened by link') ??
+              undefined
+            }
+            description={
+              t(
+                'search.location.unshareable.description',
+                'Try choosing a place or drawing a smaller area.',
+              ) ?? undefined
+            }
+            retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
+            onRetry={() => {
+              setUnshareableLocation(null);
+              setOpenStep('where');
+            }}
+          />
+        </View>
+      </AppShellPanel>
     );
   }
 
@@ -283,20 +287,23 @@ export default function SearchScreen() {
   // branch that used to be a silent fall-through to the global feed.
   if (resolution.status === 'failed') {
     return (
-      <View style={styles.root}>
-        {searchPanel}
-        <ErrorState
-          title={t('search.location.failed.title', 'We could not find that place') ?? undefined}
-          description={
-            t(`search.location.failed.${resolution.reason}`, {
-              defaultValue:
-                t('search.location.failed.generic', 'Try choosing a different place.') ?? '',
-            }) ?? undefined
-          }
-          retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
-          onRetry={handleEditSearch}
-        />
-      </View>
+      // An error is ONE panel; the results are two (`SearchResultsView`).
+      <AppShellPanel>
+        <View style={styles.root}>
+          {searchPanel}
+          <ErrorState
+            title={t('search.location.failed.title', 'We could not find that place') ?? undefined}
+            description={
+              t(`search.location.failed.${resolution.reason}`, {
+                defaultValue:
+                  t('search.location.failed.generic', 'Try choosing a different place.') ?? '',
+              }) ?? undefined
+            }
+            retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
+            onRetry={handleEditSearch}
+          />
+        </View>
+      </AppShellPanel>
     );
   }
 
