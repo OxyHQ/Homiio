@@ -96,8 +96,11 @@ class CityService {
     if (options.limit) params.append('limit', String(options.limit));
 
     try {
-      const response = await api.get(`/api/cities/lookup?${params.toString()}`);
-      return response.data as CityLookupResult;
+      // The route answers with the API envelope; the lookup union is its `data`.
+      const response = await api.get<{ data: CityLookupResult }>(
+        `/api/cities/lookup?${params.toString()}`,
+      );
+      return response.data.data;
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) return { status: 'not_found' };
       throw error;
