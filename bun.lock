@@ -107,7 +107,7 @@
         "@bitdrift/react-native": "^0.14.1",
         "@expo/app-integrity": "~57.0.2",
         "@expo/vector-icons": "^15.1.1",
-        "@goway.to/maps": "^0.1.0",
+        "@goway.to/maps": "^0.1.1",
         "@goway.to/sdk": "^0.6.0",
         "@homiio/shared-types": "workspace:*",
         "@maplibre/maplibre-react-native": "^11.4.0",
@@ -666,7 +666,7 @@
 
     "@fastify/merge-json-schemas": ["@fastify/merge-json-schemas@0.2.1", "", { "dependencies": { "dequal": "^2.0.3" } }, "sha512-OA3KGBCy6KtIvLf8DINC5880o5iBlDX4SxzLQS8HorJAbqluzLRn80UXU0bxZn7UOFhFgpRJDasfwn9nG4FG4A=="],
 
-    "@goway.to/maps": ["@goway.to/maps@0.1.0", "", { "dependencies": { "supercluster": "^8.0.1" }, "peerDependencies": { "@goway.to/sdk": ">=0.6.0", "@maplibre/maplibre-react-native": ">=11.4.0", "@oxy.so/bloom": ">=10.16.0", "expo-location": "*", "maplibre-gl": ">=6.10.0", "react": ">=19.0.0", "react-dom": ">=19.0.0", "react-native": ">=0.80.0", "react-native-reanimated": ">=4.0.0", "react-native-svg": ">=15.0.0" }, "optionalPeers": ["@maplibre/maplibre-react-native", "maplibre-gl", "react-dom"] }, "sha512-myG6DJlmwyZBM2C5cHwwET/8Bjxpb/kf/77L16JqHiz1qPmft7SuXNOUP7k/ZNZTaq41JGS5p2r7hzq+SH7xEA=="],
+    "@goway.to/maps": ["@goway.to/maps@0.1.1", "", { "dependencies": { "supercluster": "^8.0.1" }, "peerDependencies": { "@goway.to/sdk": ">=0.6.0", "@maplibre/maplibre-react-native": ">=11.4.0", "@oxy.so/bloom": ">=10.16.0", "expo-location": "*", "maplibre-gl": ">=6.10.0", "react": ">=19.0.0", "react-dom": ">=19.0.0", "react-native": ">=0.80.0", "react-native-reanimated": ">=4.0.0", "react-native-svg": ">=15.0.0" }, "optionalPeers": ["@maplibre/maplibre-react-native", "maplibre-gl", "react-dom"] }, "sha512-bJOCgEfO9OYMMZiAA+Dg1FUTsoSjZbkKqF8ab5FH9bwGJ7frbASPhPUJzDX/13Zqn63Qk4P/DLwFrDOAqB76gA=="],
 
     "@goway.to/sdk": ["@goway.to/sdk@0.6.0", "", { "dependencies": { "zod": "^4.6.5" } }, "sha512-utebwiKE+zgF78GEzFVtHH9ixGJfmFOqFCZ4SOyFEiWxwGTPRZoYvJ7XMkjYvIEdQvnaKicyaFilY319Ct805g=="],
 

@@ -27,7 +27,7 @@
     "@bitdrift/react-native": "^0.14.1",
     "@expo/app-integrity": "~57.0.2",
     "@expo/vector-icons": "^15.1.1",
-    "@goway.to/maps": "^0.1.0",
+    "@goway.to/maps": "^0.1.1",
     "@goway.to/sdk": "^0.6.0",
     "@homiio/shared-types": "workspace:*",
     "@maplibre/maplibre-react-native": "^11.4.0",
