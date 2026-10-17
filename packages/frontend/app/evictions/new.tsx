@@ -26,6 +26,7 @@ import { DatePicker, TimeField } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
 import { RiAlertLine, RiImageAddLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { PhoneInput } from '@oxy.so/bloom/phone-input';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Switch } from '@oxy.so/bloom/switch';
@@ -339,15 +340,19 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
   const coverPreview = cover?.url ? resolveBackendImageUrl(cover.url) : undefined;
 
   return (
-    <>
-      <PageHeader
-        title={mode === 'edit' ? t('evictions.form.editTitle') : t('evictions.form.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={mode === 'edit' ? t('evictions.form.editTitle') : t('evictions.form.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
           <SectionEyebrow>{t('evictions.eyebrow')}</SectionEyebrow>
           <H2 style={styles.pageTitle}>
@@ -563,8 +568,8 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
         >
           {mode === 'edit' ? t('evictions.form.saveChanges') : t('evictions.form.publish')}
         </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 };
 
@@ -589,29 +594,29 @@ export default function EvictionsFormScreen() {
 
   if (isEdit && isLoading) {
     return (
-      <>
-        {editHeader}
-        <View style={styles.content}>
+      <Screen documentScroll header={editHeader}>
+        <ScreenScrollView contentContainerStyle={styles.content}>
           <Skeleton.Box width="100%" height={48} borderRadius={radius.md} />
           <Skeleton.Box width="100%" height={200} borderRadius={radius.lg} />
           <Skeleton.Box width="100%" height={48} borderRadius={radius.md} />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (isEdit && (isError || !existing)) {
     return (
-      <>
-        {editHeader}
-        <ErrorState
-          icon={RiAlertLine}
-          title={t('evictions.loadError')}
-          description={t('common.tryAgain')}
-          retryLabel={t('common.goBack')}
-          onRetry={() => router.back()}
-        />
-      </>
+      <Screen documentScroll header={editHeader}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('evictions.loadError')}
+            description={t('common.tryAgain')}
+            retryLabel={t('common.goBack')}
+            onRetry={() => router.back()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 

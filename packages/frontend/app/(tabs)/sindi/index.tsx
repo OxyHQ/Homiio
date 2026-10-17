@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Search } from '@oxy.so/bloom/search';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Card } from '@oxy.so/bloom/card';
@@ -93,39 +94,48 @@ export default function Sindi() {
 
   if (!isAuthenticated) {
     return (
-      <>
+      <Screen
+        documentScroll
+        header={
+          <PageHeader
+            title={t('sindi.title')}
+            titleAlign="center"
+            leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+            onBack={router.canGoBack() ? router.back : undefined}
+            backLabel={t('goBack')}
+          />
+        }
+      >
+        <ScreenScrollView>
+          <EmptyState
+            icon={RiLockLine}
+            title={t('sindi.auth.required')}
+            description={t('sindi.auth.message')}
+            actionText={t('common.signIn')}
+            actionIcon={RiLoginBoxLine}
+            onAction={() => openAccountDialog()}
+            iconColor={colors.primarySubtleForeground}
+          />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen
+      documentScroll
+      header={
         <PageHeader
           title={t('sindi.title')}
+          subtitle={t('sindi.subtitle')}
           titleAlign="center"
           leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
           onBack={router.canGoBack() ? router.back : undefined}
           backLabel={t('goBack')}
         />
-        <EmptyState
-          icon={RiLockLine}
-          title={t('sindi.auth.required')}
-          description={t('sindi.auth.message')}
-          actionText={t('common.signIn')}
-          actionIcon={RiLoginBoxLine}
-          onAction={() => openAccountDialog()}
-          iconColor={colors.primarySubtleForeground}
-        />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <PageHeader
-        title={t('sindi.title')}
-        subtitle={t('sindi.subtitle')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-
-      <View style={styles.content}>
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <Card radius="radius-24" style={styles.heroCard} appearance="outline">
           <SindiIcon size={56} color={colors.primary} />
           <SectionEyebrow>Meet Sindi</SectionEyebrow>
@@ -213,8 +223,8 @@ export default function Sindi() {
             </ConversationList>
           )}
         </View>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

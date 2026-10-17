@@ -18,6 +18,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useRouter } from 'expo-router';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
@@ -254,17 +255,18 @@ export default function ContractsScreen() {
     contracts.length === 0
   ) {
     return (
-      <>
-        {header}
-        <EmptyState
-          icon={RiFileTextLine}
-          title={t('contracts.list.noRentalPropertiesTitle')}
-          description={t('contracts.list.noRentalPropertiesDescription')}
-          actionText={t('contracts.list.browseProperties')}
-          actionIcon={RiHomeLine}
-          onAction={() => router.push('/')}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <EmptyState
+            icon={RiFileTextLine}
+            title={t('contracts.list.noRentalPropertiesTitle')}
+            description={t('contracts.list.noRentalPropertiesDescription')}
+            actionText={t('contracts.list.browseProperties')}
+            actionIcon={RiHomeLine}
+            onAction={() => router.push('/')}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -272,9 +274,25 @@ export default function ContractsScreen() {
   const hasNoContracts = !leasesLoading && !leasesError && contracts.length === 0;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen
+      documentScroll
+      header={header}
+      bottomBar={
+        <View className="lg:hidden p-4 bg-card border-t border-border">
+          <Button
+            size="lg"
+            onPress={handleAddNewContract}
+            leadingIcon={RiAddLine}
+            style={styles.footerButton}
+            tone="accent"
+            appearance="solid"
+          >
+            {t('contracts.list.newContract')}
+          </Button>
+        </View>
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleRow}>
           <View style={styles.titleBlock}>
             <SectionEyebrow>{t('contracts.list.eyebrow')}</SectionEyebrow>
@@ -389,21 +407,8 @@ export default function ContractsScreen() {
             ))}
           </View>
         ) : null}
-      </View>
-
-      <View className="lg:hidden p-4 bg-card border-t border-border">
-        <Button
-          size="lg"
-          onPress={handleAddNewContract}
-          leadingIcon={RiAddLine}
-          style={styles.footerButton}
-          tone="accent"
-          appearance="solid"
-        >
-          {t('contracts.list.newContract')}
-        </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

@@ -27,6 +27,7 @@ import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { LeaseDuration } from '@homiio/shared-types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
@@ -318,9 +319,8 @@ export default function RoommatePreferencesPage() {
 
   if (!hasProfile) {
     return (
-      <>
-        {header}
-        <View style={styles.emptyWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiUserLine}
             title={t('roommates.preferencesPage.personalProfileRequired')}
@@ -329,15 +329,14 @@ export default function RoommatePreferencesPage() {
             actionIcon={RiAccountCircleLine}
             onAction={() => router.push('/profile')}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
           <SectionEyebrow>{t('roommates.preferencesPage.eyebrow')}</SectionEyebrow>
           <H2 style={styles.title}>{t('roommates.preferences')}</H2>
@@ -455,8 +454,8 @@ export default function RoommatePreferencesPage() {
             ? t('roommates.preferencesPage.saving')
             : t('roommates.preferencesPage.save')}
         </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -467,7 +466,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['4xl'],
   },
   emptyWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   titleBlock: {

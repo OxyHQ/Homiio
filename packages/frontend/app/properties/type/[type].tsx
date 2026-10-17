@@ -13,20 +13,20 @@
  * replaces the old `useProperties` + `useEffect(loadProperties)` +
  * client-side filter/sort with server-side filtering, sorting and infinite
  * scroll, and removes the loading effect entirely (pure derived / React-Query
- * state).
+ * state). Paginates through `ScreenScrollView`'s `onEndReached`.
  */
-import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { RiEqualizerLine, RiHomeLine } from '@oxy.so/bloom/icons';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
 import { SortMenu } from '@/components/search/SortMenu';
 import { SearchFiltersDialog, countActiveFilters } from '@/components/search/SearchFiltersDialog';
@@ -161,12 +161,19 @@ export default function PropertyTypeScreen() {
   })();
 
   return (
-    <>
-      <PropertyListHeader
-        title={t('properties.type.title', { type: typeName })}
-        subtitle={subtitle}
-      />
-      <View style={styles.scrollContent}>
+    <Screen
+      documentScroll
+      header={
+        <PropertyListHeader
+          title={t('properties.type.title', { type: typeName })}
+          subtitle={subtitle}
+        />
+      }
+    >
+      <ScreenScrollView
+        contentContainerStyle={styles.scrollContent}
+        onEndReached={handleEndReached}
+      >
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -184,8 +191,7 @@ export default function PropertyTypeScreen() {
         {isFetchingNextPage ? (
           <PropertyResultsGridSkeleton count={2} style={styles.gridPadding} />
         ) : null}
-        <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
-      </View>
+      </ScreenScrollView>
       <SearchFiltersDialog
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
@@ -193,7 +199,7 @@ export default function PropertyTypeScreen() {
         onApply={patchQuery}
         showTypes={false}
       />
-    </>
+    </Screen>
   );
 }
 

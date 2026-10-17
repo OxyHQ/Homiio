@@ -1,5 +1,5 @@
 import type React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { TextLines } from './TextLines';
 
@@ -54,11 +54,7 @@ export const PropertyListSkeleton: React.FC<PropertyListSkeletonProps> = ({
     </View>
   );
 
-  return (
-    <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
-      {viewMode === 'grid' ? renderGridSkeleton() : renderListSkeleton()}
-    </ScrollView>
-  );
+  return <View>{viewMode === 'grid' ? renderGridSkeleton() : renderListSkeleton()}</View>;
 };
 
 const styles = StyleSheet.create({

@@ -36,6 +36,7 @@ import { Field } from '@oxy.so/bloom/field';
 import { RiAddLine, RiCalendarLine, RiDeleteBinLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { toast } from '@oxy.so/bloom/toast';
 import { Text } from '@oxy.so/bloom/typography';
@@ -226,12 +227,11 @@ export default function ViewingAvailabilityPage() {
 
   if (scheduleQuery.isLoading) {
     return (
-      <>
-        {header}
-        <View style={styles.centered}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centered}>
           <Loading variant="spinner" size="lg" />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -241,20 +241,20 @@ export default function ViewingAvailabilityPage() {
     // that does not exist. That is the intended outcome, not an error to
     // explain away.
     return (
-      <>
-        {header}
-        <ErrorState
-          title={t('viewings.schedule.notYours')}
-          description={t('viewings.schedule.notYoursDescription')}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            title={t('viewings.schedule.notYours')}
+            description={t('viewings.schedule.notYoursDescription')}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Admonition type="info">{t('viewings.schedule.explainer')}</Admonition>
 
         {scheduleQuery.data?.timeZoneSource === 'fallback' ? (
@@ -375,8 +375,8 @@ export default function ViewingAvailabilityPage() {
         >
           {t('viewings.schedule.save')}
         </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     gap: spacing.md,
   },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  centered: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
   rowTitle: { fontSize: 16, fontWeight: '700' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   timeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

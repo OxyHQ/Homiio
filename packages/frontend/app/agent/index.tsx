@@ -13,7 +13,7 @@
  *
  * Section order: hero → how-it-works → earnings calculator → rewards teaser →
  * (partner only) referral link + dashboard → closing CTA banner. Sections are
- * flat with per-section gutter on the shell's content surface.
+ * flat with per-section gutter inside the page's `ScreenScrollView`.
  */
 import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { openAccountDialog, useOxy } from '@oxy.so/services';
 
 import { AgentHero } from '@/components/agent/AgentHero';
@@ -93,63 +94,68 @@ export default function AgentScreen() {
   }, [isAuthenticated, isPartner, link, joinMutation, t]);
 
   return (
-    <>
-      <PageHeader
-        title={t('agent.menu.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-        transparent
-        titleReveal="onScroll"
-      />
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('agent.menu.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+          transparent
+          titleReveal="onScroll"
+        />
+      }
+    >
+      <ScreenScrollView>
+        <AgentHero
+          title={t('agent.hero.title')}
+          subtitle={t('agent.hero.subtitle')}
+          ctaLabel={ctaLabel}
+          onPressCta={handleHeroCta}
+          ctaLoading={joinMutation.isPending}
+          trustLine={t('agent.hero.trust')}
+        />
 
-      <AgentHero
-        title={t('agent.hero.title')}
-        subtitle={t('agent.hero.subtitle')}
-        ctaLabel={ctaLabel}
-        onPressCta={handleHeroCta}
-        ctaLoading={joinMutation.isPending}
-        trustLine={t('agent.hero.trust')}
-      />
+        {/* Section rhythm owned here by NativeWind `gap` (24px mobile / 32px
+              web); post-hero sections only. Hero sits outside so it does not
+              participate in the gap stack. */}
+        <View className="gap-6 md:gap-8 pb-20">
+          <AgentHowItWorks />
 
-      {/* Section rhythm owned here by NativeWind `gap` (24px mobile / 32px
-            web); post-hero sections only. Hero sits outside so it does not
-            participate in the gap stack. */}
-      <View className="gap-6 md:gap-8 pb-20">
-        <AgentHowItWorks />
+          <EarningsCalculator />
 
-        <EarningsCalculator />
+          <RewardsTeaser points={partner?.points} />
 
-        <RewardsTeaser points={partner?.points} />
+          {/* Partner-only: referral link + dashboard. Rendered only once the
+                join has succeeded (or on a returning partner) — derived purely
+                from the query, no effect. */}
+          {isPartner && link ? <ReferralLinkCard link={link} /> : null}
 
-        {/* Partner-only: referral link + dashboard. Rendered only once the
-              join has succeeded (or on a returning partner) — derived purely
-              from the query, no effect. */}
-        {isPartner && link ? <ReferralLinkCard link={link} /> : null}
+          {isPartner && stats ? (
+            <PartnerDashboard
+              stats={stats}
+              points={partner?.points ?? 0}
+              referrals={referralsQuery.data ?? []}
+              commissions={earningsQuery.data ?? []}
+              referralsLoading={referralsQuery.isLoading}
+              earningsLoading={earningsQuery.isLoading}
+            />
+          ) : null}
 
-        {isPartner && stats ? (
-          <PartnerDashboard
-            stats={stats}
-            points={partner?.points ?? 0}
-            referrals={referralsQuery.data ?? []}
-            commissions={earningsQuery.data ?? []}
-            referralsLoading={referralsQuery.isLoading}
-            earningsLoading={earningsQuery.isLoading}
-          />
-        ) : null}
-
-        <View className="px-4 md:px-8">
-          <CtaBanner
-            title={t('agent.banner.title')}
-            subtitle={t('agent.banner.subtitle')}
-            ctaLabel={t('agent.banner.cta')}
-            image={require('@/assets/images/cta-agent.jpg')}
-            trustLine={t('agent.banner.trust')}
-            onPress={handleHeroCta}
-          />
+          <View className="px-4 md:px-8">
+            <CtaBanner
+              title={t('agent.banner.title')}
+              subtitle={t('agent.banner.subtitle')}
+              ctaLabel={t('agent.banner.cta')}
+              image={require('@/assets/images/cta-agent.jpg')}
+              trustLine={t('agent.banner.trust')}
+              onPress={handleHeroCta}
+            />
+          </View>
         </View>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }

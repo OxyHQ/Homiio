@@ -50,6 +50,7 @@ import {
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Search } from '@oxy.so/bloom/search';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { confirm } from '@oxy.so/bloom/surfaces';
@@ -250,119 +251,124 @@ export default function InboxScreen() {
   );
 
   return (
-    <>
-      <PageHeader
-        title={t('inbox.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        actions={
-          <>
-            {unreadCount > 0 ? (
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('inbox.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          actions={
+            <>
+              {unreadCount > 0 ? (
+                <Button
+                  iconOnly
+                  leadingIcon={RiCheckboxCircleLine}
+                  accessibilityLabel={t('notification.markAllRead.action')}
+                  onPress={() => void handleMarkAllAsRead()}
+                  tone="accent"
+                  appearance="subtle"
+                />
+              ) : null}
               <Button
                 iconOnly
-                leadingIcon={RiCheckboxCircleLine}
-                accessibilityLabel={t('notification.markAllRead.action')}
-                onPress={() => void handleMarkAllAsRead()}
+                leadingIcon={RiSettings3Line}
+                accessibilityLabel={t('notification.settings.title')}
+                onPress={() => router.push('/settings/notifications')}
                 tone="accent"
                 appearance="subtle"
               />
-            ) : null}
-            <Button
-              iconOnly
-              leadingIcon={RiSettings3Line}
-              accessibilityLabel={t('notification.settings.title')}
-              onPress={() => router.push('/settings/notifications')}
-              tone="accent"
-              appearance="subtle"
-            />
-          </>
-        }
-      />
-
-      <View style={styles.controls}>
-        <Search
-          value={searchQuery}
-          label={t('notification.search.placeholder')}
-          onChangeText={setSearchQuery}
-          onClearText={() => setSearchQuery('')}
+            </>
+          }
         />
-
-        <SegmentedControl<InboxFilter>
-          label={t('notification.filter.label')}
-          type="tabs"
-          value={filter}
-          onChange={setFilter}
-        >
-          <SegmentedControlItem value="all">
-            <SegmentedControlItemText>{t('notification.filter.all')}</SegmentedControlItemText>
-          </SegmentedControlItem>
-          <SegmentedControlItem value="unread">
-            <SegmentedControlItemText>
-              {unreadCount > 0
-                ? `${t('notification.filter.unread')} · ${unreadCount}`
-                : t('notification.filter.unread')}
-            </SegmentedControlItemText>
-          </SegmentedControlItem>
-        </SegmentedControl>
-      </View>
-
-      {isLoading && notifications.length === 0 ? (
-        <View style={styles.stateWrap}>
-          <ListSkeleton rows={6} rowHeight={64} />
-        </View>
-      ) : error ? (
-        <View style={styles.stateWrap}>
-          <ErrorState
-            title={t('error.loadNotifications')}
-            description={typeof error === 'string' ? error : t('common.tryAgain')}
-            retryLabel={t('common.retry')}
-            onRetry={handleRefresh}
+      }
+    >
+      <ScreenScrollView>
+        <View style={styles.controls}>
+          <Search
+            value={searchQuery}
+            label={t('notification.search.placeholder')}
+            onChangeText={setSearchQuery}
+            onClearText={() => setSearchQuery('')}
           />
+
+          <SegmentedControl<InboxFilter>
+            label={t('notification.filter.label')}
+            type="tabs"
+            value={filter}
+            onChange={setFilter}
+          >
+            <SegmentedControlItem value="all">
+              <SegmentedControlItemText>{t('notification.filter.all')}</SegmentedControlItemText>
+            </SegmentedControlItem>
+            <SegmentedControlItem value="unread">
+              <SegmentedControlItemText>
+                {unreadCount > 0
+                  ? `${t('notification.filter.unread')} · ${unreadCount}`
+                  : t('notification.filter.unread')}
+              </SegmentedControlItemText>
+            </SegmentedControlItem>
+          </SegmentedControl>
         </View>
-      ) : (
-        <View style={styles.listContent}>
-          {listHeader}
-          {filteredNotifications.length > 0 ? (
-            filteredNotifications.map((item) => (
-              <NotificationItem
-                key={item.id}
-                type={item.type}
-                title={item.title}
-                description={item.message}
-                time={formatRelativeTime(new Date(item.createdAt))}
-                read={item.read}
-                onPress={() => void handleNotificationPress(item)}
-                onLongPress={() => void handleDeleteNotification(item)}
-                onDelete={() => void handleDeleteNotification(item)}
-              />
-            ))
-          ) : isFiltered ? (
-            <View style={styles.emptyWrap}>
-              <EmptyState
-                icon={RiFilterLine}
-                title={t('notification.empty.filteredTitle')}
-                description={t('notification.empty.filtered')}
-              />
-            </View>
-          ) : (
-            <View style={styles.illustrationEmpty}>
-              <Image
-                source={EMPTY_INBOX_ILLUSTRATION}
-                style={styles.illustrationImage}
-                contentFit="contain"
-                accessibilityIgnoresInvertColors
-              />
-              <H3 style={[styles.illustrationTitle, { color: theme.text }]}>
-                {t('notification.empty.title')}
-              </H3>
-              <BloomText style={[styles.illustrationMessage, { color: theme.textSecondary }]}>
-                {t('notification.empty.message')}
-              </BloomText>
-            </View>
-          )}
-        </View>
-      )}
-    </>
+
+        {isLoading && notifications.length === 0 ? (
+          <View style={styles.stateWrap}>
+            <ListSkeleton rows={6} rowHeight={64} />
+          </View>
+        ) : error ? (
+          <View style={styles.stateWrap}>
+            <ErrorState
+              title={t('error.loadNotifications')}
+              description={typeof error === 'string' ? error : t('common.tryAgain')}
+              retryLabel={t('common.retry')}
+              onRetry={handleRefresh}
+            />
+          </View>
+        ) : (
+          <View style={styles.listContent}>
+            {listHeader}
+            {filteredNotifications.length > 0 ? (
+              filteredNotifications.map((item) => (
+                <NotificationItem
+                  key={item.id}
+                  type={item.type}
+                  title={item.title}
+                  description={item.message}
+                  time={formatRelativeTime(new Date(item.createdAt))}
+                  read={item.read}
+                  onPress={() => void handleNotificationPress(item)}
+                  onLongPress={() => void handleDeleteNotification(item)}
+                  onDelete={() => void handleDeleteNotification(item)}
+                />
+              ))
+            ) : isFiltered ? (
+              <View style={styles.emptyWrap}>
+                <EmptyState
+                  icon={RiFilterLine}
+                  title={t('notification.empty.filteredTitle')}
+                  description={t('notification.empty.filtered')}
+                />
+              </View>
+            ) : (
+              <View style={styles.illustrationEmpty}>
+                <Image
+                  source={EMPTY_INBOX_ILLUSTRATION}
+                  style={styles.illustrationImage}
+                  contentFit="contain"
+                  accessibilityIgnoresInvertColors
+                />
+                <H3 style={[styles.illustrationTitle, { color: theme.text }]}>
+                  {t('notification.empty.title')}
+                </H3>
+                <BloomText style={[styles.illustrationMessage, { color: theme.textSecondary }]}>
+                  {t('notification.empty.message')}
+                </BloomText>
+              </View>
+            )}
+          </View>
+        )}
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

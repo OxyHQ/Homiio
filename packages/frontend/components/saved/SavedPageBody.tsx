@@ -1,7 +1,7 @@
 /**
  * The signed-in Saved page — the Bloom housing template's Saved page, inside
  * Homiio's frame. The route (`app/(tabs)/saved/index.tsx`) owns the `Header`
- * and the sign-in gate; this owns everything under them.
+ * and the sign-in gate; this owns everything under them, as the screen's scroller.
  *
  * One column, top to bottom, each section from real data only:
  *
@@ -14,12 +14,12 @@
  *   by the offering each card prices.
  */
 import React, { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { RefreshControl, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import savedPropertyService from '@/services/savedPropertyService';
 
@@ -63,13 +63,9 @@ export function SavedPageBody({ enabled }: { enabled: boolean }) {
   const twoColumns = columnWidth >= TWO_COLUMN_MIN_WIDTH;
   const gutter = columnWidth >= 640 ? 32 : 16;
 
-  // Native end-of-scroll reveals the next window of saved homes; web uses the
-  // sentinel inside the section.
+  // The end of the page reveals the next window of saved homes.
   const [loadMoreSignal, setLoadMoreSignal] = useState(0);
-  const { onScroll } = useInfiniteScroll({
-    onEndReached: () => setLoadMoreSignal((signal) => signal + 1),
-    enabled,
-  });
+  const handleEndReached = useCallback(() => setLoadMoreSignal((signal) => signal + 1), []);
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([
@@ -83,10 +79,8 @@ export function SavedPageBody({ enabled }: { enabled: boolean }) {
   const folders = foldersQuery.data?.folders ?? [];
 
   return (
-    <ScrollView
-      onScroll={onScroll}
-      scrollEventThrottle={16}
-      showsVerticalScrollIndicator={false}
+    <ScreenScrollView
+      onEndReached={enabled ? handleEndReached : undefined}
       refreshControl={
         <RefreshControl
           refreshing={savedQuery.isRefetching || foldersQuery.isRefetching}
@@ -125,7 +119,7 @@ export function SavedPageBody({ enabled }: { enabled: boolean }) {
           loadMoreSignal={loadMoreSignal}
         />
       </View>
-    </ScrollView>
+    </ScreenScrollView>
   );
 }
 

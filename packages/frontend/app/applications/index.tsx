@@ -18,6 +18,7 @@ import { isThisWeek, isToday } from 'date-fns';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -145,9 +146,8 @@ export default function MyApplicationsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiFileTextLine}
             title={t('applications.list.signInTitle')}
@@ -156,43 +156,40 @@ export default function MyApplicationsScreen() {
             actionIcon={RiLoginBoxLine}
             onAction={() => openAccountDialog()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (applicationsQuery.isPending) {
     return (
-      <>
-        {header}
-        <View style={styles.content}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.content}>
           <FilterRow value={filter} onChange={setFilter} t={t} />
           <ListSkeleton rows={5} rowHeight={120} />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (applicationsQuery.isError) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('applications.list.loadError')}
             description={applicationsQuery.error?.message ?? t('applications.list.tryAgain')}
             retryLabel={t('applications.list.retry')}
             onRetry={() => applicationsQuery.refetch()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <FilterRow value={filter} onChange={setFilter} t={t} />
 
         {filtered.length === 0 ? (
@@ -228,8 +225,8 @@ export default function MyApplicationsScreen() {
             </View>
           ))
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -260,7 +257,7 @@ const styles = StyleSheet.create({
     gap: spacing['2xl'],
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   emptyWrap: {

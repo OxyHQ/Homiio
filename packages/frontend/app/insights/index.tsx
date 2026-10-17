@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { StatCards, type StatCardsItem } from '@oxy.so/bloom/stat-cards';
 import {
   BarListCard,
@@ -102,17 +103,36 @@ export default function InsightsScreen() {
     ];
   }, [appStats, locale, t]);
 
+  const header = (
+    <PageHeader
+      title={t('home.insights.screenTitle')}
+      subtitle={t('home.insights.subtitle')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+
   if (statsQuery.isPending) {
-    return <InsightsSkeleton />;
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <InsightsSkeleton />
+        </ScreenScrollView>
+      </Screen>
+    );
   }
 
   if (statsQuery.isError) {
     return (
-      <View className="flex-1 items-center justify-center p-6">
-        <BloomText style={{ color: theme.colors.text }}>
-          {statsQuery.error.message || t('home.insights.loadError')}
-        </BloomText>
-      </View>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerClassName="items-center p-6">
+          <BloomText style={{ color: theme.colors.text }}>
+            {statsQuery.error.message || t('home.insights.loadError')}
+          </BloomText>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -126,18 +146,10 @@ export default function InsightsScreen() {
     c.state ? `${c.city}, ${c.state}` : c.city;
 
   return (
-    <>
-      <PageHeader
-        title={t('home.insights.screenTitle')}
-        subtitle={t('home.insights.subtitle')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
+    <Screen documentScroll header={header}>
       {/* Vertical rhythm between the stacked blocks is owned here by
-                    NativeWind `gap` — no per-block stacking margins. */}
-      <View className="w-full gap-6 md:gap-8 px-4 pt-4 pb-14">
+          NativeWind `gap` — no per-block stacking margins. */}
+      <ScreenScrollView contentContainerClassName="w-full gap-6 md:gap-8 px-4 pt-4 pb-14">
         <StatCards stats={kpis} />
 
         <View className="gap-4 md:flex-row md:items-start">
@@ -204,7 +216,7 @@ export default function InsightsScreen() {
             ))}
           </Shelf>
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }

@@ -92,20 +92,5 @@ export const PropertyActionBar: React.FC<Props> = ({
     actions = { primaryLabel: t('properties.contact'), onPrimary: onContact, ...call };
   }
 
-  return (
-    <ActionBar
-      price={price}
-      priceAccessibilityLabel={priceAccessibilityLabel}
-      {...actions}
-      style={styles.bar}
-    />
-  );
-};
-
-const styles = {
-  // RN-Web supports `position: 'sticky'`, absent from RN's ViewStyle.
-  bar: Platform.select<ViewStyle>({
-    web: { position: 'sticky', bottom: 0, zIndex: 1000 } as unknown as ViewStyle,
-    default: {},
-  }),
+  return <ActionBar price={price} priceAccessibilityLabel={priceAccessibilityLabel} {...actions} />;
 };

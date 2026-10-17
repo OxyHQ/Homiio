@@ -3,7 +3,7 @@
  * SettingsList primitives with a row per currency and an active-state
  * checkmark on the right.
  */
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Text } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { RiCheckLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
@@ -40,15 +41,19 @@ export default function CurrencySettingsScreen() {
   };
 
   return (
-    <>
-      <PageHeader
-        title={t('settings.currency.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={settingsScreenStyles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('settings.currency.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={settingsScreenStyles.content}>
         <SettingsListGroup
           title={t('settings.currency.selectCurrency')}
           footer={t('settings.currency.description')}
@@ -76,8 +81,8 @@ export default function CurrencySettingsScreen() {
             );
           })}
         </SettingsListGroup>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

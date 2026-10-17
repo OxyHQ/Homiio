@@ -5,11 +5,11 @@ import { TextLines } from './TextLines';
 
 export const PropertyDetailSkeleton: React.FC = () => {
   return (
-    <View className="flex-1 bg-background">
+    <View>
       {/* Header image skeleton */}
       <Skeleton.Box width="100%" height={250} borderRadius={0} />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <View>
         {/* Title and location */}
         <View style={styles.section}>
           <TextLines lines={2} lastLineWidth="70%" lineHeight={24} lineSpacing={8} />
@@ -108,27 +108,12 @@ export const PropertyDetailSkeleton: React.FC = () => {
             />
           </View>
         </View>
-
-        {/* Action bar space */}
-        <View style={styles.actionBarSpace} />
-      </ScrollView>
-
-      {/* Action bar skeleton */}
-      <View className="border-border bg-card" style={styles.actionBar}>
-        <View style={styles.priceSection}>
-          <Skeleton.Box width={80} height={20} />
-          <Skeleton.Box width={60} height={16} style={{ marginTop: 4 }} />
-        </View>
-        <Skeleton.Box width={140} height={48} borderRadius={24} />
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-  },
   section: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -181,23 +166,5 @@ const styles = StyleSheet.create({
   featureItem: {
     alignItems: 'center',
     width: '30%',
-  },
-  actionBarSpace: {
-    height: 80,
-  },
-  actionBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-  },
-  priceSection: {
-    flex: 1,
   },
 });

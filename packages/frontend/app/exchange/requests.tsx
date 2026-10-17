@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
@@ -146,9 +147,8 @@ export default function ExchangeRequestsScreen() {
 
   if (!isAuthed) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiArrowLeftRightLine}
             title={t('listing.exchange.signInTitle')}
@@ -157,15 +157,14 @@ export default function ExchangeRequestsScreen() {
             actionIcon={RiLoginBoxLine}
             onAction={() => openAccountDialog()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         {/* Role segmented toggle */}
         <SegmentedControl<RoleView>
           label={t('listing.exchange.requestsTitle')}
@@ -250,8 +249,8 @@ export default function ExchangeRequestsScreen() {
             ))}
           </View>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -261,7 +260,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   emptyWrap: {

@@ -177,9 +177,9 @@ function MediaResolverProvider({ children }: { children: React.ReactNode }) {
  * `ContentPanel`, the route's right rail as the `aside`, and Bloom's
  * `BottomBar` while the sidebar is a drawer.
  *
- * `scroll="document"`: the browser document scrolls on web, and Bloom gives
- * native its container scroll view — pages render no scroll view of their own.
- * Each page draws its own Bloom `PageHeader`, led by `AppShellMenuButton`.
+ * `scroll="page"`: every route is a Bloom `Screen` whose `ScreenScrollView`
+ * scrolls the document on web and is the scroller on native. Each page puts its
+ * Bloom `PageHeader`, led by `AppShellMenuButton`, in the Screen's header.
  * `/explore` is `fixed`: its map pins one screen and scrolls only its list.
  */
 function AppFrame() {
@@ -200,7 +200,7 @@ function AppFrame() {
     <AppShell
       variant="feed"
       panel
-      scroll={isExploreRoute ? 'fixed' : 'document'}
+      scroll={isExploreRoute ? 'fixed' : 'page'}
       sidebar={sidebar}
       drawer="reveal"
       drawerOpen={drawerOpen}

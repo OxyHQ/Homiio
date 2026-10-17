@@ -11,7 +11,7 @@
 as its content, and nothing else as the frame:
 
 ```tsx
-<AppShell variant="feed" panel safeArea scroll="document" header={null}
+<AppShell variant="feed" panel scroll="page" header={null}
   sidebar={…} drawer="reveal" aside={…} bottomBar={<HomiioBottomBar />}>
   <Slot />
 </AppShell>
@@ -31,39 +31,56 @@ layout forks.
 - `aside` is `RightBar`. Decide whether there is a column with
   `useHasRightBar()` BEFORE creating the element: `AppShell` sizes a column for
   any non-null `aside`.
-- `safeArea`: the shell owns the device insets. Pages never use `SafeAreaView`
-  or `useSafeAreaInsets()`; only portaled overlays (sheets, dialogs) do.
+- Device insets belong to Bloom chrome (`PageHeader`, `BottomBar`, `Screen`).
+  Pages never use `SafeAreaView` or `useSafeAreaInsets()`; only portaled
+  overlays (sheets, dialogs) do.
 
 ### A page
 
-A page is Bloom's `PageHeader` followed by its content — no header wrapper, no
-scroll view, no background:
+Every route is a Bloom `Screen` with its `PageHeader` in the `header` slot and its
+content in one `ScreenScrollView` — no background, no other vertical scroller:
 
 ```tsx
-<>
-  <PageHeader
-    title={t('…')}
-    titleAlign="center"
-    leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-    onBack={router.canGoBack() ? router.back : undefined}
-    backLabel={t('goBack')}
-    safeArea={false}
-  />
-  <View className="gap-4 p-4">…</View>
-</>
+<Screen
+  documentScroll
+  header={
+    <PageHeader
+      title={t('…')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  }
+  bottomBar={pinnedBar /* only a page with one: BookingBar, a wizard footer */}
+>
+  <ScreenScrollView contentContainerClassName="gap-4 p-4" onEndReached={loadMore}>
+    …
+  </ScreenScrollView>
+  {/* dialogs and sheets after the scroller */}
+</Screen>
 ```
 
-`AppShellMenuButton` renders only while the sidebar is a drawer. A header over a
-hero image adds `transparent titleReveal="onScroll"`. `app/tips/index.tsx` is the
-reference.
+- Every return branch (loading, error, empty, signed-out) has the same shape, so
+  it keeps its header and scrolls.
+- A header over a photo (home hero, listing gallery) is
+  `PageHeader placement="overlap"`: the content starts at the top edge, under it.
+- A pinned bar is `Screen bottomBar`, never `position: 'sticky'`: Bloom pins it
+  (sticky on web, absolute on native) on top of the app's bottom navigation and
+  reserves its height.
+- Content that fills the viewport and scrolls itself (a chat thread, a map) is a
+  plain `View` inside `Screen`, with the `PageHeader` in flow above it.
+
+`AppShellMenuButton` renders only while the sidebar is a drawer.
 
 ### Scroll ownership
 
-`AppShell` scrolls: the document on web, Bloom's container scroll view on
-native. **A page renders no vertical page-level `ScrollView` or list
-virtualizer** — horizontal rows and scrollers inside sheets are fine.
-`/explore` is the exception: the shell runs `scroll="fixed"` there, the map is
-pinned and only the results list scrolls.
+`AppShell scroll="page"`: on web the document scrolls (each `Screen documentScroll`
+stays in document flow); on native the shell adds no scroll view and the route's
+`ScreenScrollView` is the scroller. A page that renders its content outside a
+`ScreenScrollView` does not scroll on native. Horizontal rows and scrollers inside
+sheets are fine. `/explore` is the exception: the shell runs `scroll="fixed"`
+there, the map is pinned and only the results list scrolls.
 
 ### Breakpoints are NativeWind classes
 
@@ -264,35 +281,25 @@ The mapping table lives in `packages/frontend/components/ui/README.md`.
   `RangeCalendar`/`Calendar`**: blocked/booked days, min/max stay and the
   no-range-across-unavailable-days rule are Homiio's, not Bloom's.
 
-## Infinite scroll and pagination primitive
+## Infinite scroll and pagination
 
-Homiio has **one** reusable infinite-scroll primitive. Never hand-roll
-`ScrollView.onScroll` distance math again. It respects the "one scroll owner per
-surface" rule above (web sentinel, native handler) rather than copying Mention's
-`FlatList.onEndReached`.
+A paginated page passes its guarded loader
+(`if (hasNextPage && !isFetchingNextPage) fetchNextPage()`) to
+`ScreenScrollView onEndReached`. Bloom fires it from the scroll view on native and
+from the window in a web `Screen documentScroll`, and re-arms when the content
+grows. Never hand-roll scroll distance math or an end-of-list sentinel in a page.
+`/explore`'s results list, which scrolls beside the pinned map, is the one surface
+that still keeps `LoadMoreSentinel` + `useInfiniteScroll`.
 
-- **Web** (document scroll or a nested `overflow:auto`): render
-  `components/common/LoadMoreSentinel.tsx` at the list's end, a 1px `View` plus
-  `IntersectionObserver` (600px `rootMargin`), inert on native.
-- **Native** (the surface's own scroll owner): `hooks/useInfiniteScroll.ts`
-  returns an `{ onScroll }` end-detect handler (0.7 threshold, re-arms on scroll
-  up) to spread onto the screen's `ScrollView`. A screen scrolled by
-  `components/PageScrollView.tsx` gets end detection from its Reanimated worklet
-  (`runOnJS`) firing `onEndReached` and `onEndReachedThreshold`, sharing the same
-  `END_REACHED_THRESHOLD` constant.
-- A screen wires **both** (sentinel plus native handler), and each platform only
-  fires its own. The guarded loader
-  (`if (hasNextPage && !isFetchingNextPage) fetchNextPage()`) stays in the
-  consumer, not the primitive.
 - Canonical data hooks, to reuse rather than writing a new pagination engine:
   `hooks/usePropertySearch.ts` (search, browse, home feed) and
   `hooks/useInfiniteCityProperties.ts` (a city's listings), both
   `useInfiniteQuery`-based and page based. Render results with
   `components/ui/PropertyResultsGrid.tsx` and `PropertyResultsGridSkeleton`, a
-  `.map` grid that intentionally does not own scroll, for embedding in the single
-  page scroller.
+  `.map` grid that intentionally does not own scroll, for embedding in the
+  page's `ScreenScrollView`.
 - A list with no backend pagination endpoint (saved) reveals client-side a
-  page at a time through the same sentinel and native handler.
+  page at a time from the same `onEndReached`.
 - Backend list endpoints feeding an infinite grid should expose flat `hasMore`
   and `totalPages` aliases alongside the nested `pagination` object, which keeps
   `normalizeEnvelope` intact. See `/api/properties/search` and

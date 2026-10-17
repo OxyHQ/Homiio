@@ -253,7 +253,6 @@ describe('the defects the ladder was hiding', () => {
     for (const pathname of [
       '/properties/drafts',
       '/properties/recently-viewed',
-      '/properties/address-detail',
       '/properties/my',
     ]) {
       expect(railForPathname(pathname).propertyId).toBeUndefined();

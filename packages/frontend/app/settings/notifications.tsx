@@ -4,7 +4,7 @@
  * button) while permission is missing, and `confirm()` for clear-all.
  */
 import { useCallback, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';
@@ -35,6 +35,7 @@ import {
   RiVolumeUpLine,
 } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Switch } from '@oxy.so/bloom/switch';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { useTheme } from '@oxy.so/bloom/theme';
@@ -251,15 +252,19 @@ export default function NotificationSettingsScreen() {
   );
 
   return (
-    <>
-      <PageHeader
-        title={t('notification.settings.title')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={settingsScreenStyles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('notification.settings.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={settingsScreenStyles.content}>
         {hasPermission ? (
           <SettingsListGroup>
             <SettingsListItem
@@ -379,8 +384,8 @@ export default function NotificationSettingsScreen() {
             />
           </SettingsListGroup>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

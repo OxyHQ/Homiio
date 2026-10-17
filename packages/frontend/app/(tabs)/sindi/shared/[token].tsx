@@ -13,6 +13,7 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Chip } from '@oxy.so/bloom/chip';
 import { RiShare2Line } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -39,8 +40,10 @@ export default function SharedConversationView() {
     [t, i18n.language],
   );
 
+  // The thread is a chat with its own scroller, so the page fills the screen
+  // rather than scrolling as one, and the header sits in flow above it.
   return (
-    <>
+    <Screen documentScroll>
       <PageHeader
         title={t('sindi.shared.subtitle')}
         titleAlign="center"
@@ -48,7 +51,6 @@ export default function SharedConversationView() {
         onBack={router.canGoBack() ? router.back : undefined}
         backLabel={t('goBack')}
       />
-
       <View style={styles.badge}>
         <Chip
           size="sm"
@@ -65,7 +67,7 @@ export default function SharedConversationView() {
       <Text variant="caption-1-regular" style={[styles.footer, { color: colors.textTertiary }]}>
         {t('sindi.shared.footer')}
       </Text>
-    </>
+    </Screen>
   );
 }
 

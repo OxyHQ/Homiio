@@ -15,6 +15,7 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { RiEditLine, RiFolderLine, RiFolderOpenLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -115,69 +116,69 @@ export default function SavedFolderScreen() {
 
   if (isLoading) {
     return (
-      <>
-        {fallbackHeader}
-        <View style={styles.skeletonWrap}>
+      <Screen documentScroll header={fallbackHeader}>
+        <ScreenScrollView contentContainerStyle={styles.skeletonWrap}>
           <ListSkeleton rows={4} rowHeight={160} />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (isError) {
     return (
-      <>
-        {fallbackHeader}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={fallbackHeader}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('saved.loadFailed')}
             retryLabel={t('common.retry')}
             onRetry={handleRefresh}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (!folder) {
     return (
-      <>
-        {fallbackHeader}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={fallbackHeader}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiFolderOpenLine}
             title={t('saved.noFolder')}
             description={t('saved.noFolderDescription')}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   return (
-    <>
-      <PageHeader
-        title={`${folder.icon || '📁'} ${folder.name}`}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-        actions={
-          folder.isDefault ? undefined : (
-            <Button
-              size="sm"
-              onPress={() => router.push(`/saved/${folderId}/edit`)}
-              leadingIcon={RiEditLine}
-              tone="accent"
-              appearance="subtle"
-            >
-              {t('common.edit')}
-            </Button>
-          )
-        }
-      />
-
-      <View style={styles.gridContent}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={`${folder.icon || '📁'} ${folder.name}`}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+          actions={
+            folder.isDefault ? undefined : (
+              <Button
+                size="sm"
+                onPress={() => router.push(`/saved/${folderId}/edit`)}
+                leadingIcon={RiEditLine}
+                tone="accent"
+                appearance="subtle"
+              >
+                {t('common.edit')}
+              </Button>
+            )
+          }
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.gridContent}>
         {folderProperties.length === 0 ? (
           <View style={styles.emptyInner}>
             <EmptyState
@@ -196,14 +197,14 @@ export default function SavedFolderScreen() {
             renderFooter={renderNoteFooter}
           />
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing['2xl'],

@@ -42,6 +42,7 @@ import { Calendar } from '@oxy.so/bloom/date-picker';
 import { RiCalendarLine, RiMapPinLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { useTheme } from '@oxy.so/bloom/theme';
@@ -391,32 +392,39 @@ export default function BookViewingPage() {
 
   if (loading || !property) {
     return (
-      <>
+      <Screen
+        documentScroll
+        header={
+          <PageHeader
+            title={t('app.loading')}
+            titleAlign="center"
+            leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+            onBack={router.canGoBack() ? router.back : undefined}
+            backLabel={t('goBack')}
+          />
+        }
+      >
+        <ScreenScrollView contentContainerStyle={styles.loadingContainer}>
+          <Loading variant="spinner" size="lg" text={t('property.loading')} />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen
+      documentScroll
+      header={
         <PageHeader
-          title={t('app.loading')}
+          title={isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
           titleAlign="center"
           leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
           onBack={router.canGoBack() ? router.back : undefined}
           backLabel={t('goBack')}
         />
-        <View style={styles.loadingContainer}>
-          <Loading variant="spinner" size="lg" text={t('property.loading')} />
-        </View>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <PageHeader
-        title={isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-
-      <View style={styles.content}>
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <Card radius="radius-16" appearance="outline">
           <CardHeader>
             <CardTitle>{property.title}</CardTitle>
@@ -560,8 +568,8 @@ export default function BookViewingPage() {
         >
           {isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
         </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -575,7 +583,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   loadingContainer: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

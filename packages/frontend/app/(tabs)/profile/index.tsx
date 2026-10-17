@@ -22,6 +22,7 @@ import { Avatar } from '@oxy.so/bloom/avatar';
 import { Badge } from '@oxy.so/bloom/badge';
 import { Button } from '@oxy.so/bloom/button';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { H1, H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services';
@@ -93,33 +94,31 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <>
-        {header}
-        <View style={styles.scroll}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.content}>
           <View style={styles.heroSkeleton}>
             <ListSkeleton rows={2} rowHeight={120} />
           </View>
           <View style={styles.groups}>
             <ListSkeleton rows={3} rowHeight={72} />
           </View>
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (isError) {
     return (
-      <>
-        {header}
-        <View style={styles.centerWrap}>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('profile.loadFailed')}
             description={t('profile.loadFailedHint')}
             retryLabel={t('common.retry')}
             onRetry={() => profileQuery.refetch()}
           />
-        </View>
-      </>
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -136,9 +135,8 @@ export default function ProfileScreen() {
     verifiedBadges.push({ label: 'Background verified', key: 'background' });
 
   return (
-    <>
-      {header}
-      <View style={styles.scroll}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroWrap}>
           <View style={styles.heroContent}>
             <View style={styles.heroRow}>
@@ -268,8 +266,8 @@ export default function ProfileScreen() {
             />
           </SettingsListGroup>
         </View>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
@@ -316,12 +314,12 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress 
 };
 
 const styles = StyleSheet.create({
-  scroll: {
+  content: {
     paddingTop: spacing.lg,
     paddingBottom: spacing['4xl'],
   },
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing['2xl'],

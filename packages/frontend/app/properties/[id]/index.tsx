@@ -29,6 +29,7 @@ import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { ButtonGroup, ButtonGroupItem } from '@oxy.so/bloom/button-group';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import {
@@ -459,30 +460,52 @@ export default function PropertyDetailPage() {
   const showBookingBar = bookingMode === 'vacation' && stay.bookable;
 
   if (isLoading) {
-    return <PropertyDetailSkeleton />;
+    return (
+      <Screen
+        documentScroll
+        header={
+          <PageHeader
+            placement="overlap"
+            leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+            onBack={router.canGoBack() ? router.back : undefined}
+            backLabel={t('goBack')}
+          />
+        }
+      >
+        <ScreenScrollView>
+          <PropertyDetailSkeleton />
+        </ScreenScrollView>
+      </Screen>
+    );
   }
 
   if (error || !property) {
     return (
-      <>
-        <PageHeader
-          title={t('property.error', 'Error') || 'Error'}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-          onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
-        />
-        <ErrorState
-          icon={RiHomeLine}
-          title={t('property.notFound', 'Property not found') || 'Property not found'}
-          description={
-            t('property.notFoundHelp', 'It may have been removed or the link is broken.') ||
-            'It may have been removed or the link is broken.'
-          }
-          retryLabel={t('goBack', 'Go back') || 'Go back'}
-          onRetry={() => router.back()}
-        />
-      </>
+      <Screen
+        documentScroll
+        header={
+          <PageHeader
+            title={t('property.error', 'Error') || 'Error'}
+            titleAlign="center"
+            leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+            onBack={router.canGoBack() ? router.back : undefined}
+            backLabel={t('goBack')}
+          />
+        }
+      >
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiHomeLine}
+            title={t('property.notFound', 'Property not found') || 'Property not found'}
+            description={
+              t('property.notFoundHelp', 'It may have been removed or the link is broken.') ||
+              'It may have been removed or the link is broken.'
+            }
+            retryLabel={t('goBack', 'Go back') || 'Go back'}
+            onRetry={() => router.back()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -592,38 +615,68 @@ export default function PropertyDetailPage() {
   );
 
   return (
-    <>
-      <PageHeader
-        title={property.title}
-        subtitle={property.price}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-        actions={
-          <ButtonGroup>
-            {landlordOxyUserId ? (
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={property.title}
+          subtitle={property.price}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+          actions={
+            <ButtonGroup>
+              {landlordOxyUserId ? (
+                <ButtonGroupItem
+                  iconOnly
+                  leadingIcon={RiAccountCircleLine}
+                  onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
+                  accessibilityLabel={t('property.host.openProfile')}
+                />
+              ) : null}
               <ButtonGroupItem
                 iconOnly
-                leadingIcon={RiAccountCircleLine}
-                onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
-                accessibilityLabel={t('property.host.openProfile')}
+                leadingIcon={RiCalendarLine}
+                selected={hasActiveViewing}
+                onPress={() => router.push('/viewings')}
+                accessibilityLabel={t('viewings.title')}
               />
-            ) : null}
-            <ButtonGroupItem
-              iconOnly
-              leadingIcon={RiCalendarLine}
-              selected={hasActiveViewing}
-              onPress={() => router.push('/viewings')}
-              accessibilityLabel={t('viewings.title')}
-            />
-          </ButtonGroup>
-        }
-        placement="overlap"
-        titleReveal="onScroll"
-      />
-
-      <View style={styles.content}>
+            </ButtonGroup>
+          }
+          placement="overlap"
+          titleReveal="onScroll"
+        />
+      }
+      bottomBar={
+        showBookingBar ? (
+          <>
+            <View className="lg:hidden">
+              <BookingBar
+                price={stay.price}
+                priceUnit={stay.priceUnit}
+                priceAccessibilityLabel={stay.priceAccessibilityLabel}
+                dates={stay.datesSummary ?? t('search.summary.addDates')}
+                onPressDates={() => stay.openDates('checkIn')}
+                reserveLabel={
+                  !stay.range
+                    ? t('booking.widget.checkAvailability')
+                    : stay.instantBook
+                      ? t('property.cta.reserve')
+                      : t('booking.widget.requestToBook')
+                }
+                onReserve={stay.reserve}
+                loading={stay.reserving}
+              />
+            </View>
+            <View className="hidden lg:flex">{actionBar}</View>
+          </>
+        ) : (
+          actionBar
+        )
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         {photoGrid}
         {listingHeader}
 
@@ -803,35 +856,7 @@ export default function PropertyDetailPage() {
             <FraudWarning text={t('property.fraudWarning')} />
           </View>
         </View>
-      </View>
-
-      {showBookingBar ? (
-        <View className="lg:hidden" style={styles.bookingBar}>
-          <BookingBar
-            price={stay.price}
-            priceUnit={stay.priceUnit}
-            priceAccessibilityLabel={stay.priceAccessibilityLabel}
-            dates={stay.datesSummary ?? t('search.summary.addDates')}
-            onPressDates={() => stay.openDates('checkIn')}
-            reserveLabel={
-              !stay.range
-                ? t('booking.widget.checkAvailability')
-                : stay.instantBook
-                  ? t('property.cta.reserve')
-                  : t('booking.widget.requestToBook')
-            }
-            onReserve={stay.reserve}
-            loading={stay.reserving}
-          />
-        </View>
-      ) : null}
-      {showBookingBar ? (
-        <View className="hidden lg:flex" style={styles.bookingBar}>
-          {actionBar}
-        </View>
-      ) : (
-        actionBar
-      )}
+      </ScreenScrollView>
       {stay.dialog}
 
       <ZoomableMediaGallery ref={galleryRef} indicatorVariant="thumbnails" />
@@ -845,7 +870,7 @@ export default function PropertyDetailPage() {
           onClose={() => setExchangeSheetVisible(false)}
         />
       ) : null}
-    </>
+    </Screen>
   );
 }
 
@@ -856,12 +881,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
   },
-  // The 1 + 4 grid sits inside the page gutter; the narrow carousel is full-bleed.
-  // RN-Web supports `position: 'sticky'`, absent from RN's ViewStyle.
-  bookingBar: Platform.select({
-    web: { position: 'sticky', bottom: 0, zIndex: 1000 } as unknown as ViewStyle,
-    default: {},
-  }),
   // Single-column content. The page columns (content + widgets) are owned
   // by the app shell (app/_layout.tsx: mainContentWrapper + RightBar), so
   // this screen only fills the content column. It's full-bleed (no

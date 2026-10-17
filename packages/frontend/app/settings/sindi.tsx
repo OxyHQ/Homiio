@@ -20,6 +20,7 @@ import { useConversations, useDeleteConversation } from '@alia.onl/sdk';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { RiInformationLine, RiRefreshLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Switch } from '@oxy.so/bloom/switch';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
@@ -74,22 +75,26 @@ export default function SindiSettingsScreen() {
   }, [t, conversations, deleteConversation, resetPreferences]);
 
   return (
-    <>
-      <PageHeader
-        title={t('sindi.settings.title')}
-        titleAlign="center"
-        leading={
-          <>
-            <AppShellMenuButton accessibilityLabel={t('sidebar.open')} />
-            <View style={styles.headerIcon}>
-              <SindiIcon size={20} color={colors.primarySubtleForeground} />
-            </View>
-          </>
-        }
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={settingsScreenStyles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('sindi.settings.title')}
+          titleAlign="center"
+          leading={
+            <>
+              <AppShellMenuButton accessibilityLabel={t('sidebar.open')} />
+              <View style={styles.headerIcon}>
+                <SindiIcon size={20} color={colors.primarySubtleForeground} />
+              </View>
+            </>
+          }
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={settingsScreenStyles.content}>
         <SettingsListGroup
           title={t('sindi.settings.behavior')}
           footer={t('sindi.settings.behaviorFooter')}
@@ -110,8 +115,8 @@ export default function SindiSettingsScreen() {
             onPress={() => void handleResetDefaults()}
           />
         </SettingsListGroup>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

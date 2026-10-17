@@ -1,7 +1,7 @@
 /**
  * Review explore — a neighborhood's reviewed buildings (street + number, review
- * count, average rating, recommend %). Paginated via `LoadMoreSentinel` at the
- * end of the list (the shell owns scrolling). Tapping a building opens its
+ * count, average rating, recommend %). Paginated through `ScreenScrollView`'s
+ * `onEndReached`. Tapping a building opens its
  * address page on the reviews tab.
  */
 import React from 'react';
@@ -11,12 +11,12 @@ import { useTranslation } from 'react-i18next';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ExploreList, ExploreRow } from '@/components/reviews/ExploreRow';
-import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { useExploreNeighborhood } from '@/hooks/useExploreReviews';
 import { radius, spacing } from '@/constants/styles';
 import { RiAlertLine, RiBuilding2Line } from '@oxy.so/bloom/icons';
@@ -38,15 +38,19 @@ export default function ReviewExploreNeighborhoodScreen() {
     number ? `${street}, ${number}` : street;
 
   return (
-    <>
-      <PageHeader
-        title={t('reviews.explore.buildingsTitle')}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        onBack={router.canGoBack() ? router.back : undefined}
-        backLabel={t('goBack')}
-      />
-      <View style={styles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={t('reviews.explore.buildingsTitle')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content} onEndReached={loadMore}>
         {query.isLoading ? (
           <View style={styles.list}>
             {Array.from({ length: 6 }).map((_, idx) => (
@@ -68,26 +72,23 @@ export default function ReviewExploreNeighborhoodScreen() {
             description={t('reviews.explore.emptyBuildingsDescription')}
           />
         ) : (
-          <>
-            <ExploreList>
-              {buildings.map((building) => (
-                <ExploreRow
-                  key={building.buildingLevelId}
-                  title={buildingTitle(building.street, building.number)}
-                  subtitle={t('reviews.explore.buildingMeta', {
-                    count: building.reviewCount,
-                    recommend: Math.round(building.recommendationPercentage),
-                  })}
-                  rating={building.averageRating}
-                  onPress={() => router.push(`/addresses/${building.buildingLevelId}?tab=reviews`)}
-                />
-              ))}
-            </ExploreList>
-            <LoadMoreSentinel onLoadMore={loadMore} enabled={Boolean(query.hasNextPage)} />
-          </>
+          <ExploreList>
+            {buildings.map((building) => (
+              <ExploreRow
+                key={building.buildingLevelId}
+                title={buildingTitle(building.street, building.number)}
+                subtitle={t('reviews.explore.buildingMeta', {
+                  count: building.reviewCount,
+                  recommend: Math.round(building.recommendationPercentage),
+                })}
+                rating={building.averageRating}
+                onPress={() => router.push(`/addresses/${building.buildingLevelId}?tab=reviews`)}
+              />
+            ))}
+          </ExploreList>
         )}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

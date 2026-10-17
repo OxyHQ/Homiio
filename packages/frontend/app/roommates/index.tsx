@@ -29,6 +29,7 @@ import {
 import { Tabs, TabsTrigger, type TabsIconComponent } from '@oxy.so/bloom/tabs';
 import { toast } from '@oxy.so/bloom/toast';
 import { Loading } from '@oxy.so/bloom/loading';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { H1 } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
@@ -422,77 +423,95 @@ export default function RoommatesPage() {
     }
   };
 
-  return (
-    <>
-      <View className="bg-card px-4 pb-3 gap-3 border-b border-border">
-        <View style={styles.headerInner}>
-          <View style={styles.titleBlock}>
-            <SectionEyebrow>{t('roommates.screen.eyebrow')}</SectionEyebrow>
-            <H1 style={styles.title}>{t('roommates.screen.title')}</H1>
-          </View>
-          <View style={styles.headerAction} className="sm:hidden">
-            <Button
-              size="sm"
-              onPress={() => router.push('/roommates/preferences')}
-              leadingIcon={RiSettings3Line}
-              iconOnly
-              accessibilityLabel={t('roommates.preferences')}
-              tone="neutral"
-              appearance="outline"
-            />
-          </View>
-          <View style={styles.headerAction} className="hidden sm:flex">
-            <Button
-              size="sm"
-              onPress={() => router.push('/roommates/preferences')}
-              leadingIcon={RiSettings3Line}
-              accessibilityLabel={t('roommates.preferences')}
-              tone="neutral"
-              appearance="outline"
-            >
-              {t('roommates.preferences')}
-            </Button>
-          </View>
+  const titleBlock = (
+    <View className="bg-card px-4 pb-3 gap-3 border-b border-border">
+      <View style={styles.headerInner}>
+        <View style={styles.titleBlock}>
+          <SectionEyebrow>{t('roommates.screen.eyebrow')}</SectionEyebrow>
+          <H1 style={styles.title}>{t('roommates.screen.title')}</H1>
         </View>
-        {/* On a phone the four icons alone cost ~96px, which is what pushed the
-            last tab off a 390px screen. Labels carry the meaning; longer
-            translations still scroll, and Bloom `Tabs` centres the selected
-            trigger when they do. */}
-        <View className="sm:hidden">
-          <Tabs
-            variant="pill"
-            value={activeTab}
-            onValueChange={(value) => {
-              if (isTab(value)) setActiveTab(value);
-            }}
-          >
-            {TAB_IDS.map((entry) => (
-              <TabsTrigger key={entry.id} value={entry.id} label={t(entry.labelKey)} />
-            ))}
-          </Tabs>
+        <View style={styles.headerAction} className="sm:hidden">
+          <Button
+            size="sm"
+            onPress={() => router.push('/roommates/preferences')}
+            leadingIcon={RiSettings3Line}
+            iconOnly
+            accessibilityLabel={t('roommates.preferences')}
+            tone="neutral"
+            appearance="outline"
+          />
         </View>
-        <View className="hidden sm:flex">
-          <Tabs
-            variant="pill"
-            value={activeTab}
-            onValueChange={(value) => {
-              if (isTab(value)) setActiveTab(value);
-            }}
+        <View style={styles.headerAction} className="hidden sm:flex">
+          <Button
+            size="sm"
+            onPress={() => router.push('/roommates/preferences')}
+            leadingIcon={RiSettings3Line}
+            accessibilityLabel={t('roommates.preferences')}
+            tone="neutral"
+            appearance="outline"
           >
-            {TAB_IDS.map((entry) => (
-              <TabsTrigger
-                key={entry.id}
-                value={entry.id}
-                label={t(entry.labelKey)}
-                leadingIcon={entry.icon}
-              />
-            ))}
-          </Tabs>
+            {t('roommates.preferences')}
+          </Button>
         </View>
       </View>
+      {/* On a phone the four icons alone cost ~96px, which is what pushed the
+          last tab off a 390px screen. Labels carry the meaning; longer
+          translations still scroll, and Bloom `Tabs` centres the selected
+          trigger when they do. */}
+      <View className="sm:hidden">
+        <Tabs
+          variant="pill"
+          value={activeTab}
+          onValueChange={(value) => {
+            if (isTab(value)) setActiveTab(value);
+          }}
+        >
+          {TAB_IDS.map((entry) => (
+            <TabsTrigger key={entry.id} value={entry.id} label={t(entry.labelKey)} />
+          ))}
+        </Tabs>
+      </View>
+      <View className="hidden sm:flex">
+        <Tabs
+          variant="pill"
+          value={activeTab}
+          onValueChange={(value) => {
+            if (isTab(value)) setActiveTab(value);
+          }}
+        >
+          {TAB_IDS.map((entry) => (
+            <TabsTrigger
+              key={entry.id}
+              value={entry.id}
+              label={t(entry.labelKey)}
+              leadingIcon={entry.icon}
+            />
+          ))}
+        </Tabs>
+      </View>
+    </View>
+  );
 
-      <View style={styles.content}>{renderTabContent()}</View>
-    </>
+  const tabContent = <View style={styles.content}>{renderTabContent()}</View>;
+
+  // The Rooms tab is `RoomList`, which scrolls and paginates its own list, so it
+  // fills the screen below the title block instead of nesting in a scroller.
+  if (activeTab === 'rooms' && hasProfile) {
+    return (
+      <Screen documentScroll>
+        {titleBlock}
+        {tabContent}
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen documentScroll>
+      <ScreenScrollView>
+        {titleBlock}
+        {tabContent}
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

@@ -23,6 +23,7 @@ import {
   RiUserLine,
 } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
@@ -200,49 +201,51 @@ export default function TipArticleScreen() {
 
   if (!slug) {
     return (
-      <>
-        {header}
-        <ErrorState
-          icon={RiFileTextLine}
-          title={t('tips.unavailable')}
-          description={t('tips.missingSlug')}
-          retryLabel={t('common.goBack')}
-          onRetry={() => router.back()}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiFileTextLine}
+            title={t('tips.unavailable')}
+            description={t('tips.missingSlug')}
+            retryLabel={t('common.goBack')}
+            onRetry={() => router.back()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (tipQuery.isPending) {
     return (
-      <>
-        {header}
-        <TipDetailSkeleton />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <TipDetailSkeleton />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (tipQuery.isError || !tipQuery.data) {
     return (
-      <>
-        {header}
-        <ErrorState
-          icon={RiFileTextLine}
-          title={t('tips.unavailable')}
-          description={tipQuery.error?.message ?? t('tips.loadFailed')}
-          retryLabel={t('common.goBack')}
-          onRetry={() => router.back()}
-        />
-      </>
+      <Screen documentScroll header={header}>
+        <ScreenScrollView>
+          <ErrorState
+            icon={RiFileTextLine}
+            title={t('tips.unavailable')}
+            description={tipQuery.error?.message ?? t('tips.loadFailed')}
+            retryLabel={t('common.goBack')}
+            onRetry={() => router.back()}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   const tip = tipQuery.data;
 
   return (
-    <>
-      {header}
-      <View style={styles.content}>
+    <Screen documentScroll header={header}>
+      <ScreenScrollView contentContainerStyle={styles.content}>
         <View className="bg-card" style={styles.hero}>
           {tip.coverImageUrl ? (
             <Image
@@ -310,8 +313,8 @@ export default function TipArticleScreen() {
             </View>
           </View>
         ) : null}
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 

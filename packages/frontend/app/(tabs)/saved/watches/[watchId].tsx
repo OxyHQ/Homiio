@@ -21,7 +21,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Admonition } from '@oxy.so/bloom/admonition';
@@ -31,6 +31,7 @@ import { Card } from '@oxy.so/bloom/card';
 import { RiCheckLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Switch } from '@oxy.so/bloom/switch';
@@ -122,33 +123,35 @@ export default function WatchAlertSettingsScreen() {
     [t],
   );
 
+  const missingHeader = (
+    <PageHeader
+      title={t('alerts.settings.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+    />
+  );
+
   if (isLoading && searches.length === 0) {
     return (
-      <>
-        <PageHeader
-          title={t('alerts.settings.title')}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        />
-        <Loading style={styles.loading} />
-      </>
+      <Screen documentScroll header={missingHeader}>
+        <ScreenScrollView>
+          <Loading style={styles.loading} />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
   if (!watch) {
     return (
-      <>
-        <PageHeader
-          title={t('alerts.settings.title')}
-          titleAlign="center"
-          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-        />
-        <EmptyState
-          icon={RiSearchLine}
-          title={t('alerts.settings.missingTitle')}
-          description={t('alerts.settings.missingDescription')}
-        />
-      </>
+      <Screen documentScroll header={missingHeader}>
+        <ScreenScrollView>
+          <EmptyState
+            icon={RiSearchLine}
+            title={t('alerts.settings.missingTitle')}
+            description={t('alerts.settings.missingDescription')}
+          />
+        </ScreenScrollView>
+      </Screen>
     );
   }
 
@@ -156,13 +159,17 @@ export default function WatchAlertSettingsScreen() {
     watch.alertStatus?.status === 'inactive' ? watch.alertStatus.reason : undefined;
 
   return (
-    <>
-      <PageHeader
-        title={watch.name}
-        titleAlign="center"
-        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
-      />
-      <View style={styles.content}>
+    <Screen
+      documentScroll
+      header={
+        <PageHeader
+          title={watch.name}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        />
+      }
+    >
+      <ScreenScrollView contentContainerStyle={styles.content}>
         {/* Shown BEFORE the switches, so a watch that cannot fire says so while
             somebody is deciding rather than after they have finished. */}
         {inactiveReason && inactiveReason !== 'cadence_off' ? (
@@ -263,8 +270,8 @@ export default function WatchAlertSettingsScreen() {
         >
           {t('alerts.settings.viewHistory')}
         </Button>
-      </View>
-    </>
+      </ScreenScrollView>
+    </Screen>
   );
 }
 
