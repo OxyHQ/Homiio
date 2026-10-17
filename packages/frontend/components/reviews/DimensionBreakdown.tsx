@@ -19,7 +19,6 @@ import {
   SERVICE_VALUES,
   type ReviewSection,
 } from '@/components/reviews/dimensions';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 interface DistributionEntry {
@@ -107,7 +106,7 @@ export const DimensionBreakdown: React.FC<DimensionBreakdownProps> = ({ reviews,
         const max = Math.max(...block.entries.map((entry) => entry.count), 1);
         return (
           <View key={block.title} style={styles.block}>
-            <BloomText style={styles.blockTitle}>{block.title}</BloomText>
+            <BloomText className="text-[13px] font-bold text-foreground">{block.title}</BloomText>
             {block.entries.map((entry) => (
               <DistributionRow key={entry.label} entry={entry} max={max} />
             ))}
@@ -124,10 +123,5 @@ const styles = StyleSheet.create({
   },
   block: {
     gap: spacing.sm,
-  },
-  blockTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
 });

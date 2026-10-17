@@ -1301,7 +1301,13 @@
       "files": "Files"
     },
     "signOutFailed": "Failed to sign out",
-    "signOutSuccess": "Signed out"
+    "signOutSuccess": "Signed out",
+    "appearance": {
+      "title": "外观",
+      "system": "跟随系统",
+      "light": "浅色",
+      "dark": "深色"
+    }
   },
   "common": {
     "cancel": "Cancel",

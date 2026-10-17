@@ -44,7 +44,6 @@ import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGrid
 import { EmptyState } from '@/components/ui/EmptyState';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 import { formatPrice } from '@homiio/shared-types';
@@ -164,12 +163,12 @@ function DraftCard({
         <H4 style={styles.draftTitle}>
           {draft.title || `${draft.address.street}, ${draft.address.city}`}
         </H4>
-        <BloomText style={styles.draftAddress}>
+        <BloomText className="text-sm text-muted-foreground">
           {draft.address.street}, {draft.address.city}, {draft.address.state}{' '}
           {draft.address.zipCode}
         </BloomText>
         {draft.rent.amount > 0 ? (
-          <BloomText style={styles.draftPrice}>
+          <BloomText className="text-base font-semibold text-primary-text">
             {formatPrice(
               { amount: draft.rent.amount, currency: draft.rent.currency, unit: 'month' },
               locale,
@@ -180,13 +179,13 @@ function DraftCard({
         <View style={styles.draftMeta}>
           <View style={styles.draftMetaItem}>
             <RiTimeLine size="xs" fill={theme.colors.textSecondary} />
-            <BloomText style={styles.draftMetaText}>
+            <BloomText className="text-xs text-muted-foreground">
               {formatRelativeDate(draft.lastSaved)}
             </BloomText>
           </View>
           <View style={styles.draftMetaItem}>
             <RiSaveLine size="xs" fill={theme.colors.textSecondary} />
-            <BloomText style={styles.draftMetaText}>Draft</BloomText>
+            <BloomText className="text-xs text-muted-foreground">Draft</BloomText>
           </View>
         </View>
       </View>
@@ -327,7 +326,6 @@ const styles = StyleSheet.create({
   draftType: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   draftActions: {
     flexDirection: 'row',
@@ -339,16 +337,6 @@ const styles = StyleSheet.create({
   draftTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  draftAddress: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  draftPrice: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primaryColor,
   },
   draftMeta: {
     flexDirection: 'row',
@@ -359,10 +347,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  draftMetaText: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   createNewButton: {
     marginTop: spacing['2xl'],

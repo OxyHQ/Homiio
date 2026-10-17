@@ -17,9 +17,9 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { Button } from '@oxy.so/bloom/button';
 import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 import { RiAlertLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
 import { ICON_SIZES, spacing } from '@/constants/styles';
 
 interface ErrorStateProps {
@@ -41,13 +41,18 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   onRetry,
   style,
 }) => {
+  const { colors } = useTheme();
   return (
     <View style={[styles.container, style]}>
-      <View style={styles.iconCircle}>
-        <Icon width={ICON_SIZES.xl} height={ICON_SIZES.xl} fill={colors.COLOR_BLACK_LIGHT_3} />
+      <View className="bg-muted" style={styles.iconCircle}>
+        <Icon width={ICON_SIZES.xl} height={ICON_SIZES.xl} fill={colors.textSecondary} />
       </View>
       <H3 style={styles.title}>{title}</H3>
-      {description ? <BloomText style={styles.description}>{description}</BloomText> : null}
+      {description ? (
+        <BloomText className="text-muted-foreground" style={styles.description}>
+          {description}
+        </BloomText>
+      ) : null}
       {onRetry ? (
         <View style={styles.action}>
           <Button onPress={onRetry} size="md" tone="accent" appearance="solid">
@@ -72,7 +77,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
@@ -80,13 +84,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   description: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
     textAlign: 'center',
     maxWidth: 320,
     lineHeight: 20,

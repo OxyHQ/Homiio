@@ -9,12 +9,12 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { ThemedText } from './ThemedText';
-import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
 import { RiArrowRightSLine, RiFileCopyLine, RiMapPinFill, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 interface Address {
   street: string;
@@ -46,6 +46,7 @@ export function AddressDisplay({
   style,
 }: AddressDisplayProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   const formattedAddress = `${address.street || ''}, ${address.city || ''}, ${address.state || ''} ${address.zipCode || ''}`;
   const shortAddress = `${address.city || ''}, ${address.state || ''}`;
@@ -94,43 +95,51 @@ export function AddressDisplay({
         onPress={handlePress}
         disabled={!onPress}
       >
-        <RiMapPinLine width={16} height={16} fill={colors.COLOR_BLACK_LIGHT_5} />
-        <ThemedText style={styles.compactText} numberOfLines={1}>
+        <RiMapPinLine width={16} height={16} fill={colors.textTertiary} />
+        <ThemedText style={[styles.compactText, { color: colors.textTertiary }]} numberOfLines={1}>
           {shortAddress}
         </ThemedText>
-        {onPress && <RiArrowRightSLine width={16} height={16} fill={colors.COLOR_BLACK_LIGHT_5} />}
+        {onPress && <RiArrowRightSLine width={16} height={16} fill={colors.textTertiary} />}
       </TouchableOpacity>
     );
   }
 
   if (variant === 'card') {
     return (
-      <View style={[styles.cardContainer, style]}>
+      <View className="border-border bg-background" style={[styles.cardContainer, style]}>
         <View style={styles.cardHeader}>
           <View style={styles.addressInfo}>
-            <RiMapPinFill width={20} height={20} fill={colors.primaryColor} />
+            <RiMapPinFill width={20} height={20} fill={colors.primarySubtleForeground} />
             <View style={styles.addressTextContainer}>
               <ThemedText style={styles.cardStreet}>{address.street}</ThemedText>
-              <ThemedText style={styles.cardCityState}>
+              <ThemedText style={[styles.cardCityState, { color: colors.textTertiary }]}>
                 {address.city}, {address.state} {address.zipCode}
               </ThemedText>
             </View>
           </View>
           {showActions && (
             <View style={styles.cardActions}>
-              <TouchableOpacity style={styles.actionButton} onPress={handleCopyAddress}>
-                <RiFileCopyLine width={16} height={16} fill={colors.primaryColor} />
+              <TouchableOpacity
+                className="bg-primary-subtle"
+                style={styles.actionButton}
+                onPress={handleCopyAddress}
+              >
+                <RiFileCopyLine width={16} height={16} fill={colors.primarySubtleForeground} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton} onPress={handleOpenInMaps}>
-                <RiMapPinLine width={16} height={16} fill={colors.primaryColor} />
+              <TouchableOpacity
+                className="bg-primary-subtle"
+                style={styles.actionButton}
+                onPress={handleOpenInMaps}
+              >
+                <RiMapPinLine width={16} height={16} fill={colors.primarySubtleForeground} />
               </TouchableOpacity>
             </View>
           )}
         </View>
         {showMap && address.coordinates && (
-          <View style={styles.mapPlaceholder}>
-            <RiMapPinLine width={24} height={24} fill={colors.COLOR_BLACK_LIGHT_5} />
-            <ThemedText style={styles.mapPlaceholderText}>
+          <View className="border-border bg-surface" style={styles.mapPlaceholder}>
+            <RiMapPinLine width={24} height={24} fill={colors.textTertiary} />
+            <ThemedText style={[styles.mapPlaceholderText, { color: colors.textTertiary }]}>
               {t('address.display.mapPlaceholder')}
             </ThemedText>
           </View>
@@ -141,30 +150,46 @@ export function AddressDisplay({
 
   // Detailed variant (default)
   return (
-    <View style={[styles.detailedContainer, style]}>
+    <View className="bg-background" style={[styles.detailedContainer, style]}>
       <View style={styles.detailedHeader}>
-        <RiMapPinFill width={24} height={24} fill={colors.primaryColor} />
+        <RiMapPinFill width={24} height={24} fill={colors.primarySubtleForeground} />
         <View style={styles.detailedAddressInfo}>
           <ThemedText style={styles.detailedStreet}>{address.street}</ThemedText>
-          <ThemedText style={styles.detailedCityState}>
+          <ThemedText style={[styles.detailedCityState, { color: colors.textTertiary }]}>
             {address.city}, {address.state} {address.zipCode}
           </ThemedText>
           {address.country && address.country !== 'USA' && (
-            <ThemedText style={styles.detailedCountry}>{address.country}</ThemedText>
+            <ThemedText style={[styles.detailedCountry, { color: colors.textTertiary }]}>
+              {address.country}
+            </ThemedText>
           )}
         </View>
       </View>
 
       {showActions && (
         <View style={styles.detailedActions}>
-          <TouchableOpacity style={styles.detailedActionButton} onPress={handleCopyAddress}>
-            <RiFileCopyLine width={16} height={16} fill={colors.primaryColor} />
-            <ThemedText style={styles.actionButtonText}>{t('address.display.copy')}</ThemedText>
+          <TouchableOpacity
+            className="bg-primary-subtle"
+            style={styles.detailedActionButton}
+            onPress={handleCopyAddress}
+          >
+            <RiFileCopyLine width={16} height={16} fill={colors.primarySubtleForeground} />
+            <ThemedText
+              style={[styles.actionButtonText, { color: colors.primarySubtleForeground }]}
+            >
+              {t('address.display.copy')}
+            </ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.detailedActionButton} onPress={handleOpenInMaps}>
-            <RiMapPinLine width={16} height={16} fill={colors.primaryColor} />
-            <ThemedText style={styles.actionButtonText}>
+          <TouchableOpacity
+            className="bg-primary-subtle"
+            style={styles.detailedActionButton}
+            onPress={handleOpenInMaps}
+          >
+            <RiMapPinLine width={16} height={16} fill={colors.primarySubtleForeground} />
+            <ThemedText
+              style={[styles.actionButtonText, { color: colors.primarySubtleForeground }]}
+            >
               {t('address.display.openInMaps')}
             </ThemedText>
           </TouchableOpacity>
@@ -186,16 +211,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_5,
   },
 
   // Card variant styles
   cardContainer: {
     padding: 16,
     borderRadius: 12,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -218,7 +240,6 @@ const styles = StyleSheet.create({
   },
   cardCityState: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_5,
   },
   cardActions: {
     flexDirection: 'row',
@@ -228,30 +249,25 @@ const styles = StyleSheet.create({
     padding: 8,
     marginLeft: 8,
     borderRadius: 6,
-    backgroundColor: colors.primaryColor + '10',
   },
   mapPlaceholder: {
     marginTop: 12,
     height: 100,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
     borderStyle: 'dashed',
   },
   mapPlaceholderText: {
     marginTop: 8,
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_5,
   },
 
   // Detailed variant styles
   detailedContainer: {
     padding: 16,
     borderRadius: 12,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
   },
   detailedHeader: {
     flexDirection: 'row',
@@ -269,12 +285,10 @@ const styles = StyleSheet.create({
   },
   detailedCityState: {
     fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_5,
     marginBottom: 2,
   },
   detailedCountry: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_5,
   },
   detailedActions: {
     flexDirection: 'row',
@@ -284,7 +298,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: colors.primaryColor + '10',
     borderRadius: 8,
     flex: 1,
     marginHorizontal: 4,
@@ -294,6 +307,5 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     fontWeight: '500',
-    color: colors.primaryColor,
   },
 });

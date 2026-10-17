@@ -2,9 +2,9 @@ import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { RiCalendarLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { Section, SectionRow } from '@/components/property/Section';
-import { colors } from '@/styles/colors';
 import { formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import type { Property } from '@homiio/shared-types';
@@ -18,6 +18,7 @@ const ICON_SIZE = 20;
 export const AvailabilitySection: React.FC<Props> = ({ property }) => {
   const { t } = useTranslation();
   const { locale } = useFormatting();
+  const { colors } = useTheme();
   const availableFrom = property?.availableFrom || property?.createdAt;
   const leaseTerm = property?.leaseTerm;
   if (!availableFrom && !leaseTerm) return null;
@@ -31,11 +32,7 @@ export const AvailabilitySection: React.FC<Props> = ({ property }) => {
       {dateStr ? (
         <SectionRow
           leading={
-            <RiCalendarLine
-              width={ICON_SIZE}
-              height={ICON_SIZE}
-              fill={colors.COLOR_BLACK_LIGHT_3}
-            />
+            <RiCalendarLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.textSecondary} />
           }
           label={t('property.sections.availableFrom')}
           value={dateStr}
@@ -43,9 +40,7 @@ export const AvailabilitySection: React.FC<Props> = ({ property }) => {
       ) : null}
       {leaseTerm ? (
         <SectionRow
-          leading={
-            <RiTimeLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.COLOR_BLACK_LIGHT_3} />
-          }
+          leading={<RiTimeLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.textSecondary} />}
           label={t('property.sections.leaseTerm')}
           value={leaseTerm}
         />

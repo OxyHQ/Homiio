@@ -33,6 +33,7 @@ import {
   RiSearchLine,
 } from '@oxy.so/bloom/icons';
 import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useSavedSearches } from '@/hooks/useSavedSearches';
@@ -50,8 +51,6 @@ import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
-import { useColors } from '@/hooks/useThemeColor';
-import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
 import { boundsCenter, OfferingType } from '@homiio/shared-types';
 import type { GeoBounds, LocationSelection, Property, PropertyType } from '@homiio/shared-types';
@@ -141,7 +140,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const { t } = useTranslation();
   const formatting = useFormatting();
   const bottomSheet = useContext(BottomSheetContext);
-  const themeColors = useColors();
+  const { colors } = useTheme();
   const { setBrowseMode } = useRentalMode();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const handleEditSearch = useCallback(() => onOpenStepChange('where'), [onOpenStepChange]);
@@ -573,7 +572,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   // --- shared sub-renders ---
   const saveLabel = isSearchSaved ? t('search.actions.saved') : t('search.actions.save');
   const topBar = (
-    <View style={styles.topBar}>
+    <View className="border-border bg-card" style={styles.topBar}>
       {/* With the mode tabs above the bar (wide), the row aligns on the bar (the
           bottom of the composer) rather than on the tabs-plus-bar column. */}
       <View className="items-center sm:items-end" style={styles.topBarContent}>
@@ -594,9 +593,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           iconOnly
           icon={
             isSearchSaved ? (
-              <RiBookmarkFill width={20} height={20} fill={themeColors.primary} />
+              <RiBookmarkFill width={20} height={20} fill={colors.primarySubtleForeground} />
             ) : (
-              <RiBookmarkLine width={20} height={20} fill={themeColors.text} />
+              <RiBookmarkLine width={20} height={20} fill={colors.text} />
             )
           }
           onPress={handleSaveSearch}
@@ -610,7 +609,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           offering={query.offering}
           selected={query.propertyTypes}
           onChange={handleTypesChange}
-          fadeColor={colors.surfaceElevated}
+          fadeColor={colors.card}
           trailing={
             <View style={styles.trailing}>
               <FilterTriggerButton
@@ -726,9 +725,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         accessibilityLiveRegion="polite"
         accessibilityRole="header"
       >
-        <BloomText style={styles.resultsTitle}>{resultsHeading}</BloomText>
+        <BloomText className="text-xl font-bold text-foreground">{resultsHeading}</BloomText>
         {unmappableCount > 0 ? (
-          <BloomText style={styles.resultsNote}>
+          <BloomText className="mt-1 text-[13px] text-muted-foreground">
             {t('search.header.withoutMapLocation', { count: unmappableCount })}
           </BloomText>
         ) : null}
@@ -760,7 +759,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         // RN-Web, leaving a transparent full-width overlay that swallows every
         // drag and hover on the map beneath it.
         <View style={styles.searchAreaWrap}>
-          <View style={[styles.searchAreaButton, cardShadow.md, styles.interactive]}>
+          <View
+            className="bg-card"
+            style={[styles.searchAreaButton, cardShadow.md, styles.interactive]}
+          >
             <Button
               onPress={handleSearchThisArea}
               size="sm"
@@ -775,10 +777,13 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             </Button>
           </View>
           <View
+            className="bg-card"
             style={[styles.pendingNotice, cardShadow.md, styles.interactive]}
             accessibilityLiveRegion="polite"
           >
-            <BloomText style={styles.pendingNoticeText}>{stillShowingLabel}</BloomText>
+            <BloomText className="shrink text-[13px] text-foreground">
+              {stillShowingLabel}
+            </BloomText>
             {returnBounds ? (
               <Button
                 onPress={handleReturnToSearchedArea}
@@ -827,7 +832,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           {listScroll}
         </View>
         <View
-          className={showMobileMap ? undefined : 'hidden sm:flex'}
+          className={showMobileMap ? 'border-border' : 'hidden border-border sm:flex'}
           style={styles.splitMapColumn}
         >
           {mapPanel}
@@ -870,14 +875,10 @@ const styles = StyleSheet.create({
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      backgroundColor: colors.surfaceElevated,
       borderBottomWidth: hairline.width,
-      borderBottomColor: hairline.color,
     } as unknown as ViewStyle,
     default: {
-      backgroundColor: colors.surfaceElevated,
       borderBottomWidth: hairline.width,
-      borderBottomColor: hairline.color,
     },
   }) as ViewStyle,
   topBarContent: {
@@ -948,13 +949,11 @@ const styles = StyleSheet.create({
       height: '100%',
       overflow: 'hidden',
       borderLeftWidth: hairline.width,
-      borderLeftColor: hairline.color,
     } as unknown as ViewStyle,
     default: {
       flex: 1,
       minWidth: 0,
       borderLeftWidth: hairline.width,
-      borderLeftColor: hairline.color,
     },
   }) as ViewStyle,
   listScroll: Platform.select<ViewStyle>({
@@ -971,16 +970,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
-  },
-  resultsTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  resultsNote: {
-    marginTop: spacing.xs,
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
   // Grid gutter aligned to the header gutter and every other property-grid
   // screen (`spacing.lg`) for a clean, consistent left edge across the app.
@@ -1006,7 +995,6 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   searchAreaButton: {
-    backgroundColor: colors.surfaceElevated,
     borderRadius: radius.pill,
     overflow: 'hidden',
   },
@@ -1021,13 +1009,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.surfaceElevated,
     borderRadius: radius.pill,
-  },
-  pendingNoticeText: {
-    flexShrink: 1,
-    fontSize: 13,
-    color: colors.COLOR_BLACK,
   },
   popoverWrap: {
     position: 'absolute',

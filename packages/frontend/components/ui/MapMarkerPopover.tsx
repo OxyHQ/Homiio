@@ -15,7 +15,6 @@ import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'reac
 import { Button } from '@oxy.so/bloom/button';
 
 import { PropertyCard } from '@/components/PropertyCard';
-import { colors } from '@/styles/colors';
 import { cardShadow, radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 import { RiCloseLine } from '@oxy.so/bloom/icons';
@@ -47,7 +46,7 @@ export const MapMarkerPopover: React.FC<MapMarkerPopoverProps> = ({
     // under its side gutters). The card re-enables itself with `'auto'`, so only
     // the popover is interactive and the gutters pass taps through to the map.
     <View style={[styles.container, style, { pointerEvents: 'none' }]}>
-      <View style={[styles.card, cardShadow.lg, { pointerEvents: 'auto' }]}>
+      <View className="bg-card" style={[styles.card, cardShadow.lg, { pointerEvents: 'auto' }]}>
         <View style={styles.dismissAnchor}>
           <Button
             onPress={onDismiss}
@@ -76,7 +75,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   card: {
-    backgroundColor: colors.surfaceElevated,
     borderRadius: radius.lg,
     overflow: 'hidden',
     position: 'relative',

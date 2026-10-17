@@ -1301,7 +1301,13 @@
       "files": "Files"
     },
     "signOutFailed": "Failed to sign out",
-    "signOutSuccess": "Signed out"
+    "signOutSuccess": "Signed out",
+    "appearance": {
+      "title": "চেহারা",
+      "system": "সিস্টেম",
+      "light": "লাইট",
+      "dark": "ডার্ক"
+    }
   },
   "common": {
     "cancel": "Cancel",

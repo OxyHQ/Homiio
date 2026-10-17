@@ -33,6 +33,7 @@ import {
   RiStarLine,
   RiUserLine,
 } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { getAccountDisplayName, getAccountFallbackHandle } from '@oxy.so/core';
 import { openAccountDialog, useAuth, useOxy } from '@oxy.so/services';
 
@@ -44,7 +45,6 @@ import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useHostStatus } from '@/hooks/useHostStatus';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { useColors } from '@/hooks/useThemeColor';
 import { useUIStore } from '@/store/uiStore';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { SindiIcon } from '@/assets/icons';
@@ -114,7 +114,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   const router = useRouter();
   const pathname = usePathname() || '/';
   const { t } = useTranslation();
-  const colors = useColors();
+  const { colors } = useTheme();
 
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);

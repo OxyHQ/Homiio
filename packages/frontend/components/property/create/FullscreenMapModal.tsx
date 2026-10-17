@@ -40,8 +40,11 @@ export function FullscreenMapModal({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <View style={styles.fullscreenMapContainer}>
-        <View style={[styles.fullscreenMapHeader, { paddingTop: insets.top + 12 }]}>
+      <View className="bg-background" style={styles.fullscreenMapContainer}>
+        <View
+          className="border-border"
+          style={[styles.fullscreenMapHeader, { paddingTop: insets.top + 12 }]}
+        >
           <Button
             iconOnly
             leadingIcon={RiCloseLine}

@@ -18,9 +18,9 @@
 import type React from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { ListingCardGrid } from '@oxy.so/bloom/listing-card';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { PropertyCard } from '@/components/PropertyCard';
-import { colors } from '@/styles/colors';
 import type { Property } from '@homiio/shared-types';
 
 const IS_WEB = Platform.OS === 'web';
@@ -56,6 +56,7 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
   style,
   renderFooter,
 }) => {
+  const { colors } = useTheme();
   if (properties.length === 0) return null;
 
   return (
@@ -64,7 +65,11 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
         {properties.map((property) => (
           <View
             key={property.id}
-            style={property.id === highlightedPropertyId ? styles.highlighted : null}
+            style={
+              property.id === highlightedPropertyId
+                ? [styles.highlighted, { outlineColor: colors.primary }]
+                : null
+            }
             onPointerEnter={
               IS_WEB && onPropertyHoverIn ? () => onPropertyHoverIn(property.id) : undefined
             }
@@ -89,7 +94,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     outlineWidth: 2,
     outlineStyle: 'solid',
-    outlineColor: colors.primaryColor,
     outlineOffset: 4,
   },
 });

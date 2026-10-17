@@ -14,7 +14,6 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 interface TruncatedDescriptionProps {
@@ -79,7 +78,6 @@ const styles = StyleSheet.create({
   body: {
     fontSize: 15,
     lineHeight: 24,
-    color: colors.COLOR_BLACK,
   },
   toggleAnchor: {
     marginTop: spacing.sm,

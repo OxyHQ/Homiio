@@ -314,7 +314,9 @@ const ReservationsTable: React.FC<ReservationsTableProps> = ({
         basis: 130,
         accessor: (row) => dayValue(row.checkIn),
         sortDescFirst: false,
-        cell: ({ row }) => <BloomText className="text-sm">{formatDay(row.checkIn)}</BloomText>,
+        cell: ({ row }) => (
+          <BloomText className="text-sm text-foreground">{formatDay(row.checkIn)}</BloomText>
+        ),
       },
       {
         id: 'checkOut',
@@ -322,7 +324,9 @@ const ReservationsTable: React.FC<ReservationsTableProps> = ({
         basis: 130,
         accessor: (row) => dayValue(row.checkOut),
         sortDescFirst: false,
-        cell: ({ row }) => <BloomText className="text-sm">{formatDay(row.checkOut)}</BloomText>,
+        cell: ({ row }) => (
+          <BloomText className="text-sm text-foreground">{formatDay(row.checkOut)}</BloomText>
+        ),
       },
       {
         id: 'guests',
@@ -342,7 +346,7 @@ const ReservationsTable: React.FC<ReservationsTableProps> = ({
         basis: 120,
         accessor: (row) => row.total,
         cell: ({ row }) => (
-          <BloomText className="text-sm font-medium">
+          <BloomText className="text-sm font-medium text-foreground">
             {formatMoney(row.total, row.currency, locale)}
           </BloomText>
         ),

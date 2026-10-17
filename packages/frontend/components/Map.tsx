@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { View, type ViewStyle, Text } from 'react-native';
+import { View, type ViewStyle } from 'react-native';
+import { Text } from '@oxy.so/bloom/typography';
 import { useQuery } from '@tanstack/react-query';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import type { StyleSpecification } from 'maplibre-gl';
@@ -17,7 +18,6 @@ import {
 import { boundsCenter } from '@homiio/shared-types';
 import { isDegenerateBounds, toCameraBounds } from './mapCamera';
 import { DEFAULT_STYLE_URL, fetchSanitizedMapStyle } from './mapStyle';
-import { colors } from '@/styles/colors';
 import type {
   GeocodedAddress,
   ClusterLeaf,
@@ -514,7 +514,7 @@ const addressInstructionStyles = {
     zIndex: 1000,
   },
   text: {
-    color: colors.white,
+    color: 'white',
     fontSize: 14,
     textAlign: 'center' as const,
     fontWeight: '500' as const,

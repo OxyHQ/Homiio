@@ -9,7 +9,7 @@ import React from 'react';
 import { StyleSheet, type StyleProp, type TextProps, type TextStyle } from 'react-native';
 
 import { H1, H2, P, Text } from '@oxy.so/bloom/typography';
-import { colors } from '@/styles/colors';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 type ThemedTextType = 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
 
@@ -42,12 +42,18 @@ const typeStyles = StyleSheet.create({
   link: {
     fontSize: 16,
     lineHeight: 30,
-    color: colors.linkColor,
   },
 });
 
 export function ThemedText({ style, type = 'default', className, ...rest }: ThemedTextProps) {
-  const resolvedStyle: StyleProp<TextStyle> = className?.trim() ? style : [typeStyles[type], style];
+  const { colors } = useTheme();
+  const resolvedStyle: StyleProp<TextStyle> = className?.trim()
+    ? style
+    : [
+        typeStyles[type],
+        type === 'link' ? { color: colors.primarySubtleForeground } : undefined,
+        style,
+      ];
 
   if (type === 'title') {
     return <H1 {...rest} className={className} style={resolvedStyle} />;

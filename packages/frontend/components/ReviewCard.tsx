@@ -58,7 +58,6 @@ import {
 import { useToggleHelpful, useReportReview } from '@/hooks/useReviewMutations';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { formatLocalized } from '@/utils/dateLocale';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
 interface DimensionChipData {
@@ -91,7 +90,9 @@ const DimensionGroup: React.FC<DimensionGroupProps> = ({ title, chips }) => {
   if (chips.length === 0) return null;
   return (
     <View style={styles.dimGroup}>
-      <BloomText style={styles.eyebrow}>{title}</BloomText>
+      <BloomText className="text-muted-foreground" style={styles.eyebrow}>
+        {title}
+      </BloomText>
       <View style={styles.dimChips}>
         {chips.map((chip) => {
           const text = chip.label ? `${chip.label}: ${chip.value}` : chip.value;
@@ -199,9 +200,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
         />
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
-            <BloomText style={[styles.authorName, { color: theme.colors.text }]}>
-              {displayName}
-            </BloomText>
+            <BloomText style={styles.authorName}>{displayName}</BloomText>
             {review.verified ? (
               <Chip
                 size="sm"
@@ -226,28 +225,26 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
             ) : null}
           </View>
           <View style={styles.metaRow}>
-            <BloomText style={styles.metaText}>
+            <BloomText className="text-[13px] text-muted-foreground">
               {formatLocalized(new Date(review.createdAt), 'PP')}
             </BloomText>
             {tenancyLabel ? (
               <>
-                <BloomText style={styles.metaDot}>·</BloomText>
-                <BloomText style={styles.metaText}>{tenancyLabel}</BloomText>
+                <BloomText className="text-[13px] text-text-tertiary">·</BloomText>
+                <BloomText className="text-[13px] text-muted-foreground">{tenancyLabel}</BloomText>
               </>
             ) : null}
             {rentLabel ? (
               <>
-                <BloomText style={styles.metaDot}>·</BloomText>
-                <BloomText style={styles.metaText}>{rentLabel}</BloomText>
+                <BloomText className="text-[13px] text-text-tertiary">·</BloomText>
+                <BloomText className="text-[13px] text-muted-foreground">{rentLabel}</BloomText>
               </>
             ) : null}
           </View>
         </View>
       </View>
 
-      {review.title ? (
-        <BloomText style={[styles.title, { color: theme.colors.text }]}>{review.title}</BloomText>
-      ) : null}
+      {review.title ? <BloomText style={styles.title}>{review.title}</BloomText> : null}
 
       <View style={styles.ratingRow}>
         {review.rating > 0 ? (
@@ -270,7 +267,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
 
       {pros.length > 0 ? (
         <View style={styles.prosConsBlock}>
-          <BloomText style={[styles.eyebrow, { color: theme.colors.success }]}>
+          <BloomText className="text-success" style={styles.eyebrow}>
             {t('reviews.card.pros')}
           </BloomText>
           {pros.map((item, index) => (
@@ -284,7 +281,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
 
       {cons.length > 0 ? (
         <View style={styles.prosConsBlock}>
-          <BloomText style={[styles.eyebrow, { color: theme.colors.error }]}>
+          <BloomText className="text-error" style={styles.eyebrow}>
             {t('reviews.card.cons')}
           </BloomText>
           {cons.map((item, index) => (
@@ -302,14 +299,18 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
       <DimensionGroup title={t('reviews.card.sections.area')} chips={areaChips} />
 
       {review.adviceToLandlord ? (
-        <View style={[styles.adviceBlock, { borderLeftColor: theme.colors.border }]}>
-          <BloomText style={styles.eyebrow}>{t('reviews.card.adviceToLandlord')}</BloomText>
+        <View className="border-border" style={styles.adviceBlock}>
+          <BloomText className="text-muted-foreground" style={styles.eyebrow}>
+            {t('reviews.card.adviceToLandlord')}
+          </BloomText>
           <BloomText style={styles.adviceText}>{review.adviceToLandlord}</BloomText>
         </View>
       ) : null}
       {review.adviceToAgency ? (
-        <View style={[styles.adviceBlock, { borderLeftColor: theme.colors.border }]}>
-          <BloomText style={styles.eyebrow}>{t('reviews.card.adviceToAgency')}</BloomText>
+        <View className="border-border" style={styles.adviceBlock}>
+          <BloomText className="text-muted-foreground" style={styles.eyebrow}>
+            {t('reviews.card.adviceToAgency')}
+          </BloomText>
           <BloomText style={styles.adviceText}>{review.adviceToAgency}</BloomText>
         </View>
       ) : null}
@@ -340,6 +341,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
             <Image
               key={`${url}-${index}`}
               source={{ uri: resolveBackendImageUrl(url) }}
+              className="bg-muted"
               style={styles.reviewImage}
             />
           ))}
@@ -413,14 +415,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.xs,
   },
-  metaText: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  metaDot: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_5,
-  },
   title: {
     fontSize: 17,
     fontWeight: '700',
@@ -444,12 +438,10 @@ const styles = StyleSheet.create({
   opinion: {
     fontSize: 15,
     lineHeight: 22,
-    color: colors.COLOR_BLACK_LIGHT_2,
   },
   eyebrow: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -465,7 +457,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
-    color: colors.COLOR_BLACK_LIGHT_2,
   },
   dimGroup: {
     gap: spacing.xs,
@@ -483,7 +474,6 @@ const styles = StyleSheet.create({
   adviceText: {
     fontSize: 14,
     lineHeight: 20,
-    color: colors.COLOR_BLACK_LIGHT_2,
   },
   agencyLink: {
     alignSelf: 'flex-start',
@@ -495,7 +485,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 90,
     borderRadius: radius.md,
-    backgroundColor: colors.mutedSubtle,
   },
   footer: {
     flexDirection: 'row',

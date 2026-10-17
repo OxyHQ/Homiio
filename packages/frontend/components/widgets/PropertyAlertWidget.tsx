@@ -7,9 +7,9 @@ import { Button } from '@oxy.so/bloom/button';
 import { RiNotification3Line } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
 import { Switch } from '@oxy.so/bloom/switch';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
-import { useColors } from '@/hooks/useThemeColor';
 import { toast } from '@oxy.so/bloom/toast';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
@@ -80,7 +80,7 @@ function formatPriceRange(
 export function PropertyAlertWidget() {
   const { t } = useTranslation();
   const { locale } = useFormatting();
-  const colors = useColors();
+  const { colors } = useTheme();
   const { saveSearch, isAuthenticated, isSaving } = useSavedSearches();
 
   const [location, setLocation] = useState('');
@@ -155,7 +155,7 @@ export function PropertyAlertWidget() {
         <RiNotification3Line
           width={ALERT_ICON_SIZE}
           height={ALERT_ICON_SIZE}
-          fill={colors.primary}
+          fill={colors.primarySubtleForeground}
         />
       }
     >

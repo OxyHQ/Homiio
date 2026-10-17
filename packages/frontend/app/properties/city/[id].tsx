@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useState, useMemo, useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Text } from '@oxy.so/bloom/typography';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -7,7 +8,7 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card } from '@oxy.so/bloom/card';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
-import { colors } from '@/styles/colors';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { spacing } from '@/constants/styles';
 
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -51,6 +52,7 @@ const DEFAULT_FILTERS: CityFilterState = {
 
 export default function CityPropertiesPage() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const { locale } = useFormatting();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -203,7 +205,7 @@ export default function CityPropertiesPage() {
         {/* Hero Section — DB-stored cover image (self-hosted) behind a scrim,
             falling back to a brand gradient when the city has no cover image. */}
         <View style={styles.heroSection}>
-          <View style={styles.heroContainer}>
+          <View className="bg-muted" style={styles.heroContainer}>
             {cityImageSource ? (
               <Image
                 source={cityImageSource}
@@ -214,7 +216,7 @@ export default function CityPropertiesPage() {
               />
             ) : (
               <LinearGradient
-                colors={[colors.primaryColor, colors.secondaryLight]}
+                colors={[colors.primary, colors.secondarySubtle]}
                 style={styles.heroImage}
               />
             )}
@@ -238,13 +240,19 @@ export default function CityPropertiesPage() {
         {/* City Stats Cards */}
         <View style={styles.statsSection}>
           <Card radius="radius-16" style={styles.statCard} appearance="outline">
-            <Text style={styles.statNumber}>{city.propertiesCount}</Text>
-            <Text style={styles.statLabel}>{t('properties.city.properties')}</Text>
+            <Text className="mb-1 text-2xl font-bold text-foreground">{city.propertiesCount}</Text>
+            <Text className="text-sm font-medium text-muted-foreground">
+              {t('properties.city.properties')}
+            </Text>
           </Card>
           {typeof city.population === 'number' && city.population > 0 ? (
             <Card radius="radius-16" style={styles.statCard} appearance="outline">
-              <Text style={styles.statNumber}>{formatNumber(city.population, locale)}</Text>
-              <Text style={styles.statLabel}>{t('properties.city.population')}</Text>
+              <Text className="mb-1 text-2xl font-bold text-foreground">
+                {formatNumber(city.population, locale)}
+              </Text>
+              <Text className="text-sm font-medium text-muted-foreground">
+                {t('properties.city.population')}
+              </Text>
             </Card>
           ) : null}
         </View>
@@ -253,8 +261,10 @@ export default function CityPropertiesPage() {
         <View style={styles.propertiesSection}>
           <View style={styles.propertiesHeader}>
             <View>
-              <Text style={styles.sectionTitle}>{t('properties.city.availableProperties')}</Text>
-              <Text style={styles.propertiesSubtitle}>
+              <Text className="mb-4 text-[22px] font-bold text-foreground">
+                {t('properties.city.availableProperties')}
+              </Text>
+              <Text className="mt-1 text-base text-muted-foreground">
                 {total} {t('properties.city.propertiesFound')}
               </Text>
             </View>
@@ -293,7 +303,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
   },
   heroImage: {
     position: 'absolute',
@@ -316,7 +325,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: colors.white,
+    color: 'white',
     marginBottom: 4,
   },
   heroSubtitle: {
@@ -342,24 +351,6 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontWeight: '500',
-  },
-
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 16,
-  },
 
   // Properties Section
   propertiesSection: {
@@ -371,11 +362,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 20,
-  },
-  propertiesSubtitle: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginTop: 4,
   },
 
   // Properties List

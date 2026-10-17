@@ -22,7 +22,8 @@ import React, {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { View, type ViewStyle, Text } from 'react-native';
+import { View, type ViewStyle } from 'react-native';
+import { Text } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
 import * as maplibregl from 'maplibre-gl';
 import type {
@@ -36,6 +37,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature, FeatureCollection, Point } from 'geojson';
 import * as Location from 'expo-location';
 import { MapClusterMarker, MapPriceMarker } from '@oxy.so/bloom/map-marker';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { useMapState } from '@/context/MapStateContext';
 import { boundsCenter } from '@homiio/shared-types';
@@ -50,7 +52,6 @@ import {
   type OverlayItem,
 } from './mapOverlays';
 import { DEFAULT_STYLE_URL, fetchSanitizedMapStyle, installMissingImageFallback } from './mapStyle';
-import { colors } from '@/styles/colors';
 import { PROGRAMMATIC_MOVE, moveSourceOf } from './mapTypes';
 import type {
   GeocodedAddress,
@@ -134,7 +135,6 @@ const SOURCE_ID = 'markers';
  * tiles, so without it there would be no features to draw from.
  */
 const SOURCE_ANCHOR_LAYER_ID = 'markers-anchor';
-const ADDRESS_MARKER_COLOR = '#007AFF';
 
 /** Throttle window (ms) for streaming intermediate region updates while panning. */
 const REGION_EMIT_THROTTLE_MS = 100;
@@ -248,6 +248,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
   const { getMapState, setMapState } = useMapState();
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   // The hint shows while address lookup asks for it, until the first tap on the
   // map dismisses it. Turning either prop off and on again brings it back.
@@ -297,6 +298,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const onAddressSelectRef = useRef(onAddressSelect);
   const enableAddressLookupRef = useRef(enableAddressLookup);
   const screenIdRef = useRef(screenId);
+  const addressMarkerColorRef = useRef(colors.primary);
   onMapPressRef.current = onMapPress;
   onMarkerPressRef.current = onMarkerPress;
   onClusterPressRef.current = onClusterPress;
@@ -304,6 +306,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   onAddressSelectRef.current = onAddressSelect;
   enableAddressLookupRef.current = enableAddressLookup;
   screenIdRef.current = screenId;
+  addressMarkerColorRef.current = colors.primary;
 
   const setMapStateRef = useRef(setMapState);
   setMapStateRef.current = setMapState;
@@ -593,7 +596,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
         if (enableAddressLookupRef.current) {
           addressMarkerRef.current?.remove();
-          addressMarkerRef.current = new maplibregl.Marker({ color: ADDRESS_MARKER_COLOR })
+          addressMarkerRef.current = new maplibregl.Marker({ color: addressMarkerColorRef.current })
             .setLngLat(coordinates)
             .addTo(map);
 
@@ -863,7 +866,7 @@ const addressInstructionStyles = {
     zIndex: 1000,
   },
   text: {
-    color: colors.white,
+    color: 'white',
     fontSize: 14,
     textAlign: 'center' as const,
     fontWeight: '500' as const,

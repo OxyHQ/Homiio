@@ -28,13 +28,13 @@ import {
   RiVerifiedBadgeFill,
 } from '@oxy.so/bloom/icons';
 
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { ReviewModerationStatus, type ReviewDTO } from '@homiio/shared-types';
 import { Stars } from '@/components/ui/Stars';
 import { reviewRentLabel } from '@/components/reviews/publishedFacts';
 import { formatLocalized } from '@/utils/dateLocale';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 const BODY_CLAMP_LINES = 4;
@@ -47,6 +47,7 @@ interface CommunityNoteCardProps {
 
 export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) => {
   const { t, i18n } = useTranslation();
+  const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [isTruncatable, setIsTruncatable] = useState(false);
 
@@ -79,34 +80,36 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
         <Avatar
           size={AVATAR_SIZE}
           color="neutral"
-          placeholderIcon={<RiUserLine width={20} height={20} fill={colors.COLOR_BLACK_LIGHT_3} />}
+          placeholderIcon={<RiUserLine width={20} height={20} fill={colors.textSecondary} />}
         />
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
-            <BloomText style={styles.authorName}>{authorName}</BloomText>
+            <BloomText className="text-[15px] font-semibold text-foreground">
+              {authorName}
+            </BloomText>
             {note.verified ? (
               <RiVerifiedBadgeFill
                 width={15}
                 height={15}
-                fill={colors.primaryColor}
+                fill={colors.primarySubtleForeground}
                 accessibilityLabel={t('property.communityNotes.verifiedBadge')}
               />
             ) : null}
           </View>
           <View style={styles.metaRow}>
-            <BloomText style={styles.metaText}>{formattedDate}</BloomText>
+            <BloomText className="text-[13px] text-muted-foreground">{formattedDate}</BloomText>
             {note.livedForMonths > 0 ? (
               <>
-                <BloomText style={styles.metaDot}>·</BloomText>
-                <BloomText style={styles.metaText}>
+                <BloomText className="text-[13px] text-text-tertiary">·</BloomText>
+                <BloomText className="text-[13px] text-muted-foreground">
                   {t('property.communityNotes.livedMonths', { count: note.livedForMonths })}
                 </BloomText>
               </>
             ) : null}
             {rentLabel ? (
               <>
-                <BloomText style={styles.metaDot}>·</BloomText>
-                <BloomText style={styles.metaText}>{rentLabel}</BloomText>
+                <BloomText className="text-[13px] text-text-tertiary">·</BloomText>
+                <BloomText className="text-[13px] text-muted-foreground">{rentLabel}</BloomText>
               </>
             ) : null}
           </View>
@@ -114,10 +117,12 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
         <Stars rating={note.rating} />
       </View>
 
-      {note.title ? <BloomText style={styles.title}>{note.title}</BloomText> : null}
+      {note.title ? (
+        <BloomText className="text-[15px] font-bold text-foreground">{note.title}</BloomText>
+      ) : null}
 
       <BloomText
-        style={styles.body}
+        className="text-[15px] leading-[22px] text-foreground"
         numberOfLines={expanded ? undefined : BODY_CLAMP_LINES}
         onTextLayout={handleTextLayout}
       >
@@ -137,10 +142,12 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
       ) : null}
 
       {pros.length > 0 ? (
-        <View style={styles.commentBlock}>
-          <BloomText style={styles.commentLabel}>{t('property.communityNotes.liked')}</BloomText>
+        <View className="gap-0.5 border-l-2 border-border pl-3">
+          <BloomText className="text-xs font-bold uppercase tracking-[0.5px] text-muted-foreground">
+            {t('property.communityNotes.liked')}
+          </BloomText>
           {pros.map((item, index) => (
-            <BloomText key={`pro-${index}`} style={styles.commentText}>
+            <BloomText key={`pro-${index}`} className="text-sm leading-5 text-foreground">
               • {item}
             </BloomText>
           ))}
@@ -148,10 +155,12 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
       ) : null}
 
       {cons.length > 0 ? (
-        <View style={styles.commentBlock}>
-          <BloomText style={styles.commentLabel}>{t('property.communityNotes.disliked')}</BloomText>
+        <View className="gap-0.5 border-l-2 border-border pl-3">
+          <BloomText className="text-xs font-bold uppercase tracking-[0.5px] text-muted-foreground">
+            {t('property.communityNotes.disliked')}
+          </BloomText>
           {cons.map((item, index) => (
-            <BloomText key={`con-${index}`} style={styles.commentText}>
+            <BloomText key={`con-${index}`} className="text-sm leading-5 text-foreground">
               • {item}
             </BloomText>
           ))}
@@ -163,13 +172,14 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
           {note.recommendation ? (
             <RiThumbUpLine width={13} height={13} fill={colors.success} />
           ) : (
-            <RiThumbDownLine width={13} height={13} fill={colors.COLOR_BLACK_LIGHT_3} />
+            <RiThumbDownLine width={13} height={13} fill={colors.textSecondary} />
           )}
           <BloomText
-            style={[
-              styles.recommendText,
-              { color: note.recommendation ? colors.success : colors.COLOR_BLACK_LIGHT_3 },
-            ]}
+            className={
+              note.recommendation
+                ? 'text-[13px] font-semibold text-success'
+                : 'text-[13px] font-semibold text-muted-foreground'
+            }
           >
             {note.recommendation
               ? t('property.communityNotes.recommends')
@@ -178,7 +188,7 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
         </View>
 
         {note.helpfulCount > 0 ? (
-          <BloomText style={styles.helpfulCount}>
+          <BloomText className="text-[13px] text-muted-foreground">
             {t('property.communityNotes.helpful', { count: note.helpfulCount })}
           </BloomText>
         ) : null}
@@ -218,55 +228,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  authorName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: spacing.xs,
   },
-  metaText: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  metaDot: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_5,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  body: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
   readMore: {
     alignSelf: 'flex-start',
-  },
-  commentBlock: {
-    gap: 2,
-    paddingLeft: spacing.md,
-    borderLeftWidth: 2,
-    borderLeftColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  commentLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  commentText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.COLOR_BLACK_LIGHT_2,
   },
   footer: {
     flexDirection: 'row',
@@ -279,14 +248,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  recommendText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  helpfulCount: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   underReview: {
     marginLeft: 'auto',

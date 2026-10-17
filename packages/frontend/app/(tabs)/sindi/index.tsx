@@ -44,7 +44,6 @@ import { NEW_SINDI_CONVERSATION, SINDI_AGENT_ID } from '@/components/sindi/sindi
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiExplanationBottomSheet } from '@/components/SindiExplanationBottomSheet';
 import { spacing } from '@/constants/styles';
-import { colors as staticColors } from '@/styles/colors';
 
 /** The three promises under the hero. */
 const FEATURES = [
@@ -109,7 +108,7 @@ export default function Sindi() {
           actionText={t('common.signIn')}
           actionIcon={RiLoginBoxLine}
           onAction={() => openAccountDialog()}
-          iconColor={staticColors.primaryColor}
+          iconColor={colors.primarySubtleForeground}
         />
       </>
     );

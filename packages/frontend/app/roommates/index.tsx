@@ -10,7 +10,7 @@
  *   - Shared EmptyState + Loading (Bloom) component.
  *   - Flat wrappers (hairline border) around list content.
  */
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -50,7 +50,6 @@ import { roommateService } from '@/services/roommateService';
 import type { PropertyFilters } from '@/services/propertyService';
 import { useProfileStore } from '@/store/profileStore';
 import { spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 
 type Tab = 'discover' | 'requests' | 'relationships' | 'rooms';
 
@@ -425,7 +424,7 @@ export default function RoommatesPage() {
 
   return (
     <>
-      <View style={styles.headerWrap}>
+      <View className="bg-card px-4 pb-3 gap-3 border-b border-border">
         <View style={styles.headerInner}>
           <View style={styles.titleBlock}>
             <SectionEyebrow>{t('roommates.screen.eyebrow')}</SectionEyebrow>
@@ -498,14 +497,6 @@ export default function RoommatesPage() {
 }
 
 const styles = StyleSheet.create({
-  headerWrap: {
-    backgroundColor: colors.surfaceElevated,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
   headerInner: {
     flexDirection: 'row',
     alignItems: 'center',

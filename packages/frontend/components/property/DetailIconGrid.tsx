@@ -33,9 +33,9 @@ import React from 'react';
 import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 import type { ButtonIconComponent } from '@oxy.so/bloom/button';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
 
 /**
@@ -77,7 +77,8 @@ export const DetailIcon: React.FC<{
   fallbackIcon: DetailFallbackIcon;
   muted?: boolean;
 }> = ({ image, fallbackIcon: FallbackIcon, muted = false }) => {
-  const tint = muted ? colors.COLOR_BLACK_LIGHT_5 : colors.COLOR_BLACK_LIGHT_1;
+  const { colors } = useTheme();
+  const tint = muted ? colors.textTertiary : colors.text;
   return (
     <View style={styles.detailIconBox}>
       {image ? (
@@ -170,34 +171,35 @@ export const DetailIconRow: React.FC<DetailIconRowProps> = ({
   trailing,
   muted = false,
   divided = false,
-}) => (
-  <View style={[styles.row, divided && styles.rowDivided]}>
-    <View style={styles.rowIcon}>{icon}</View>
-    {trailing !== undefined ? (
-      <View style={styles.rowText}>
-        <BloomText
-          variant="body-regular"
-          style={[styles.label, styles.labelShrink, muted && styles.labelMuted]}
-        >
+}) => {
+  const { colors } = useTheme();
+  const mutedText = muted && { color: colors.textTertiary };
+  return (
+    <View
+      className={divided ? 'border-border' : undefined}
+      style={[styles.row, divided && styles.rowDivided]}
+    >
+      <View style={styles.rowIcon}>{icon}</View>
+      {trailing !== undefined ? (
+        <View style={styles.rowText}>
+          <BloomText variant="body-regular" style={[styles.label, styles.labelShrink, mutedText]}>
+            {label}
+          </BloomText>
+          <BloomText
+            variant="body-2-semibold"
+            style={[{ color: colors.textSecondary }, muted && styles.trailingMuted, mutedText]}
+          >
+            {trailing}
+          </BloomText>
+        </View>
+      ) : (
+        <BloomText variant="body-regular" style={[styles.label, styles.labelFill, mutedText]}>
           {label}
         </BloomText>
-        <BloomText
-          variant="body-2-semibold"
-          style={[styles.trailing, muted && styles.trailingMuted]}
-        >
-          {trailing}
-        </BloomText>
-      </View>
-    ) : (
-      <BloomText
-        variant="body-regular"
-        style={[styles.label, styles.labelFill, muted && styles.labelMuted]}
-      >
-        {label}
-      </BloomText>
-    )}
-  </View>
-);
+      )}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   detailIconBox: {
@@ -241,7 +243,6 @@ const styles = StyleSheet.create({
   },
   rowDivided: {
     borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
   },
   rowIcon: {
     width: DETAIL_ICON_SIZE,
@@ -256,7 +257,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 15,
-    color: colors.COLOR_BLACK,
   },
   // The label fills the row when there's no trailing text...
   labelFill: {
@@ -266,14 +266,7 @@ const styles = StyleSheet.create({
   labelShrink: {
     flexShrink: 1,
   },
-  labelMuted: {
-    color: colors.COLOR_BLACK_LIGHT_5,
-  },
-  trailing: {
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
   trailingMuted: {
     fontWeight: '400',
-    color: colors.COLOR_BLACK_LIGHT_5,
   },
 });

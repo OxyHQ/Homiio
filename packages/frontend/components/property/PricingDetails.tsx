@@ -22,7 +22,6 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Section } from '@/components/property/Section';
 import { MoneyText } from '@/components/MoneyText';
-import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
 import { OfferingType, type Property } from '@homiio/shared-types';
 import { hasOffering, type RentalMode } from '@/utils/propertyUtils';
@@ -183,11 +182,11 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
       {rows.map((row, idx) => (
         <React.Fragment key={row.key}>
           <View style={styles.row}>
-            <BloomText style={styles.label}>{row.label}</BloomText>
+            <BloomText className="text-[15px] text-muted-foreground">{row.label}</BloomText>
             <BloomText style={styles.value}>
               <MoneyText amount={row.amount} currency={currency} style={styles.value} />
               {row.key === 'rent' ? (
-                <BloomText style={styles.unit}>{` /${rentUnit}`}</BloomText>
+                <BloomText className="text-[13px] font-normal text-muted-foreground">{` /${rentUnit}`}</BloomText>
               ) : null}
             </BloomText>
           </View>
@@ -199,7 +198,9 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
         <>
           <Divider />
           <View style={styles.row}>
-            <BloomText style={styles.label}>{t('property.sections.utilitiesIncluded')}</BloomText>
+            <BloomText className="text-[15px] text-muted-foreground">
+              {t('property.sections.utilitiesIncluded')}
+            </BloomText>
             <BloomText style={styles.value}>
               {utilitiesIncluded
                 ? t('propertyCreate.amenities.yes')
@@ -210,21 +211,23 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
       ) : null}
 
       {showMoveIn ? (
-        <View style={styles.moveIn}>
+        <View className="border-border" style={styles.moveIn}>
           <BloomText style={styles.moveInTitle}>{t('property.moveInCost.title')}</BloomText>
           <View style={styles.moveInRows}>
             {moveInRows.map((row) => (
               <View key={row.key} style={styles.moveInRow}>
-                <BloomText style={styles.moveInLabel}>{row.label}</BloomText>
+                <BloomText className="text-sm text-muted-foreground">{row.label}</BloomText>
                 <MoneyText amount={row.amount} currency={currency} style={styles.moveInValue} />
               </View>
             ))}
           </View>
-          <View style={styles.moveInTotalRow}>
+          <View className="bg-muted" style={styles.moveInTotalRow}>
             <BloomText style={styles.moveInTotalLabel}>{totalLabel}</BloomText>
             <MoneyText amount={total} currency={currency} style={styles.moveInTotalValue} />
           </View>
-          <BloomText style={styles.moveInNote}>{t('property.moveInCost.note')}</BloomText>
+          <BloomText className="text-xs leading-4 text-muted-foreground">
+            {t('property.moveInCost.note')}
+          </BloomText>
         </View>
       ) : null}
     </Section>
@@ -239,31 +242,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.lg,
   },
-  label: {
-    fontSize: 15,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
   value: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  unit: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
   moveIn: {
     marginTop: spacing.lg,
     paddingTop: spacing.lg,
     borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
     gap: spacing.md,
   },
   moveInTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
   moveInRows: {
     gap: spacing.xs,
@@ -274,13 +265,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.lg,
   },
-  moveInLabel: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
   moveInValue: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
   },
   moveInTotalRow: {
     flexDirection: 'row',
@@ -292,21 +278,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: colors.mutedSubtle,
   },
   moveInTotalLabel: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
   moveInTotalValue: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  moveInNote: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    lineHeight: 16,
   },
 });

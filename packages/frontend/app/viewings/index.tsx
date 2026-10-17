@@ -32,7 +32,6 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { viewingService, type ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
 import { spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 import { RiAlertLine, RiCalendarLine, RiLoginBoxLine } from '@oxy.so/bloom/icons';
 
 type ViewingStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
@@ -294,7 +293,7 @@ export default function ViewingsPage() {
         <View style={styles.titleBlock}>
           <SectionEyebrow>Upcoming visits</SectionEyebrow>
           <H2 style={styles.title}>Your viewings</H2>
-          <BloomText style={styles.subtitle}>
+          <BloomText className="text-sm text-muted-foreground">
             Track every visit you have requested and reschedule or cancel with one tap.
           </BloomText>
         </View>
@@ -367,10 +366,6 @@ const styles = StyleSheet.create({
   },
   title: {
     letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.muted,
   },
   filterRow: {
     flexDirection: 'row',

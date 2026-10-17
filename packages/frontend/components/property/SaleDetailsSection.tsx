@@ -15,10 +15,10 @@ import { Divider } from '@oxy.so/bloom/divider';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { RiArrowDownLine } from '@oxy.so/bloom/icons';
 import { Chip } from '@oxy.so/bloom/chip';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { Section } from '@/components/property/Section';
 import { MoneyText } from '@/components/MoneyText';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { formatPercentage, type PropertySale } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
@@ -39,6 +39,7 @@ const CHAIN_STATUS_LABEL: Record<NonNullable<PropertySale['chainStatus']>, { key
 export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
   const { t } = useTranslation();
   const { locale } = useFormatting();
+  const { colors } = useTheme();
 
   const chain = sale.chainStatus ? CHAIN_STATUS_LABEL[sale.chainStatus] : undefined;
 
@@ -51,7 +52,9 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
             variant="subtle"
             color="success"
             size="sm"
-            startIcon={<RiArrowDownLine width={14} height={14} fill={colors.success} />}
+            startIcon={
+              <RiArrowDownLine width={14} height={14} fill={colors.successSubtleForeground} />
+            }
           >
             {t('listing.sale.priceReduced')}
           </Chip>
@@ -62,7 +65,9 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
         <>
           <Divider />
           <View style={styles.row}>
-            <BloomText style={styles.label}>{t('listing.sale.pricePerSqm')}</BloomText>
+            <BloomText className="text-[15px] text-muted-foreground">
+              {t('listing.sale.pricePerSqm')}
+            </BloomText>
             <BloomText style={styles.value}>
               <MoneyText amount={sale.pricePerSqm} currency={sale.currency} style={styles.value} />
             </BloomText>
@@ -74,7 +79,9 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
         <>
           <Divider />
           <View style={styles.row}>
-            <BloomText style={styles.label}>{t('listing.sale.estimatedYield')}</BloomText>
+            <BloomText className="text-[15px] text-muted-foreground">
+              {t('listing.sale.estimatedYield')}
+            </BloomText>
             <BloomText style={styles.value}>
               {formatPercentage(sale.estimatedYield, locale, {
                 input: 'percent',
@@ -89,7 +96,9 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
         <>
           <Divider />
           <View style={styles.row}>
-            <BloomText style={styles.label}>{t('listing.sale.chainStatus.label')}</BloomText>
+            <BloomText className="text-[15px] text-muted-foreground">
+              {t('listing.sale.chainStatus.label')}
+            </BloomText>
             <BloomText style={styles.value}>{t(chain.key)}</BloomText>
           </View>
         </>
@@ -109,7 +118,6 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 28,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
     letterSpacing: -0.4,
   },
   row: {
@@ -119,13 +127,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.lg,
   },
-  label: {
-    fontSize: 15,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
   value: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
 });

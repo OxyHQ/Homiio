@@ -11,6 +11,7 @@ import { Item } from '@oxy.so/bloom/item';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import { SwitchFilterRow, ToggleChipGroup } from '@oxy.so/bloom/stay-filters';
 import { Textarea } from '@oxy.so/bloom/textarea';
+import { useTheme } from '@oxy.so/bloom/theme';
 import {
   type AvailabilityWindow,
   AvailabilityWindowStatus,
@@ -22,7 +23,6 @@ import {
   AvailabilityCalendar,
   type AvailabilityCalendarRange,
 } from '@/components/AvailabilityCalendar';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { EXCHANGE_LANGUAGE_OPTIONS, EXCHANGE_MODE_OPTIONS } from './constants';
 import { createPropertyStyles as styles } from './styles';
@@ -55,6 +55,7 @@ const windowKey = (window: AvailabilityWindow): string => `${window.start}_${win
  */
 export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const { offering } = formData;
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -136,8 +137,8 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
                 <Item
                   key={key}
                   density="compact"
-                  style={exchangeStyles.windowItem}
-                  leading={<RiCalendarLine size="sm" fill={colors.exchangeAccent} />}
+                  style={[exchangeStyles.windowItem, { backgroundColor: colors.tertiarySubtle }]}
+                  leading={<RiCalendarLine size="sm" fill={colors.tertiarySubtleForeground} />}
                   title={formatWindow(window)}
                   trailing={
                     <Button
@@ -155,7 +156,9 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
             })}
           </View>
         ) : (
-          <ThemedText style={styles.instructions}>{t('listing.exchange.noWindows')}</ThemedText>
+          <ThemedText style={[styles.instructions, { color: colors.textSecondary }]}>
+            {t('listing.exchange.noWindows')}
+          </ThemedText>
         )}
         <Button
           leadingIcon={RiAddLine}
@@ -227,7 +230,6 @@ const exchangeStyles = StyleSheet.create({
   },
   windowItem: {
     borderRadius: radius.md,
-    backgroundColor: colors.exchangeSubtle,
   },
   addWindowButton: {
     alignSelf: 'flex-start',

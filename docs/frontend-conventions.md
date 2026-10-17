@@ -95,6 +95,20 @@ Homiio's own `@source` globs and the web document-scroll override.
   copied here drifts (it once painted the blue preset under a yellow app).
 - There is no `tailwind.config.js`: Tailwind v4 reads only the CSS.
 
+### Colours follow the theme
+
+The app follows the system light/dark scheme (`BloomProvider defaultMode="system"`,
+persisted; Settings → Appearance overrides it). So no colour is static:
+
+- Text and surfaces use token classes (`text-foreground`, `text-muted-foreground`,
+  `text-primary-text`, `bg-card`, `bg-muted`, `border-border`, `bg-success-subtle`
+  …). A prop that needs a VALUE (icon `fill`, spinner, gradient) reads
+  `useTheme().colors` from `@oxy.so/bloom/theme`.
+- No hex literals, no module-scope colour in `StyleSheet.create`, no `+ '20'` alpha
+  suffixes (use the `*Subtle` pair or `withAlpha`). Literal white only over photos.
+- A Bloom `Text` given a `className` drops its default colour and type style, so
+  that className must carry a colour class too.
+
 ## NativeWind: `Pressable` function-form `style`
 
 The NativeWind css-interop (v4 `react-native-css-interop`, and the v5 preview /
@@ -201,9 +215,7 @@ function-form `style`) and three chrome **variants**. Never hand-roll
 `<Pressable style={[barIconButton, pressed && barIconButtonPressed]}>` plus a glyph
 again.
 
-- Variants: `ghost` (flat transparent, `mutedSubtle` pressed tint, for headers
-  and bars, reusing the shared `barIconButton` / `barIconSize` /
-  `barBackIconSize` tokens), `overlay` (frosted white circle for on-photo use,
+- Variants: `ghost` (flat transparent, muted pressed tint, for headers and bars), `overlay` (frosted card-coloured circle for on-photo use,
   such as the card save heart), and `filled` (brand fill plus
   `primaryForeground` glyph). Props: `icon` (a Remix icon COMPONENT from
   `@oxy.so/bloom/icons`, e.g. `icon={RiShare2Line}`, never a glyph name),

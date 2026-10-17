@@ -13,7 +13,7 @@
  * - Party names are the Oxy accounts' display names, resolved in one batch;
  *   an account that does not resolve shows a dash, never an id.
  */
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
@@ -44,7 +44,6 @@ import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
 import { spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 
 /**
  * Build a display title for the property a lease is attached to. Properties
@@ -280,7 +279,9 @@ export default function ContractsScreen() {
           <View style={styles.titleBlock}>
             <SectionEyebrow>{t('contracts.list.eyebrow')}</SectionEyebrow>
             <H2 style={styles.title}>{t('contracts.list.title')}</H2>
-            <BloomText style={styles.subtitle}>{t('contracts.list.subtitle')}</BloomText>
+            <BloomText className="text-sm text-muted-foreground">
+              {t('contracts.list.subtitle')}
+            </BloomText>
           </View>
           <View className="hidden lg:flex">
             <Button
@@ -352,7 +353,7 @@ export default function ContractsScreen() {
               pageSize={20}
               minWidth={1000}
               emptyState={
-                <BloomText style={styles.subtitle}>
+                <BloomText className="text-sm text-muted-foreground">
                   {query.trim() ? t('contracts.list.emptyTitle') : emptyDescription}
                 </BloomText>
               }
@@ -390,7 +391,7 @@ export default function ContractsScreen() {
         ) : null}
       </View>
 
-      <View style={styles.footer} className="lg:hidden">
+      <View className="lg:hidden p-4 bg-card border-t border-border">
         <Button
           size="lg"
           onPress={handleAddNewContract}
@@ -425,10 +426,6 @@ const styles = StyleSheet.create({
   title: {
     letterSpacing: -0.5,
   },
-  subtitle: {
-    fontSize: 14,
-    color: colors.muted,
-  },
   filterRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -447,12 +444,6 @@ const styles = StyleSheet.create({
   },
   cellText: {
     fontSize: 14,
-  },
-  footer: {
-    padding: spacing.lg,
-    backgroundColor: colors.surfaceElevated,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   footerButton: {
     alignSelf: 'stretch',

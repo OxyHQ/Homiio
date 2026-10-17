@@ -6,10 +6,10 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { City } from '@homiio/shared-types';
 
-import { colors } from '@/styles/colors';
 import { textShadow } from '@/styles/shadows';
 import { radius, spacing, tracker } from '@/constants/styles';
 import { cityRegionName, getCityImageSource } from '@/utils/cityDisplay';
@@ -25,6 +25,7 @@ interface CityCardProps {
  * `md` (so ~3 fit comfortably) and the widest from `xl`.
  */
 export function CityCard({ city, onPress }: CityCardProps) {
+  const { colors } = useTheme();
   const [pressed, setPressed] = useState(false);
   // Hover anywhere on the card zooms its photo (web); press does it on native.
   // `onHoverIn/Out` are Pressable-only + web-only (native ignores them).
@@ -47,7 +48,7 @@ export function CityCard({ city, onPress }: CityCardProps) {
       onHoverOut={() => setHovered(false)}
       accessibilityRole="button"
       accessibilityLabel={`Explore homes in ${city.name}`}
-      className="aspect-[4/5] w-[240px] md:w-[280px] xl:w-[360px]"
+      className="aspect-[4/5] w-[240px] md:w-[280px] xl:w-[360px] bg-muted"
       style={styles.card}
     >
       {/* The photo zooms inside the card's rounded mask on hover (anywhere on the
@@ -64,7 +65,7 @@ export function CityCard({ city, onPress }: CityCardProps) {
           />
         ) : (
           <LinearGradient
-            colors={[colors.primaryColor, colors.secondaryLight]}
+            colors={[colors.primary, colors.secondarySubtle]}
             style={[styles.cardImage, { pointerEvents: 'none' }]}
           />
         )}
@@ -91,7 +92,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
   },
   // The masked zoom wrapper fills the card so the photo scales inside the
   // rounded corners; the scrim and copy sit above it as siblings.
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   cardCity: {
     fontSize: 22,
     fontWeight: '700',
-    color: colors.white,
+    color: 'white',
     letterSpacing: tracker.tight,
     textShadow: textShadow({ y: 1, blur: 4, color: 'rgba(0, 0, 0, 0.35)' }),
   },

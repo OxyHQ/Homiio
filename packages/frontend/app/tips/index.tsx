@@ -30,7 +30,6 @@ import {
   type TipArticle,
 } from '@/services/tipsService';
 import { spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 
 interface TipCardProps {
@@ -168,7 +167,7 @@ export default function TipsScreen() {
         <View style={styles.titleBlock}>
           <SectionEyebrow>{t('home.tips.eyebrow')}</SectionEyebrow>
           <H2 style={styles.title}>{t('home.tips.title')}</H2>
-          <BloomText style={styles.subtitle}>{t('home.tips.subtitle')}</BloomText>
+          <BloomText className="text-sm text-muted-foreground">{t('home.tips.subtitle')}</BloomText>
         </View>
 
         {allTags.length > 0 ? (
@@ -254,10 +253,6 @@ const styles = StyleSheet.create({
   },
   title: {
     letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.muted,
   },
   tagRow: {
     gap: spacing.sm,

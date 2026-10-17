@@ -1,5 +1,4 @@
 import { Platform, StyleSheet } from 'react-native';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 /**
@@ -54,14 +53,12 @@ export const createPropertyStyles = StyleSheet.create({
   },
   instructions: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
     lineHeight: 20,
   },
   mapContainer: {
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
   },
   mapWrapper: {
     position: 'relative',
@@ -73,7 +70,6 @@ export const createPropertyStyles = StyleSheet.create({
   },
   fullscreenMapContainer: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   fullscreenMapHeader: {
     flexDirection: 'row',
@@ -83,7 +79,6 @@ export const createPropertyStyles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
   fullscreenMapTitle: {
     flex: 1,

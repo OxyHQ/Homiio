@@ -1,53 +1,25 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
+import { Text } from '@oxy.so/bloom/typography';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { colors } from '@/styles/colors';
 import { RiErrorWarningFill } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 export default function NotFoundScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   return (
-    <View style={styles.container}>
-      <RiErrorWarningFill width={80} height={80} fill={colors.primaryColor} />
-      <Text style={styles.title}>{t('notFound.title')}</Text>
-      <Text style={styles.message}>{t('notFound.message')}</Text>
-      <TouchableOpacity style={styles.button} onPress={() => router.back()}>
-        <Text style={styles.buttonText}>{t('notFound.goBack')}</Text>
+    <View className="flex-1 items-center justify-center p-4">
+      <RiErrorWarningFill width={80} height={80} fill={colors.primarySubtleForeground} />
+      <Text className="my-4 text-2xl font-bold text-foreground">{t('notFound.title')}</Text>
+      <Text className="mb-6 text-center text-base text-muted-foreground">
+        {t('notFound.message')}
+      </Text>
+      <TouchableOpacity className="rounded-full bg-primary px-6 py-3" onPress={() => router.back()}>
+        <Text className="text-base font-bold text-primary-foreground">{t('notFound.goBack')}</Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 16,
-  },
-  message: {
-    fontSize: 16,
-    color: colors.muted,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  button: {
-    backgroundColor: colors.primaryColor,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-  },
-  buttonText: {
-    color: colors.primaryForeground,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});

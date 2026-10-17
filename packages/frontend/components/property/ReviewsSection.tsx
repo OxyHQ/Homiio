@@ -37,7 +37,6 @@ import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
 import { useAddressReviews } from '@/hooks/useAddressReviews';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import { getPropertyLocationLabel } from '@/utils/propertyUtils';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
@@ -100,12 +99,14 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     <View>
       <SectionHeader title={t('property.reviews.title')} />
       <View style={styles.body}>
-        <BloomText style={styles.disclaimer}>{t('property.reviews.disclaimer')}</BloomText>
+        <BloomText className="mt-2 mb-5 text-[13px] leading-[18px] text-muted-foreground">
+          {t('property.reviews.disclaimer')}
+        </BloomText>
 
         {loading ? (
           <View style={styles.skeletonGrid}>
             {Array.from({ length: 4 }).map((_, idx) => (
-              <View key={idx} style={styles.skeletonCard}>
+              <View key={idx} className="bg-muted" style={styles.skeletonCard}>
                 <Skeleton.Box width="60%" height={14} borderRadius={4} />
                 <Skeleton.Box
                   width="100%"
@@ -183,13 +184,6 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: SECTION_GUTTER,
   },
-  disclaimer: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xl,
-    lineHeight: 18,
-  },
   stack: {
     gap: spacing.xl,
   },
@@ -214,7 +208,6 @@ const styles = StyleSheet.create({
     minWidth: 240,
     flexGrow: 1,
     padding: spacing.lg,
-    backgroundColor: colors.mutedSubtle,
     borderRadius: radius.md,
     gap: spacing.sm,
   },

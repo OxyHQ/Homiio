@@ -19,12 +19,12 @@ import { useTranslation } from 'react-i18next';
 import { Chip } from '@oxy.so/bloom/chip';
 import { Dialog } from '@oxy.so/bloom/dialog';
 import { RiArrowDownSLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import type { LocationSelection } from '@homiio/shared-types';
 
 import { WhereStep } from '@/components/search/steps/WhereStep';
 import type { LocationScope } from '@/hooks/useLocationScope';
-import { useColors } from '@/hooks/useThemeColor';
 
 import { useScopeWhere } from './useScopeWhere';
 
@@ -49,7 +49,7 @@ export function AreaChip({
   testID,
 }: AreaChipProps): React.ReactElement {
   const { t } = useTranslation();
-  const colors = useColors();
+  const { colors } = useTheme();
   const [text, setText] = useState('');
   const where = useScopeWhere(scope, scope.selection);
   const { value, placeholder } = where.statement;

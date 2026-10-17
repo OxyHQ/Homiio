@@ -197,7 +197,7 @@ export default function HomePage() {
         </View>
 
         <View className="w-full items-start gap-3 px-4 pb-4 md:items-center md:px-8">
-          <H1 className="text-display-4-bold md:text-center lg:text-display-3-bold">
+          <H1 className="text-display-4-bold text-foreground md:text-center lg:text-display-3-bold">
             {t(`home.hero.title.${browseMode}`)}
           </H1>
           <View className="z-20 w-full max-w-[880px] self-center">

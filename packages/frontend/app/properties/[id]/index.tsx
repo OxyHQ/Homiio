@@ -29,6 +29,7 @@ import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { ButtonGroup, ButtonGroupItem } from '@oxy.so/bloom/button-group';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import {
   RiAccountCircleLine,
@@ -105,7 +106,6 @@ import { Section, SECTION_GUTTER } from '@/components/property/Section';
 import { BookingCard } from '@/components/property/BookingCard';
 
 import { resolveBookingMode } from '@/utils/bookingMode';
-import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
 
 interface PropertyDetailViewModel {
@@ -124,6 +124,7 @@ interface PropertyDetailViewModel {
 
 export default function PropertyDetailPage() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const formatting = useFormatting();
   const router = useRouter();
   const { id } = useLocalSearchParams();
@@ -633,7 +634,7 @@ export default function PropertyDetailPage() {
             </View>
           ) : null}
 
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <BasicInfoSection
               property={apiProperty}
               mode={rentalMode}
@@ -643,14 +644,16 @@ export default function PropertyDetailPage() {
             <ExternalContactSection property={apiProperty} />
             {property.alsoAvailable ? (
               <View style={styles.alsoAvailableRow}>
-                <RiShapesLine width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />
-                <BloomText style={styles.alsoAvailableText}>{property.alsoAvailable}</BloomText>
+                <RiShapesLine width={14} height={14} fill={colors.textSecondary} />
+                <BloomText className="text-[13px] text-muted-foreground">
+                  {property.alsoAvailable}
+                </BloomText>
               </View>
             ) : null}
           </View>
 
           {showInlineBookingCard && apiProperty ? (
-            <View className="lg:hidden" style={[styles.section, styles.divider]}>
+            <View className="border-border lg:hidden" style={[styles.section, styles.divider]}>
               <Section>
                 <BookingCard
                   property={apiProperty as Property}
@@ -660,22 +663,22 @@ export default function PropertyDetailPage() {
             </View>
           ) : null}
 
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <PropertyDetailsCard property={apiProperty} />
           </View>
 
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <PropertyFeatures property={apiProperty} />
           </View>
 
           {showSleepArrangement ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="border-border" style={[styles.section, styles.divider]}>
               <SleepArrangement property={apiProperty as Property} />
             </View>
           ) : null}
 
           {hasPricingDetails(apiProperty, rentalMode) ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="border-border" style={[styles.section, styles.divider]}>
               <PricingDetails property={apiProperty} mode={rentalMode} />
             </View>
           ) : null}
@@ -684,13 +687,13 @@ export default function PropertyDetailPage() {
               carry a sale block (gated together so neither leaves a bare
               hairline divider behind). */}
           {saleData ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="border-border" style={[styles.section, styles.divider]}>
               <SaleDetailsSection sale={saleData} />
             </View>
           ) : null}
 
           {saleData ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="border-border" style={[styles.section, styles.divider]}>
               <MortgageCalculatorSection salePrice={saleData.price} currency={saleData.currency} />
             </View>
           ) : null}
@@ -699,7 +702,7 @@ export default function PropertyDetailPage() {
               block. Gated like the sale section so it never leaves a bare
               hairline divider. */}
           {exchangeData ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="border-border" style={[styles.section, styles.divider]}>
               <ExchangeSection
                 exchange={exchangeData}
                 /* An EXTERNAL listing keeps its exchange terms on show and
@@ -713,19 +716,19 @@ export default function PropertyDetailPage() {
             </View>
           ) : null}
 
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <HouseRules property={apiProperty} />
           </View>
 
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <LocationDisplay property={apiProperty as Property} />
           </View>
 
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <PropertyOverview property={apiProperty} />
           </View>
 
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <NeighborhoodInfo property={apiProperty} />
           </View>
 
@@ -733,22 +736,22 @@ export default function PropertyDetailPage() {
               near this listing. Gated so a fail-soft / degraded-empty section
               never leaves a bare hairline divider behind. */}
           {showNearbyServicesSection ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="border-border" style={[styles.section, styles.divider]}>
               <NearbyServicesSection propertyId={property.id} />
             </View>
           ) : null}
 
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <AvailabilitySection property={apiProperty} />
           </View>
 
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <AmenitiesGrid property={apiProperty as { amenities?: string[] | null }} />
           </View>
 
           {/* Community Notes — community-verified notes about the building —
               shown on every listing. */}
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <CommunityNotesSection property={apiProperty as Property} variant="preview" />
           </View>
 
@@ -756,7 +759,7 @@ export default function PropertyDetailPage() {
               every offering: they outlive the advertisement (ADR 0001), so a
               home for rent, for sale or to swap shows the same ones. Reviews
               and Community Notes are distinct features that coexist. */}
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <ReviewsSection property={apiProperty as Property} />
           </View>
 
@@ -766,19 +769,22 @@ export default function PropertyDetailPage() {
               wrapper is gated so a fail-soft/empty section never leaves a
               bare hairline divider behind. */}
           {showPriceRangeSection ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="border-border" style={[styles.section, styles.divider]}>
               <PriceRangeSection propertyId={property.id} bedrooms={property.bedrooms} />
             </View>
           ) : null}
 
           {showSimilarHomesSection ? (
-            <View style={[styles.section, styles.divider, { paddingHorizontal: SECTION_GUTTER }]}>
+            <View
+              className="border-border"
+              style={[styles.section, styles.divider, { paddingHorizontal: SECTION_GUTTER }]}
+            >
               <SimilarHomesSection propertyId={property.id} />
             </View>
           ) : null}
 
           {apiProperty ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="border-border" style={[styles.section, styles.divider]}>
               <LandlordSection
                 property={apiProperty}
                 landlordProfile={landlordProfile}
@@ -789,11 +795,11 @@ export default function PropertyDetailPage() {
           ) : null}
 
           {apiProperty ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="border-border" style={[styles.section, styles.divider]}>
               <SindiSection property={apiProperty} />
             </View>
           ) : null}
-          <View style={[styles.section, styles.divider]}>
+          <View className="border-border" style={[styles.section, styles.divider]}>
             <FraudWarning text={t('property.fraudWarning')} />
           </View>
         </View>
@@ -885,12 +891,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SECTION_GUTTER,
     marginTop: spacing.md,
   },
-  alsoAvailableText: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
   divider: {
     borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
   },
 });

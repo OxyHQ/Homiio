@@ -38,6 +38,7 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
 import { RiAddLine, RiAlertLine, RiListUnordered, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
@@ -60,7 +61,6 @@ import { useEvictions } from '@/hooks/useEvictionQueries';
 import { EvictionCard } from '@/components/evictions/EvictionCard';
 import { selectionToBoardScope } from '@/components/evictions/evictionScope';
 import { formatEvictionShortDate } from '@/components/evictions/evictionUtils';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 const EMPTY_ILLUSTRATION: ImageSourcePropType = require('@/assets/illustrations/empty-evictions.png');
@@ -90,6 +90,7 @@ export default function EvictionsBoardScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { isAuthenticated } = useOxy();
+  const { colors } = useTheme();
 
   // The APP-WIDE scope (#353), not a board-local one. Home and this board read
   // the same ladder, so two surfaces cannot disagree about where the user is —
@@ -206,7 +207,9 @@ export default function EvictionsBoardScreen() {
     <View style={styles.scopePrompt}>
       <RiMapPinLine size="xl" fill={colors.textSecondary} />
       <H3 style={styles.emptyTitle}>{t('evictions.scope.title')}</H3>
-      <BloomText style={styles.emptyMessage}>{t('evictions.scope.subtitle')}</BloomText>
+      <BloomText className="text-muted-foreground" style={styles.emptyMessage}>
+        {t('evictions.scope.subtitle')}
+      </BloomText>
       <View style={styles.scopeActions}>
         {/* The picker, not a bare "use my location": when location is off the
             picker says so on the row, where a button here could only fail. */}
@@ -249,7 +252,7 @@ export default function EvictionsBoardScreen() {
             accessibilityIgnoresInvertColors
           />
           <H3 style={styles.emptyTitle}>{t('evictions.empty.title')}</H3>
-          <BloomText style={styles.emptyMessage}>
+          <BloomText className="text-muted-foreground" style={styles.emptyMessage}>
             {/* The empty state names the AREA, so "nothing here" cannot be
                 mistaken for "nothing anywhere". */}
             {t('evictions.empty.scoped')}
@@ -322,7 +325,9 @@ export default function EvictionsBoardScreen() {
           <View style={styles.titleBlock}>
             <SectionEyebrow>{t('evictions.eyebrow')}</SectionEyebrow>
             <H2 style={styles.title}>{t('evictions.title')}</H2>
-            <BloomText style={styles.subtitle}>{t('evictions.subtitle')}</BloomText>
+            <BloomText className="text-sm text-muted-foreground">
+              {t('evictions.subtitle')}
+            </BloomText>
           </View>
 
           {/* Why no card names a home: said once, before the first case,
@@ -340,7 +345,10 @@ export default function EvictionsBoardScreen() {
               testID="evictions-area"
             />
             {boardScope && !(isLoading && cases.length === 0) ? (
-              <BloomText style={styles.count} accessibilityRole="header">
+              <BloomText
+                className="text-sm font-semibold text-foreground"
+                accessibilityRole="header"
+              >
                 {t('evictions.countInScope', { count: total })}
               </BloomText>
             ) : null}
@@ -411,20 +419,11 @@ const styles = StyleSheet.create({
   title: {
     letterSpacing: -0.5,
   },
-  subtitle: {
-    fontSize: 14,
-    color: colors.muted,
-  },
   scopeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.md,
-  },
-  count: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
   },
   filterRow: {
     flexDirection: 'row',
@@ -461,13 +460,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   emptyMessage: {
     fontSize: 14,
-    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 320,

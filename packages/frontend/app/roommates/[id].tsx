@@ -29,7 +29,6 @@ import { useRoommate } from '@/hooks/useRoommate';
 import profileService from '@/services/profileService';
 import { roommateService } from '@/services/roommateService';
 import { spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 
 export default function RoommateProfilePage() {
   const { t } = useTranslation();
@@ -97,12 +96,12 @@ export default function RoommateProfilePage() {
           <SectionEyebrow>{t('roommates.profileDetail.title')}</SectionEyebrow>
           <H2 style={styles.name}>{info.name}</H2>
           {info.occupation ? (
-            <BloomText style={styles.subtitle}>{info.occupation}</BloomText>
+            <BloomText className="text-sm text-muted-foreground">{info.occupation}</BloomText>
           ) : null}
           {info.location ? (
             <View style={styles.metaRow}>
               <RiMapPinLine width={16} height={16} fill={theme.colors.textSecondary} />
-              <BloomText style={styles.metaText}>{info.location}</BloomText>
+              <BloomText className="text-[13px] text-muted-foreground">{info.location}</BloomText>
             </View>
           ) : null}
           {!isOwnProfile ? (
@@ -113,12 +112,12 @@ export default function RoommateProfilePage() {
           {(followerCount != null || followingCount != null) && (
             <View style={styles.statsRow}>
               {followerCount != null ? (
-                <BloomText style={styles.statText}>
+                <BloomText className="text-[13px] font-semibold text-muted-foreground">
                   {t('roommates.profileDetail.followers', { count: followerCount })}
                 </BloomText>
               ) : null}
               {followingCount != null ? (
-                <BloomText style={styles.statText}>
+                <BloomText className="text-[13px] font-semibold text-muted-foreground">
                   {t('roommates.profileDetail.following', { count: followingCount })}
                 </BloomText>
               ) : null}
@@ -129,29 +128,35 @@ export default function RoommateProfilePage() {
         {info.bio ? (
           <Card radius="radius-16" style={styles.card} appearance="outline">
             <H3 style={styles.cardTitle}>{t('roommates.profileDetail.about')}</H3>
-            <BloomText style={styles.bodyText}>{info.bio}</BloomText>
+            <BloomText className="text-sm leading-5 text-foreground">{info.bio}</BloomText>
           </Card>
         ) : null}
 
         <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3 style={styles.cardTitle}>{t('roommates.profileDetail.preferencesTitle')}</H3>
           <View style={styles.detailRow}>
-            <BloomText style={styles.detailLabel}>{t('roommates.profileDetail.budget')}</BloomText>
-            <BloomText style={styles.detailValue}>
+            <BloomText className="text-sm text-foreground">
+              {t('roommates.profileDetail.budget')}
+            </BloomText>
+            <BloomText className="text-sm font-semibold text-foreground">
               {info.budget.max > 0
                 ? `${info.budget.currency} ${info.budget.min}–${info.budget.max}/mo`
                 : t('roommates.profileDetail.notSpecified')}
             </BloomText>
           </View>
           <View style={styles.detailRow}>
-            <BloomText style={styles.detailLabel}>{t('roommates.profileDetail.moveIn')}</BloomText>
-            <BloomText style={styles.detailValue}>{info.moveInDate}</BloomText>
+            <BloomText className="text-sm text-foreground">
+              {t('roommates.profileDetail.moveIn')}
+            </BloomText>
+            <BloomText className="text-sm font-semibold text-foreground">
+              {info.moveInDate}
+            </BloomText>
           </View>
           <View style={styles.detailRow}>
-            <BloomText style={styles.detailLabel}>
+            <BloomText className="text-sm text-foreground">
               {t('roommates.profileDetail.leaseLength')}
             </BloomText>
-            <BloomText style={styles.detailValue}>{info.duration}</BloomText>
+            <BloomText className="text-sm font-semibold text-foreground">{info.duration}</BloomText>
           </View>
         </Card>
 
@@ -247,19 +252,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 14,
-    color: colors.muted,
-  },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     marginTop: spacing.xs,
-  },
-  metaText: {
-    fontSize: 13,
-    color: colors.muted,
   },
   followRow: {
     marginTop: spacing.md,
@@ -269,11 +266,6 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     marginTop: spacing.sm,
   },
-  statText: {
-    fontSize: 13,
-    color: colors.muted,
-    fontWeight: '600',
-  },
   card: {
     padding: spacing.lg,
     gap: spacing.sm,
@@ -282,25 +274,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     marginBottom: spacing.xs,
   },
-  bodyText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
-    lineHeight: 20,
-  },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.xs,
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   badgeRow: {
     flexDirection: 'row',

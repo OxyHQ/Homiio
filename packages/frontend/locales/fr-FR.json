@@ -1301,7 +1301,13 @@
       "files": "Files"
     },
     "signOutFailed": "Failed to sign out",
-    "signOutSuccess": "Signed out"
+    "signOutSuccess": "Signed out",
+    "appearance": {
+      "title": "Apparence",
+      "system": "Système",
+      "light": "Clair",
+      "dark": "Sombre"
+    }
   },
   "common": {
     "cancel": "Cancel",

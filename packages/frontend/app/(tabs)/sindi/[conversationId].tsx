@@ -18,6 +18,7 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { RiLockLine, RiLoginBoxLine, RiShare2Line } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { openAccountDialog, useAuth } from '@oxy.so/services';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -29,11 +30,11 @@ import { SindiConversation } from '@/components/sindi/SindiConversation';
 import { NEW_SINDI_CONVERSATION } from '@/components/sindi/sindiAgent';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { shareSindiConversation } from '@/hooks/useSindiChat';
-import { colors } from '@/styles/colors';
 
 export default function ConversationDetail() {
   const { canUsePrivateApi } = useAuth();
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const router = useRouter();
   const { share, isSharing } = useShareConversation();
   const { conversationId, message } = useLocalSearchParams<{
@@ -117,7 +118,7 @@ export default function ConversationDetail() {
           actionText={t('common.signIn')}
           actionIcon={RiLoginBoxLine}
           onAction={() => openAccountDialog()}
-          iconColor={colors.primaryColor}
+          iconColor={colors.primarySubtleForeground}
         />
       </>
     );

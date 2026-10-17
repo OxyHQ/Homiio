@@ -3,7 +3,7 @@
  *
  * The HERO (the rounded `LinearGradient` pill at the top) is intentionally
  * preserved. Everything BELOW it is flat, image-forward, and sits directly on
- * the app `colors.background` (no cardy shadows / borders):
+ * the Bloom page background (no cardy shadows / borders):
  *
  *  - Contribution picker: a frequency `SegmentedControl` (one-time / monthly)
  *    + a Bloom `RadioCard` per tier (title · price, subtitle), driving
@@ -38,7 +38,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { RadioCard } from '@oxy.so/bloom/radio';
-import { useTheme } from '@oxy.so/bloom/theme';
+import { useTheme, withAlpha } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import {
   SegmentedControl,
@@ -54,7 +54,6 @@ import {
   DetailIconRow,
   DETAIL_ICON_SIZE,
 } from '@/components/property/DetailIconGrid';
-import { colors } from '@/styles/colors';
 import { hairline, spacing, tracker } from '@/constants/styles';
 import { formatMoney } from '@homiio/shared-types';
 import { api } from '@/utils/api';
@@ -93,7 +92,7 @@ export default function DonatePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [frequency, setFrequency] = useState<DonationFrequency>('monthly');
-  const { colors: theme } = useTheme();
+  const { colors } = useTheme();
   const { locale } = useFormatting();
 
   const tiers = useMemo<DonationTier[]>(
@@ -199,10 +198,17 @@ export default function DonatePage() {
       />
       <View style={styles.scrollContent}>
         {/* Hero — preserved. */}
-        <LinearGradient colors={[colors.info, colors.info + '90']} style={styles.heroSection}>
-          <RiHeartFill width={48} height={48} fill={colors.white} />
-          <BloomText style={styles.heroTitle}>{t('donations.page.subtitle')}</BloomText>
-          <BloomText style={styles.heroDescription}>{t('donations.page.description')}</BloomText>
+        <LinearGradient
+          colors={[colors.info, withAlpha(colors.info, 0.56)]}
+          style={styles.heroSection}
+        >
+          <RiHeartFill width={48} height={48} fill={colors.infoForeground} />
+          <BloomText className="text-info-foreground" style={styles.heroTitle}>
+            {t('donations.page.subtitle')}
+          </BloomText>
+          <BloomText className="text-info-foreground" style={styles.heroDescription}>
+            {t('donations.page.description')}
+          </BloomText>
         </LinearGradient>
 
         {/* Contribution picker — frequency toggle + flat tier list. */}
@@ -269,7 +275,7 @@ export default function DonatePage() {
         </View>
 
         {/* What your support enables — flat icon list. */}
-        <View style={[styles.section, styles.divider]}>
+        <View className="border-border" style={[styles.section, styles.divider]}>
           <Section title={t('donations.page.impact.title')}>
             <DetailIconGrid>
               {impactAreas.map((area) => (
@@ -279,7 +285,7 @@ export default function DonatePage() {
                       <area.icon
                         width={DETAIL_ICON_SIZE}
                         height={DETAIL_ICON_SIZE}
-                        fill={theme.text}
+                        fill={colors.text}
                       />
                     }
                     label={area.title}
@@ -291,7 +297,7 @@ export default function DonatePage() {
         </View>
 
         {/* Mission — concise lead + flat checklist. */}
-        <View style={[styles.section, styles.divider]}>
+        <View className="border-border" style={[styles.section, styles.divider]}>
           <Section
             title={t('donations.page.mission.title')}
             subtitle={t('donations.page.mission.description')}
@@ -299,7 +305,7 @@ export default function DonatePage() {
             <View style={styles.goalList}>
               {missionGoals.map((goal) => (
                 <View key={goal} style={styles.goalRow}>
-                  <RiCheckboxCircleFill width={20} height={20} fill={theme.primary} />
+                  <RiCheckboxCircleFill width={20} height={20} fill={colors.primary} />
                   <BloomText style={styles.goalText}>{goal}</BloomText>
                 </View>
               ))}
@@ -327,13 +333,11 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.white,
     textAlign: 'center',
     marginTop: spacing.lg,
   },
   heroDescription: {
     fontSize: 16,
-    color: colors.white,
     textAlign: 'center',
     marginTop: spacing.md,
     opacity: 0.9,
@@ -349,7 +353,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
   },
   pickerBody: {
     gap: spacing.xl,
@@ -369,7 +372,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     lineHeight: 22,
-    color: colors.COLOR_BLACK_LIGHT_2,
     letterSpacing: tracker.normal,
   },
 });

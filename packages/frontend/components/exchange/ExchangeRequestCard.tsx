@@ -15,7 +15,6 @@ import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
 import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatDateRange } from '@/utils/dateFormatting';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 export interface ExchangeRequestCardProps {
@@ -27,7 +26,7 @@ export interface ExchangeRequestCardProps {
 export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({ request, actions }) => {
   const router = useRouter();
   const { t } = useTranslation();
-  const theme = useTheme();
+  const { colors } = useTheme();
   const { property } = useProperty(request.propertyId);
 
   const title = useMemo(
@@ -57,27 +56,21 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({ reques
         </View>
         <View style={styles.body}>
           <View style={styles.headerRow}>
-            <BloomText style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
+            <BloomText style={styles.title} numberOfLines={1}>
               {title}
             </BloomText>
             <ExchangeStatusBadge status={request.status} />
           </View>
-          <BloomText
-            style={[styles.dates, { color: theme.colors.textSecondary }]}
-            numberOfLines={1}
-          >
+          <BloomText className="text-muted-foreground" style={styles.dates} numberOfLines={1}>
             {formatDateRange(request.requestedWindow.start, request.requestedWindow.end)}
           </BloomText>
           <View style={styles.metaRow}>
             {request.mode === ExchangeMode.SWAP ? (
-              <RiArrowLeftRightLine size="xs" fill={colors.exchangeAccent} />
+              <RiArrowLeftRightLine size="xs" fill={colors.tertiarySubtleForeground} />
             ) : (
-              <RiHotelBedLine size="xs" fill={colors.exchangeAccent} />
+              <RiHotelBedLine size="xs" fill={colors.tertiarySubtleForeground} />
             )}
-            <BloomText
-              style={[styles.meta, { color: theme.colors.textTertiary }]}
-              numberOfLines={1}
-            >
+            <BloomText className="text-text-tertiary" style={styles.meta} numberOfLines={1}>
               {modeLabel}
             </BloomText>
           </View>

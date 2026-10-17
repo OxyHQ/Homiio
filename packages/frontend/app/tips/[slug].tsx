@@ -36,7 +36,6 @@ import {
   type TipArticle,
 } from '@/services/tipsService';
 import { radius, spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 
 const renderMarkdown = (content: string): React.ReactNode[] => {
@@ -79,7 +78,7 @@ const renderMarkdown = (content: string): React.ReactNode[] => {
       );
     } else if (trimmed.startsWith('> ')) {
       elements.push(
-        <View key={key} style={styles.blockquote}>
+        <View key={key} className="border-primary bg-primary-subtle" style={styles.blockquote}>
           <BloomText style={styles.blockquoteText}>{trimmed.substring(2)}</BloomText>
         </View>,
       );
@@ -244,7 +243,7 @@ export default function TipArticleScreen() {
     <>
       {header}
       <View style={styles.content}>
-        <View style={styles.hero}>
+        <View className="bg-card" style={styles.hero}>
           {tip.coverImageUrl ? (
             <Image
               source={{ uri: tip.coverImageUrl }}
@@ -275,20 +274,24 @@ export default function TipArticleScreen() {
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
               <RiUserLine width={14} height={14} fill={theme.colors.textSecondary} />
-              <BloomText style={styles.metaText}>{tip.author}</BloomText>
+              <BloomText className="text-[13px] text-muted-foreground">{tip.author}</BloomText>
             </View>
             <View style={styles.metaItem}>
               <RiTimeLine width={14} height={14} fill={theme.colors.textSecondary} />
-              <BloomText style={styles.metaText}>{tip.readTime}</BloomText>
+              <BloomText className="text-[13px] text-muted-foreground">{tip.readTime}</BloomText>
             </View>
             {tip.publishedAt ? (
               <View style={styles.metaItem}>
                 <RiCalendarLine width={14} height={14} fill={theme.colors.textSecondary} />
-                <BloomText style={styles.metaText}>{formatPublishDate(tip.publishedAt)}</BloomText>
+                <BloomText className="text-[13px] text-muted-foreground">
+                  {formatPublishDate(tip.publishedAt)}
+                </BloomText>
               </View>
             ) : null}
           </View>
-          <BloomText style={styles.description}>{tip.description}</BloomText>
+          <BloomText className="text-base leading-6 italic text-muted-foreground">
+            {tip.description}
+          </BloomText>
         </View>
 
         <View style={styles.articleBody}>{renderMarkdown(tip.content)}</View>
@@ -322,7 +325,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderRadius: radius.xl,
     overflow: 'hidden',
-    backgroundColor: colors.surfaceElevated,
   },
   heroImage: {
     width: '100%',
@@ -353,16 +355,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  metaText: {
-    fontSize: 13,
-    color: colors.muted,
-  },
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.muted,
-    fontStyle: 'italic',
-  },
   articleBody: {
     gap: spacing.xs,
   },
@@ -380,30 +372,25 @@ const styles = StyleSheet.create({
   },
   paragraph: {
     fontSize: 16,
-    color: colors.COLOR_BLACK,
     lineHeight: 26,
     marginBottom: spacing.sm,
   },
   listItem: {
     fontSize: 16,
-    color: colors.COLOR_BLACK,
     lineHeight: 26,
     marginBottom: spacing.xs,
     marginLeft: spacing.md,
   },
   blockquote: {
     borderLeftWidth: 3,
-    borderLeftColor: colors.primaryColor,
     paddingLeft: spacing.md,
     paddingVertical: spacing.sm,
     marginVertical: spacing.sm,
-    backgroundColor: colors.infoSubtle,
     borderRadius: radius.md,
   },
   blockquoteText: {
     fontSize: 16,
     fontStyle: 'italic',
-    color: colors.COLOR_BLACK_LIGHT_2,
     lineHeight: 24,
   },
   relatedSection: {

@@ -14,13 +14,11 @@
  */
 
 import type React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Chip } from '@oxy.so/bloom/chip';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { EvictionHelpNeed } from '@homiio/shared-types';
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
 
 export interface EvictionHelpNeedsProps {
   readonly needs: readonly EvictionHelpNeed[];
@@ -30,12 +28,14 @@ export const EvictionHelpNeeds: React.FC<EvictionHelpNeedsProps> = ({ needs }) =
   const { t } = useTranslation();
 
   if (needs.length === 0) {
-    return <BloomText style={styles.empty}>{t('evictions.help.empty')}</BloomText>;
+    return (
+      <BloomText className="text-sm text-muted-foreground">{t('evictions.help.empty')}</BloomText>
+    );
   }
 
   return (
-    <View style={styles.root}>
-      <View style={styles.chips}>
+    <View className="gap-2">
+      <View className="flex-row flex-wrap gap-1">
         {needs.map((need) => (
           <Chip key={need.type} variant="outlined" color="default">
             {t(`evictions.help.need.${need.type}`)}
@@ -45,7 +45,10 @@ export const EvictionHelpNeeds: React.FC<EvictionHelpNeedsProps> = ({ needs }) =
       {needs
         .filter((need) => Boolean(need.note))
         .map((need) => (
-          <BloomText key={`${need.type}-note`} style={styles.note}>
+          <BloomText
+            key={`${need.type}-note`}
+            className="text-[13px] leading-[18px] text-muted-foreground"
+          >
             {t('evictions.help.noteLine', {
               need: t(`evictions.help.need.${need.type}`),
               note: need.note,
@@ -55,23 +58,3 @@ export const EvictionHelpNeeds: React.FC<EvictionHelpNeedsProps> = ({ needs }) =
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  root: {
-    gap: spacing.sm,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  note: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  empty: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-});

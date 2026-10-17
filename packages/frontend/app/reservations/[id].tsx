@@ -6,8 +6,8 @@
  * - Bloom Loading + ErrorState replace the ad-hoc spinner/error views.
  * - Bloom Button for every CTA; the inline modal was replaced by the
  *   Bloom `confirm()` surface.
- * - Bloom typography across the board, semantic color tokens (`colors.surface`,
- *   `colors.muted`) — no more raw hex literals.
+ * - Bloom typography across the board, Bloom theme token classes
+ *   (`text-muted-foreground`, `bg-muted`) — no more raw hex literals.
  */
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
@@ -33,7 +33,6 @@ import { confirm } from '@oxy.so/bloom/surfaces';
 import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
-import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 import { RiAlertLine } from '@oxy.so/bloom/icons';
 
@@ -215,11 +214,11 @@ export default function ReservationDetailScreen() {
     <>
       {header}
       <View style={styles.content}>
-        <View style={styles.thumbWrap}>
+        <View className="bg-muted" style={styles.thumbWrap}>
           {imageSource ? (
             <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
           ) : (
-            <View style={[styles.thumb, styles.thumbPlaceholder]} />
+            <View style={styles.thumb} />
           )}
         </View>
 
@@ -229,14 +228,16 @@ export default function ReservationDetailScreen() {
             <ReservationStatusBadge status={reservation.status} />
           </View>
           {property?.address ? (
-            <BloomText style={styles.subtitle}>
+            <BloomText className="text-[13px] text-muted-foreground">
               {[property.address.cityName, property.address.countryName].filter(Boolean).join(', ')}
             </BloomText>
           ) : null}
         </Card>
 
         <Card radius="radius-16" className="p-5" appearance="outline">
-          <BloomText style={styles.sectionLabel}>{t('reservations.detail.tripDetails')}</BloomText>
+          <BloomText className="text-muted-foreground" style={styles.sectionLabel}>
+            {t('reservations.detail.tripDetails')}
+          </BloomText>
           <DetailRow
             label={t('reservations.detail.checkIn')}
             value={format(new Date(reservation.checkIn), 'EEE, MMM d, yyyy')}
@@ -257,7 +258,9 @@ export default function ReservationDetailScreen() {
         </Card>
 
         <Card radius="radius-16" className="p-5" appearance="outline">
-          <BloomText style={styles.sectionLabel}>{t('reservations.detail.price')}</BloomText>
+          <BloomText className="text-muted-foreground" style={styles.sectionLabel}>
+            {t('reservations.detail.price')}
+          </BloomText>
           <PriceBreakdown
             nights={reservation.nights}
             nightlyRate={reservation.nightlyRate}
@@ -322,7 +325,7 @@ export default function ReservationDetailScreen() {
         {role === 'guest' &&
         reservation.status === ReservationStatus.CONFIRMED &&
         !showGuestCancel ? (
-          <BloomText style={styles.policyNote}>
+          <BloomText className="text-xs italic text-muted-foreground">
             {t('reservations.detail.cancelPolicyNote', {
               policy: reservation.cancellationPolicy.replace('_', ' '),
             })}
@@ -339,9 +342,9 @@ interface DetailRowProps {
 }
 
 const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
-  <View style={styles.detailRow}>
-    <BloomText style={styles.detailLabel}>{label}</BloomText>
-    <BloomText style={styles.detailValue}>{value}</BloomText>
+  <View className="border-border" style={styles.detailRow}>
+    <BloomText className="text-[13px] text-muted-foreground">{label}</BloomText>
+    <BloomText className="text-[13px] font-semibold text-foreground">{value}</BloomText>
   </View>
 );
 
@@ -361,14 +364,10 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
   },
   thumb: {
     width: '100%',
     height: '100%',
-  },
-  thumbPlaceholder: {
-    backgroundColor: colors.mutedSubtle,
   },
   headerRow: {
     flexDirection: 'row',
@@ -382,15 +381,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flex: 1,
   },
-  subtitle: {
-    fontSize: 13,
-    color: colors.muted,
-  },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    color: colors.muted,
     letterSpacing: tracker.eyebrow,
     marginBottom: spacing.sm,
   },
@@ -399,16 +393,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  detailLabel: {
-    fontSize: 13,
-    color: colors.muted,
-  },
-  detailValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   actionRow: {
     flexDirection: 'row',
@@ -418,10 +402,5 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     minWidth: 120,
-  },
-  policyNote: {
-    fontSize: 12,
-    color: colors.muted,
-    fontStyle: 'italic',
   },
 });

@@ -39,7 +39,6 @@ import { SINDI_AGENT_ID } from '@/components/sindi/sindiAgent';
 import { useSindiPanelLayout } from '@/components/sindi/sindiPanelLayout';
 import { useUIStore } from '@/store/uiStore';
 import { radius, spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 
 /**
  * Scrim color for the overlay-tier panel (30% black). The scrim
@@ -56,23 +55,21 @@ const PANEL_SCRIM = 'rgba(0, 0, 0, 0.3)';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /**
- * Hairline borders from an explicit Bloom token: the `--border` CSS variable
- * behind the `border-border` class doesn't reliably reach the native runtime.
+ * Hairline borders. Their colour is the explicit Bloom token passed at render
+ * (`{ borderColor: colors.border }`): the `--border` CSS variable behind the
+ * `border-border` class doesn't reliably reach the native runtime.
  */
 const panelBorders = StyleSheet.create({
   overlayEdge: {
     borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: colors.border,
   },
   docked: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
     borderRadius: 24,
     overflow: 'hidden',
   },
   headerDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
   },
 });
 
@@ -102,19 +99,22 @@ const overlayPanelPinnedStyle: ViewStyle =
 const SHELL_VERTICAL_PADDING = 24;
 
 /** Skeleton rows shown while the conversation list loads. */
-const PanelSkeleton: React.FC = () => (
-  <View style={styles.skeletonList}>
-    {Array.from({ length: 4 }).map((_, idx) => (
-      <View key={idx} style={styles.skeletonRow}>
-        <Skeleton.Circle size={36} />
-        <View style={styles.skeletonBody}>
-          <Skeleton.Text style={{ width: 140, lineHeight: 16 }} />
-          <Skeleton.Text style={{ width: 180, lineHeight: 13 }} />
+const PanelSkeleton: React.FC = () => {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.skeletonList}>
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <View key={idx} style={[styles.skeletonRow, { backgroundColor: colors.card }]}>
+          <Skeleton.Circle size={36} />
+          <View style={styles.skeletonBody}>
+            <Skeleton.Text style={{ width: 140, lineHeight: 16 }} />
+            <Skeleton.Text style={{ width: 180, lineHeight: 13 }} />
+          </View>
         </View>
-      </View>
-    ))}
-  </View>
-);
+      ))}
+    </View>
+  );
+};
 
 /**
  * Responsive Sindi AI chat panel. Where it goes is `useSindiPanelLayout`'s
@@ -142,7 +142,7 @@ const PanelSkeleton: React.FC = () => (
  */
 export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
   const { t } = useTranslation();
-  const { colors: themeColors } = useTheme();
+  const { colors } = useTheme();
   const { canUsePrivateApi } = useAuth();
 
   const closeSindiPanel = useUIStore((s) => s.closeSindiPanel);
@@ -180,7 +180,7 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
   const chrome = useCallback(
     ({ participants }: AliaChatState) => ({
       header: (
-        <View style={[styles.header, panelBorders.headerDivider]}>
+        <View style={[styles.header, panelBorders.headerDivider, { borderColor: colors.border }]}>
           <Button
             iconOnly
             leadingIcon={RiArrowLeftSLine}
@@ -213,7 +213,7 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
         </View>
       ),
     }),
-    [t, handleBackToList, handleNewChat, closeSindiPanel],
+    [t, handleBackToList, handleNewChat, closeSindiPanel, colors.border],
   );
 
   if (!isVisible) return null;
@@ -221,19 +221,19 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
   // The landing's header. An open conversation draws its own (the chat's
   // participants, through `chrome`).
   const landingHeader = (
-    <View style={[styles.header, panelBorders.headerDivider]}>
+    <View style={[styles.header, panelBorders.headerDivider, { borderColor: colors.border }]}>
       <View style={styles.headerLeft}>
-        <View style={[styles.headerBrand, { backgroundColor: themeColors.primarySubtle }]}>
-          <SindiIcon size={22} color={themeColors.primary} />
+        <View style={[styles.headerBrand, { backgroundColor: colors.primarySubtle }]}>
+          <SindiIcon size={22} color={colors.primary} />
         </View>
         <View style={styles.headerTitleWrap}>
-          <Text variant="body-semibold" numberOfLines={1} style={{ color: themeColors.text }}>
+          <Text variant="body-semibold" numberOfLines={1} style={{ color: colors.text }}>
             {t('sindi.panel.title')}
           </Text>
           <Text
             variant="caption-1-regular"
             numberOfLines={1}
-            style={{ color: themeColors.textSecondary }}
+            style={{ color: colors.textSecondary }}
           >
             {t('sindi.panel.subtitle')}
           </Text>
@@ -271,7 +271,7 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
         actionText={t('common.signIn')}
         actionIcon={RiLoginBoxLine}
         onAction={() => openAccountDialog()}
-        iconColor={colors.primaryColor}
+        iconColor={colors.primarySubtleForeground}
       />
     </>
   ) : open ? (
@@ -290,14 +290,11 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
       {landingHeader}
       <ScrollView contentContainerStyle={styles.landing} showsVerticalScrollIndicator={false}>
         <View style={styles.intro}>
-          <SindiIcon size={40} color={themeColors.primary} />
-          <Text variant="headline-semibold" style={[styles.center, { color: themeColors.text }]}>
+          <SindiIcon size={40} color={colors.primary} />
+          <Text variant="headline-semibold" style={[styles.center, { color: colors.text }]}>
             {t('sindi.panel.title')}
           </Text>
-          <Text
-            variant="body-2-regular"
-            style={[styles.center, { color: themeColors.textSecondary }]}
-          >
+          <Text variant="body-2-regular" style={[styles.center, { color: colors.textSecondary }]}>
             {t('sindi.panel.intro')}
           </Text>
         </View>
@@ -313,17 +310,17 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
         </Button>
 
         <View style={styles.historyBlock}>
-          <Text variant="body-semibold" style={{ color: themeColors.text }}>
+          <Text variant="body-semibold" style={{ color: colors.text }}>
             {t('sindi.panel.conversations')}
           </Text>
           {conversations.isLoading ? (
             <PanelSkeleton />
           ) : sortedConversations.length === 0 ? (
             <View style={styles.emptyHistory}>
-              <RiChat3Line width={28} height={28} fill={themeColors.textTertiary} />
+              <RiChat3Line width={28} height={28} fill={colors.textTertiary} />
               <Text
                 variant="body-2-regular"
-                style={[styles.center, { color: themeColors.textSecondary }]}
+                style={[styles.center, { color: colors.textSecondary }]}
               >
                 {t('sindi.panel.empty')}
               </Text>
@@ -350,8 +347,10 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
       <Animated.View
         entering={FadeIn.duration(120)}
         exiting={FadeOut.duration(120)}
+        // Explicit solid surface: `bg-background` resolves transparent in this
+        // subtree on the Metro web build, so page content showed through.
         style={[
-          styles.panel,
+          { backgroundColor: colors.background, borderColor: colors.border },
           panelBorders.docked,
           Platform.OS === 'web' ? { height: viewportHeight - SHELL_VERTICAL_PADDING } : { flex: 1 },
         ]}
@@ -382,8 +381,12 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
           entering={FadeIn.duration(120)}
           exiting={FadeOut.duration(120)}
           style={[
-            styles.panel,
-            { width: layout.width, pointerEvents: 'auto' },
+            {
+              width: layout.width,
+              pointerEvents: 'auto',
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+            },
             panelBorders.overlayEdge,
             overlayPanelPinnedStyle,
           ]}
@@ -396,14 +399,6 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
 }
 
 const styles = StyleSheet.create({
-  panel: {
-    // Explicit solid surface. The `bg-background` className resolves to a
-    // transparent computed background on the Metro web build (the CSS var
-    // behind it doesn't reach this subtree), so page content showed THROUGH
-    // the panel as it scrolled. An explicit Bloom token guarantees an opaque
-    // panel in both placements.
-    backgroundColor: colors.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -466,7 +461,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
     borderRadius: radius.lg,
   },

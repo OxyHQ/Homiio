@@ -30,7 +30,6 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { JurisdictionResourceWithId } from '@homiio/shared-types';
 import { SettingsRowIcon } from '@/components/profile/SettingsRowIcon';
 import { formatEvictionShortDate } from './evictionUtils';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 export interface EvictionResourcesProps {
@@ -54,13 +53,19 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
     return <Loading variant="inline" size="sm" text={t('evictions.resources.loading')} />;
   }
   if (isError) {
-    return <BloomText style={styles.state}>{t('evictions.resources.error')}</BloomText>;
+    return (
+      <BloomText className="text-sm text-muted-foreground">
+        {t('evictions.resources.error')}
+      </BloomText>
+    );
   }
 
   return (
     <View style={styles.root}>
       {resources.length === 0 ? (
-        <BloomText style={styles.state}>{t('evictions.resources.empty')}</BloomText>
+        <BloomText className="text-sm text-muted-foreground">
+          {t('evictions.resources.empty')}
+        </BloomText>
       ) : (
         <SettingsListGroup variant="filled">
           {resources.map((resource) => (
@@ -87,7 +92,7 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
       )}
       {/* Rendered even when the list is empty: the reason there is nothing here
           is as much a part of the disclaimer as the links would be. */}
-      <BloomText style={styles.disclaimer}>
+      <BloomText className="text-xs text-muted-foreground" style={styles.disclaimer}>
         {disclaimer ?? t('evictions.resources.fallbackDisclaimer')}
       </BloomText>
     </View>
@@ -98,13 +103,7 @@ const styles = StyleSheet.create({
   root: {
     gap: spacing.sm,
   },
-  state: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
   disclaimer: {
-    fontSize: 12,
-    color: colors.textSecondary,
     lineHeight: 17,
     marginTop: spacing.xs,
   },

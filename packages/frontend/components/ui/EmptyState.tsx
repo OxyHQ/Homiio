@@ -16,9 +16,9 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { Button } from '@oxy.so/bloom/button';
 import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 import { RiErrorWarningFill } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
 import { ICON_SIZES, spacing } from '@/constants/styles';
 
 type EmptyStateProps = {
@@ -44,17 +44,22 @@ export function EmptyState({
   onAction,
   style,
   iconSize = ICON_SIZES.xl,
-  iconColor = colors.COLOR_BLACK_LIGHT_3,
+  iconColor,
 }: EmptyStateProps) {
+  const { colors } = useTheme();
   return (
     <View style={[styles.container, style]}>
-      <View style={styles.iconCircle}>
-        <Icon width={iconSize} height={iconSize} fill={iconColor} />
+      <View className="bg-muted" style={styles.iconCircle}>
+        <Icon width={iconSize} height={iconSize} fill={iconColor ?? colors.textSecondary} />
       </View>
 
       <H3 style={styles.title}>{title}</H3>
 
-      {description ? <BloomText style={styles.description}>{description}</BloomText> : null}
+      {description ? (
+        <BloomText className="text-muted-foreground" style={styles.description}>
+          {description}
+        </BloomText>
+      ) : null}
 
       {actionText && onAction ? (
         <View style={styles.action}>
@@ -86,7 +91,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
@@ -94,13 +98,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   description: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 320,

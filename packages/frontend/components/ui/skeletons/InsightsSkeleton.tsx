@@ -1,7 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
-import { colors } from '@/styles/colors';
 
 export function InsightsSkeleton() {
   return (
@@ -24,13 +23,12 @@ export function InsightsSkeleton() {
         {Array.from({ length: 3 }).map((_, index) => (
           <View
             key={index}
+            className="border-border bg-card"
             style={{
               flex: 1,
-              backgroundColor: colors.white,
               padding: 16,
               borderRadius: 12,
               borderWidth: 1,
-              borderColor: colors.border,
             }}
           >
             <Skeleton.Box width={40} height={40} borderRadius={20} style={{ marginBottom: 12 }} />
@@ -43,12 +41,11 @@ export function InsightsSkeleton() {
       {/* Chart Section */}
       <View style={{ marginHorizontal: 16, marginBottom: 24 }}>
         <View
+          className="border-border bg-card"
           style={{
-            backgroundColor: colors.white,
             padding: 20,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: colors.border,
           }}
         >
           <Skeleton.Box width={150} height={20} style={{ marginBottom: 16 }} />
@@ -63,13 +60,12 @@ export function InsightsSkeleton() {
         {Array.from({ length: 3 }).map((_, index) => (
           <View
             key={index}
+            className="border-border bg-card"
             style={{
-              backgroundColor: colors.white,
               borderRadius: 12,
               marginBottom: 12,
               overflow: 'hidden',
               borderWidth: 1,
-              borderColor: colors.border,
             }}
           >
             <View style={{ flexDirection: 'row' }}>

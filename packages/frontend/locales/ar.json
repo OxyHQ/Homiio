@@ -1309,7 +1309,13 @@
       "files": "Files"
     },
     "signOutFailed": "Failed to sign out",
-    "signOutSuccess": "Signed out"
+    "signOutSuccess": "Signed out",
+    "appearance": {
+      "title": "المظهر",
+      "system": "النظام",
+      "light": "فاتح",
+      "dark": "داكن"
+    }
   },
   "common": {
     "cancel": "Cancel",

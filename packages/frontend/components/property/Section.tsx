@@ -24,9 +24,9 @@ import type React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Item } from '@oxy.so/bloom/item';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 /**
@@ -49,18 +49,21 @@ interface SectionHeaderProps {
  * whatever follows it — the gap to body is owned by `Section` (or the
  * consumer) so a header can also stand alone above custom layouts.
  */
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle }) => (
-  <View style={styles.header}>
-    <BloomText variant="title-2-bold" style={styles.title}>
-      {title}
-    </BloomText>
-    {subtitle ? (
-      <BloomText variant="body-2-regular" style={styles.subtitle}>
-        {subtitle}
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.header}>
+      <BloomText variant="title-2-bold" style={styles.title}>
+        {title}
       </BloomText>
-    ) : null}
-  </View>
-);
+      {subtitle ? (
+        <BloomText variant="body-2-regular" style={{ color: colors.textSecondary }}>
+          {subtitle}
+        </BloomText>
+      ) : null}
+    </View>
+  );
+};
 
 interface SectionProps {
   /** Optional title rendered via `SectionHeader`. */
@@ -118,24 +121,25 @@ interface SectionRowProps {
  * Bloom `Item` flush with the section gutter: the label leads, the value
  * trails.
  */
-export const SectionRow: React.FC<SectionRowProps> = ({ label, value, leading }) => (
-  <Item
-    density="compact"
-    leading={leading}
-    title={label}
-    titleStyle={styles.rowLabel}
-    trailing={
-      typeof value === 'string' || typeof value === 'number' ? (
-        <BloomText variant="body-semibold" style={styles.rowValue}>
-          {value}
-        </BloomText>
-      ) : (
-        value
-      )
-    }
-    style={styles.row}
-  />
-);
+export const SectionRow: React.FC<SectionRowProps> = ({ label, value, leading }) => {
+  const { colors } = useTheme();
+  return (
+    <Item
+      density="compact"
+      leading={leading}
+      title={label}
+      titleStyle={{ color: colors.textSecondary }}
+      trailing={
+        typeof value === 'string' || typeof value === 'number' ? (
+          <BloomText variant="body-semibold">{value}</BloomText>
+        ) : (
+          value
+        )
+      }
+      style={styles.row}
+    />
+  );
+};
 
 const styles = StyleSheet.create({
   header: {
@@ -143,11 +147,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   title: {
-    color: colors.COLOR_BLACK,
     letterSpacing: -0.2,
-  },
-  subtitle: {
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   body: {
     paddingHorizontal: SECTION_GUTTER,
@@ -161,11 +161,5 @@ const styles = StyleSheet.create({
   row: {
     paddingLeft: 0,
     paddingRight: 0,
-  },
-  rowLabel: {
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  rowValue: {
-    color: colors.COLOR_BLACK,
   },
 });

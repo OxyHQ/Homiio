@@ -68,7 +68,6 @@ import {
   type LocationSelection,
   type GeoPoint,
 } from '@homiio/shared-types';
-import { useColors } from '@/hooks/useThemeColor';
 import { spacing } from '@/constants/styles';
 import { selectionLabel } from '../types';
 import type { DeviceOptionState } from '@/components/location/scopeWhere';
@@ -251,7 +250,6 @@ export function WhereSuggestions({
   style,
 }: WhereSuggestionsProps): React.ReactElement | null {
   const { t } = useTranslation();
-  const colors = useColors();
   const storedSearches = useRecentSearchesStore((s) => s.searches);
   const recentSearches = onSelectRecent ? storedSearches : NO_RECENTS;
   const { state, attribution } = search;
@@ -407,7 +405,7 @@ export function WhereSuggestions({
   if (items.length === 0 && !status) {
     if (hasOptions) return <View style={[styles.list, style]}>{optionRows}</View>;
     return emptyHint ? (
-      <BloomText style={[styles.statusText, { color: colors.textSecondary }, style]}>
+      <BloomText className="text-muted-foreground" style={[styles.statusText, style]}>
         {emptyHint}
       </BloomText>
     ) : null;
@@ -417,10 +415,12 @@ export function WhereSuggestions({
     <View style={[styles.list, style]}>
       {showRecents ? optionRows : null}
       {status ? (
-        <BloomText style={[styles.statusText, { color: colors.textSecondary }]}>{status}</BloomText>
+        <BloomText className="text-muted-foreground" style={styles.statusText}>
+          {status}
+        </BloomText>
       ) : null}
       {degraded ? (
-        <BloomText style={[styles.statusText, { color: colors.textSecondary }]}>
+        <BloomText className="text-muted-foreground" style={styles.statusText}>
           {t('search.where.degraded')}
         </BloomText>
       ) : null}
@@ -434,7 +434,7 @@ export function WhereSuggestions({
       ) : null}
       {/* Required by the provider's data licence wherever results appear. */}
       {!showRecents && places.length > 0 && attribution ? (
-        <BloomText style={[styles.attribution, { color: colors.textSecondary }]}>
+        <BloomText className="text-muted-foreground" style={styles.attribution}>
           {attribution.text}
         </BloomText>
       ) : null}

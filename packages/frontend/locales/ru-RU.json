@@ -1305,7 +1305,13 @@
       "files": "Files"
     },
     "signOutFailed": "Failed to sign out",
-    "signOutSuccess": "Signed out"
+    "signOutSuccess": "Signed out",
+    "appearance": {
+      "title": "Оформление",
+      "system": "Системная",
+      "light": "Светлая",
+      "dark": "Тёмная"
+    }
   },
   "common": {
     "cancel": "Cancel",
