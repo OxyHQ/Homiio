@@ -451,19 +451,6 @@
       "other": "Other"
     },
     "widgets": {
-      "quickFilters": {
-        "title": "Filtres Ràpids",
-        "furnished": "Moblat",
-        "pets": "Mascotes permeses",
-        "coliving": "Convivència",
-        "ecoFriendly": "Ecològic",
-        "verified": "Verificat",
-        "budget": "Menys de 1000 €",
-        "apply": "Aplica",
-        "searchWithCount": "Cerca amb {{count}} filtres",
-        "advancedFilters": "Filtres Avançats",
-        "fairPrice": "Preu just"
-      },
       "alerts": {
         "title": "Alertes de propietats",
         "subtitle": "Rep avisos quan noves propietats coincideixin amb els teus criteris",

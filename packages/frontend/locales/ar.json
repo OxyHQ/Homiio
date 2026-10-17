@@ -451,19 +451,6 @@
       "other": "Other"
     },
     "widgets": {
-      "quickFilters": {
-        "title": "Quick Filters",
-        "furnished": "Furnished",
-        "pets": "Pets allowed",
-        "coliving": "Co-living",
-        "ecoFriendly": "Eco-friendly",
-        "verified": "Verified",
-        "budget": "Under €1000",
-        "apply": "Apply",
-        "searchWithCount": "Search with {{count}} filters",
-        "advancedFilters": "Advanced Filters",
-        "fairPrice": "Fair price"
-      },
       "alerts": {
         "title": "Property Alerts",
         "subtitle": "Get notified when new properties match your criteria",

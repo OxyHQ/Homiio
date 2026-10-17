@@ -210,7 +210,6 @@ export default function InsightsScreen() {
               <PropertyCard
                 key={property.id}
                 property={property}
-                enableImageCarousel={false}
                 onPress={() => router.push(`/properties/${property.id}`)}
               />
             ))}

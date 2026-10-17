@@ -8,6 +8,5 @@ export * from './SavedSearchesWidget';
 export * from './PropertyAlertWidget';
 export * from './NeighborhoodRatingWidget';
 export * from './RecentlyViewedWidget';
-export * from './QuickFiltersWidget';
 export * from './PropertyPreviewWidget';
 export * from './PropertyBookingWidget';

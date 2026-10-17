@@ -25,8 +25,6 @@ export const SCREEN_IDS = [
   'properties',
   'property-details',
   'profile',
-  'explore',
-  'explore-results',
   'create-property',
 ] as const;
 

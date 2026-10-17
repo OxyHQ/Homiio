@@ -2,9 +2,7 @@
  * SimilarHomesSection — "Similar homes nearby" horizontal carousel on the
  * property detail screen (companion to the price-transparency block).
  *
- * A Bloom `Shelf` row of `PropertyCard`s, like the home sections. Cards pass `enableImageCarousel={false}` so an
- * in-card photo pager never fights the row swipe — the established rule for
- * cards inside a horizontal scroller.
+ * A Bloom `Shelf` row of `PropertyCard`s, like the home sections.
  *
  * Sourced from `useAreaInsights(propertyId).comparables` (same React Query key
  * as `PriceRangeSection`, so the request is deduped). Renders nothing when
@@ -42,7 +40,6 @@ export const SimilarHomesSection: React.FC<SimilarHomesSectionProps> = ({ proper
         <PropertyCard
           key={item.id}
           property={item}
-          enableImageCarousel={false}
           showSaveButton={false}
           onPress={() => router.push(`/properties/${item.id}`)}
         />

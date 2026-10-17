@@ -75,11 +75,6 @@ export interface PropertyCardProps {
   showSaveButton?: boolean;
   /** Whether "Verified" may be the card's badge. Default `true`. */
   showVerifiedBadge?: boolean;
-  /**
-   * Page through every photo. Pass `false` inside a horizontal scroller, where
-   * an in-card pager would fight the row swipe: the card shows the cover only.
-   */
-  enableImageCarousel?: boolean;
   isLoading?: boolean;
   onPress?: () => void;
   /** Rendered under the card (owner actions, a saved note). */
@@ -93,7 +88,6 @@ export const PropertyCard = React.memo(function PropertyCard({
   orientation = 'vertical',
   showSaveButton = true,
   showVerifiedBadge = true,
-  enableImageCarousel = true,
   isLoading = false,
   onPress,
   footerContent,
@@ -123,7 +117,6 @@ export const PropertyCard = React.memo(function PropertyCard({
       property.coverImageIndex,
       variant === 'compact' ? 'small' : 'medium',
     );
-    const pagesPhotos = enableImageCarousel && variant !== 'compact';
 
     const offering = resolvePrimaryOffering(property, browseMode, t('listing.exchange.free'));
     let price: string | undefined;
@@ -174,7 +167,7 @@ export const PropertyCard = React.memo(function PropertyCard({
       .join(', ');
 
     return {
-      photos: pagesPhotos ? photos : photos.slice(0, 1),
+      photos: variant === 'compact' ? photos.slice(0, 1) : photos,
       title,
       subtitle,
       dates,
@@ -183,7 +176,7 @@ export const PropertyCard = React.memo(function PropertyCard({
       badge,
       accessibilityLabel,
     };
-  }, [property, variant, enableImageCarousel, browseMode, showVerifiedBadge, t, formatting]);
+  }, [property, variant, browseMode, showVerifiedBadge, t, formatting]);
 
   const isSaved = propertyId
     ? isInitialized

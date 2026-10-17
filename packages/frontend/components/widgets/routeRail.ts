@@ -125,8 +125,11 @@ export const ROUTE_RAIL: Readonly<Record<string, RailAssignment>> = {
   '/properties/recently-viewed': NO_RAIL,
 
   // ---- Explore -----------------------------------------------------------
-  '/explore': { rail: 'explore' },
-  '/explore/[query]': { rail: 'explore-results' },
+  // Explore is the map and its results, side by side, edge to edge — as on
+  // Airbnb. A rail would squeeze the results to one column, and its filters
+  // repeated the ones in explore's own bar.
+  '/explore': NO_RAIL,
+  '/explore/[query]': NO_RAIL,
   // `/search` is a two-line `<Redirect>` to `/explore` and renders nothing of
   // its own, so it gets no rail: the rail that matters is the one `/explore`
   // resolves once the redirect lands.

@@ -228,7 +228,7 @@ describe('railForPathname agrees with the map for every real route', () => {
   });
 
   it('ignores a query string and a trailing slash', () => {
-    expect(railForPathname('/explore?q=barcelona').screenId).toBe('explore');
+    expect(railForPathname('/profile?tab=reviews').screenId).toBe('profile');
     expect(railForPathname('/properties/').pattern).toBe('/properties');
   });
 });
@@ -297,8 +297,6 @@ describe('the defects the ladder was hiding', () => {
     // it and delete the rail from the app.
     expect(railForPathname('/').screenId).toBe('home');
     expect(railForPathname('/properties').screenId).toBe('properties');
-    expect(railForPathname('/explore').screenId).toBe('explore');
-    expect(railForPathname('/explore/barcelona').screenId).toBe('explore-results');
     expect(railForPathname('/profile').screenId).toBe('profile');
     expect(railForPathname('/profile/edit').screenId).toBe('profile');
   });

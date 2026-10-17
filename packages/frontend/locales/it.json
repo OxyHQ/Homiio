@@ -551,19 +551,6 @@
       "exchange": "Scambio"
     },
     "widgets": {
-      "quickFilters": {
-        "title": "Filtri Rapidi",
-        "furnished": "Arredato",
-        "pets": "Animali ammessi",
-        "coliving": "Co-living",
-        "ecoFriendly": "Eco-compatibile",
-        "verified": "Verificato",
-        "budget": "Meno di 1000 €",
-        "apply": "Applica",
-        "searchWithCount": "Cerca con {{count}} filtri",
-        "advancedFilters": "Filtri Avanzati",
-        "fairPrice": "Prezzo giusto"
-      },
       "alerts": {
         "title": "Avvisi immobili",
         "subtitle": "Ricevi una notifica quando nuovi immobili corrispondono ai tuoi criteri",
