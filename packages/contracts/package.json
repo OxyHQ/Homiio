@@ -15,8 +15,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepack": "bun run build",
-    "prepublishOnly": "bun run build"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "prepack": "bun run clean && bun run build && node ../../scripts/assert-package-dist.mjs",
+    "prepublishOnly": "bun run clean && bun run build && node ../../scripts/assert-package-dist.mjs"
   },
   "dependencies": {
     "zod": "^4.3.6"
