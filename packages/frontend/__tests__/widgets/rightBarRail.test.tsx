@@ -30,11 +30,6 @@ jest.mock('expo-router', () => ({
   usePathname: () => mockUsePathname(),
 }));
 
-jest.mock('@/store/uiStore', () => ({
-  useUIStore: (selector: (state: { sindiPanelOpen: boolean }) => unknown) =>
-    selector({ sindiPanelOpen: false }),
-}));
-
 /**
  * A spy in place of the real widget set.
  *

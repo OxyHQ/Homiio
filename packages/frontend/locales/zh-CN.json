@@ -1344,23 +1344,12 @@
     "goBack": "Go Back",
     "signIn": "Sign in",
     "month": "month",
-    "reset": "Reset",
     "decreaseItem": "减少{{title}}",
     "increaseItem": "增加{{title}}"
   },
   "sindi": {
-    "name": "Sindi",
-    "title": "Sindi",
-    "subtitle": "Housing Justice Advocate with Real-Time Info",
     "panel": {
-      "title": "Sindi",
-      "subtitle": "AI housing assistant",
-      "intro": "Your AI housing assistant. Ask about tenant rights, leases, and housing issues — right here, without leaving the page.",
-      "newChat": "New chat",
-      "startNew": "Start new conversation",
-      "close": "Close",
-      "conversations": "Conversations",
-      "empty": "Start a new conversation to get help."
+      "newChat": "New chat"
     },
     "auth": {
       "required": "Authentication Required",
@@ -1397,21 +1386,8 @@
         "failed": "Failed to generate share link. Please try again."
       }
     },
-    "conversation": {
-      "title": "Conversation"
-    },
     "settings": {
-      "resetMessage": "这将删除你与 Sindi 的对话，并将其偏好恢复为默认值。",
-      "resetTitle": "Reset Sindi?",
-      "reset": "删除对话并重置",
-      "actions": "Actions",
-      "tipsDescription": "开始对话时推荐问题。",
-      "tips": "Show tips & hints",
-      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
-      "behavior": "Behavior",
-      "title": "Sindi preferences",
-      "resetDone": "Sindi 已重置。",
-      "resetFailed": "无法重置 Sindi，请重试。"
+      "actions": "Actions"
     },
     "voice": {
       "unsupportedDevice": "此设备上无法使用语音输入",

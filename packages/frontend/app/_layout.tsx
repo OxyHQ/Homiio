@@ -8,8 +8,6 @@ import { Slot, ThemeProvider, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useHomiioSidebarProps } from '@/components/SideBar';
 import { RightBar, RIGHT_BAR_WIDTH, useHasRightBar } from '@/components/RightBar';
-import { SindiPanel } from '@/components/sindi/SindiPanel';
-import { useSindiPanelLayout } from '@/components/sindi/sindiPanelLayout';
 import { HomiioBottomBar } from '@/components/HomiioBottomBar';
 import { useUIStore } from '@/store/uiStore';
 import { AppShell } from '@oxy.so/bloom/app-shell';
@@ -193,7 +191,6 @@ function AppFrame() {
     [openMobileDrawer, closeMobileDrawer],
   );
   const hasRightBar = useHasRightBar();
-  const sindiPanel = useSindiPanelLayout();
   const isExploreRoute = pathname === '/explore' || pathname.startsWith('/explore/');
 
   return (
@@ -210,14 +207,11 @@ function AppFrame() {
       navigationAlign="content"
       navigationGap={8}
       gutter={8}
-      aside={
-        sindiPanel.docked ? <SindiPanel placement="aside" /> : hasRightBar ? <RightBar /> : null
-      }
-      asideWidth={sindiPanel.docked ? sindiPanel.width : RIGHT_BAR_WIDTH}
+      aside={hasRightBar ? <RightBar /> : null}
+      asideWidth={RIGHT_BAR_WIDTH}
       asideFrom="lg"
       asideCollapse="hidden"
       bottomBar={<HomiioBottomBar />}
-      overlay={<SindiPanel placement="overlay" />}
     >
       <Slot />
     </AppShell>

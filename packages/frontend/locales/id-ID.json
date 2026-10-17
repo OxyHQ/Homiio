@@ -1344,23 +1344,12 @@
     "goBack": "Go Back",
     "signIn": "Sign in",
     "month": "month",
-    "reset": "Reset",
     "decreaseItem": "Kurangi {{title}}",
     "increaseItem": "Tambah {{title}}"
   },
   "sindi": {
-    "name": "Sindi",
-    "title": "Sindi",
-    "subtitle": "Housing Justice Advocate with Real-Time Info",
     "panel": {
-      "title": "Sindi",
-      "subtitle": "AI housing assistant",
-      "intro": "Your AI housing assistant. Ask about tenant rights, leases, and housing issues — right here, without leaving the page.",
-      "newChat": "New chat",
-      "startNew": "Start new conversation",
-      "close": "Close",
-      "conversations": "Conversations",
-      "empty": "Start a new conversation to get help."
+      "newChat": "New chat"
     },
     "auth": {
       "required": "Authentication Required",
@@ -1397,21 +1386,8 @@
         "failed": "Failed to generate share link. Please try again."
       }
     },
-    "conversation": {
-      "title": "Conversation"
-    },
     "settings": {
-      "resetMessage": "Ini akan menghapus percakapan Anda dengan Sindi dan mengembalikan preferensinya ke bawaan.",
-      "resetTitle": "Reset Sindi?",
-      "reset": "Hapus percakapan dan atur ulang",
-      "actions": "Actions",
-      "tipsDescription": "Sarankan pertanyaan saat memulai percakapan.",
-      "tips": "Show tips & hints",
-      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
-      "behavior": "Behavior",
-      "title": "Sindi preferences",
-      "resetDone": "Sindi telah diatur ulang.",
-      "resetFailed": "Sindi tidak dapat diatur ulang. Coba lagi."
+      "actions": "Actions"
     },
     "voice": {
       "unsupportedDevice": "Input suara tidak tersedia di perangkat ini",

@@ -1344,23 +1344,12 @@
     "goBack": "Go Back",
     "signIn": "Sign in",
     "month": "month",
-    "reset": "Reset",
     "decreaseItem": "{{title}} কমান",
     "increaseItem": "{{title}} বাড়ান"
   },
   "sindi": {
-    "name": "Sindi",
-    "title": "Sindi",
-    "subtitle": "Housing Justice Advocate with Real-Time Info",
     "panel": {
-      "title": "Sindi",
-      "subtitle": "AI housing assistant",
-      "intro": "Your AI housing assistant. Ask about tenant rights, leases, and housing issues — right here, without leaving the page.",
-      "newChat": "New chat",
-      "startNew": "Start new conversation",
-      "close": "Close",
-      "conversations": "Conversations",
-      "empty": "Start a new conversation to get help."
+      "newChat": "New chat"
     },
     "auth": {
       "required": "Authentication Required",
@@ -1397,21 +1386,8 @@
         "failed": "Failed to generate share link. Please try again."
       }
     },
-    "conversation": {
-      "title": "Conversation"
-    },
     "settings": {
-      "resetMessage": "এটি সিন্ডির সঙ্গে আপনার কথোপকথন মুছে ফেলবে এবং এর পছন্দগুলো ডিফল্টে ফিরিয়ে দেবে।",
-      "resetTitle": "Reset Sindi?",
-      "reset": "কথোপকথন মুছুন ও রিসেট করুন",
-      "actions": "Actions",
-      "tipsDescription": "কথোপকথন শুরু করার সময় প্রশ্ন প্রস্তাব করুন।",
-      "tips": "Show tips & hints",
-      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
-      "behavior": "Behavior",
-      "title": "Sindi preferences",
-      "resetDone": "সিন্ডি রিসেট হয়েছে।",
-      "resetFailed": "সিন্ডি রিসেট করা যায়নি। আবার চেষ্টা করুন।"
+      "actions": "Actions"
     },
     "voice": {
       "unsupportedDevice": "এই ডিভাইসে ভয়েস ইনপুট উপলভ্য নয়",

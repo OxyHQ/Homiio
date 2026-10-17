@@ -1730,23 +1730,12 @@
     "emoji": "Emoji",
     "color": "Color",
     "month": "month",
-    "reset": "Reset",
     "decreaseItem": "Redueix {{title}}",
     "increaseItem": "Augmenta {{title}}"
   },
   "sindi": {
-    "name": "Sindi",
-    "title": "Sindi",
-    "subtitle": "Defensor de Justícia Habitacional amb Informació en Temps Real",
     "panel": {
-      "title": "Sindi",
-      "subtitle": "Assistent d'habitatge amb IA",
-      "intro": "El teu assistent d'habitatge amb IA. Pregunta-li sobre drets dels llogaters, contractes i problemes d'habitatge, aquí mateix, sense sortir de la pàgina.",
-      "newChat": "Xat nou",
-      "startNew": "Inicia una nova conversa",
-      "close": "Tanca",
-      "conversations": "Converses",
-      "empty": "Inicia una nova conversa per rebre ajuda."
+      "newChat": "Xat nou"
     },
     "auth": {
       "required": "Autenticació Requerida",
@@ -1783,21 +1772,8 @@
         "failed": "Error generant enllaç de compartir. Si us plau, torneu-ho a provar."
       }
     },
-    "conversation": {
-      "title": "Conversació"
-    },
     "settings": {
-      "resetMessage": "S'esborraran les teves converses amb la Sindi i les seves preferències tornaran als valors predeterminats.",
-      "resetTitle": "Reset Sindi?",
-      "reset": "Esborra les converses i restableix",
-      "actions": "Actions",
-      "tipsDescription": "Suggereix preguntes en començar una conversa.",
-      "tips": "Show tips & hints",
-      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
-      "behavior": "Behavior",
-      "title": "Sindi preferences",
-      "resetDone": "S'ha restablert la Sindi.",
-      "resetFailed": "No s'ha pogut restablir la Sindi. Torna-ho a provar."
+      "actions": "Actions"
     },
     "voice": {
       "unsupportedDevice": "L'entrada de veu no està disponible en aquest dispositiu",

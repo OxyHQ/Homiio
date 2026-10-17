@@ -396,7 +396,7 @@ Expo Router, `packages/frontend/app/`.
 
 | Segment | Screens |
 |---|---|
-| `(tabs)` | `index` (home), `inbox`, `saved` (+ `[folderId]`, `notes`), `profile` (+ `edit`, `subscriptions`), `sindi` (+ `[conversationId]` — `new` for one Alia has not made yet — and `shared/[token]`, Alia's read-only share) |
+| `(tabs)` | `index` (home), `inbox`, `saved` (+ `[folderId]`, `notes`), `profile` (+ `edit`, `subscriptions`), `sindi/shared/[token]` (Alia's read-only share; Sindi herself is the SDK's sheet, no route) |
 | `explore` | `index`, `[query]` — **the discovery surface** |
 | `search` | `index`, `[query]` — **redirects to `/explore`, nothing else** |
 | `properties` | `index`, `[id]` (+ `apply`, `book-viewing`, `report`), `create`, `drafts`, `my`, `recently-viewed`, `city/[id]`, `type/[type]` |
@@ -417,7 +417,7 @@ Expo Router, `packages/frontend/app/`.
 | `agent` | `index` — the partner/commission surface |
 | `insights` | `index` |
 | `tips` | `index`, `[slug]` |
-| `settings` | `index`, `currency`, `language`, `notifications`, `sindi` |
+| `settings` | `index`, `currency`, `language`, `notifications` |
 | top level | `notifications`, `donate`, `my-home` (the tenant's active lease), `+not-found`, `+html`, `_layout` |
 
 ### `/search` → `/explore`, unambiguously

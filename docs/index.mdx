@@ -163,7 +163,7 @@ The frontend's `ProfileProvider` loads profiles immediately after `useOxy()` rep
 
 Alia is Homiio's main AI ("Ask Alia"); Sindi, the housing agent, is an ordinary public Alia agent owned by the Homiio project account, and "Ask Sindi" opens the same dialog with Sindi's character (Alia ADR 0020). **Sindi and Alia are reached from the frontend through `@alia.onl/sdk` under the person's Oxy session; Homiio's backend never calls Alia.** The person present pays for the turn with their own Alia credits.
 
-The app mounts the SDK's one sheet (`AliaAskProvider`, `context/AskAgentProvider.tsx`), the docked/overlay panel and the full-screen `/sindi` chat. It declares **host tools** — the five things Sindi may do to the screen (`apply_search`, `show_saved`, `open_listing`, `set_results_view`, `navigate`), executed by `hooks/useSindiActions.ts` — sends what the screen shows as the turn's `clientContext`, and draws the catalogue's results with its own **renderers** (`PropertyCard`, saved homes, "which Barcelona?"). Conversations, titles, share links, files and voice are Alia's.
+The app mounts the SDK's one sheet (`AliaAskProvider`, `context/AskAgentProvider.tsx`) and nothing else: Sindi has no Homiio-made page, panel or settings. It declares **host tools** — the five things Sindi may do to the screen (`apply_search`, `show_saved`, `open_listing`, `set_results_view`, `navigate`), executed by `hooks/useSindiActions.ts` — sends what the screen shows as the turn's `clientContext`, and draws the catalogue's results with its own **renderers** (`PropertyCard`, saved homes, "which Barcelona?"). Conversations, titles, share links, files and voice are Alia's.
 
 What Sindi can do to the person's Homiio data is the **capability catalogue** (`packages/backend/capabilities/`): 167 tools Alia calls with Oxy capability tickets, bounded by Sindi's published ceiling (Oxy ADR 0042), and the same catalogue serves Homiio's public MCP. Homiio+ unlocks documents through the `sindi.files` feature gate. Homiio never calls Kaana or an inference provider, and holds no provider key.
 
@@ -218,7 +218,7 @@ See [Auth](./auth) for the full sign-in lifecycle, profile bootstrap, and the ba
 
 ## Routes at a glance
 
-**Frontend (Expo Router):** `(tabs)` (home, inbox, saved, profile, sindi), `explore`, `properties`, `addresses`, `agency`, `reviews`, `evictions`, `contracts`, `applications`, `landlord`, `viewings`, `reservations`, `stays`, `host`, `exchange`, `roommates`, `agent`, `insights`, `tips`, `settings`, `notifications`, `donate`. **`/search` is a redirect to `/explore` and holds no logic.**
+**Frontend (Expo Router):** `(tabs)` (home, inbox, saved, profile, and `sindi/shared/[token]` for a shared conversation), `explore`, `properties`, `addresses`, `agency`, `reviews`, `evictions`, `contracts`, `applications`, `landlord`, `viewings`, `reservations`, `stays`, `host`, `exchange`, `roommates`, `agent`, `insights`, `tips`, `settings`, `notifications`, `donate`. **`/search` is a redirect to `/explore` and holds no logic.**
 
 **Backend (Express):** `properties`, `rooms`, `leases`, `applications`, `viewings`, `reservations`, `exchanges`, `roommates`, `reviews`, `addresses`, `evictions`, `partners`, `profiles`, `notifications`, `analytics`, `ai`, `images`, `billing`, `telegram`, `scraper`, plus city, neighborhood, geocoding and observability handlers.
 

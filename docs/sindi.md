@@ -39,28 +39,29 @@ Homiio app ──@alia.onl/sdk (person's Oxy session, person's credits)──▶
 
 ## Where it is in the app
 
-| Surface | File | Host | What acting on the app means |
-|---|---|---|---|
-| "Ask Alia" and "Ask Sindi": one sheet | `context/AskAgentProvider.tsx` (`AliaAskProvider`) | `sheet` | nothing moves: the sheet floats over a page the person chose to read; the answer stays in the conversation |
-| Docked panel (≥ 1024) | `components/sindi/SindiPanel.tsx`, `AppShell`'s `aside` | `panel` | `beside`: the page column navigates, the chat stays |
-| Overlay panel (500–1023) | same, through Bloom's Portal | `panel` | `reveal`: the page navigates under it, and the panel closes once the answer is written |
-| Full-screen chat | `app/(tabs)/sindi/[conversationId].tsx` (`/sindi/new` for a new one) | `screen` | `leave`: the destination takes the screen once the answer is written |
-| Conversation list | `app/(tabs)/sindi/index.tsx`, the panel's landing | — | `useConversations({ agentId })` |
-| Shared conversation | `app/(tabs)/sindi/shared/[token].tsx` | — | `AliaSharedConversation`, read-only, no session |
-| Settings | `app/settings/sindi.tsx` | — | tips on/off (`store/sindiPreferencesStore.ts`); reset deletes Sindi's conversations through the SDK |
+**One surface: the SDK's sheet.** Sindi, like Alia, exists in Homiio only as
+`AliaAskProvider`'s one sheet (`context/AskAgentProvider.tsx`), with Sindi's
+Oxy character, name, greeting and starters from her Alia profile. Homiio draws
+no chat, no conversation list and no Sindi page of its own.
 
-Entry points: the sidebar's "Ask Alia" action and the phone bottom bar's Alia
-button are `useAskAgent().ask('alia')`; the sidebar's Sindi row opens `/sindi`
-at every width (#678 — nothing in the shell toggles the panel any more; it shows
-only while `uiStore.sindiPanelOpen` is set);
-"Ask Sindi about this home" (`components/property/SindiSection.tsx`) is
-`ask('sindi', turn)` with the listing named in the turn.
+| Entry point | File | Opens |
+|---|---|---|
+| Sidebar "Sindi" row | `components/SideBar/index.tsx` | `ask('sindi')` |
+| Sidebar "Ask Alia", phone bottom bar | `components/SideBar/index.tsx`, `components/HomiioBottomBar.tsx` | `ask('alia')` |
+| "Ask Sindi about this home" | `components/property/SindiSection.tsx` | `ask('sindi', turn)`, the listing named in the turn |
+| Shared conversation | `app/(tabs)/sindi/shared/[token].tsx` | `AliaSharedConversation`, read-only, no session — the one page, because a link needs an address and Alia's own app serves none |
 
-`hooks/useSindiChat.ts` builds what every surface hands the SDK, per host: the
-host tools and the executor, the screen's context, the renderers, the chat's
-words from Homiio's i18n, the Homiio+ upsell and the share link. The panel and
-the full-screen chat mount it through `components/sindi/SindiConversation.tsx`
-(`AliaChatContent agent={sindi}`).
+Sindi's face outside the sheet (the sidebar row, the listing section) is
+`components/sindi/SindiAvatar.tsx`: her character from `useAgentProfile`, the
+same one the sheet draws; signed out, a neutral glyph.
+
+The sheet lists the person's latest conversations with its lead under the
+greeting and resumes them (SDK 20.1, `AliaRecentConversations`); every
+conversation is also in the Alia app. Deleting conversations is the Alia app's.
+
+`hooks/useSindiChat.ts` builds what the sheet is handed: the host tools and the
+executor, the screen's context, the renderers, the chat's words from Homiio's
+i18n, the Homiio+ upsell and the share link.
 
 ## Host tools: what Sindi may do to the screen
 
@@ -76,7 +77,7 @@ is never authority over data.
 | `apply_search` | a **patch** over the live query | the canonical pipeline → one navigation to `exploreHref(next)` |
 | `show_saved` | an optional collection id | `/saved` or `/saved/[folderId]`, under the person's own session |
 | `open_listing` | one listing id | the listing route |
-| `set_results_view` | `list` \| `map` | `store/exploreViewStore.ts`; Explore comes with it unless the docked panel is beside it |
+| `set_results_view` | `list` \| `map` | `store/exploreViewStore.ts`; Explore comes with it, because the sheet covers the page |
 | `navigate` | one **enumerated** destination | the router's own path table (`DESTINATION_ROUTES`) |
 
 There is no `eval`, no generated JavaScript, no DOM click, no arbitrary URL and
@@ -91,8 +92,7 @@ next request and the model reads as that call's result:
 
 | Outcome | When |
 |---|---|
-| `applied` | the app now shows it |
-| `inline` | the host cannot show a result (the sheet); nothing moved |
+| `applied` | the page under the sheet now shows it; the sheet closes once the answer is written |
 | `rejected` | the input is outside the contract (`parseSindiHostCall` answers null) |
 | `stale` | the person changed the search by hand during the turn — their change wins (#519 §8.8). The query's revision is taken when the turn is SENT (`runtime.onTurnStart`) and compared when the action arrives |
 | `failed` | `exploreHref` cannot carry the area (a polygon, an unencodable id): navigating anyway would answer globally under a local heading (ADR 0002 §4.3) |
@@ -104,14 +104,14 @@ history executes nothing.
 
 ### Two halves, at two times
 
-A call arrives MID-STREAM: the model asks for the effect and keeps writing.
-`reveal` and `leave` both end with the chat's own surface gone, and doing that
-on arrival unmounts a chat that is still streaming. So the executor applies the
-STATE half at once (the search query, the results view) and holds the half that
-removes the chat until the SDK's conversation store says the stream stopped
-(`streamingConversationId` leaving the conversation that was streaming) — after
-Stop as much as after the last word. `beside` holds nothing. A surface that
-unmounts first takes its held steps with it.
+The sheet is mounted above the app frame, so a navigation never unmounts it:
+the executor changes the page UNDER the sheet as soon as a call arrives. A call
+arrives MID-STREAM, though — the model asks for the effect and keeps writing —
+so the sheet itself closes only when the SDK's conversation store says the
+stream stopped (`streamingConversationId` leaving the conversation that was
+streaming), after Stop as much as after the last word, through the provider's
+ref (`useAskAgent().dismiss`). An executor that unmounts first takes its held
+close with it.
 
 ### `apply_search` is a patch
 
@@ -167,7 +167,7 @@ interface **is** the policy, because there is nowhere in it to put anything
 else:
 
 ```ts
-{ revision, presentation, destination, listingId?, offering?, locationToken?, scopeLabel?, priceMin?, priceMax?, priceCurrency? }
+{ revision, destination, listingId?, offering?, locationToken?, scopeLabel?, priceMin?, priceMax?, priceCurrency? }
 ```
 
 `locationToken` is the `loc` token, which by ADR 0002 §8.2 carries no coordinate
@@ -177,11 +177,9 @@ exists for the stale check. Never sent: a pathname, a DOM snapshot, the store,
 an IP, a GPS fix, a token, a document, a contact, or the contents of somebody's
 saved list.
 
-`presentation` is `side_by_side` for the docked panel alone, because it answers
-"is there a main pane beside the chat?" — what the model needs to write "I've
-opened it beside you". `Platform.OS` decides nothing: a narrow web tab, a wide
-native tablet and the full-screen chat on a big monitor are each answered by
-their host and their tier (`components/sindi/sindiHost.ts`).
+The serialised context opens with one fixed line telling the model the chat is
+a sheet over the app, that an action changes the page under it and that the
+sheet closes once its answer is written.
 
 ## Files, voice, sharing
 
@@ -301,17 +299,17 @@ native binaries get 404 from the removed `/api/ai` until they update).
 | `clarify_location` | `resolvePlace` answers `ambiguous` / `not_found` → the `homiio:resolvePlace` renderer, the same sentence |
 | `wantsListings` (asking ≠ navigating) | the host tool's description (`apply_search` vs `searchListings`) plus Sindi's prompt |
 | `appContext` revision, stale turns | `clientContext` per turn; the revision taken at turn start; the SDK's once-per-call and abort |
-| host act modes (`sindiHost.ts`) | unchanged |
+| host act modes (`sindiHost.ts`: docked, overlay, full-screen, sheet) | one host, the sheet: act under it, close it once the answer is written |
 | "show me my saved homes" inline | renderer `homiio:listSavedHomes` → `SindiSavedHomes` |
 | PDF contract review, housing image analysis | Alia `file` / `image_url` parts plus Sindi's prompt |
 | Homiio+ file gate (client-only; credits never spent) | feature gate `sindi.files`, enforced and consumed on the server; locked → `FilePremiumInfoSheet` |
 | Homiio conversation tables, titles, 24 h share links | Alia conversations (`useConversations({ agentId })`), titles and share links; Homiio's tables dropped |
 | `/api/ai/suggestions` | Sindi's starters (Alia) on an empty chat; fixed i18n prompts on a listing |
-| docked/overlay panel, `/sindi` screens | the SDK's conversation on the same surfaces |
+| docked/overlay panel, `/sindi` and `/sindi/:id` screens, Homiio's conversation list | the SDK's one sheet, with its recent conversations and resume; all conversations also in the Alia app |
 | in-property bottom sheet | `useAskAgent().ask('sindi', turn)`: one sheet for Alia and Sindi |
 | sidebar "Ask Alia", bottom-bar Alia button | `ask('alia')` |
 | voice dictation (`expo-speech-recognition`) | the SDK's dictation and calls |
-| tips toggle (never persisted, read by nothing) | persisted; hides Sindi's starters |
+| Settings → Sindi (tips toggle, reset) | gone: starters are the agent's (Alia's editor); deleting conversations is the Alia app's |
 
 New with the cut: every action a person can take in Homiio through the
 catalogue, fully autonomous within Sindi's configuration and with no approval
@@ -322,8 +320,7 @@ cards; Alia consulting Sindi from any app; Homiio's public MCP.
 | File | What it pins |
 |---|---|
 | `frontend __tests__/sindi/actionContract.test.ts` | the declaration (names, schema from the parser's fields, no write), every refusal, patch semantics, outcome lines |
-| `frontend __tests__/sindi/actionExecution.test.ts` | WHEN each half of an action runs, per host, against the SDK's real stream store; stale and failed; every destination is a real route |
-| `frontend __tests__/sindi/controlCapability.test.ts` | the capability for every host at every breakpoint |
+| `frontend __tests__/sindi/actionExecution.test.ts` | WHEN each half of an action runs — the page at once, the sheet's close at the turn's end — against the SDK's real stream store; stale and failed; every destination is a real route |
 | `frontend __tests__/sindi/clarifyLocation.test.tsx` | the clarification sentence from the shipped strings; no host tool for it |
 | `frontend __tests__/sindi/toolRenderers.test.tsx` | which tools are drawn and what each draws |
 | `backend __tests__/capabilities/*` | the catalogue, `resolvePlace`'s refusals, route parity |
@@ -336,5 +333,5 @@ cards; Alia consulting Sindi from any app; Homiio's public MCP.
   is none.
 - **The region-level duplicate data** behind the Barcelona trio
   (`docs/postgres.md`).
-- **Tips in the sheet.** The SDK's sheet always offers an agent's starters, so
-  the tips switch applies to the panel and the full-screen chat.
+- **Native builds** still on the old binary keep the removed `/sindi` screens
+  until they update.

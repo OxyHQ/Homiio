@@ -1352,23 +1352,12 @@
     "goBack": "Go Back",
     "signIn": "Sign in",
     "month": "month",
-    "reset": "Reset",
     "decreaseItem": "تقليل {{title}}",
     "increaseItem": "زيادة {{title}}"
   },
   "sindi": {
-    "name": "Sindi",
-    "title": "Sindi",
-    "subtitle": "Housing Justice Advocate with Real-Time Info",
     "panel": {
-      "title": "Sindi",
-      "subtitle": "AI housing assistant",
-      "intro": "Your AI housing assistant. Ask about tenant rights, leases, and housing issues — right here, without leaving the page.",
-      "newChat": "New chat",
-      "startNew": "Start new conversation",
-      "close": "Close",
-      "conversations": "Conversations",
-      "empty": "Start a new conversation to get help."
+      "newChat": "New chat"
     },
     "auth": {
       "required": "Authentication Required",
@@ -1405,21 +1394,8 @@
         "failed": "Failed to generate share link. Please try again."
       }
     },
-    "conversation": {
-      "title": "Conversation"
-    },
     "settings": {
-      "resetMessage": "سيؤدي هذا إلى حذف محادثاتك مع سيندي وإعادة تفضيلاتها إلى الإعدادات الافتراضية.",
-      "resetTitle": "Reset Sindi?",
-      "reset": "حذف المحادثات وإعادة التعيين",
-      "actions": "Actions",
-      "tipsDescription": "اقتراح أسئلة عند بدء محادثة.",
-      "tips": "Show tips & hints",
-      "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
-      "behavior": "Behavior",
-      "title": "Sindi preferences",
-      "resetDone": "تمت إعادة تعيين سيندي.",
-      "resetFailed": "تعذّرت إعادة تعيين سيندي. حاول مرة أخرى."
+      "actions": "Actions"
     },
     "voice": {
       "unsupportedDevice": "الإدخال الصوتي غير متاح على هذا الجهاز",

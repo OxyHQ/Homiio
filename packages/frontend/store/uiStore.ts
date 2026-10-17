@@ -5,8 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 /**
  * Cross-cutting UI state (sidebar layout, in-app overlays).
  *
- * The persisted slice (sidebar collapse + the Sindi panel
- * open-state) restores the user's chosen desktop layout on next launch. The
+ * The persisted slice (sidebar collapse) restores the user's chosen desktop
+ * layout on next launch. The
  * mobile drawer open-state is deliberately transient — an overlay drawer
  * should never re-open itself after a reload — so it is excluded from
  * persistence via `partialize`.
@@ -20,22 +20,12 @@ interface UIState {
    * sidebar is a drawer; the shell ignores it while the rail sits in flow.
    */
   mobileDrawerOpen: boolean;
-  /**
-   * Whether the Sindi AI chat panel is open: `AppShell`'s aside from `lg`, an
-   * overlay from 500 (see `components/sindi/sindiPanelLayout.ts`). A
-   * wide-layout preference like `sidebarCollapsed`, so it is persisted and
-   * restores on reload.
-   */
-  sindiPanelOpen: boolean;
 
   toggleSidebarCollapsed: () => void;
   setSidebarCollapsed: (value: boolean) => void;
   openMobileDrawer: () => void;
   closeMobileDrawer: () => void;
   toggleMobileDrawer: () => void;
-  openSindiPanel: () => void;
-  closeSindiPanel: () => void;
-  toggleSindiPanel: () => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -43,23 +33,21 @@ export const useUIStore = create<UIState>()(
     (set) => ({
       sidebarCollapsed: false,
       mobileDrawerOpen: false,
-      sindiPanelOpen: false,
       toggleSidebarCollapsed: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),
       openMobileDrawer: () => set({ mobileDrawerOpen: true }),
       closeMobileDrawer: () => set({ mobileDrawerOpen: false }),
       toggleMobileDrawer: () => set((state) => ({ mobileDrawerOpen: !state.mobileDrawerOpen })),
-      openSindiPanel: () => set({ sindiPanelOpen: true }),
-      closeSindiPanel: () => set({ sindiPanelOpen: false }),
-      toggleSindiPanel: () => set((state) => ({ sindiPanelOpen: !state.sindiPanelOpen })),
     }),
     {
       name: '@homiio/ui-store',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({
-        sidebarCollapsed: state.sidebarCollapsed,
-        sindiPanelOpen: state.sindiPanelOpen,
+      // Version 1 dropped the Sindi panel's open-state: Sindi is the SDK's sheet.
+      version: 1,
+      migrate: (persisted) => ({
+        sidebarCollapsed: Boolean((persisted as { sidebarCollapsed?: unknown })?.sidebarCollapsed),
       }),
+      partialize: (state) => ({ sidebarCollapsed: state.sidebarCollapsed }),
     },
   ),
 );
