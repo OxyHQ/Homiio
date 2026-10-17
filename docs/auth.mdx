@@ -15,22 +15,20 @@ There is no password storage, no session table, and no JWT minting on Homiio's s
 
 ## Frontend wiring
 
-`packages/frontend/app/_layout.tsx` mounts `OxyProvider` inside `BloomThemeProvider`, `QueryClientProvider`, and `RentalModeProvider`:
+`packages/frontend/app/_layout.tsx` mounts `OxyProvider` inside `BloomProvider` and `RentalModeProvider`, and hands it the app's one module-scope `QueryClient`, which it provides:
 
 ```tsx
-<BloomThemeProvider fonts>
-  <QueryClientProvider client={queryClient}>
-    <RentalModeProvider>
-      <OxyProvider baseURL={OXY_BASE_URL}>
-        <ProfileProvider>
-          <SavedPropertiesProvider>
-            {/* ... */}
-          </SavedPropertiesProvider>
-        </ProfileProvider>
-      </OxyProvider>
-    </RentalModeProvider>
-  </QueryClientProvider>
-</BloomThemeProvider>
+<BloomProvider>
+  <RentalModeProvider>
+    <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID} queryClient={queryClient}>
+      <ProfileProvider>
+        <SavedPropertiesProvider>
+          {/* ... */}
+        </SavedPropertiesProvider>
+      </ProfileProvider>
+    </OxyProvider>
+  </RentalModeProvider>
+</BloomProvider>
 ```
 
 `OXY_BASE_URL` comes from `packages/frontend/config.ts`:

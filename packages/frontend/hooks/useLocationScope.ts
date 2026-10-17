@@ -40,9 +40,10 @@
  *    `sessionSelection`, because the ladder reads that rung first;
  *  - a stale device response for a PREVIOUS position lands in a different cache
  *    entry (its key holds the old grid square) and is never read;
- *  - a SECOND automatic answer loses to the first one, because committing an
- *    inferred scope records it (`autoScope`) and the ladder reads that above
- *    both inference rungs. It becomes `upgrade` — an offer — instead.
+ *  - a SECOND automatic answer loses to the first one, because the first is
+ *    recorded (`autoScope`, by {@link observeInferredScope}) and the ladder
+ *    reads that above both inference rungs. It becomes `upgrade` — an offer —
+ *    instead.
  *
  * ## A geocoding failure never clears the scope
  *
@@ -53,21 +54,39 @@
  * search.
  */
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { type QueryClient, type QueryKey, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
-import { KEY_COORD_DECIMALS, type GeoPlace, type LocationSelection } from '@homiio/shared-types';
+import { useShallow } from 'zustand/react/shallow';
+import { useAuthStore } from '@oxy.so/services';
+import {
+  KEY_COORD_DECIMALS,
+  type ApproximateLocation,
+  type GeoPlace,
+  type LocationSelection,
+} from '@homiio/shared-types';
 
 import { reversePlace } from '@/services/geoService';
 import { useLocationScopeStore } from '@/store/locationScopeStore';
-import { usePrimarySavedArea } from './useSavedSearches';
+import type { SavedSearch } from '@/store/savedSearchesStore';
+import {
+  primarySavedAreaOf,
+  SAVED_SEARCHES_KEY,
+  usePrimarySavedArea,
+  type PrimarySavedArea,
+} from './useSavedSearches';
 import {
   resolveLocationScope,
   type DevicePositionState,
   type LocationScopeState,
 } from './locationScopeLadder';
-import { APPROXIMATE_BUDGET_MS, useApproximateLocation } from './useApproximateLocation';
+import {
+  APPROXIMATE_BUDGET_MS,
+  APPROXIMATE_LOCATION_QUERY_KEY,
+  approximateStateOf,
+  useApproximateLocation,
+} from './useApproximateLocation';
 
 /**
  * The radius a device-scoped search covers, in METRES.
@@ -249,6 +268,157 @@ function useDeadline(ms: number): boolean {
   return useSyncExternalStore(deadline.subscribe, deadline.hasElapsed, deadline.hasElapsed);
 }
 
+/** The device fix's cache key. `deviceRequested` is in it — see the query. */
+function deviceFixQueryKey(deviceRequested: boolean) {
+  return ['locationScope', 'deviceFix', deviceRequested] as const;
+}
+
+/** What a query holds, read from a hook's result or straight out of the cache. */
+interface QueryReading<T> {
+  readonly data: T | undefined;
+  readonly isPending: boolean;
+  readonly isFetching: boolean;
+}
+
+/** The choices the ladder reads from the store. */
+type ScopeChoices = Pick<
+  ReturnType<typeof useLocationScopeStore.getState>,
+  'explicitGlobal' | 'sessionSelection' | 'lastChosenArea' | 'deviceRequested' | 'autoScope'
+>;
+
+const pickChoices = (store: ScopeChoices): ScopeChoices => ({
+  explicitGlobal: store.explicitGlobal,
+  sessionSelection: store.sessionSelection,
+  lastChosenArea: store.lastChosenArea,
+  deviceRequested: store.deviceRequested,
+  autoScope: store.autoScope,
+});
+
+/**
+ * Everything the ladder reads, as plain values.
+ *
+ * Gathered by {@link useLocationScope} from its hooks to render, and by
+ * {@link observeInferredScope} from the cache to commit — one derivation,
+ * {@link scopeOf}, so the two cannot disagree about which rung is in force.
+ */
+interface ScopeSources {
+  readonly choices: ScopeChoices;
+  readonly savedArea: PrimarySavedArea;
+  readonly fix: QueryReading<DeviceFixOutcome>;
+  readonly approximate: QueryReading<ApproximateLocation>;
+  /** Whether the shared startup deadline has passed. */
+  readonly budgetElapsed: boolean;
+}
+
+/**
+ * Whether an INFERENCE could still be used at all.
+ *
+ * False the moment any explicit rung supplies an area, which is what keeps
+ * the network lookup from running for somebody who has already said where
+ * they are looking — a request whose answer the ladder would discard.
+ *
+ * A saved area still LOADING counts as one. Treating "still loading" as
+ * "absent" produces exactly the late-answer failure this file's header claims
+ * is unreachable: the ladder would fall to an inferred rung, resolve Home to
+ * it, and then jump to the saved area a moment later when the request lands —
+ * a scope changing under the user with no action from them.
+ */
+function inferenceUsable(choices: ScopeChoices, savedArea: PrimarySavedArea): boolean {
+  return (
+    !choices.explicitGlobal &&
+    !choices.sessionSelection &&
+    !savedArea.pending &&
+    !savedArea.selection &&
+    !choices.lastChosenArea
+  );
+}
+
+/**
+ * Whether the device rung runs: when there is nothing above it to use, or when
+ * the user asked for it.
+ *
+ * Gating on the higher rungs is not an optimisation: taking a position for a
+ * scope that will be outranked is a location read the user did not ask for and
+ * would not benefit from.
+ */
+function deviceNeeded(choices: ScopeChoices, savedArea: PrimarySavedArea): boolean {
+  return choices.deviceRequested || inferenceUsable(choices, savedArea);
+}
+
+/**
+ * Whether the network lookup runs. Still enabled once an inferred scope is
+ * committed: it IS the committed scope's source, and disabling it would drop
+ * the cache entry the ladder is reading from.
+ */
+function approximateEnabled(choices: ScopeChoices, savedArea: PrimarySavedArea): boolean {
+  return inferenceUsable(choices, savedArea) || choices.autoScope?.source === 'ip';
+}
+
+/** What the device rung knows, before the startup budget is applied. */
+function deviceStateOf({ choices, savedArea, fix }: ScopeSources): DevicePositionState {
+  // `resolving` while the rung ABOVE is still loading, so the ladder reports
+  // `resolving` rather than falling through. Reporting `idle` here would flash
+  // the destinations board for the half-second the saved-search request takes,
+  // for a user who has already chosen an area.
+  if (savedArea.pending) return { status: 'resolving' };
+  if (!deviceNeeded(choices, savedArea)) return { status: 'idle' };
+  if (fix.isPending || fix.isFetching) return { status: 'resolving' };
+  const outcome = fix.data;
+  if (!outcome) {
+    // The query is enabled, settled, and produced nothing — the only way that
+    // happens is a rejection, which `takeDeviceFix` does not throw but a
+    // cancelled query can produce. Treated as unavailable, never as denied:
+    // telling somebody their permission was refused when it was not is worse
+    // than telling them we could not get a fix.
+    return { status: 'failed', reason: 'position_unavailable' };
+  }
+  if (outcome.status === 'not_asked') return { status: 'idle' };
+  if (outcome.status === 'denied') return { status: 'failed', reason: 'permission_denied' };
+  if (outcome.status === 'unavailable') return { status: 'failed', reason: 'position_unavailable' };
+  return {
+    status: 'resolved',
+    selection: {
+      kind: 'current_location',
+      center: { longitude: outcome.longitude, latitude: outcome.latitude },
+      radiusMeters: DEVICE_SCOPE_RADIUS_METERS,
+      precision: 'exact',
+    },
+  };
+}
+
+/** The scope, from everything the ladder reads. */
+function scopeOf(sources: ScopeSources): LocationScopeState {
+  const { choices, savedArea, approximate, budgetElapsed } = sources;
+  const device = deviceStateOf(sources);
+  return resolveLocationScope({
+    explicitGlobal: choices.explicitGlobal,
+    sessionSelection: choices.sessionSelection,
+    savedAreaSelection: savedArea.selection,
+    lastChosenSelection: choices.lastChosenArea,
+    // After the deadline a still-unanswered device stops reporting `resolving`,
+    // so the ladder moves on to the network answer or to discovery instead of
+    // holding a skeleton for the ten seconds `getCurrentPositionAsync` may take
+    // indoors. Reported as `idle` — "this rung has nothing to say" — rather
+    // than as a failure, because it has not failed and may yet answer.
+    //
+    // NOT applied when the user PRESSED the button: they asked, they are
+    // watching a spinner they started, and a deadline that quietly gave up on
+    // them would be the button doing nothing.
+    device:
+      !choices.deviceRequested && budgetElapsed && device.status === 'resolving'
+        ? { status: 'idle' }
+        : device,
+    approximate: approximateStateOf({
+      enabled: approximateEnabled(choices, savedArea),
+      isPending: approximate.isPending,
+      elapsedBudget: budgetElapsed,
+      data: approximate.data,
+    }),
+    committedAuto: choices.autoScope,
+    deviceRequested: choices.deviceRequested,
+  });
+}
+
 /**
  * The saved-search rung, LIVE since #356.
  *
@@ -267,56 +437,22 @@ function useDeadline(ms: number): boolean {
  * `null` remains the COMMON answer — most people have no primary area — and the
  * ladder still falls through it, because an absent rung is a skip and not a
  * failure. What is new is that the absence is now DISTINGUISHED from not knowing
- * yet: see `savedAreaPending` below.
+ * yet: see `inferenceUsable`.
  */
 
 export function useLocationScope(): LocationScope {
   const queryClient = useQueryClient();
-  const sessionSelection = useLocationScopeStore((s) => s.sessionSelection);
-  const explicitGlobal = useLocationScopeStore((s) => s.explicitGlobal);
-  const lastChosenArea = useLocationScopeStore((s) => s.lastChosenArea);
-  const deviceRequested = useLocationScopeStore((s) => s.deviceRequested);
+  const choices = useLocationScopeStore(useShallow(pickChoices));
   const permissionPromptShown = useLocationScopeStore((s) => s.permissionPromptShown);
-  const committedAuto = useLocationScopeStore((s) => s.autoScope);
-  const primaryArea = usePrimarySavedArea();
-  const savedAreaSelection = primaryArea.selection;
-  /**
-   * Whether the saved-area rung has ANSWERED yet.
-   *
-   * Distinct from `savedAreaSelection === null`, and the distinction is the
-   * whole reason this exists rather than a bare read. Treating "still loading"
-   * as "absent" produces exactly the late-answer failure this file's header
-   * claims is unreachable: the ladder would fall to the device rung, resolve
-   * Home to the device position, and then jump to the saved area a moment later
-   * when the request lands — a scope changing under the user with no action
-   * from them.
-   *
-   * `false` for a logged-out user, who cannot have a primary area, so nothing
-   * ever waits on a request that will not be made.
-   */
-  const savedAreaPending = primaryArea.pending;
-
-  // The device rung runs when there is nothing above it to use, or when the user
-  // asked for it. Gating on the higher rungs is not an optimisation: taking a
-  // position for a scope that will be outranked is a location read the user did
-  // not ask for and would not benefit from.
-  const deviceNeeded =
-    deviceRequested ||
-    (!explicitGlobal &&
-      !sessionSelection &&
-      // NOT merely `!savedAreaSelection`: taking a position while the rung above
-      // is still loading is a location read for a scope that may be about to be
-      // outranked, which is the very thing the gate below it exists to avoid.
-      !savedAreaPending &&
-      !savedAreaSelection &&
-      !lastChosenArea);
+  const savedArea = usePrimarySavedArea();
+  const { deviceRequested } = choices;
 
   const fixQuery = useQuery({
     // `deviceRequested` is part of the key so that pressing the button after a
     // denial re-runs the read instead of serving the cached denial forever.
-    queryKey: ['locationScope', 'deviceFix', deviceRequested] as const,
+    queryKey: deviceFixQueryKey(deviceRequested),
     queryFn: () => takeDeviceFix(deviceRequested),
-    enabled: deviceNeeded,
+    enabled: deviceNeeded(choices, savedArea),
     staleTime: DEVICE_FIX_MAX_AGE_MS,
     gcTime: DEVICE_FIX_MAX_AGE_MS,
     retry: false,
@@ -342,143 +478,43 @@ export function useLocationScope(): LocationScope {
     retry: false,
   });
 
-  /**
-   * Whether an INFERENCE could still be used at all.
-   *
-   * False the moment any explicit rung supplies an area, which is what keeps
-   * the network lookup from running for somebody who has already said where
-   * they are looking — a request whose answer the ladder would discard.
-   *
-   * `savedAreaPending` is included for the same reason the device rung gates on
-   * it: starting an inference for a scope that is about to be outranked is work
-   * nobody benefits from.
-   */
-  const inferenceUsable =
-    !explicitGlobal &&
-    !sessionSelection &&
-    !savedAreaPending &&
-    !savedAreaSelection &&
-    !lastChosenArea;
-
   // ONE clock for both rungs. See the header: chaining two timeouts is the
   // failure mode, not a slow first one.
   const budgetElapsed = useDeadline(APPROXIMATE_BUDGET_MS);
 
   const approximateQuery = useApproximateLocation({
-    // Still enabled once an inferred scope is committed: it IS the committed
-    // scope's source, and disabling it would drop the cache entry the ladder is
-    // reading from.
-    enabled: inferenceUsable || committedAuto?.source === 'ip',
-    budgetElapsed,
+    enabled: approximateEnabled(choices, savedArea),
   });
-
-  const device = useMemo((): DevicePositionState => {
-    // `resolving` while the rung ABOVE is still loading, so the ladder reports
-    // `resolving` rather than falling through to the mandatory picker. Reporting
-    // `idle` here would flash the place picker open for the half-second the
-    // saved-search request takes, for a user who has already chosen an area —
-    // the same reason the device rung's own `resolving` branch refuses
-    // `needsPlace`.
-    if (savedAreaPending) return { status: 'resolving' };
-    if (!deviceNeeded) return { status: 'idle' };
-    if (fixQuery.isPending || fixQuery.isFetching) return { status: 'resolving' };
-    const outcome = fixQuery.data;
-    if (!outcome) {
-      // The query is enabled, settled, and produced nothing — the only way that
-      // happens is a rejection, which `takeDeviceFix` does not throw but a
-      // cancelled query can produce. Treated as unavailable, never as denied:
-      // telling somebody their permission was refused when it was not is worse
-      // than telling them we could not get a fix.
-      return { status: 'failed', reason: 'position_unavailable' };
-    }
-    if (outcome.status === 'not_asked') return { status: 'idle' };
-    if (outcome.status === 'denied') return { status: 'failed', reason: 'permission_denied' };
-    if (outcome.status === 'unavailable')
-      return { status: 'failed', reason: 'position_unavailable' };
-    return {
-      status: 'resolved',
-      selection: {
-        kind: 'current_location',
-        center: { longitude: outcome.longitude, latitude: outcome.latitude },
-        radiusMeters: DEVICE_SCOPE_RADIUS_METERS,
-        precision: 'exact',
-      },
-    };
-  }, [savedAreaPending, deviceNeeded, fixQuery.isPending, fixQuery.isFetching, fixQuery.data]);
-
-  /**
-   * The device rung, with the startup budget applied.
-   *
-   * After the deadline a still-unanswered device stops reporting `resolving`,
-   * so the ladder moves on to the network answer or to discovery instead of
-   * holding a skeleton for the ten seconds `getCurrentPositionAsync` may take
-   * indoors. Reported as `idle` — "this rung has nothing to say" — rather than
-   * as a failure, because it has not failed and may yet answer.
-   *
-   * NOT applied when the user PRESSED the button: they asked, they are watching
-   * a spinner they started, and a deadline that quietly gave up on them would
-   * be the button doing nothing.
-   */
-  const budgetedDevice = useMemo((): DevicePositionState => {
-    if (deviceRequested) return device;
-    if (budgetElapsed && device.status === 'resolving') return { status: 'idle' };
-    return device;
-  }, [device, deviceRequested, budgetElapsed]);
 
   const state = useMemo(
     () =>
-      resolveLocationScope({
-        explicitGlobal,
-        sessionSelection,
-        savedAreaSelection,
-        lastChosenSelection: lastChosenArea,
-        device: budgetedDevice,
-        approximate: approximateQuery.state,
-        committedAuto,
-        deviceRequested,
+      scopeOf({
+        choices,
+        savedArea,
+        fix: {
+          data: fixQuery.data,
+          isPending: fixQuery.isPending,
+          isFetching: fixQuery.isFetching,
+        },
+        approximate: {
+          data: approximateQuery.data,
+          isPending: approximateQuery.isPending,
+          isFetching: approximateQuery.isFetching,
+        },
+        budgetElapsed,
       }),
     [
-      explicitGlobal,
-      sessionSelection,
-      savedAreaSelection,
-      lastChosenArea,
-      budgetedDevice,
-      approximateQuery.state,
-      committedAuto,
-      deviceRequested,
+      choices,
+      savedArea,
+      fixQuery.data,
+      fixQuery.isPending,
+      fixQuery.isFetching,
+      approximateQuery.data,
+      approximateQuery.isPending,
+      approximateQuery.isFetching,
+      budgetElapsed,
     ],
   );
-
-  /**
-   * Record the FIRST inferred scope of the session.
-   *
-   * Still an effect, deliberately. "The first inference in force" is HISTORY,
-   * not something derivable from the current inputs, and the inference in
-   * force is only known once the ladder has run over three asynchronous
-   * sources (the device fix, the network answer and the startup deadline) plus
-   * the saved-area query. No single event handler sees all of them: the
-   * QueryClient is created inside the root layout, so nothing at module scope
-   * can observe the cache and run the ladder when an answer lands. With a
-   * module-scope QueryClient (a `QueryObserver` over the two inference queries)
-   * this commit would move into that observer's callback and the effect would
-   * go. It is idempotent at the store (`commitAutoScope` ignores a second
-   * call), so running on every render where an inference is in force is
-   * harmless rather than load-bearing.
-   *
-   * `deviceRequested` is excluded: a scope the user ASKED for is not an
-   * inference the app needs to protect them from, and recording it would make
-   * the next press of the button a no-op.
-   */
-  const inferredSource = state.source;
-  const inferredSelection = state.selection;
-  useEffect(() => {
-    if (deviceRequested) return;
-    if (inferredSource !== 'device' && inferredSource !== 'ip') return;
-    if (!inferredSelection) return;
-    useLocationScopeStore
-      .getState()
-      .commitAutoScope({ source: inferredSource, selection: inferredSelection });
-  }, [deviceRequested, inferredSource, inferredSelection]);
 
   const choose = useCallback((selection: LocationSelection) => {
     useLocationScopeStore.getState().choose(selection);
@@ -496,7 +532,7 @@ export function useLocationScope(): LocationScope {
     // A second press after a failed fix is a RETRY. The key has not changed, so
     // without a reset the cached failure would answer it and nothing would run.
     if (alreadyRequested) {
-      void queryClient.resetQueries({ queryKey: ['locationScope', 'deviceFix', true] });
+      void queryClient.resetQueries({ queryKey: deviceFixQueryKey(true) });
     }
   }, [queryClient]);
 
@@ -522,5 +558,76 @@ export function useLocationScope(): LocationScope {
     useCurrentLocation,
     applyUpgrade,
     permissionPromptShown,
+  };
+}
+
+/** A query's state as the cache holds it. No entry yet reads as not answered. */
+function cachedReading<T>(queryClient: QueryClient, queryKey: QueryKey): QueryReading<T> {
+  const state = queryClient.getQueryState<T>(queryKey);
+  return {
+    data: state?.data,
+    isPending: state === undefined || state.status === 'pending',
+    isFetching: state?.fetchStatus === 'fetching',
+  };
+}
+
+/**
+ * Record the FIRST inferred scope of the session, where the answers land.
+ *
+ * "The first inference in force" is HISTORY, not something derivable from the
+ * current inputs, so it is written down (`commitAutoScope`) the moment the
+ * ladder first resolves to the device or the network. That moment is always one
+ * of the ladder's sources changing — the device fix or the network answer
+ * landing, the saved-area query settling, a choice in the store, a sign-in or
+ * sign-out — so this subscribes to those sources and runs the same
+ * {@link scopeOf} the hook renders from, reading the queries out of the cache.
+ * Nothing renders, so nothing commits from an effect.
+ *
+ * The QueryCache is subscribed to rather than a `QueryObserver` per query: an
+ * observer is a CONSUMER of its query, and would keep a device fix alive past
+ * the five-minute `gcTime` ADR 0002 §8.3 gives it. Every cache event is read,
+ * not only the three keys, because the check is cheap and a key list would be
+ * one more thing to keep in step with the ladder.
+ *
+ * The startup deadline is not read. It decides when a surface stops WAITING —
+ * moving a rung between `resolving` and `idle` or `unavailable` — never which
+ * answer is in force.
+ *
+ * `deviceRequested` is excluded: a scope the user ASKED for is not an inference
+ * the app needs to protect them from, and recording it would make the next press
+ * of the button a no-op.
+ *
+ * Wired once by the root layout, at module scope, for the app's QueryClient.
+ * Returns the unsubscribe.
+ */
+export function observeInferredScope(queryClient: QueryClient): () => void {
+  const commit = (): void => {
+    const store = useLocationScopeStore.getState();
+    // `commitAutoScope` would ignore a second call anyway; returning first keeps
+    // every cache event after the commit to two reads.
+    if (store.deviceRequested || store.autoScope) return;
+    const { source, selection } = scopeOf({
+      choices: store,
+      savedArea: primarySavedAreaOf(
+        // The session `usePrimarySavedArea` reads through `useOxy`, read here
+        // through the SDK's out-of-render surface for it.
+        useAuthStore.getState().isAuthenticated,
+        cachedReading<SavedSearch[]>(queryClient, SAVED_SEARCHES_KEY),
+      ),
+      fix: cachedReading(queryClient, deviceFixQueryKey(false)),
+      approximate: cachedReading(queryClient, APPROXIMATE_LOCATION_QUERY_KEY),
+      budgetElapsed: false,
+    });
+    if ((source === 'device' || source === 'ip') && selection) {
+      store.commitAutoScope({ source, selection });
+    }
+  };
+  const unsubscribes = [
+    queryClient.getQueryCache().subscribe(commit),
+    useLocationScopeStore.subscribe(commit),
+    useAuthStore.subscribe(commit),
+  ];
+  return () => {
+    for (const unsubscribe of unsubscribes) unsubscribe();
   };
 }

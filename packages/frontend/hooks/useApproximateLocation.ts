@@ -40,7 +40,7 @@ import type { ApproximatePositionState } from './locationScopeLadder';
  * the cache for a field that changes only labels, and keying on a screen would
  * reintroduce the fan-out.
  */
-const APPROXIMATE_LOCATION_QUERY_KEY = ['approximateLocation'] as const;
+export const APPROXIMATE_LOCATION_QUERY_KEY = ['approximateLocation'] as const;
 
 /**
  * How long the app waits for an answer before showing destinations.
@@ -54,12 +54,6 @@ const APPROXIMATE_LOCATION_QUERY_KEY = ['approximateLocation'] as const;
  * Exported so the test can assert against the same number the hook uses.
  */
 export const APPROXIMATE_BUDGET_MS = 1_500;
-
-export interface ApproximateLocationResult {
-  readonly state: ApproximatePositionState;
-  /** The raw answer, for a surface that wants to explain the provenance. */
-  readonly data: ApproximateLocation | undefined;
-}
 
 /**
  * Translate the query's state into the ladder's input.
@@ -96,20 +90,13 @@ export function approximateStateOf(input: {
   return { status: 'unavailable' };
 }
 
-export function useApproximateLocation(options: {
-  readonly enabled: boolean;
-  /**
-   * Whether the shared startup budget has elapsed.
-   *
-   * Owned by {@link useLocationScope} and passed IN rather than timed here, for
-   * two reasons. The budget covers the device rung too — "no encadenar primero
-   * los 10 segundos actuales de GPS y después una llamada IP" — so one clock
-   * has to govern both. And a timer living inside a query hook is the shape
-   * that keeps a jest worker alive after the suite ends.
-   */
-  readonly budgetElapsed: boolean;
-}): ApproximateLocationResult {
-  const query = useQuery({
+/**
+ * The network lookup itself. What its answer MEANS to the ladder — including
+ * the startup budget, which governs both rungs and so cannot be timed here — is
+ * {@link approximateStateOf}, applied by `useLocationScope`.
+ */
+export function useApproximateLocation(options: { readonly enabled: boolean }) {
+  return useQuery({
     queryKey: APPROXIMATE_LOCATION_QUERY_KEY,
     queryFn: fetchApproximateLocation,
     enabled: options.enabled,
@@ -120,14 +107,4 @@ export function useApproximateLocation(options: {
     // retry. Said explicitly so nobody adds one expecting it to help.
     retry: false,
   });
-
-  return {
-    state: approximateStateOf({
-      enabled: options.enabled,
-      isPending: query.isPending,
-      elapsedBudget: options.budgetElapsed,
-      data: query.data,
-    }),
-    data: query.data,
-  };
 }

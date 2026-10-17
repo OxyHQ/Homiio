@@ -42,15 +42,11 @@ import { PortalProvider, PortalOutlet } from '@oxy.so/bloom/portal';
 import { expoRouterScrollAdapter } from '@oxy.so/bloom/scroll/expo-router';
 import '../styles/global.css';
 import { OXY_BASE_URL, OXY_CLIENT_ID } from '@/config';
-import {
-  QueryClient,
-  QueryClientProvider,
-  onlineManager,
-  focusManager,
-} from '@tanstack/react-query';
+import { QueryClient, onlineManager, focusManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { logger } from '@/utils/logger';
 import { bindApiToOxy } from '@/utils/api';
+import { observeInferredScope } from '@/hooks/useLocationScope';
 import {
   isSupportedLanguage,
   setStoredLanguage,
@@ -102,6 +98,46 @@ focusManager.setEventListener((setFocused) => {
   });
   return () => subscription.remove();
 });
+
+/**
+ * The app's ONE QueryClient, handed to `OxyProvider`, which provides it.
+ *
+ * Given none, `OxyProvider` creates and provides a client of its own — and it
+ * did, nested inside a second client this layout used to create, so every query
+ * ran on the SDK's client while this file's cached nothing (Oxy ADR 0004: a
+ * supplied client becomes THE client, never nested under another). The defaults
+ * are the ones the app actually ran with under the SDK: offline-first, and a
+ * retry only for a failure another attempt can change — a 404 or a 401 answers
+ * the same the third time.
+ *
+ * Module scope rather than component state so code outside React can observe
+ * the cache: `observeInferredScope` commits the first inferred location scope
+ * where the inference queries land. Subscribing does no I/O and starts no
+ * timer, so importing this module stays inert for static rendering and tests.
+ */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      networkMode: 'offlineFirst',
+      retry: (failureCount, error) => failureCount < 2 && isRetriable(error),
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
+      refetchOnReconnect: true,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      networkMode: 'offlineFirst',
+    },
+  },
+});
+observeInferredScope(queryClient);
+
+/** A transport failure, a timeout, a rate limit or a server error. */
+function isRetriable(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status;
+  if (typeof status !== 'number') return true;
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
 
 /**
  * One-time app bootstrap, started at module load: set up notifications (native
@@ -253,22 +289,6 @@ export default function RootLayout() {
   const [fadeComplete, setFadeComplete] = useState(false);
   const startFade = initializationComplete;
 
-  const queryClient = useMemo(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            retry: 2,
-            staleTime: 1000 * 60 * 5, // 5 min — reduces duplicate fetches
-            gcTime: 1000 * 60 * 30, // 30 min — keeps data in cache longer
-            refetchOnReconnect: true,
-            refetchOnWindowFocus: false, // Disable to prevent unnecessary refetches
-          },
-        },
-      }),
-    [],
-  );
-
   // --- Splash Fade Handler (WEB only) ---
   // The custom `AppSplashScreen` fades out on web once init completes; its
   // `onFadeComplete` records that the fade finished. On native this callback
@@ -323,65 +343,64 @@ export default function RootLayout() {
                   />
                 ) : null
               ) : (
-                <QueryClientProvider client={queryClient}>
-                  <RentalModeProvider>
-                    <OxyProvider
-                      baseURL={OXY_BASE_URL}
-                      clientId={OXY_CLIENT_ID}
-                      language={{
-                        supportedLocales: SUPPORTED_LANGUAGE_CODES,
-                        fallbackLocale: 'en-US',
-                        onChange: (locale) => {
-                          if (!isSupportedLanguage(locale)) return;
-                          return setStoredLanguage(locale);
-                        },
-                        onError: (error, locale) => {
-                          logger.warn('Failed to follow the Oxy-resolved language', locale, error);
-                        },
-                      }}
-                    >
-                      {/*
-                    Renders nothing itself — it just pushes to the toast store
-                    that `OxyProvider`'s own `<ToastOutlet />` renders. Mounted
-                    here (inside `BloomProvider` for theme, inside `OxyProvider`
-                    for the toast host) so a lost connection surfaces as a
-                    toast instead of a per-screen banner.
-                  */}
-                      <ConnectionStatusToasts />
-                      <MediaResolverProvider>
-                        <ProfileProvider>
-                          <SavedPropertiesProvider>
-                            <NotificationProvider>
-                              <I18nextProvider i18n={i18n}>
-                                <BottomSheetProvider>
-                                  <MenuProvider>
-                                    <PortalProvider>
-                                      <ErrorBoundary>
-                                        <MapStateProvider>
-                                          <AskAgentProvider>
-                                            <AppFrame />
-                                          </AskAgentProvider>
-                                        </MapStateProvider>
-                                      </ErrorBoundary>
-                                      {/*
-                                  Root overlay outlet. `AppShell`'s navigation
-                                  drawer renders here through Bloom's Portal so
-                                  the panel and its backdrop cover the whole
-                                  viewport. Placed last so it sits above all app
-                                  chrome.
-                                */}
-                                      <PortalOutlet />
-                                    </PortalProvider>
-                                  </MenuProvider>
-                                </BottomSheetProvider>
-                              </I18nextProvider>
-                            </NotificationProvider>
-                          </SavedPropertiesProvider>
-                        </ProfileProvider>
-                      </MediaResolverProvider>
-                    </OxyProvider>
-                  </RentalModeProvider>
-                </QueryClientProvider>
+                <RentalModeProvider>
+                  <OxyProvider
+                    baseURL={OXY_BASE_URL}
+                    clientId={OXY_CLIENT_ID}
+                    queryClient={queryClient}
+                    language={{
+                      supportedLocales: SUPPORTED_LANGUAGE_CODES,
+                      fallbackLocale: 'en-US',
+                      onChange: (locale) => {
+                        if (!isSupportedLanguage(locale)) return;
+                        return setStoredLanguage(locale);
+                      },
+                      onError: (error, locale) => {
+                        logger.warn('Failed to follow the Oxy-resolved language', locale, error);
+                      },
+                    }}
+                  >
+                    {/*
+                  Renders nothing itself — it just pushes to the toast store
+                  that `OxyProvider`'s own `<ToastOutlet />` renders. Mounted
+                  here (inside `BloomProvider` for theme, inside `OxyProvider`
+                  for the toast host) so a lost connection surfaces as a
+                  toast instead of a per-screen banner.
+                */}
+                    <ConnectionStatusToasts />
+                    <MediaResolverProvider>
+                      <ProfileProvider>
+                        <SavedPropertiesProvider>
+                          <NotificationProvider>
+                            <I18nextProvider i18n={i18n}>
+                              <BottomSheetProvider>
+                                <MenuProvider>
+                                  <PortalProvider>
+                                    <ErrorBoundary>
+                                      <MapStateProvider>
+                                        <AskAgentProvider>
+                                          <AppFrame />
+                                        </AskAgentProvider>
+                                      </MapStateProvider>
+                                    </ErrorBoundary>
+                                    {/*
+                                Root overlay outlet. `AppShell`'s navigation
+                                drawer renders here through Bloom's Portal so
+                                the panel and its backdrop cover the whole
+                                viewport. Placed last so it sits above all app
+                                chrome.
+                              */}
+                                    <PortalOutlet />
+                                  </PortalProvider>
+                                </MenuProvider>
+                              </BottomSheetProvider>
+                            </I18nextProvider>
+                          </NotificationProvider>
+                        </SavedPropertiesProvider>
+                      </ProfileProvider>
+                    </MediaResolverProvider>
+                  </OxyProvider>
+                </RentalModeProvider>
               )}
             </BloomNavigationTheme>
           </BloomProvider>

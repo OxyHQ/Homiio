@@ -121,11 +121,11 @@ export type ApproximatePositionState =
 /**
  * An automatic scope already in force.
  *
- * Recorded by the hook the first time an inferred rung supplies a scope, and
- * read back here so a SECOND automatic answer cannot replace it. Without it the
- * ladder would happily move somebody from the city their network implied to the
- * city their GPS implied, three seconds after they started scrolling — the jump
- * #518 §3.3 forbids in those words.
+ * Recorded by `observeInferredScope` the first time an inferred rung supplies a
+ * scope, and read back here so a SECOND automatic answer cannot replace it.
+ * Without it the ladder would happily move somebody from the city their network
+ * implied to the city their GPS implied, three seconds after they started
+ * scrolling — the jump #518 §3.3 forbids in those words.
  *
  * It is outranked by every explicit rung above it, so it delays nothing the
  * user actually chose; and it is session-only, so a new launch re-resolves.
