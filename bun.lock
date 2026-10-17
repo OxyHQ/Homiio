@@ -36,7 +36,7 @@
         "@oxy.so/db": "^1.3.0",
         "@oxy.so/homiio-contracts": "workspace:*",
         "@oxy.so/mcp": "1.3.0",
-        "@oxy.so/utils": "^1.2.0",
+        "@oxy.so/utils": "^1.3.0",
         "@peable.to/sdk": "0.2.2",
         "axios": "^1.18.1",
         "bcryptjs": "^3.0.3",
@@ -113,6 +113,7 @@
         "@oxy.so/expo-splash": "^1.0.0",
         "@oxy.so/homiio-contracts": "workspace:*",
         "@oxy.so/services": "11.12.0",
+        "@oxy.so/utils": "^1.3.0",
         "@react-native-async-storage/async-storage": "^2.2.0",
         "@react-native-community/netinfo": "12.0.1",
         "@tanstack/query-async-storage-persister": "^5.104.1",
@@ -235,6 +236,9 @@
     "packages/shared-types": {
       "name": "@homiio/shared-types",
       "version": "1.0.0",
+      "dependencies": {
+        "@oxy.so/utils": "^1.3.0",
+      },
       "devDependencies": {
         "@types/node": "^26.6.5",
         "typescript": "^6.0.3",
@@ -875,7 +879,7 @@
 
     "@oxy.so/telemetry": ["@oxy.so/telemetry@1.2.0", "", {}, "sha512-ryydgkL5jDUVzpG0I2O1/QF+AHYITpaHdqABXdno23J7kYeijUO+QBIXEEQxCBy/9S7AslqDvHwhWpFsGLLrzA=="],
 
-    "@oxy.so/utils": ["@oxy.so/utils@1.2.0", "", {}, "sha512-FerneDb/AkTGsqp9VNKkz7oVKrWJYCB/juxcL6S452RLdC2Di7zaSjXYSWF6oyVQAG953MIA9mxYSjKfABwzeQ=="],
+    "@oxy.so/utils": ["@oxy.so/utils@1.3.0", "", {}, "sha512-HY+LrU6AcM+BkXGTlcYUoVdzwrQvbjf9HpFYKpoiXB9D51B+NXJBvV/Nk29zCTKkt3SL67jb40eEFAbTjrgMEQ=="],
 
     "@paralleldrive/cuid2": ["@paralleldrive/cuid2@2.3.1", "", { "dependencies": { "@noble/hashes": "^1.1.5" } }, "sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw=="],
 

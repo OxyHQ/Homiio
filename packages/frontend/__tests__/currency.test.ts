@@ -1,20 +1,10 @@
 /**
- * Pure-logic unit tests for the currency CATALOGUE and the exchange-rate maths
- * behind the settings picker. No React Native or native-module dependencies, so
- * they run fast and deterministically under jest-expo.
- *
- * The `formatCurrency` / `formatCurrencyWithCode` blocks that used to sit here
- * are gone with the functions: they asserted `€1,200` for `es-ES` readers too,
- * which is precisely the bug issue #357 fixed. Money formatting is covered by
- * `__tests__/format/money.test.ts` against `formatMoney`.
+ * Pure-logic unit tests for the currency CATALOGUE and the exchange-rate line
+ * behind the settings picker. Conversion and money formatting themselves are
+ * `@oxy.so/utils/currency`'s, covered there; `__tests__/format/money.test.ts`
+ * pins Homiio's precision on top of them.
  */
-import {
-  convertCurrency,
-  getCurrencyByCode,
-  isValidCurrencyCode,
-  parseCurrencyAmount,
-  searchCurrencies,
-} from '@/utils/currency';
+import { CURRENCIES, getCurrencyByCode, getExchangeRateDisplay } from '@/utils/currency';
 import { FALLBACK_RATES } from '@/utils/exchangeRates';
 
 describe('currency utils', () => {
@@ -25,67 +15,35 @@ describe('currency utils', () => {
     });
   });
 
-  describe('convertCurrency', () => {
-    it('returns the amount unchanged when source and target match', () => {
-      expect(convertCurrency(123.45, 'EUR', 'EUR', FALLBACK_RATES)).toBe(123.45);
-    });
-
-    it('converts via the USD base using both rates', () => {
-      // 100 USD -> EUR at 0.85 = 85
-      expect(convertCurrency(100, 'USD', 'EUR', FALLBACK_RATES)).toBeCloseTo(85, 5);
-      // round-trip back to USD should be lossless for these rates
-      const eur = convertCurrency(100, 'USD', 'EUR', FALLBACK_RATES);
-      expect(convertCurrency(eur, 'EUR', 'USD', FALLBACK_RATES)).toBeCloseTo(100, 5);
-    });
-
-    it('converts between two non-USD currencies', () => {
-      // 85 EUR -> GBP: 85 / 0.85 * 0.73 = 73
-      expect(convertCurrency(85, 'EUR', 'GBP', FALLBACK_RATES)).toBeCloseTo(73, 5);
-    });
-  });
-
-  describe('convertCurrency with an unknown code', () => {
-    it('treats an unknown currency as USD-par', () => {
-      expect(convertCurrency(10, 'ZZZ', 'USD', FALLBACK_RATES)).toBe(10);
-    });
-  });
-
-  describe('parseCurrencyAmount', () => {
-    it('strips symbols and thousands separators', () => {
-      expect(parseCurrencyAmount('€1,234.56')).toBeCloseTo(1234.56, 5);
-    });
-
-    it('returns 0 for non-numeric input', () => {
-      expect(parseCurrencyAmount('not a price')).toBe(0);
-    });
-  });
-
-  describe('isValidCurrencyCode', () => {
-    it('accepts a known code and rejects an unknown one', () => {
-      expect(isValidCurrencyCode('USD')).toBe(true);
-      expect(isValidCurrencyCode('ZZZ')).toBe(false);
+  describe('CURRENCIES', () => {
+    it('lists every code once', () => {
+      const codes = CURRENCIES.map((currency) => currency.code);
+      expect(new Set(codes).size).toBe(codes.length);
     });
   });
 
   describe('getCurrencyByCode', () => {
-    it('returns the matching currency descriptor', () => {
+    it('finds a catalogued currency', () => {
       expect(getCurrencyByCode('EUR')).toMatchObject({ code: 'EUR', symbol: '€' });
     });
 
-    it('returns undefined for an unknown code', () => {
+    it('answers undefined for an unknown code', () => {
       expect(getCurrencyByCode('ZZZ')).toBeUndefined();
     });
   });
 
-  describe('searchCurrencies', () => {
-    it('matches on name case-insensitively', () => {
-      const results = searchCurrencies('euro');
-      expect(results.some((c) => c.code === 'EUR')).toBe(true);
+  describe('getExchangeRateDisplay', () => {
+    it('says 1:1 for the same currency', () => {
+      expect(getExchangeRateDisplay('EUR', 'EUR', 'en-US', FALLBACK_RATES)).toBe('1:1');
     });
 
-    it('matches on code', () => {
-      const results = searchCurrencies('gbp');
-      expect(results.map((c) => c.code)).toContain('GBP');
+    it('converts through the USD-based table and formats for the reader', () => {
+      // 1 USD = 0.85 EUR in the fallback table.
+      expect(getExchangeRateDisplay('USD', 'EUR', 'en-US', FALLBACK_RATES)).toBe('1 USD = €0.85');
+    });
+
+    it('shows nothing for a code the table cannot convert', () => {
+      expect(getExchangeRateDisplay('ZZZ', 'USD', 'en-US', FALLBACK_RATES)).toBe('');
     });
   });
 });

@@ -54,9 +54,7 @@ export const useCurrency = () => {
   };
 
   const getCurrentCurrency = (): Currency => {
-    return (
-      getCurrencyByCode(currentCurrency) || { code: currentCurrency, symbol: '$', name: 'Unknown' }
-    );
+    return getCurrencyByCode(currentCurrency) ?? { code: currentCurrency, symbol: currentCurrency };
   };
 
   return {

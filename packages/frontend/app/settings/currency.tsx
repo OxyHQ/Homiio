@@ -17,6 +17,8 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
 import { useCurrency } from '@/hooks/useCurrency';
+import { currencyName } from '@oxy.so/utils/currency';
+
 import { CURRENCIES, getExchangeRateDisplay } from '@/utils/currency';
 import { useExchangeRates } from '@/utils/exchangeRates';
 import { useFormatting } from '@/utils/format';
@@ -69,7 +71,7 @@ export default function CurrencySettingsScreen() {
               <SettingsListItem
                 key={currency.code}
                 icon={<Text style={styles.flag}>{currency.flag}</Text>}
-                title={currency.name}
+                title={currency.name ?? currencyName(currency.code, locale)}
                 description={description}
                 value={currency.symbol}
                 rightElement={
