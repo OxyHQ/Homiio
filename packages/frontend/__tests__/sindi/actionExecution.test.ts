@@ -10,9 +10,10 @@
  * sheet itself only gets out of the way once the turn stops streaming, or the
  * person would lose the answer they asked for.
  *
- * The turn's end is the SDK's own conversation store (`streamingConversationId`).
- * The tests drive that real store rather than calling a settle function, so they
- * fail if the executor stops listening to it.
+ * The SDK tells the runtime that sent a turn when it ends (`runtime.onTurnEnd`).
+ * The tests end a turn the way the SDK does — the conversation store goes idle
+ * and the runtime is called — and pin that only the call settles: the store
+ * going idle is any conversation's turn ending, or one unmounting.
  */
 
 import { act, renderHook } from '@testing-library/react-native';
@@ -50,13 +51,19 @@ function executor() {
     });
     return outcome;
   };
-  return { ...hook, run };
+  /** The turn stopped streaming — finished, stopped or failed — as the SDK reports it. */
+  const settled = () =>
+    act(() => {
+      idle();
+      hook.result.current.runtime.onTurnEnd?.();
+    });
+  return { ...hook, run, settled };
 }
 
 /** A turn is streaming in conversation `c1`, as the SDK's thread reports it. */
 const streaming = () => act(() => useConversationStore.getState().setStreamingConversationId('c1'));
-/** The stream stopped — finished, or the person pressed Stop. */
-const settled = () => act(() => useConversationStore.getState().setStreamingConversationId(null));
+/** Nothing is streaming any more. On its own, that is not this runtime's turn ending. */
+const idle = () => useConversationStore.getState().setStreamingConversationId(null);
 
 beforeEach(() => {
   mockPush.mockClear();
@@ -101,7 +108,7 @@ describe('the sheet steps aside once the answer is written', () => {
   });
 
   it('closes when the turn settles — after Stop as much as after the last word — exactly once', async () => {
-    const { run } = executor();
+    const { run, settled } = executor();
     streaming();
     await run(toExplore());
     settled();
@@ -128,7 +135,7 @@ describe('the refusals', () => {
 
   it('answers stale when the person changed the search after sending the turn', async () => {
     // #519 §8.8: their change wins, and the model is told so.
-    const { result, run } = executor();
+    const { result, run, settled } = executor();
     act(() => result.current.runtime.onTurnStart?.());
     act(() =>
       useSearchQueryStore.getState().replaceSearch({ ...DEFAULT_SEARCH_QUERY, priceMax: 700 }),
@@ -163,17 +170,29 @@ describe('the refusals', () => {
 
 describe('what settling does not do', () => {
   it('closes nothing for a turn that produced no action', () => {
-    executor();
+    const { settled } = executor();
     streaming();
     settled();
     expect(mockCloseSheet).not.toHaveBeenCalled();
   });
 
-  it('discards a deferred close when the executor leaves', async () => {
-    const { run, unmount } = executor();
+  it('waits for its own turn, not for the store going idle', async () => {
+    // Another conversation's turn ending, or one unmounting mid-turn (the SDK
+    // never calls it back), leaves the store idle without this call.
+    const { run } = executor();
     streaming();
     await run(toExplore());
-    unmount();
+    act(idle);
+    expect(mockCloseSheet).not.toHaveBeenCalled();
+  });
+
+  it('drops what an unannounced turn held when the next one starts', async () => {
+    const { result, run, settled } = executor();
+    streaming();
+    await run(toExplore());
+    act(idle);
+    act(() => result.current.runtime.onTurnStart?.());
+    streaming();
     settled();
     expect(mockCloseSheet).not.toHaveBeenCalled();
   });

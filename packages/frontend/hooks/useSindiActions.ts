@@ -38,10 +38,11 @@
  * The call arrives MID-STREAM: the model asks for the effect and then keeps
  * writing. Closing the sheet on arrival would take away an answer still being
  * written. So the page changes at once, and the sheet closes when the turn
- * stops streaming, which the SDK's conversation store announces
- * (`streamingConversationId` leaving the conversation that was streaming). It
- * also closes after **Stop**: stopping cancels the answer, and the answer is
- * what the close was waiting for.
+ * stops streaming, which the SDK tells the runtime that sent it
+ * (`runtime.onTurnEnd`, once per turn). It also closes after **Stop** or a
+ * failure: either ends the answer, and the answer is what the close was
+ * waiting for. A conversation that unmounts mid-turn is never called back, so
+ * what its turn held is dropped when the next turn starts.
  *
  * ## A search is ONE navigation
  *
@@ -50,7 +51,7 @@
  * patch racing the URL's hydration (#519 §8.6).
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import {
   type AliaHostAction,
@@ -86,13 +87,8 @@ export const DESTINATION_ROUTES = {
 export interface UseSindiActions {
   /** What the surface declares to Alia: the tools, and the executor behind them. */
   readonly hostTools: AliaHostTools;
-  /** The runtime callbacks the executor needs: the moment a turn is sent. */
+  /** The runtime callbacks the executor needs: the moment a turn is sent, and the moment it ends. */
   readonly runtime: AliaRuntimeHost;
-  /**
-   * The turn has stopped streaming: run what was held back until it had.
-   * Called when the SDK's stream ends; exported for the tests that pin WHEN.
-   */
-  readonly settleTurn: () => void;
 }
 
 /**
@@ -108,42 +104,6 @@ export function useSindiActions(closeSheet: () => void): UseSindiActions {
   /** The steps that take the sheet off the screen, waiting for the turn to end. */
   const deferred = useRef<(() => void)[]>([]);
 
-  const settleTurn = useCallback(() => {
-    if (deferred.current.length === 0) return;
-    // Taken and cleared BEFORE running, so a step cannot be re-run by the next settle.
-    const pending = deferred.current;
-    deferred.current = [];
-    for (const run of pending) run();
-  }, []);
-
-  // A turn ends when the SDK stops streaming the conversation that was.
-  //
-  // These two stay effects, deliberately. The end of a turn is an EVENT in the
-  // SDK's store, not a value to render, and the steps waiting for it belong to
-  // THIS mount: the panel remounts per conversation (`key={open.serial}`) and
-  // the route can be left mid-answer, and a step from the old mount must not
-  // run then. Subscribing from `execute` would cover the first half but not the
-  // second — the hook renders no element of its own whose ref could carry the
-  // mount's lifetime (the SDK draws the whole chat). What would retire both is
-  // a host callback in `@alia.onl/sdk` — `AliaRuntimeHost.onTurnEnd`, called by
-  // the mounted thread, which dies with the surface.
-  useEffect(
-    () =>
-      useConversationStore.subscribe((state, previous) => {
-        const was = previous.streamingConversationId;
-        if (was !== null && state.streamingConversationId !== was) settleTurn();
-      }),
-    [settleTurn],
-  );
-
-  // The surface left before its turn ended: what it was going to do goes with it.
-  useEffect(
-    () => () => {
-      deferred.current = [];
-    },
-    [],
-  );
-
   const execute = useCallback(
     async (call: AliaHostAction): Promise<AliaHostOutcome> => {
       const action = actionOfHostCall(call);
@@ -157,7 +117,7 @@ export function useSindiActions(closeSheet: () => void): UseSindiActions {
 
       const outcome = applyAction(action, router);
       if (outcome === 'applied') {
-        // Nothing streaming means nothing will settle: there is no answer left to cut off.
+        // Nothing streaming means no turn end will come: there is no answer left to cut off.
         const streaming = useConversationStore.getState().streamingConversationId !== null;
         if (streaming) deferred.current.push(closeSheet);
         else closeSheet();
@@ -169,15 +129,25 @@ export function useSindiActions(closeSheet: () => void): UseSindiActions {
 
   const onTurnStart = useCallback(() => {
     turnRevision.current = revisionOf(useSearchQueryStore.getState().query);
+    // What a turn held is that turn's. One whose conversation unmounted before it
+    // ended is never announced, and its close must not land on this one.
+    deferred.current = [];
+  }, []);
+
+  /** The turn has stopped streaming: run what was held back until it had. */
+  const onTurnEnd = useCallback(() => {
+    // Taken and cleared BEFORE running, so a step cannot be re-run by the next turn's end.
+    const pending = deferred.current;
+    deferred.current = [];
+    for (const run of pending) run();
   }, []);
 
   return useMemo(
     () => ({
       hostTools: { definitions: SINDI_HOST_TOOL_DEFINITIONS, execute },
-      runtime: { onTurnStart },
-      settleTurn,
+      runtime: { onTurnStart, onTurnEnd },
     }),
-    [execute, onTurnStart, settleTurn],
+    [execute, onTurnStart, onTurnEnd],
   );
 }
 
