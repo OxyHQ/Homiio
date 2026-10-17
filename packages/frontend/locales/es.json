@@ -430,19 +430,6 @@
       "other": "Other"
     },
     "widgets": {
-      "quickFilters": {
-        "title": "Filtros Rápidos",
-        "furnished": "Amueblado",
-        "pets": "Mascotas permitidas",
-        "coliving": "Convivencia",
-        "ecoFriendly": "Ecológico",
-        "verified": "Verificado",
-        "budget": "Menos de 1000 €",
-        "apply": "Aplicar",
-        "searchWithCount": "Buscar con {{count}} filtros",
-        "advancedFilters": "Filtros Avanzados",
-        "fairPrice": "Precio justo"
-      },
       "alerts": {
         "title": "Alertas de propiedades",
         "subtitle": "Recibe avisos cuando nuevas propiedades coincidan con tus criterios",

@@ -6,7 +6,6 @@ import { SavedSearchesWidget } from './SavedSearchesWidget';
 import { PropertyAlertWidget } from './PropertyAlertWidget';
 import { NeighborhoodRatingWidget } from './NeighborhoodRatingWidget';
 import { RecentlyViewedWidget } from './RecentlyViewedWidget';
-import { QuickFiltersWidget } from './QuickFiltersWidget';
 import { PropertyPreviewWidget } from './PropertyPreviewWidget';
 import { PropertyBookingWidget } from './PropertyBookingWidget';
 import { MissionWidget } from './MissionWidget';
@@ -72,16 +71,6 @@ export const WidgetManager = React.memo(function WidgetManager({
         <NeighbourSupportWidget key="neighbour-support" />,
       ],
       profile: [<MissionWidget key="mission" />],
-      explore: [
-        <QuickFiltersWidget key="quick-filters" />,
-        <SavedSearchesWidget key="saved-searches" />,
-        <PropertyAlertWidget key="property-alert" />,
-      ],
-      'explore-results': [
-        <QuickFiltersWidget key="quick-filters" />,
-        <SavedSearchesWidget key="saved-searches" />,
-        <PropertyAlertWidget key="property-alert" />,
-      ],
       'create-property': [<PropertyPreviewWidget key="property-preview" />],
     };
     return config;

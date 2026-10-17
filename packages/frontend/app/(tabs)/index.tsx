@@ -162,12 +162,7 @@ export default function HomePage() {
 
   const propertyCards = (properties: readonly Property[]) =>
     properties.map((property) => (
-      <PropertyCard
-        key={property.id}
-        property={property}
-        enableImageCarousel={false}
-        onPress={() => openProperty(property)}
-      />
+      <PropertyCard key={property.id} property={property} onPress={() => openProperty(property)} />
     ));
 
   return (

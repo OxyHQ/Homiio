@@ -80,7 +80,10 @@ stays in document flow); on native the shell adds no scroll view and the route's
 `ScreenScrollView` is the scroller. A page that renders its content outside a
 `ScreenScrollView` does not scroll on native. Horizontal rows and scrollers inside
 sheets are fine. `/explore` is the exception: the shell runs `scroll="fixed"`
-there, the map is pinned and only the results list scrolls.
+there, and the results and the map are Bloom's `AppShellSplitPanes` — side by
+side with a draggable divider once the panes' own box fits both, one at a time
+below that, switched by the Map / List toggle each pane shows while
+`useAppShellPaneAlone()`. Explore has no right rail.
 
 ### Breakpoints are NativeWind classes
 
@@ -288,8 +291,8 @@ A paginated page passes its guarded loader
 `ScreenScrollView onEndReached`. Bloom fires it from the scroll view on native and
 from the window in a web `Screen documentScroll`, and re-arms when the content
 grows. Never hand-roll scroll distance math or an end-of-list sentinel in a page.
-`/explore`'s results list, which scrolls beside the pinned map, is the one surface
-with its own `ScrollView`; it pages through `hooks/useInfiniteScroll`, whose
+`/explore`'s results list, which scrolls in its own split pane beside the map,
+is the one surface with its own `ScrollView`; it pages through `hooks/useInfiniteScroll`, whose
 scroll, layout and content-size handlers work the same on web and native.
 
 - Canonical data hooks, to reuse rather than writing a new pagination engine:

@@ -24,7 +24,9 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'r
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { AppShellSplitPanes, useAppShellPaneAlone } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
+import { useBottomEdgeInset } from '@oxy.so/bloom/layout';
 import {
   RiBookmarkFill,
   RiBookmarkLine,
@@ -87,6 +89,17 @@ const SKELETON_COUNT = 6;
  * the first-load count since it's just a hint that more rows are arriving.
  */
 const NEXT_PAGE_SKELETON_COUNT = 2;
+
+/**
+ * The results / map split. Two panes from 900 of their own width: the list
+ * rests at 900, never narrower than 520 (two cards of the results grid), and
+ * gives way so the map keeps 380; a drag reaches 1200.
+ */
+const SPLIT_FROM = 900;
+const LIST_WIDTH = 900;
+const LIST_MIN_WIDTH = 520;
+const LIST_MAX_WIDTH = 1200;
+const MAP_MIN_WIDTH = 380;
 
 /**
  * The centre of a declared box, as the map's `[lng, lat]` pair.
@@ -502,6 +515,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const bottomEdge = useBottomEdgeInset();
   const listEnd = useInfiniteScroll({
     onEndReached: handleEndReached,
     enabled: hasNextPage,
@@ -649,11 +663,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     </View>
   );
 
-  // The explore list lives in a half-window column beside the map, so it stays
-  // container-responsive with NO `maxColumns` cap: `PropertyResultsGrid` falls
-  // back to the global `GRID_MAX_COLUMNS` and the narrow column naturally lands
-  // on fewer columns than a full-width grid (≥2 via `GRID_MIN_COLUMNS`, more
-  // only when an ultra-wide window genuinely gives the list column the room).
+  // The results grid counts its OWN width (Bloom's `ListingCardGrid`), so the
+  // list pane beside the map gets the columns its room fits — two from 500,
+  // which `LIST_MIN_WIDTH` always leaves it.
   const listBody = () => {
     if (isLoading && properties.length === 0) {
       return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
@@ -709,7 +721,8 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       // browser-level check, or a person with the inspector open, can see that.
       nativeID={`search-list-${queryId}`}
       style={styles.listScroll}
-      contentContainerStyle={styles.listScrollContent}
+      // `scroll="fixed"` leaves the bottom bar's clearance to this list.
+      contentContainerStyle={{ paddingBottom: spacing['4xl'] + bottomEdge }}
       onScroll={listEnd.onScroll}
       onLayout={listEnd.onLayout}
       onContentSizeChange={listEnd.onContentSizeChange}
@@ -818,40 +831,62 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     </View>
   );
 
-  // Wide: list + sticky map side-by-side. Narrow: one column at a time, the list
-  // or the full-screen map, switched by the floating Map/List toggle.
+  // Bloom's split panes: results and map side by side, with a draggable divider,
+  // once the panes' own box fits both (`SPLIT_FROM`); below that ONE pane at a
+  // time, switched by the floating Map / List toggle each pane shows while it is
+  // alone. The panes measure themselves, so a sidebar beside them counts.
+  const toList = t('search.fab.list', 'List') || 'List';
+  const toMap = t('search.fab.map', 'Map') || 'Map';
   return (
     <View style={styles.container}>
       {topBar}
-      <View style={styles.splitRow}>
-        <View
-          className={showMobileMap ? 'hidden sm:flex' : undefined}
-          style={styles.splitListColumn}
-        >
-          {listScroll}
-        </View>
-        <View
-          className={showMobileMap ? 'border-border' : 'hidden border-border sm:flex'}
-          style={styles.splitMapColumn}
-        >
-          {mapPanel}
-        </View>
-      </View>
-      {/* Zero-height bottom strip: the FAB anchors itself above it. */}
-      <View className="absolute inset-x-0 bottom-0 sm:hidden">
-        <MapFab
-          onPress={toggleResultsView}
-          label={
-            showMobileMap
-              ? t('search.fab.list', 'List') || 'List'
-              : t('search.fab.map', 'Map') || 'Map'
+      <View style={styles.panes}>
+        <AppShellSplitPanes
+          pane={showMobileMap ? 'detail' : 'list'}
+          splitFrom={SPLIT_FROM}
+          listWidth={LIST_WIDTH}
+          listMinWidth={LIST_MIN_WIDTH}
+          listMaxWidth={LIST_MAX_WIDTH}
+          detailMinWidth={MAP_MIN_WIDTH}
+          paneScroll={false}
+          list={
+            <>
+              {listScroll}
+              <PaneToggle label={toMap} icon="map" onPress={toggleResultsView} />
+            </>
           }
-          icon={showMobileMap ? 'list' : 'map'}
+          detail={
+            <>
+              {mapPanel}
+              <PaneToggle label={toList} icon="list" onPress={toggleResultsView} />
+            </>
+          }
         />
       </View>
     </View>
   );
 };
+
+/** The Map / List toggle, shown only while its pane is drawn alone. */
+function PaneToggle({
+  label,
+  icon,
+  onPress,
+}: {
+  label: string;
+  icon: 'map' | 'list';
+  onPress: () => void;
+}) {
+  const alone = useAppShellPaneAlone();
+  const bottomEdge = useBottomEdgeInset();
+  if (!alone) return null;
+  return (
+    // Zero-height strip on the bottom bar's top edge: the FAB anchors above it.
+    <View className="absolute inset-x-0" style={{ bottom: bottomEdge }}>
+      <MapFab onPress={onPress} label={label} icon={icon} />
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   // The explore surface is mounted inside a fixed-viewport shell (see
@@ -907,61 +942,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  // The split row fills the height left under the sticky `topBar`. On web a flex
-  // child defaults to `min-height:auto`, which would let the row grow to its
-  // content instead of clamping to the shell — so we pin `minHeight:0` (web-only
-  // CSS value) to make the inner list column the scroll boundary.
-  splitRow: Platform.select<ViewStyle>({
-    web: {
-      flex: 1,
-      minHeight: 0,
-      flexDirection: 'row',
-    } as unknown as ViewStyle,
-    default: {
-      flex: 1,
-      flexDirection: 'row',
-    },
-  }) as ViewStyle,
-  // The list column owns its own vertical scroll (`listScroll` → `overflow:auto`).
-  // For that inner scroller to get a bounded height it must NOT grow with its
-  // content, so on web the column hides overflow and allows itself to shrink
-  // (`minHeight:0`). `splitMapColumn` next to it stays pinned full-height.
-  splitListColumn: Platform.select<ViewStyle>({
-    web: {
-      flex: 1,
-      minWidth: 0,
-      minHeight: 0,
-      overflow: 'hidden',
-    } as unknown as ViewStyle,
-    default: {
-      flex: 1,
-      minWidth: 0,
-    },
-  }) as ViewStyle,
-  // Pinned, full-height map column. The map fills it absolutely and never
-  // scrolls — scrolling the list (left) leaves this column fixed. Slightly wider
-  // than the list on very wide screens for an edge-to-edge Airbnb-2026 map.
-  splitMapColumn: Platform.select<ViewStyle>({
-    web: {
-      flex: 1.15,
-      minWidth: 0,
-      height: '100%',
-      overflow: 'hidden',
-      borderLeftWidth: hairline.width,
-    } as unknown as ViewStyle,
-    default: {
-      flex: 1,
-      minWidth: 0,
-      borderLeftWidth: hairline.width,
-    },
-  }) as ViewStyle,
+  // The split panes fill what the top bar leaves; `minHeight: 0` keeps them
+  // bounded so each pane, not the page, owns its scroll.
+  panes: {
+    flex: 1,
+    minHeight: 0,
+  },
   listScroll: Platform.select<ViewStyle>({
     web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
     default: { flex: 1 },
   }) as ViewStyle,
-  listScrollContent: {
-    paddingBottom: spacing['4xl'],
-  },
   // Airbnb-2026 results header: the gutter matches the grid below it and the
   // rest of the property-grid screens (`spacing.lg`), with comfortable top
   // breathing room and a tighter gap down to the first card.
