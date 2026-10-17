@@ -30,7 +30,7 @@ export default function () {
   // per (owner, listing), so which one a client uses cannot matter.
   //
   // The current app posts to neither: the server records the view itself when
-  // the detail screen reads `GET /api/properties/:propertyId/open`. Both stay
+  // the detail screen sends `POST /api/properties/:propertyId/open`. Both stay
   // mounted for installed builds, which still post here and cannot be recalled.
   router.post(
     '/me/recent-properties/:propertyId',

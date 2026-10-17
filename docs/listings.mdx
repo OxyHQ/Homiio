@@ -413,9 +413,10 @@ never creates a second commission.
   built here.
 - **Recently viewed** is account-only and lives in `recently_viewed`. The
   server writes it when the detail screen opens a listing
-  (`GET /api/properties/:propertyId/open`); the plain detail read that cards,
-  prefetches and other screens use records nothing, because hovering a card is
-  not opening the listing. The app reads the history from
+  (`POST /api/properties/:propertyId/open`, once per visit and never on a
+  refresh — its cache entry is kept apart from the listing's data, see
+  `useRecordPropertyOpen`). The detail read records nothing, because hovering
+  a card or refreshing a screen is not opening the listing. The app reads the history from
   `GET /api/profiles/me/recent-properties` and never writes it; signed out
   there is none. `POST /api/profiles/me/recent-properties/:propertyId` (and its
   older `/api/properties/:propertyId/track-view` spelling) stays mounted only

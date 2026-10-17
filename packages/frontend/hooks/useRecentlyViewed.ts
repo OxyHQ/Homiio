@@ -3,7 +3,7 @@
  * server's history, and nothing else.
  *
  * Account-only. The server records a view when the detail screen opens a
- * listing (`useOpenedProperty`), so nothing here records anything, and a
+ * listing (`useRecordPropertyOpen`), so nothing here records anything, and a
  * signed-out viewer has no history: every surface reading this renders nothing.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

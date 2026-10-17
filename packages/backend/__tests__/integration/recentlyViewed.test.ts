@@ -48,7 +48,7 @@ function buildApp(oxyUserId?: string): Express {
     recentlyViewedController.clearRecentProperties(req, res, next),
   );
   app.get('/properties/:propertyId', getPropertyById);
-  app.get('/properties/:propertyId/open', openPropertyById);
+  app.post('/properties/:propertyId/open', openPropertyById);
   app.use(errorHandler);
   return app;
 }
@@ -149,38 +149,52 @@ describe('trackPropertyView', () => {
   });
 });
 
-describe('reading a listing', () => {
-  it('records the view when the person OPENS it — their history and the counter', async () => {
-    const res = await request(buildApp('oxy-a')).get(`/properties/${listingA}/open`);
+describe('opening a listing', () => {
+  it("records the view — the opener's history and the counter", async () => {
+    const res = await request(buildApp('oxy-a')).post(`/properties/${listingA}/open`);
     expect(res.status).toBe(200);
-    expect(res.body.data.id).toBe(listingA);
 
-    // Awaited before the response, so a client re-reading the history once the
-    // listing has arrived finds this view.
+    // Awaited before the response, so a client re-reading the history once
+    // this answers finds the view.
     const views = await viewsOf('oxy-a');
     expect(views.map((view) => view.propertyId)).toEqual([listingA]);
     expect(await viewCountOf(listingA)).toBe(1);
   });
 
   it('counts a signed-out open, and writes no history', async () => {
-    expect((await request(buildApp()).get(`/properties/${listingA}/open`)).status).toBe(200);
+    expect((await request(buildApp()).post(`/properties/${listingA}/open`)).status).toBe(200);
 
     expect(await getDb().select().from(recentlyViewed)).toHaveLength(0);
     expect(await viewCountOf(listingA)).toBe(1);
   });
 
-  it('records nothing on the plain read — a card prefetching a listing is not opening it', async () => {
+  it('answers 404 for a listing that does not exist, and records nothing', async () => {
+    expect((await request(buildApp('oxy-a')).post('/properties/missing/open')).status).toBe(404);
+    expect(await viewsOf('oxy-a')).toHaveLength(0);
+  });
+
+  it('answers 404 for a listing its owner deleted, and records nothing', async () => {
+    await getDb()
+      .update(propertiesTable)
+      .set({ deletedAt: new Date() })
+      .where(eq(propertiesTable.id, listingA));
+
+    expect((await request(buildApp('oxy-a')).post(`/properties/${listingA}/open`)).status).toBe(
+      404,
+    );
+    expect(await viewsOf('oxy-a')).toHaveLength(0);
+    expect(await viewCountOf(listingA)).toBe(0);
+  });
+});
+
+describe('reading a listing', () => {
+  it('records nothing — a card prefetching or a screen refreshing a listing is not opening it', async () => {
     const res = await request(buildApp('oxy-a')).get(`/properties/${listingA}`);
     expect(res.status).toBe(200);
     expect(res.body.data.id).toBe(listingA);
 
     expect(await viewsOf('oxy-a')).toHaveLength(0);
     expect(await viewCountOf(listingA)).toBe(0);
-  });
-
-  it('answers 404 for a listing that does not exist, and records nothing', async () => {
-    expect((await request(buildApp('oxy-a')).get('/properties/missing/open')).status).toBe(404);
-    expect(await viewsOf('oxy-a')).toHaveLength(0);
   });
 });
 

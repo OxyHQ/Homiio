@@ -2,7 +2,7 @@
 export {
   useAreaInsights,
   useNearbyServices,
-  useOpenedProperty,
   useProperty,
   usePropertyStats,
+  useRecordPropertyOpen,
 } from './usePropertyQueries';

@@ -53,7 +53,7 @@ import {
 } from '@oxy.so/bloom/zoomable-media-gallery';
 
 import { ErrorState } from '@/components/ui/ErrorState';
-import { useAreaInsights, useNearbyServices, useOpenedProperty } from '@/hooks';
+import { useAreaInsights, useNearbyServices, useProperty, useRecordPropertyOpen } from '@/hooks';
 import { useAddressReviews } from '@/hooks/useAddressReviews';
 import { useStayBooking } from '@/hooks/useStayBooking';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
@@ -132,8 +132,9 @@ export default function PropertyDetailPage() {
   const { mode: rentalMode, browseMode } = useRentalMode();
   const propertyIdParam = typeof id === 'string' ? id : '';
 
-  // The read that records this view on the server; see `useOpenedProperty`.
-  const { property: apiProperty, loading: isLoading, error } = useOpenedProperty(propertyIdParam);
+  const { property: apiProperty, loading: isLoading, error } = useProperty(propertyIdParam);
+  // Opening this screen is the view; a refresh of the listing above is not.
+  useRecordPropertyOpen(propertyIdParam);
 
   // Area price-insights drive the "Prices in this area" + "Similar homes"
   // block. We read it here (the child sections share the same React Query

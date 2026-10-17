@@ -110,23 +110,10 @@ class PropertyService {
     };
   }
 
-  /** One listing's details. Records nothing — cards and prefetches read this. */
+  /** One listing's details. Records nothing — cards, prefetches and refreshes read this. */
   async getPropertyById(propertyId: string): Promise<Property | null> {
-    return this.readListing(`${this.baseUrl}/${propertyId}`);
-  }
-
-  /**
-   * One listing, as the person OPENING it: the server records the view (and,
-   * signed in, adds it to their recently-viewed history). The detail screen's
-   * read, and only that.
-   */
-  async openProperty(propertyId: string): Promise<Property | null> {
-    return this.readListing(`${this.baseUrl}/${propertyId}/open`);
-  }
-
-  private async readListing(endpoint: string): Promise<Property | null> {
     try {
-      const response = await api.get(endpoint);
+      const response = await api.get(`${this.baseUrl}/${propertyId}`);
       return response.data.data;
     } catch (error) {
       // A 404 is an answer — this listing does not exist. Anything else is a
@@ -134,6 +121,15 @@ class PropertyService {
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;
     }
+  }
+
+  /**
+   * Tell the server the person OPENED this listing: it counts the view and,
+   * signed in, adds it to their recently-viewed history. Sent once per visit to
+   * the detail screen (`useRecordPropertyOpen`), never on a refresh.
+   */
+  async recordOpen(propertyId: string): Promise<void> {
+    await api.post(`${this.baseUrl}/${propertyId}/open`);
   }
 
   // Get properties owned by the authenticated user (session oxyUserId)

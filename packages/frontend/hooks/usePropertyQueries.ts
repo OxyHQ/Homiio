@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
 import { propertyService } from '@/services/propertyService';
-import type { Property, PropertyAreaInsights, PropertyNearbyServices } from '@homiio/shared-types';
+import type { PropertyAreaInsights, PropertyNearbyServices } from '@homiio/shared-types';
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -43,38 +43,40 @@ export const useProperty = (id: string) => {
 };
 
 /**
- * The listing the person has OPENED — the detail screen's read, and only its.
+ * Record that the person OPENED this listing — once per visit to its detail
+ * screen, and never again while they stay on it.
  *
- * Its request is what records the view on the server (the counter, and the
- * signed-in person's recently-viewed history), which is why it is not
- * `useProperty`: that read is shared with cards, prefetches and every other
- * screen, none of which is somebody opening the listing.
+ * Mounting the detail screen IS the open, so this is a query on the screen
+ * rather than a mutation somebody presses. What keeps a refresh from counting
+ * as another open is its cache entry:
  *
- * A card's hover prefetch warms `['property', id]`; the screen paints that copy
- * at once as placeholder data while this request, the one that records, runs.
- * The history it wrote is then stale, so it is invalidated here — the write and
- * its consequence in one place.
+ *  - It is keyed apart from the listing's data (`['property', id]`), so
+ *    invalidating or refetching the listing never reaches it. The screen shows
+ *    the listing through `useProperty`, which refreshes as usual.
+ *  - It never refetches by itself: always fresh, no refetch on focus or
+ *    reconnect, no retry — a retry after a lost response could count twice.
+ *  - `gcTime: 0` drops it once the screen unmounts, so the next visit is a new
+ *    open and records again.
+ *
+ * The recently-viewed history is stale once the server has recorded the view,
+ * so it is invalidated here — the write and its consequence in one place.
  */
-export const useOpenedProperty = (id: string) => {
+export const useRecordPropertyOpen = (id: string) => {
   const queryClient = useQueryClient();
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['property', id, 'opened'],
+  useQuery({
+    queryKey: ['propertyOpen', id],
     queryFn: async () => {
-      const property = await propertyService.openProperty(id);
+      await propertyService.recordOpen(id);
       void queryClient.invalidateQueries({ queryKey: RECENTLY_VIEWED_KEY });
-      return property;
+      return null;
     },
-    placeholderData: () => queryClient.getQueryData<Property | null>(['property', id]) ?? undefined,
     enabled: Boolean(id),
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
+    staleTime: Infinity,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
   });
-
-  return {
-    property: data ?? null,
-    loading: isLoading,
-    error: error instanceof Error ? error.message : null,
-  };
 };
 
 /** A property's stats, straight from React Query (keyed by id; no store copy). */
