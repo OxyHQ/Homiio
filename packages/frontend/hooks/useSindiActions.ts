@@ -64,7 +64,6 @@ import type { SindiAction, SindiActionOutcome } from '@homiio/shared-types';
 import {
   actionOfHostCall,
   hostOutcomeOf,
-  SINDI_HOST_APP,
   SINDI_HOST_TOOL_DEFINITIONS,
 } from '@/components/sindi/sindiHostTools';
 import { revisionOf } from '@/hooks/useSindiAppContext';
@@ -174,7 +173,7 @@ export function useSindiActions(closeSheet: () => void): UseSindiActions {
 
   return useMemo(
     () => ({
-      hostTools: { app: SINDI_HOST_APP, definitions: SINDI_HOST_TOOL_DEFINITIONS, execute },
+      hostTools: { definitions: SINDI_HOST_TOOL_DEFINITIONS, execute },
       runtime: { onTurnStart },
       settleTurn,
     }),

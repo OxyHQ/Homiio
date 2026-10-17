@@ -1731,15 +1731,6 @@
       "voice": "Entrada de voz",
       "removeAttachment": "Quitar"
     },
-    "shared": {
-      "subtitle": "Conversación Compartida",
-      "badge": "Conversación Compartida",
-      "footer": "Impulsado por Sindi - Tu Defensor de Justicia Habitacional IA",
-      "error": {
-        "notFound": "Esta conversación compartida no se pudo encontrar o ha expirado.",
-        "failed": "Error al cargar conversación compartida. Por favor, inténtalo de nuevo."
-      }
-    },
     "share": {
       "text": "Echa un vistazo a esta conversación con Sindi, tu defensor de justicia habitacional IA",
       "success": {

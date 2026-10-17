@@ -44,6 +44,7 @@ import { QueryClient, onlineManager, focusManager } from '@tanstack/react-query'
 import NetInfo from '@react-native-community/netinfo';
 import { logger } from '@/utils/logger';
 import { bindApiToOxy } from '@/utils/api';
+import { clearRetiredStorage } from '@/utils/retiredStorage';
 import { observeInferredScope } from '@/hooks/useLocationScope';
 import {
   isSupportedLanguage,
@@ -159,6 +160,11 @@ async function bootstrapApp() {
     await scheduleDemoNotification();
   }
 }
+
+// Off the splash's path: nothing waits on it, and a failure costs only a stale key.
+clearRetiredStorage().catch((error: unknown) => {
+  logger.warn('Failed to clear retired device storage:', error);
+});
 
 bootstrapApp()
   .catch((error: unknown) => {

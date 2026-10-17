@@ -1752,15 +1752,6 @@
       "voice": "Entrada de veu",
       "removeAttachment": "Treu"
     },
-    "shared": {
-      "subtitle": "Conversació Compartida",
-      "badge": "Conversació Compartida",
-      "footer": "Impulsat per Sindi - El Vostre Defensor de Justícia Habitacional IA",
-      "error": {
-        "notFound": "Aquesta conversació compartida no s'ha pogut trobar o ha caducat.",
-        "failed": "Error carregant conversació compartida. Si us plau, torneu-ho a provar."
-      }
-    },
     "share": {
       "text": "Mireu aquesta conversació amb Sindi, el vostre defensor de justícia habitacional IA",
       "success": {

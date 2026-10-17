@@ -18,7 +18,7 @@ import {
   type SindiActionOutcome,
 } from '@homiio/shared-types';
 
-/** The app slug the tools are declared under: the model sees `host_homiio__<name>`. */
+/** Homiio's app slug for Alia: the chat's `app`, so the model sees `host_homiio__<name>` and its conversations are labelled Homiio's. */
 export const SINDI_HOST_APP = 'homiio';
 
 /** What Homiio declares with every turn. */
