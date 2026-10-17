@@ -1,125 +1,79 @@
 /**
- * What Sindi is allowed to do to the app, as a closed, versioned contract
- * (#519 §8.4).
+ * What Sindi (and Alia, inside Homiio) may do to the app on the person's screen,
+ * as a closed contract: the host tools Homiio declares to Alia
+ * (`docs/agent-embedding.md` §2 in the Alia repository, Alia ADR 0020 §6).
  *
  * ## The shape of the problem
  *
  * "Sindi debe actuar sobre la app cuando permanece al lado de ella." Asking for
- * flats under €1,200 with the panel docked should open `/explore` with those
- * filters applied, in the main pane, without closing the chat. With the chat
- * full-screen, the same request shows cards inside the conversation instead.
+ * flats under €1,200 with the panel docked opens `/explore` with those filters,
+ * in the main pane, without closing the chat.
  *
- * The dangerous way to build that is a command language: let the model emit
- * something the client executes. Three rules in this file exist to make that
- * unreachable rather than discouraged.
+ * The model asks for an effect by calling a host tool (`host_homiio__<kind>`);
+ * Alia emits `alia.host_action` to the client that declared it, and the
+ * executor (`frontend/hooks/useSindiActions.ts`) performs it and answers one of
+ * `applied | inline | rejected | stale | failed`, which becomes that call's
+ * result on the next turn. Three rules here keep that from becoming a command
+ * language:
  *
- * **1. The union is CLOSED and narrow.** Six intents, each with a payload the
+ * **1. The union is CLOSED and narrow.** Five intents, each with a payload the
  * client re-validates. There is no `eval`, no generated JavaScript, no DOM
- * click, no arbitrary URL, no API method chosen by a model, no SQL. A seventh
- * intent is a deliberate edit to this file, reviewed, not a string that happens
- * to arrive.
+ * click, no arbitrary URL, no API method chosen by a model, no SQL. A sixth
+ * intent is a deliberate edit to this file, reviewed.
  *
- * **2. Nothing here writes.** Navigating, querying and saying what could not be
- * resolved are the whole scope.
- * Paying, signing, applying, messaging a third party, publishing and deleting
- * are NOT in the union and may not be added to it: each needs its own explicit
- * action and its own domain controls. "Controlling the app" is not a session
- * with unlimited permissions.
+ * **2. Nothing here writes.** Navigating and querying are the whole scope. A
+ * write (saving, applying, paying…) is a catalogue tool on Homiio's backend
+ * (`backend/capabilities/*`), authorised by Oxy for the person present — a host
+ * tool is never authority over data.
  *
- * **3. An action is bound to a TURN.** `turnId` and `actionId` are what make
- * replay, reconnection, a shared transcript and a cancelled turn all safe: an
- * envelope whose turn is not the active one is ignored, and one whose
- * `actionId` has already run is ignored. Rendering Markdown from history
- * executes nothing, because history carries text and this channel does not
- * reach it.
+ * **3. ONE source for the schema and the parser.** {@link SINDI_HOST_TOOLS}
+ * carries every tool's JSON Schema and its parser, both built from the same
+ * field table, so what the model is told it may send and what the client
+ * accepts cannot drift apart.
  *
  * ## Why the payloads are not the frontend's `SearchQuery`
  *
- * `components/search/types.ts` is a React-adjacent module and the backend may
- * not import it (#519 §8.6). {@link SindiSearchPatch} is the pure subset both
- * sides can hold, and it is a PATCH: absent keys leave the live query alone,
- * which is the "un cambio incremental conserva los filtros no mencionados"
- * rule expressed in the type rather than in an executor's discipline.
+ * `components/search/types.ts` is a React-adjacent module. {@link SindiSearchPatch}
+ * is the pure subset, and it is a PATCH: absent keys leave the live query alone,
+ * which is the "un cambio incremental conserva los filtros no mencionados" rule
+ * expressed in the type rather than in an executor's discipline.
  *
- * ## Why there is still no currency field
+ * ## Why there is no currency field
  *
- * {@link SindiSearchPatch} has no currency, and now that the price filter DOES
- * take one the reason has changed rather than gone away. Somebody who says
- * "under 1,200" has named an amount and not a unit; there is nothing in the
- * utterance to put in the field, and filling it from the conversation's last
- * scope would apply their number in a currency they never mentioned.
+ * Somebody who says "under 1,200" has named an amount and not a unit; there is
+ * nothing in the utterance to put in the field, and filling it from the last
+ * scope would apply their number in a currency they never mentioned. So a price
+ * patch carries the bound alone, and `applySearchPatch` CLEARS the currency in
+ * play when it lands — the server then answers the unit from the listings in
+ * the scope the patch is about.
  *
- * So a price patch carries the bound alone, and `applySearchPatch` CLEARS the
- * currency in play when it lands — which hands the unit to the server, whose
- * answer comes from the listings in the scope the patch is about. That is the
- * one place in the system that can answer it from evidence.
+ * ## Why a place that did not resolve is not an action
  *
- * ## Why a member that does nothing to the app is still a member
- *
- * {@link SindiAction} is otherwise a list of things the app DOES, and
- * `clarify_location` does none of them: it moves no route, changes no filter
- * and touches no store. It is here because the alternative was measured and it
- * is worse. A turn that named a place Homiio could not commit to used to emit
- * no envelope at all, so "muéstrame pisos en Hamburg" ended with the app
- * exactly as it was and nothing said — the failure ADR 0002 §1.3(c) describes
- * as "no signal anywhere in the UI that the location was dropped", with the
- * signal turned down one notch further. Refusing to choose between two real
- * Barcelonas is correct (§12.2); refusing silently is the defect.
- *
- * It could have been a field beside `action` instead. It is a member because
- * every rule the envelope already carries — one per turn, deduped by
- * `actionId`, bound to a `turnId`, rendered by one card — applies to it
- * unchanged, and a parallel channel would need all of them written a second
- * time. The safety argument is unaffected: the least powerful member possible
- * cannot be a command language.
+ * "Muéstrame pisos en Hamburg" with two Hamburgs must be SAID, not silently
+ * dropped (ADR 0002 §12.2, §1.3(c)). That is the `resolvePlace` catalogue tool's
+ * answer (`ambiguous` / `not_found`), drawn in the conversation by Homiio's
+ * renderer for that tool — not a host tool, because a host tool moves the app
+ * and draws nothing in the thread.
  */
 
 import type { ListingCurrency } from './currency';
 import type { LocationSelection } from './location';
-import type { OfferingType, PropertyType } from './common';
-
-/**
- * The contract version. Bumped when a payload's MEANING changes, never for an
- * addition.
- *
- * `clarify_location` is an addition and does NOT bump it. The degradation is
- * the one this rule assumes: a client holding the older union answers `null`
- * from `parseSindiAction`, so `parseSindiActionEnvelope` answers `null`, so the
- * frame is ignored — which lands that client on precisely the behaviour it has
- * today. A version bump would instead make every action from a newer server
- * unusable by it, turning a strict improvement into a breaking change.
- */
-export const SINDI_ACTION_VERSION = 1;
-
-/**
- * The longest place name a `clarify_location` may echo back.
- *
- * Exported so the SERVER can clamp to the same bound its client validates
- * against. A refusal the client silently drops for being too long is the
- * silence this member exists to end, arriving one layer further down — and the
- * name comes from a model's extraction of free text, which is exactly the input
- * that can be arbitrarily long.
- */
-export const SINDI_REQUESTED_PLACE_MAX_LENGTH = 120;
+import { OfferingType, PropertyType } from './common';
 
 /**
  * A patch over the live search query.
  *
- * ABSENT means "leave it alone". That is the whole reason this is a patch and
- * not a query: "ahora con dos habitaciones y que admitan mascotas" must keep
- * the area and the budget the previous turn established, and a full query would
- * silently reset every field the model did not restate.
+ * ABSENT means "leave it alone": "ahora con dos habitaciones y que admitan
+ * mascotas" must keep the area and the budget the previous turn established.
  *
  * `location` is the one field that replaces rather than merges, because a
- * geographic selection is atomic (ADR 0002 §3): "the old city with the new
- * bounds" is the single largest source of wrong results and is unrepresentable
- * by construction.
+ * geographic selection is atomic (ADR 0002 §3).
  */
 export interface SindiSearchPatch {
   readonly offering?: OfferingType;
-  /** Replaces the whole geographic selection. `null` is NOT permitted — see the executor. */
+  /** Replaces the whole geographic selection. */
   readonly location?: LocationSelection;
-  /** What the user typed, as text. Never a place label (ADR 0002 §4.1). */
+  /** What the person typed, as text. Never a place label (ADR 0002 §4.1). */
   readonly queryText?: string | null;
   readonly propertyTypes?: readonly PropertyType[];
   /** In the search's single implicit currency. See the module header. */
@@ -132,147 +86,74 @@ export interface SindiSearchPatch {
   readonly petFriendly?: boolean;
 }
 
-/**
- * How Explore presents its results. Presentation only — never a filter change.
- */
+/** How Explore presents its results. Presentation only — never a filter change. */
 export type SindiResultsView = 'list' | 'map';
 
 /**
- * The destinations Sindi may navigate to, ENUMERATED.
- *
- * A closed list rather than a path, because a path is a string and a string is
- * an open door: `navigate` with an arbitrary URL would let a model send
- * somebody to an external site, to a destructive route, or to a deep link with
- * an id it invented. Each member maps to one Expo Router route in the executor.
+ * The destinations Sindi may navigate to, ENUMERATED: a path is a string and a
+ * string is an open door. Each member maps to one Expo Router route in the
+ * executor.
  */
 export type SindiDestination = 'explore' | 'saved' | 'home' | 'my_home' | 'evictions';
 
 export type SindiAction =
-  /** Run a search. The canonical pipeline executes it; Sindi never queries the client's behalf. */
+  /** Run a search. The canonical pipeline executes it. */
   | { readonly kind: 'apply_search'; readonly patch: SindiSearchPatch }
   /**
-   * Show the person's own saved items.
-   *
-   * `folderId` is re-authorised by the executor against the signed-in account.
-   * A responsive capability grants no permissions: the id travelling through a
-   * chat channel is not evidence that its owner is the person reading it.
+   * Show the person's own saved items. `folderId` only FILTERS what the
+   * person's own session returns: an id naming somebody else's collection
+   * matches nothing.
    */
   | { readonly kind: 'show_saved'; readonly folderId?: string }
-  /** Open one listing. The id is validated and fetched under the caller's own identity. */
+  /** Open one listing. The screen fetches it under the person's own identity. */
   | { readonly kind: 'open_listing'; readonly propertyId: string }
   /** Switch Explore between list and map. Filters untouched. */
   | { readonly kind: 'set_results_view'; readonly view: SindiResultsView }
   /** Go to an enumerated destination. Never a URL. */
-  | { readonly kind: 'navigate'; readonly destination: SindiDestination }
-  /**
-   * Say that a place the turn NAMED could not be committed to, and ask.
-   *
-   * The one member the executor performs nothing for. ADR 0002 decision 5 and
-   * §4.3 forbid a failed resolution degrading into a query — not a global feed,
-   * and not the rest of the sentence applied to whatever area happened to be in
-   * force, which is a query whose location was requested and lost. With one
-   * action per turn, a named place that did not resolve therefore replaces the
-   * search rather than accompanying it.
-   *
-   * `reason` is two different sentences and not a log level. `ambiguous` means
-   * the name matches several real places and the person can settle it by
-   * naming a region — which is #519 §8.6's "pedir únicamente esa precisión
-   * dentro del chat". `not_found` means Homiio has no such place, and asking
-   * for a region would be asking them to refine something that does not exist.
-   *
-   * No candidate list rides along, deliberately. Offering the two Barcelonas to
-   * pick between is the `disambiguating` state of ADR 0002 §7 — a picker, with
-   * an admin hierarchy per row and a selection to commit — and inventing a
-   * second, chat-shaped one here is how the two would come to disagree about
-   * what a place is.
-   */
-  | {
-      readonly kind: 'clarify_location';
-      /**
-       * The place NAME the person used, echoed verbatim.
-       *
-       * A name, never a coordinate and never a `loc` token: it exists to be
-       * read back in a sentence, and ADR 0002 §8.2 keeps coordinates out of
-       * everything this channel touches.
-       */
-      readonly requested: string;
-      readonly reason: 'ambiguous' | 'not_found';
-    };
+  | { readonly kind: 'navigate'; readonly destination: SindiDestination };
+
+export type SindiActionKind = SindiAction['kind'];
 
 /**
- * One action, addressed to one turn.
- *
- * Every field outside `action` exists to answer "may this still be applied?",
- * and each answers a different failure:
- *
- *  - `version` — a client holding an older contract ignores what it cannot
- *    validate, rather than guessing at a payload whose meaning changed.
- *  - `actionId` — dedupe. A reconnection that replays the stream, or a double
- *    delivery, must not navigate twice.
- *  - `turnId` — an action from a cancelled or superseded turn is ignored. This
- *    is what makes "Stop" actually stop.
- *  - `conversationId` — an action addressed to another conversation (a second
- *    panel, a switched account) is ignored.
- *  - `contextRevision` — the revision of the app context the SERVER was given.
- *    If the user has changed a filter by hand since, the action is `stale`: the
- *    manual change wins, and #519 §8.8 says so in those words.
- */
-export interface SindiActionEnvelope {
-  readonly version: number;
-  readonly actionId: string;
-  readonly turnId: string;
-  readonly conversationId?: string;
-  readonly contextRevision: number;
-  readonly action: SindiAction;
-}
-
-/**
- * What the client did with it.
- *
- * Reported so Sindi never claims to have changed filters the executor did not
- * change. `inline` is not a failure: it is the full-screen answer, where the
- * results are cards in the conversation and the router is deliberately not
- * called.
+ * What the client did with an action — the host tool's outcome as Alia's wire
+ * contract names it. Reported so the model never claims to have changed filters
+ * the executor did not change.
  */
 export type SindiActionOutcome =
-  /** Applied to the main pane. */
+  /** Applied to the app. */
   | 'applied'
-  /** Presented inside the conversation instead. */
+  /** Not performed: the surface cannot show a result; the answer stays in the conversation. */
   | 'inline'
-  /** Refused: bad payload, unknown destination, unauthorised resource. */
+  /** Refused: bad payload, unknown destination. */
   | 'rejected'
-  /** Superseded: the context moved, or the turn is no longer active. */
+  /** Superseded: the person changed the search by hand during the turn. */
   | 'stale'
   /** Attempted and failed. */
   | 'failed';
 
 /**
- * How Sindi may present a result, derived from the EFFECTIVE layout.
- *
- * Not from the platform: "una pestaña web estrecha o la ruta Sindi fullscreen en
- * un monitor grande siguen siendo chat-only. Una tablet nativa suficientemente
- * ancha puede permitir control lateral." (#519 §8.2)
+ * How Sindi may present a result, derived from the surface and the layout — not
+ * from the platform (#519 §8.2). `side_by_side` is the docked panel alone.
  */
 export type SindiPresentation = 'side_by_side' | 'chat_only';
 
 /**
- * The app context sent WITH a turn.
+ * What the app shows, sent with every turn as Alia's `clientContext`.
  *
  * Deliberately tiny. #519 §8.3 lists what may never travel — DOM snapshots, the
- * whole Zustand store, an IP, exact GPS, tokens, documents, contacts, the full
- * contents of somebody's saved list — and the shape of this interface is the
- * enforcement: there is nowhere to put any of it.
- *
- * `scopeLabel` is the AREA'S NAME and never a coordinate. `locationToken` is the
- * `loc` token, which by ADR 0002 §8.2 carries no coordinate either — the device
- * case serialises to `here.<radius>`, with no position in it.
+ * whole store, an IP, exact GPS, tokens, documents, contacts, the contents of
+ * somebody's saved list — and the shape of this interface is the enforcement.
+ * `locationToken` is the `loc` token, which by ADR 0002 §8.2 carries no
+ * coordinate; `scopeLabel` is the area's name, already on screen.
  */
 export interface SindiAppContext {
-  /** Bumped by the client whenever the live query changes. See `contextRevision`. */
+  /** A hash of the live query. The executor compares it to detect a manual change mid-turn. */
   readonly revision: number;
   readonly presentation: SindiPresentation;
-  /** Where the user is now, as an enumerated destination, or null for anywhere else. */
+  /** Where the person is now, as an enumerated destination, or null for anywhere else. */
   readonly destination: SindiDestination | null;
+  /** The listing open on screen, when the person is reading one. */
+  readonly listingId?: string;
   readonly offering?: OfferingType;
   /** The committed scope's `loc` token. Never a coordinate. */
   readonly locationToken?: string;
@@ -280,15 +161,7 @@ export interface SindiAppContext {
   readonly scopeLabel?: string;
   readonly priceMin?: number;
   readonly priceMax?: number;
-  /**
-   * The unit those bounds are in, when a scope has answered.
-   *
-   * Sent so the model can SAY it. A price filter is narrowed to one currency
-   * server-side and the area decides which, so a model told only "priceMax:
-   * 1200" would write "under €1,200" over a złoty search — a sentence the app
-   * itself is careful never to produce. Absent means no scope has answered yet,
-   * and the model has nothing to name rather than a default to assume.
-   */
+  /** The unit those bounds are in, when a scope has answered, so the model can SAY it. */
   readonly priceCurrency?: ListingCurrency;
 }
 
@@ -303,163 +176,263 @@ export const SINDI_DESTINATIONS: readonly SindiDestination[] = [
 
 const RESULTS_VIEWS: readonly SindiResultsView[] = ['list', 'map'];
 
-/** An id shape a chat channel may carry. Deliberately strict; see `parseSindiAction`. */
+// ── The field table: one parser and one JSON Schema per field ──────────────
+
+/** A JSON Schema fragment, as the host-tool declaration carries it. */
+export type SindiJsonSchema = Readonly<Record<string, unknown>>;
+
+interface Field<T> {
+  readonly schema: SindiJsonSchema;
+  /** The value, or `undefined` when it is not acceptable. */
+  readonly parse: (value: unknown) => T | undefined;
+}
+
+/** An id shape a chat channel may carry. Deliberately strict. */
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const finiteNumber = (value: unknown): number | undefined =>
-  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+const oneOf = <T extends string>(values: readonly T[], description: string): Field<T> => ({
+  schema: { type: 'string', enum: [...values], description },
+  parse: (value) => values.find((candidate) => candidate === value),
+});
 
-const nonNegativeInteger = (value: unknown): number | undefined => {
-  const n = finiteNumber(value);
-  return n !== undefined && Number.isInteger(n) && n >= 0 ? n : undefined;
-};
+const text = (maxLength: number, description: string): Field<string> => ({
+  schema: { type: 'string', minLength: 1, maxLength, description },
+  parse: (value) =>
+    typeof value === 'string' && value.length > 0 && value.length <= maxLength ? value : undefined,
+});
 
-const shortString = (value: unknown, max: number): string | undefined =>
-  typeof value === 'string' && value.length > 0 && value.length <= max ? value : undefined;
+const id = (description: string): Field<string> => ({
+  schema: { type: 'string', pattern: ID_PATTERN.source, description },
+  parse: (value) => (typeof value === 'string' && ID_PATTERN.test(value) ? value : undefined),
+});
 
-const stringArray = (value: unknown, max: number): string[] | undefined => {
-  if (!Array.isArray(value)) return undefined;
-  const out = value.filter(
-    (item): item is string => typeof item === 'string' && item.length > 0 && item.length <= 64,
-  );
-  return out.slice(0, max);
-};
+const amount = (description: string): Field<number> => ({
+  schema: { type: 'number', minimum: 0, description },
+  parse: (value) =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined,
+});
+
+const count = (description: string): Field<number> => ({
+  schema: { type: 'integer', minimum: 0, description },
+  parse: (value) =>
+    typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : undefined,
+});
+
+const list = <T extends string>(
+  item: Field<T>,
+  maxItems: number,
+  description: string,
+): Field<readonly T[]> => ({
+  schema: { type: 'array', items: item.schema, maxItems, description },
+  parse: (value) => {
+    if (!Array.isArray(value)) return undefined;
+    const items = value.flatMap((entry) => {
+      const parsed = item.parse(entry);
+      return parsed === undefined ? [] : [parsed];
+    });
+    return items.length > 0 ? items.slice(0, maxItems) : undefined;
+  },
+});
 
 /**
- * Validate a search patch, dropping everything it does not recognise.
+ * The search patch, field by field.
  *
- * DROPPING rather than rejecting the whole patch, for one case and with one
- * consequence worth stating: a future contract version adding a field would
- * otherwise make every action from a newer server unusable by an older client,
- * turning an additive change into a breaking one. The cost is that an unknown
- * field is silently ignored — acceptable, because the executor reports what it
- * APPLIED and the surface shows the resulting filters, so a dropped field is
- * visible to the person rather than hidden.
+ * An unacceptable field is DROPPED rather than failing the whole patch: the
+ * executor reports what it applied and the screen shows the resulting filters,
+ * so a dropped field is visible to the person rather than hidden.
  *
- * `location` is passed through structurally UNVALIDATED here and re-validated by
- * the executor against the location contract's own parser; duplicating ADR
- * 0002's union in this file is how the two would diverge.
+ * `location` is checked only for being an object here and re-validated by the
+ * executor (`exploreHref` refuses a selection the `loc` grammar cannot carry):
+ * duplicating ADR 0002's union in this file is how the two would diverge.
  */
+const SEARCH_PATCH_FIELDS: {
+  readonly [K in keyof SindiSearchPatch]-?: Field<SindiSearchPatch[K]>;
+} = {
+  offering: oneOf(
+    Object.values(OfferingType),
+    'What the person is looking for: long_term_rent (monthly rent), short_term_rent (by the night), sale or exchange. Changing it clears the price range.',
+  ),
+  location: {
+    schema: {
+      type: 'object',
+      description:
+        "Replaces the whole area. A LocationSelection: for a city, the `location` that resolvePlace answered with `status: 'resolved'`. Never guess one — when resolvePlace answers ambiguous or not_found, ask the person instead.",
+    },
+    parse: (value) => (isRecord(value) ? (value as unknown as LocationSelection) : undefined),
+  },
+  queryText: {
+    schema: {
+      type: ['string', 'null'],
+      maxLength: 200,
+      description: 'Free text the person asked to search for (not a place name). null clears it.',
+    },
+    parse: (value) => (value === null ? null : text(200, '').parse(value)),
+  },
+  propertyTypes: list(
+    oneOf(Object.values(PropertyType), 'A property type.'),
+    8,
+    'Only these property types.',
+  ),
+  priceMin: amount('The lowest price, in the currency of the area searched. No currency field.'),
+  priceMax: amount('The highest price, in the currency of the area searched. No currency field.'),
+  bedrooms: count('At least this many bedrooms.'),
+  bathrooms: count('At least this many bathrooms.'),
+  amenities: list(text(64, 'An amenity key.'), 12, 'Required amenities.'),
+  petFriendly: {
+    schema: { type: 'boolean', description: 'Only homes that accept pets.' },
+    parse: (value) => (typeof value === 'boolean' ? value : undefined),
+  },
+};
+
+/** Validate a search patch, dropping what it does not recognise. `null` when nothing is left. */
 export function parseSindiSearchPatch(value: unknown): SindiSearchPatch | null {
   if (!isRecord(value)) return null;
-  const patch: {
-    offering?: OfferingType;
-    location?: LocationSelection;
-    queryText?: string | null;
-    propertyTypes?: readonly PropertyType[];
-    priceMin?: number;
-    priceMax?: number;
-    bedrooms?: number;
-    bathrooms?: number;
-    amenities?: readonly string[];
-    petFriendly?: boolean;
-  } = {};
-
-  if (typeof value.offering === 'string') patch.offering = value.offering as OfferingType;
-  if (isRecord(value.location)) patch.location = value.location as unknown as LocationSelection;
-  if (value.queryText === null) patch.queryText = null;
-  else {
-    const text = shortString(value.queryText, 200);
-    if (text !== undefined) patch.queryText = text;
+  const patch: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(SEARCH_PATCH_FIELDS) as [
+    keyof SindiSearchPatch,
+    Field<unknown>,
+  ][]) {
+    if (!(key in value)) continue;
+    const parsed = field.parse(value[key]);
+    if (parsed !== undefined) patch[key] = parsed;
   }
-  const types = stringArray(value.propertyTypes, 8);
-  if (types && types.length > 0) patch.propertyTypes = types as readonly PropertyType[];
-  const priceMin = finiteNumber(value.priceMin);
-  if (priceMin !== undefined && priceMin >= 0) patch.priceMin = priceMin;
-  const priceMax = finiteNumber(value.priceMax);
-  if (priceMax !== undefined && priceMax >= 0) patch.priceMax = priceMax;
-  const bedrooms = nonNegativeInteger(value.bedrooms);
-  if (bedrooms !== undefined) patch.bedrooms = bedrooms;
-  const bathrooms = nonNegativeInteger(value.bathrooms);
-  if (bathrooms !== undefined) patch.bathrooms = bathrooms;
-  const amenities = stringArray(value.amenities, 12);
-  if (amenities && amenities.length > 0) patch.amenities = amenities;
-  if (typeof value.petFriendly === 'boolean') patch.petFriendly = value.petFriendly;
-
-  // A patch that changes NOTHING is not an action. Emitting one would make
-  // Sindi claim to have applied a search while leaving the screen identical.
-  return Object.keys(patch).length > 0 ? patch : null;
+  // A patch that changes NOTHING is not an action: applying it would claim a
+  // search while leaving the screen identical.
+  return Object.keys(patch).length > 0 ? (patch as SindiSearchPatch) : null;
 }
 
-/** Validate an action. `null` for anything not in the closed union. */
-export function parseSindiAction(value: unknown): SindiAction | null {
-  if (!isRecord(value)) return null;
-  switch (value.kind) {
-    case 'apply_search': {
-      const patch = parseSindiSearchPatch(value.patch);
-      return patch ? { kind: 'apply_search', patch } : null;
-    }
-    case 'show_saved': {
-      if (value.folderId === undefined) return { kind: 'show_saved' };
-      const folderId = shortString(value.folderId, 64);
-      // A malformed id is a REJECTION, not a fallback to the whole list: a
-      // folder the person did not ask for is a different answer, and quietly
-      // widening the scope of "show me what I saved" is the wrong direction.
-      return folderId && ID_PATTERN.test(folderId) ? { kind: 'show_saved', folderId } : null;
-    }
-    case 'open_listing': {
-      const propertyId = shortString(value.propertyId, 64);
-      return propertyId && ID_PATTERN.test(propertyId)
-        ? { kind: 'open_listing', propertyId }
-        : null;
-    }
-    case 'set_results_view': {
-      const view = RESULTS_VIEWS.find((candidate) => candidate === value.view);
-      return view ? { kind: 'set_results_view', view } : null;
-    }
-    case 'navigate': {
-      const destination = SINDI_DESTINATIONS.find((candidate) => candidate === value.destination);
-      return destination ? { kind: 'navigate', destination } : null;
-    }
-    case 'clarify_location': {
-      // Both fields are required, and a missing one is a REJECTION rather than
-      // a default. There is no honest fallback: without a name the sentence
-      // has nothing to quote, and a defaulted `reason` would tell somebody
-      // their place does not exist when it exists twice.
-      const requested = shortString(value.requested, SINDI_REQUESTED_PLACE_MAX_LENGTH);
-      if (!requested) return null;
-      if (value.reason !== 'ambiguous' && value.reason !== 'not_found') return null;
-      return { kind: 'clarify_location', requested, reason: value.reason };
-    }
-    default:
-      return null;
-  }
+/** One host tool: what the model is told, and how its input becomes a {@link SindiAction}. */
+export interface SindiHostTool {
+  readonly name: SindiActionKind;
+  readonly description: string;
+  /** A JSON Schema with an object root, built from the same fields as {@link SindiHostTool.parse}. */
+  readonly inputSchema: SindiJsonSchema;
+  /** The action, or `null` for an input outside the contract. */
+  readonly parse: (input: unknown) => SindiAction | null;
 }
 
 /**
- * Validate an envelope arriving on the stream's data channel.
- *
- * Total: every shape that is not an envelope of this version answers `null`,
- * including a fragment, a duplicate of something else's data frame, or a
- * payload from a future version. The caller treats `null` as "not for me" and
- * moves on, which is why an unrelated `data` frame cannot crash the chat.
+ * A tool whose input is a fixed set of fields. A REQUIRED field that is missing
+ * or unacceptable refuses the call; an OPTIONAL one that is present but
+ * unacceptable refuses it too — quietly widening "show me that collection" to
+ * every collection answers a different question.
  */
-export function parseSindiActionEnvelope(value: unknown): SindiActionEnvelope | null {
-  if (!isRecord(value)) return null;
-  if (value.version !== SINDI_ACTION_VERSION) return null;
-
-  const actionId = shortString(value.actionId, 64);
-  const turnId = shortString(value.turnId, 64);
-  if (!actionId || !turnId) return null;
-  if (!ID_PATTERN.test(actionId) || !ID_PATTERN.test(turnId)) return null;
-
-  const contextRevision = nonNegativeInteger(value.contextRevision);
-  if (contextRevision === undefined) return null;
-
-  const action = parseSindiAction(value.action);
-  if (!action) return null;
-
-  const conversationId = shortString(value.conversationId, 64);
-
+function fieldsTool<K extends SindiActionKind>(
+  name: K,
+  description: string,
+  fields: Readonly<Record<string, { readonly field: Field<unknown>; readonly required: boolean }>>,
+  build: (values: Record<string, unknown>) => Extract<SindiAction, { kind: K }>,
+): SindiHostTool {
+  const entries = Object.entries(fields);
   return {
-    version: SINDI_ACTION_VERSION,
-    actionId,
-    turnId,
-    ...(conversationId && ID_PATTERN.test(conversationId) ? { conversationId } : {}),
-    contextRevision,
-    action,
+    name,
+    description,
+    inputSchema: {
+      type: 'object',
+      properties: Object.fromEntries(entries.map(([key, { field }]) => [key, field.schema])),
+      required: entries.filter(([, { required }]) => required).map(([key]) => key),
+      additionalProperties: false,
+    },
+    parse: (input) => {
+      if (!isRecord(input)) return null;
+      const values: Record<string, unknown> = {};
+      for (const [key, { field, required }] of entries) {
+        if (input[key] === undefined) {
+          if (required) return null;
+          continue;
+        }
+        const parsed = field.parse(input[key]);
+        if (parsed === undefined) return null;
+        values[key] = parsed;
+      }
+      return build(values);
+    },
   };
+}
+
+/**
+ * Every host tool Homiio declares, in the order the model sees them.
+ *
+ * The descriptions carry the one product rule that is not a type: asking about
+ * homes is not asking to be taken somewhere. Sindi answers "¿qué pisos hay en
+ * Gràcia?" with `searchListings` (drawn as cards in the conversation) and uses
+ * `apply_search` only when the person wants the app to show them.
+ */
+export const SINDI_HOST_TOOLS: readonly SindiHostTool[] = [
+  {
+    name: 'apply_search',
+    description:
+      'Open Homiio\'s Explore screen with these search filters, as a PATCH over the search on screen: omitted fields keep their current value. Use it when the person wants the app to show them homes ("show me", "open", "filter"); to answer a question about homes, call searchListings instead. For a place name, call resolvePlace first and pass its `location`.',
+    inputSchema: {
+      type: 'object',
+      properties: Object.fromEntries(
+        Object.entries(SEARCH_PATCH_FIELDS).map(([key, field]) => [key, field.schema]),
+      ),
+      additionalProperties: false,
+    },
+    parse: (input) => {
+      const patch = parseSindiSearchPatch(input);
+      return patch ? { kind: 'apply_search', patch } : null;
+    },
+  },
+  fieldsTool(
+    'show_saved',
+    "Open the person's saved homes, or one of their saved collections.",
+    {
+      folderId: {
+        field: id('A collection id from listSavedFolders. Omitted: everything saved.'),
+        required: false,
+      },
+    },
+    ({ folderId }) =>
+      folderId === undefined
+        ? { kind: 'show_saved' }
+        : { kind: 'show_saved', folderId: folderId as string },
+  ),
+  fieldsTool(
+    'open_listing',
+    "Open one listing's page in the app.",
+    {
+      propertyId: {
+        field: id('The listing id, as searchListings or getListing returned it.'),
+        required: true,
+      },
+    },
+    ({ propertyId }) => ({ kind: 'open_listing', propertyId: propertyId as string }),
+  ),
+  fieldsTool(
+    'set_results_view',
+    'Show the Explore results as a list or on the map. Filters are untouched.',
+    { view: { field: oneOf(RESULTS_VIEWS, 'list or map.'), required: true } },
+    ({ view }) => ({ kind: 'set_results_view', view: view as SindiResultsView }),
+  ),
+  fieldsTool(
+    'navigate',
+    'Go to one of these screens of the app.',
+    {
+      destination: {
+        field: oneOf(
+          SINDI_DESTINATIONS,
+          'explore (search), saved (saved homes), home, my_home (the home the person lives in), evictions (the eviction board).',
+        ),
+        required: true,
+      },
+    },
+    ({ destination }) => ({ kind: 'navigate', destination: destination as SindiDestination }),
+  ),
+];
+
+/** The action a host-tool call asks for, or `null` for an unknown tool or an input outside the contract. */
+export function parseSindiHostCall(name: string, input: unknown): SindiAction | null {
+  return SINDI_HOST_TOOLS.find((tool) => tool.name === name)?.parse(input) ?? null;
+}
+
+/** Validate an action object (`{ kind, …fields }`; `apply_search` carries `patch`). */
+export function parseSindiAction(value: unknown): SindiAction | null {
+  if (!isRecord(value) || typeof value.kind !== 'string') return null;
+  const { kind, ...input } = value;
+  return parseSindiHostCall(kind, kind === 'apply_search' ? value.patch : input);
 }

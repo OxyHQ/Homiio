@@ -59,9 +59,7 @@ export default function SavedFolderScreen() {
   const folderProperties = useMemo(
     () =>
       // `folderId` is declared on `SavedProperty` now, so the cast this used to
-      // carry is gone. The rule itself is shared with Sindi's inline answer —
-      // `propertiesInFolder` in `utils/savedFolders.ts` — so the chat and this
-      // screen cannot come to disagree about what a folder contains.
+      // carry is gone. The rule lives in `utils/savedFolders.ts`.
       propertiesInFolder(savedProperties ?? [], folderId),
     [savedProperties, folderId],
   );

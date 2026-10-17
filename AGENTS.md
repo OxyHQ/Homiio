@@ -91,8 +91,8 @@ measurements: **`docs/postgres.md`**.
   deletes nothing on a deadline. Any table whose rows expire needs an entry in
   `db/expiry.ts`'s `EXPIRY_SWEEP_TARGETS`, run by `services/cron.ts`; without one
   it grows forever with no error and no failing test. Read that module's header
-  first — `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` exists because one deadline
-  belongs to a share LINK and must clear four columns rather than delete the row.
+  first — `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` exists because a deadline can be
+  a STAMP (`eviction_cases.archived_at`) whose row must survive it.
 
 ## Ownership and auth (CRITICAL)
 
@@ -121,14 +121,9 @@ measurements: **`docs/postgres.md`**.
   provider's `OxyServices`, bound by `bindApiToOxy` in `packages/frontend/utils/api.ts`). Do NOT add local token providers, auth
   interceptors or manual `Authorization` headers. Read complete domain envelopes
   through the SDK's `requestResponse`; do not reconstruct them heuristically.
-  Sindi uses `requestAuthenticatedResponse` with the explicit web/Expo transport,
-  preserving multipart, streams and caller abort. Human authority authenticates only to
-  Homiio and must never be forwarded to Alia. For chat the backend sends the
-  request's verified bearer to OXY only, to mint a one-use requester assertion
-  (OxyHQServices ADR 0025), and calls Alia with the exact Sindi Oxy service
-  credential plus `X-Oxy-Requester-Assertion` — never `X-Oxy-User-Id`, and chat
-  never asks for consent. Do not add another manual token path. Identity and
-  inference detail: `docs/index.mdx`.
+  Sindi and Alia are reached from the frontend through `@alia.onl/sdk` under the
+  person's Oxy session; Homiio's backend never calls Alia. Do not add a manual
+  token path. Detail: `docs/sindi.md`.
 
 ## Product rules that are vetoed or load-bearing
 

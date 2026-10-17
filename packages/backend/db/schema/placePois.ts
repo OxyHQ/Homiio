@@ -11,9 +11,8 @@
  *
  * ## This table carries a TTL, and it is a genuine one
  *
- * `expires_at` is a real row deadline. Unlike
- * `conversations.sharing_expires_at`, which destroys a user's transcript, this
- * one deletes a cached copy of somebody else's public data and the service
+ * `expires_at` is a real row deadline. Unlike `eviction_cases.archived_at`,
+ * which is a stamp the row must survive, this one deletes a cached copy of somebody else's public data and the service
  * re-fetches it on the next miss. It is registered in `db/expiry.ts`, and it has
  * to be: Postgres reaps nothing on its own.
  *

@@ -320,12 +320,8 @@ jobs:
       - name: Register immutable task definition and deploy (API)
         env:
           IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.api_digest }}
-          # Non-secret, exact identifiers provisioned outside this workflow.
-          # There is no display-name query, list ordering or fallback id.
           # Provision this SecureString before rollout. Only its ARN enters the task definition.
           TASK_SECRET_OVERRIDES_JSON: '{"HOMIIO_TEAM_CHAT_KEY":"arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/HOMIIO_TEAM_CHAT_KEY"}'
-          HOMIIO_SINDI_ALIA_AGENT_ID: ${{ vars.SINDI_ALIA_AGENT_ID }}
-          HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID: ${{ vars.OXY_INFERENCE_ROUTING_PROFILE_ID }}
           # Taken away from inherited live revisions: the superseded slug
           # selector, and the Oxy service credential Homiio no longer holds.
           #
@@ -347,7 +343,12 @@ jobs:
           # is retired. Removed here as well as never supplied, so a revision
           # still referencing the SSM parameters cannot outlive their deletion
           # (a task naming a missing parameter fails to start).
-          TASK_CONFIGURATION_REMOVALS_JSON: '["OXY_INFERENCE_ROUTING_PROFILE","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","OXY_ACTIVITY_API_KEY","OXY_ACTIVITY_API_SECRET","SINDI_OXY_SERVICE_API_KEY","SINDI_OXY_SERVICE_API_SECRET"]'
+          # ALIA_API_URL, SINDI_ALIA_AGENT_ID, OXY_INFERENCE_ROUTING_PROFILE_ID:
+          # the Sindi relay and its Oxy inference calls are gone (Alia ADR 0020).
+          # Sindi and Alia are reached from the frontend through `@alia.onl/sdk`;
+          # the backend never calls Alia, so the running revision's copies of
+          # these three come off here rather than lingering on every render.
+          TASK_CONFIGURATION_REMOVALS_JSON: '["OXY_INFERENCE_ROUTING_PROFILE","OXY_INFERENCE_ROUTING_PROFILE_ID","ALIA_API_URL","SINDI_ALIA_AGENT_ID","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","OXY_ACTIVITY_API_KEY","OXY_ACTIVITY_API_SECRET","SINDI_OXY_SERVICE_API_KEY","SINDI_OXY_SERVICE_API_SECRET"]'
           # Cleared deliberately. The script treats a non-empty DEPLOY_SHA as a
           # request to re-verify that the candidate is still the exact head of
           # origin/main before mutating production, via require-current-main.sh,
@@ -358,46 +359,7 @@ jobs:
           # filter above.
           DEPLOY_SHA: ''
         run: |
-          if [[ "$HOMIIO_SINDI_ALIA_AGENT_ID" != "01a0646a-078f-7514-9800-9f43ceed7df8" ]]; then
-            echo "::error::SINDI_ALIA_AGENT_ID must equal the reserved Sindi Alia agent primary key"
-            exit 1
-          fi
-          if [[ "$HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID" != "01a06477-94f5-74f0-bc25-4c5c13b93ccd" ]]; then
-            echo "::error::OXY_INFERENCE_ROUTING_PROFILE_ID must equal the reviewed kaana-v1 profile primary key"
-            exit 1
-          fi
-          TASK_ENV_OVERRIDES_JSON=$(jq -cn \
-            --arg sindiAgentId "$HOMIIO_SINDI_ALIA_AGENT_ID" \
-            --arg routingProfileId "$HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID" \
-            '{
-              OXY_API_URL: "https://api.oxy.so",
-              ALIA_API_URL: "https://api.alia.onl",
-              SINDI_ALIA_AGENT_ID: $sindiAgentId,
-              OXY_INFERENCE_ROUTING_PROFILE_ID: $routingProfileId
-            }')
-          # Sindi's credential is retired too, and the comment that stood here
-          # said why it could not be: "a DIFFERENT identity — a dedicated agent
-          # service credential that Alia verifies, never Homiio's own — so
-          # attestation does not replace it". Both halves of that were true and
-          # the conclusion no longer follows.
-          #
-          # What Alia verifies is the requester assertion Oxy mints, and Oxy
-          # refused to mint one for an attested caller: `nativeProductAgentEntryPoint`
-          # matched an exact (application, credential, agent) triple, and an
-          # attested token carries the binding's `wl_…` handle where the
-          # credential's UUID used to be. oxy#1351 lets that entry declare the
-          # WORKLOAD it admits alongside the credential, and Homiio's canary
-          # (`services/oxy.ts`) accepts either id.
-          #
-          # Verified against production before the pair came off, with a probe
-          # that needs no signed-in user: an attested token plus a junk subject
-          # token is refused `subject_session_invalid` — the entry point
-          # recognised the caller and rejected only the session — where before it
-          # was refused `unknown_entry_point`.
-          #
-          # So nothing is injected here. The pair came off the running revision
-          # at oxy-homiio:173, and a render derives from the RUNNING one, so
-          # re-adding this block is the only thing that could bring it back.
+          TASK_ENV_OVERRIDES_JSON=$(jq -cn '{ OXY_API_URL: "https://api.oxy.so" }')
           export TASK_ENV_OVERRIDES_JSON
           STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
           if [ "$STATUS" != "ACTIVE" ]; then

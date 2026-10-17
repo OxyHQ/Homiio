@@ -262,7 +262,7 @@ export const cities = pgTable(
      * same `(country_id, name)` shape, 3 measured case groups — still permits,
      * and the refusal they caused (`placeLookup` sees three candidates for one
      * slug and correctly declines to choose) is answered by
-     * `services/sindiActions.ts`'s empty-candidate rule, not by this index.
+     * `domain/places.ts`'s empty-candidate rule, not by this index.
      * `docs/postgres.md` carries both censuses and the correction.
      *
      * {@link cities.slug} is the normalised form and is `GENERATED ALWAYS`, so

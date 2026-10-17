@@ -12,7 +12,7 @@ import { useUIStore } from '@/store/uiStore';
  * must agree: the layout (which hands it to `AppShell` as the `aside`), the
  * right rail (which steps aside for it) and the panel itself.
  *
- * - Below 500 there is no panel: the sidebar row navigates to `/sindi`.
+ * - Below 500 there is no panel.
  * - 500 to 1023: an overlay over the page, because the sidebar is a drawer and
  *   there is no aside column to give it.
  * - From Bloom's `lg` (1024, the layout's `asideFrom`): DOCKED as `AppShell`'s
@@ -20,7 +20,7 @@ import { useUIStore } from '@/store/uiStore';
  *   the rail and the panel never share the screen.
  */
 
-/** Below this the panel does not exist (phones navigate to `/sindi`). */
+/** Below this the panel does not exist. */
 export const SINDI_PANEL_FROM = 500;
 
 /** Ideal docked width. */

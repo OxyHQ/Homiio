@@ -12,7 +12,6 @@ import maintenance from './maintenance';
 import notifications from './notifications';
 import analytics from './analytics';
 import profiles from './profiles';
-import ai from './ai';
 import roommates from './roommates';
 import viewings from './viewings';
 import telegram from './telegram';
@@ -39,7 +38,6 @@ export default function () {
   const notificationRoutes = notifications();
   const analyticsRoutes = analytics();
   const profileRoutes = profiles();
-  const aiRoutes = ai();
   const roommateRoutes = roommates();
   const viewingRoutes = viewings();
   const telegramRoutes = telegram();
@@ -84,7 +82,6 @@ export default function () {
   router.use('/notifications', notificationRoutes);
   router.use('/analytics', analyticsRoutes);
   router.use('/profiles', profileRoutes);
-  router.use('/ai', aiRoutes);
   router.use('/roommates', roommateRoutes);
   router.use('/telegram', telegramRoutes);
   router.use('/images', imageRoutes);

@@ -1353,16 +1353,12 @@
       "conversations": "Conversations",
       "empty": "Start a new conversation to get help."
     },
-    "status": {
-      "thinking": "Thinking..."
-    },
     "auth": {
       "required": "Authentication Required",
       "message": "Please sign in to access Sindi, your AI-powered housing justice advocate"
     },
     "chat": {
-      "placeholder": "Ask Sindi about your tenant rights...",
-      "you": "You",
+      "placeholder": "Demandez à {{name}}…",
       "field": "Message",
       "attach": "Joindre un fichier",
       "send": "Envoyer le message",
@@ -1372,33 +1368,13 @@
       "voice": "Saisie vocale",
       "removeAttachment": "Retirer"
     },
-    "errors": {
-      "connection": "Connection Error",
-      "connectionMessage": "Please check your connection and try again.",
-      "consentTitle": "Permission needed",
-      "consentMessage": "Allow Homiio to let Sindi continue helping you while you are away.",
-      "consentAction": "Review permissions",
-      "consentRequesting": "Opening permissions...",
-      "consentUnavailableTitle": "Permission unavailable",
-      "consentUnavailableMessage": "Update Homiio and try again. No permission was granted.",
-      "uploadFailedTitle": "Upload failed",
-      "uploadAnalyzeFailed": "Could not analyze the file."
-    },
     "shared": {
-      "loading": "Loading Shared Conversation",
-      "loadingMessage": "Loading conversation...",
       "subtitle": "Shared Conversation",
       "badge": "Shared Conversation",
       "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
       "error": {
-        "title": "Conversation Not Found",
         "notFound": "This shared conversation could not be found or has expired.",
-        "failed": "Failed to load shared conversation. Please try again.",
-        "description": "The conversation may have been removed or the link may be invalid."
-      },
-      "empty": {
-        "title": "Empty Conversation",
-        "subtitle": "This shared conversation doesn't have any messages yet."
+        "failed": "Failed to load shared conversation. Please try again."
       }
     },
     "share": {
@@ -1409,65 +1385,55 @@
       },
       "error": {
         "title": "Cannot Share Conversation",
-        "saveFirst": "Please save the conversation by sending a message before sharing.",
-        "emptyConversation": "Cannot share an empty conversation. Please add some messages first.",
         "failed": "Failed to generate share link. Please try again."
       }
     },
     "conversation": {
-      "title": "Conversation",
-      "subtitle": "AI Housing Justice Advocate",
-      "loading": "Loading Conversation",
-      "loadingMessage": "Loading conversation..."
+      "title": "Conversation"
     },
     "settings": {
-      "resetMessage": "This will reset all Sindi preferences to their defaults.",
+      "resetMessage": "Vos conversations avec Sindi seront supprimées et ses préférences reviendront aux valeurs par défaut.",
       "resetTitle": "Reset Sindi?",
-      "reset": "Reset Sindi to defaults",
+      "reset": "Supprimer les conversations et réinitialiser",
       "actions": "Actions",
-      "tipsDescription": "Surface inline guidance while you chat.",
+      "tipsDescription": "Suggérer des questions au début d’une conversation.",
       "tips": "Show tips & hints",
       "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
       "behavior": "Behavior",
       "title": "Sindi preferences",
-      "resetDone": "Sindi preferences reset."
+      "resetDone": "Sindi a été réinitialisée.",
+      "resetFailed": "Impossible de réinitialiser Sindi. Réessayez."
     },
     "voice": {
-      "unsupportedBrowser": "La saisie vocale n'est pas prise en charge par ce navigateur",
       "unsupportedDevice": "La saisie vocale n'est pas disponible sur cet appareil",
-      "deniedTitle": "Accès au micro refusé",
       "deniedMessage": "Autorisez l'accès au micro et à la reconnaissance vocale dans les réglages pour dicter vos messages.",
       "failed": "La saisie vocale s'est arrêtée de manière inattendue"
-    },
-    "actions": {
-      "take": "Le faire",
-      "takeAccessible": "Effectuer ce que Sindi propose",
-      "applySearch": "Ouvrir Explorer avec ces filtres",
-      "showSaved": "Ouvrir vos favoris",
-      "openListing": "Ouvrir ce logement",
-      "showMap": "Afficher les résultats sur la carte",
-      "showList": "Afficher les résultats en liste",
-      "navigate": {
-        "explore": "Ouvrir Explorer",
-        "saved": "Ouvrir Favoris",
-        "home": "Ouvrir l’écran d’accueil",
-        "my_home": "Ouvrir Mon logement",
-        "evictions": "Ouvrir le tableau des expulsions"
-      },
-      "clarifyLocation": {
-        "ambiguous": "Je n’ai pas su de quel « {{place}} » vous parliez : il y en a plusieurs. Dans quelle région ?",
-        "notFound": "Je n’ai aucun lieu nommé « {{place}} », la recherche est restée telle quelle."
-      },
-      "applied": "Fait : {{what}}.",
-      "stale": "Vous avez modifié la recherche vous-même : rien n’a été changé.",
-      "failed": "Impossible : {{what}}."
     },
     "saved": {
       "loading": "Je regarde vos logements enregistrés…",
       "failed": "Vos logements enregistrés n’ont pas pu être chargés.",
       "empty": "Vous n’avez encore enregistré aucun logement.",
-      "emptyFolder": "Cette collection est vide.",
       "more": "et {{count}} de plus"
+    },
+    "place": {
+      "ambiguous": "Je n’ai pas su de quel « {{place}} » vous parliez : il y en a plusieurs. Dans quelle région ?",
+      "notFound": "Je n’ai aucun lieu nommé « {{place}} », la recherche est restée telle quelle."
+    },
+    "property": {
+      "title": "Demandez à Sindi à propos de ce logement",
+      "subtitle": "Votre assistante de location 24 h/24. Posez vos questions sur le logement, le quartier, vos droits ou les coûts cachés.",
+      "subtitleVerified": "Sindi a vérifié l'authenticité de cette annonce. Posez vos questions sur le logement, le quartier, vos droits ou les coûts cachés.",
+      "verified": "Vérifié par Sindi",
+      "askAccessible": "Demandez à Sindi à propos de ce logement",
+      "askHint": "Ouvre une conversation avec Sindi sur ce logement",
+      "defaultQuestion": "Pouvez-vous m'aider à comprendre ce logement et mes droits de locataire ?",
+      "context": "À propos de ce logement : {{title}} (annonce Homiio {{id}}).",
+      "prompts": {
+        "budget": "Quel budget prévoir ?",
+        "costs": "Y a-t-il des coûts cachés ?",
+        "area": "Parlez-moi de ce quartier",
+        "rights": "Quels sont mes droits ?"
+      }
     }
   },
   "sidebar": {
@@ -4082,7 +4048,6 @@
   },
   "alia": {
     "clientContext": "La personne utilise Homiio, une application de logement pour trouver où louer, acheter ou séjourner, se renseigner sur l'historique d'un logement et son coût réel, et gérer ou défendre une location.",
-    "onScreen": "Elle se trouve actuellement sur l'écran {{path}}.",
     "suggestion": {
       "find": "Aide-moi à trouver un logement",
       "costs": "Combien ce logement me coûtera-t-il vraiment ?",

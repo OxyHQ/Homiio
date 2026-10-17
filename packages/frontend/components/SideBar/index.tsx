@@ -39,7 +39,7 @@ import { openAccountDialog, useAuth, useOxy } from '@oxy.so/services';
 
 import { AliaAvatarIcon } from '@alia.onl/sdk/avatar';
 import { LogoIcon } from '@/assets/logo';
-import { useAskAlia } from '@/context/AskAliaContext';
+import { useAskAgent } from '@alia.onl/sdk';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
@@ -163,7 +163,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   const { isHost } = useHostStatus();
   const { user, isAuthenticated, isAuthResolved, signIn } = useAuth();
   const { oxyServices } = useOxy();
-  const { askAlia } = useAskAlia();
+  const { ask } = useAskAgent();
 
   const { folders } = useSavedPropertiesContext();
   const { properties: recentProperties } = useRecentlyViewed();
@@ -187,12 +187,11 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   // panel exists is a viewport decision the sidebar no longer makes.
   const handleSindi = React.useCallback(() => handleNavigate('/sindi'), [handleNavigate]);
 
-  // Opens Alia's chat sheet (or the sign-in dialog when signed out); the drawer
-  // is dismissed first so the sheet is not presented behind it.
+  // Alia's sheet, or the sign-in dialog when signed out.
   const handleAskAlia = React.useCallback(() => {
     closeMobileDrawer();
-    askAlia();
-  }, [closeMobileDrawer, askAlia]);
+    ask('alia');
+  }, [closeMobileDrawer, ask]);
 
   const handleSettings = React.useCallback(() => handleNavigate('/settings'), [handleNavigate]);
   const handleProfile = React.useCallback(() => handleNavigate('/profile'), [handleNavigate]);

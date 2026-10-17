@@ -81,57 +81,19 @@ describe('Homiio never reaches an inference provider directly', () => {
     expect(directProviderMatches(source)).toBe(true);
   });
 
-  it('keeps interactive Sindi chat on the Alia product boundary', () => {
-    const route = readFileSync(join(REPOSITORY_ROOT, 'packages/backend/routes/ai.ts'), 'utf8');
-    const source = readFileSync(
-      join(REPOSITORY_ROOT, 'packages/backend/services/aliaChatService.ts'),
-      'utf8',
-    );
-    expect(route).toContain('aliaChat.streamText');
-    expect(route).toContain('for await (const text of stream)');
-    expect(route).toContain('signal: upstreamAbort.signal');
-    expect(route).toContain("req.once('aborted', abortUpstream)");
-    expect(route).not.toMatch(/feature:\s*['"]sindi-chat['"]/);
-    // The path, the body and the bearer header are `@alia.onl/server`'s now —
-    // Alia's own client, published from the repository that writes the stream.
-    // This gate stops naming bytes this file no longer assembles and names the
-    // ONE hop that still has to be right here: which client, and what it is
-    // handed. `aliaChatService.test.ts` asserts the resulting wire.
-    expect(source).toContain("from '@alia.onl/server'");
-    expect(source).toContain('new AliaServerClient(');
-    expect(source).toContain('baseUrl: input.apiUrl');
-    expect(source).toContain('token: serviceToken');
-    // ADR 0025: Alia gets the service token and a requester assertion. The
-    // person's bearer is traded with Oxy and never becomes an Alia header.
-    expect(source).toContain("headers: { 'X-Oxy-Requester-Assertion': assertion }");
-    expect(source).not.toMatch(/['"]X-Oxy-User-Id['"]\s*:/i);
-    expect(source).not.toMatch(/token:\s*input\.requester/);
-    expect(source).not.toMatch(/Authorization:\s*`Bearer \$\{input\.requester/);
-    expect(route).not.toContain('getUserAccessToken');
-    // The bearer handed to the service is the one the auth middleware verified
-    // for a USER; a service-token caller has none to trade.
-    expect(route).toContain(
-      'requester: { accountId: userId, accessToken: getVerifiedUserAccessToken(req) }',
-    );
-    expect(route).toMatch(
-      /authenticated\.serviceApp === undefined && typeof authenticated\.accessToken === 'string'/,
-    );
-    expect(route).toContain("message.role === 'user' || message.role === 'assistant'");
-    expect(route).not.toContain(
-      "const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }",
-    );
-    expect(source).not.toMatch(
-      /ALIA_API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|GROQ_API_KEY|OPENROUTER_API_KEY|XAI_API_KEY|CEREBRAS_API_KEY|RELAY_API_KEY/,
-    );
-  });
-
-  it('never constructs the Kaana-only authorizedRoutes envelope', () => {
-    const source = readFileSync(
-      join(REPOSITORY_ROOT, 'packages/backend/services/oxyInferenceService.ts'),
-      'utf8',
-    );
-    expect(source).not.toMatch(/^\s*authorizedRoutes\s*:/m);
-    expect(source).toContain('routingProfileId: this.#routingProfileId');
-    expect(source).not.toMatch(/^\s*routingProfile\s*:/m);
+  it('never calls Alia or Oxy inference from the backend', () => {
+    // Sindi and Alia are reached from the FRONTEND through `@alia.onl/sdk`,
+    // under the person's own Oxy session (Alia ADR 0020). The backend's only
+    // part in a Sindi turn is the capability catalogue Alia calls back into,
+    // so a backend module that imports an Alia client, names Alia's API or
+    // opens an Oxy inference session is a second chat path coming back.
+    const backend = runtimeSources('packages/backend');
+    const violations = backend.filter((file) => {
+      const source = readFileSync(join(REPOSITORY_ROOT, file), 'utf8');
+      return /['"]@alia\.onl\/|['"]@oxy\.so\/core\/inference['"]|https:\/\/api\.alia\.onl/.test(
+        source,
+      );
+    });
+    expect(violations).toEqual([]);
   });
 });

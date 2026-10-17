@@ -253,6 +253,13 @@
       "when": 1792160175758,
       "tag": "0035_capability_effect_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792163178378,
+      "tag": "0036_drop_sindi_conversations",
+      "breakpoints": true
     }
   ]
 }

@@ -13,7 +13,7 @@ export interface UseSindiUpsellResult {
 /**
  * Opens the Sindi file-analysis premium upsell sheet and wires its actions
  * (dismiss / upgrade-to-subscriptions). Centralises the bottom-sheet plumbing
- * so the conversation hook only needs a single `openUpsell` callback.
+ * so a surface only needs a single `openUpsell` callback (`onFeatureLocked`).
  */
 export function useSindiUpsell(): UseSindiUpsellResult {
   const router = useRouter();

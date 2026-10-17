@@ -1,53 +1,35 @@
 /**
- * A place Homiio could not commit to is SAID, on a screen that can be driven
- * and on one that cannot.
+ * A place Homiio could not commit to is SAID.
  *
- * The contract half of `clarify_location` is pinned in `actionContract.test.ts`
- * with the rest of the union. This file pins the two things a parser cannot
- * see, and both were the actual defect rather than a hypothetical one:
+ * "Muéstrame pisos en Hamburg" with two Hamburgs: refusing to choose is right
+ * (ADR 0002 §12.2), refusing SILENTLY was the defect. Sindi asks the catalogue
+ * (`resolvePlace`), which answers `ambiguous` or `not_found`, and Homiio's
+ * renderer for that tool draws the sentence in the conversation — from the
+ * tool's own answer, so it appears whatever the model writes.
  *
- *  1. **The executor performs nothing for it**, in the host with the fewest
- *     reasons not to act. A turn naming an unresolvable place must not move the
- *     app — ADR 0002 decision 5, "a failed resolution never runs a
- *     location-less query" — so `execute` reports `inline` and the router is
- *     never called, from the docked panel, whose `actMode` is `beside` and
- *     which defers nothing. A `navigate` to Explore here would be §1.3(c), an
- *     unrestricted feed under a request for one place.
+ * Pinned here:
+ *
+ *  1. **Nothing in the app moves for it.** There is no host tool for a
+ *     clarification: a call to the retired `clarify_location` is rejected, so
+ *     no navigation can follow an unresolved place (ADR 0002 decision 5 — a
+ *     failed resolution never runs a location-less query).
  *  2. **The card renders a sentence a person can act on**, from the real
  *     `en.json`. Asserting against the shipped strings rather than a stub is
- *     deliberate: the failure this whole change is about is a refusal nobody
- *     could see, and a missing translation key renders as `sindi.actions.…`,
- *     which is the same failure wearing a different coat.
+ *     deliberate: a missing key renders as `sindi.place.…`, which is the same
+ *     silence wearing a different coat.
  */
 
-import type React from 'react';
-import { render, renderHook } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 
 import { BloomThemeProvider } from '@oxy.so/bloom/theme';
-
-import type { SindiActionEnvelope } from '@homiio/shared-types';
-import { SINDI_ACTION_VERSION } from '@homiio/shared-types';
+import { parseSindiHostCall } from '@homiio/shared-types';
 
 import en from '@/locales/en.json';
-import { SindiActionCard } from '@/components/sindi/SindiActionCard';
-import { useSindiActions } from '@/hooks/useSindiActions';
+import { placeClarificationOf, SINDI_TOOL_RENDERERS } from '@/components/sindi/sindiToolRenderers';
 
-const mockPush = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
-// A docked panel, which is the host/layout pair with the FEWEST reasons not to
-// act: `actMode` is `beside`, so nothing below is prevented by the capability
-// check and nothing is deferred to `settleTurn`. Only the layout hook is
-// replaced — `controlCapabilityOf` and `actModeOf` are the real ones, so this
-// file cannot pass by mocking away the rules it is reasoning about.
-jest.mock('@/components/sindi/sindiPanelLayout', () => ({
-  ...jest.requireActual('@/components/sindi/sindiPanelLayout'),
-  useSindiPanelLayout: () => ({ visible: true, docked: true, width: 420 }),
-}));
-
-// The saved-homes list is the `show_saved` branch's inline answer and pulls the
-// data layer with it. No clarification renders it; stubbed so a failure here is
-// never that module's.
+// The saved-homes list pulls the data layer with it; no clarification renders it.
 jest.mock('@/components/sindi/SindiSavedHomes', () => ({ SindiSavedHomes: () => null }));
 
 /** The real English strings, interpolated the way i18next would. */
@@ -70,84 +52,73 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-const clarification = (
-  overrides: Partial<Extract<SindiActionEnvelope['action'], { kind: 'clarify_location' }>> = {},
-): SindiActionEnvelope => ({
-  version: SINDI_ACTION_VERSION,
-  actionId: 'a1',
-  turnId: 't1',
-  contextRevision: 7,
-  action: { kind: 'clarify_location', requested: 'Barcelona', reason: 'ambiguous', ...overrides },
-});
-
-/** Bloom typography reads its theme from context; there is no other reason. */
-const card = (execution: React.ComponentProps<typeof SindiActionCard>['execution']) =>
+const resolvePlace = (city: string, output: unknown) =>
   render(
     <BloomThemeProvider>
-      <SindiActionCard execution={execution} onTake={jest.fn()} />
+      {SINDI_TOOL_RENDERERS['homiio:resolvePlace']?.({
+        app: 'homiio',
+        tool: 'resolvePlace',
+        toolCallId: 'call_1',
+        input: { city },
+        output,
+      })}
     </BloomThemeProvider>,
   );
 
-beforeEach(() => {
-  mockPush.mockClear();
-});
-
-describe('the executor performs nothing for a clarification', () => {
-  it('answers inline and never navigates, even with a main pane to navigate', () => {
-    const { result } = renderHook(() =>
-      useSindiActions({
-        host: 'panel',
-        activeTurnId: 't1',
-        contextRevision: 7,
-        onExecuted: jest.fn(),
-      }),
-    );
-
-    expect(result.current.execute(clarification())).toBe('inline');
-    expect(mockPush).not.toHaveBeenCalled();
-    // Nor is anything held back for the end of the turn: a sentence does not
-    // take the chat's surface away, so there is nothing to wait for.
-    result.current.settleTurn();
-    expect(mockPush).not.toHaveBeenCalled();
-  });
-
-  it('tells the surface, so the sentence reaches the conversation', () => {
-    const onExecuted = jest.fn();
-    const { result } = renderHook(() =>
-      useSindiActions({ host: 'panel', activeTurnId: 't1', contextRevision: 7, onExecuted }),
-    );
-
-    result.current.execute(clarification());
-
-    expect(onExecuted).toHaveBeenCalledWith({ envelope: clarification(), outcome: 'inline' });
+describe('nothing in the app moves for a clarification', () => {
+  it('has no host tool: the retired clarify_location is refused', () => {
+    expect(
+      parseSindiHostCall('clarify_location', { requested: 'Barcelona', reason: 'ambiguous' }),
+    ).toBeNull();
   });
 });
 
 describe('the card says which place and why', () => {
   it('asks which one, naming it, for a homonym', () => {
-    const { getByText, queryByText } = card({ envelope: clarification(), outcome: 'inline' });
-
-    getByText(en.sindi.actions.clarifyLocation.ambiguous.replace('{{place}}', 'Barcelona'));
-    // Nothing to take: Homiio is not withholding a search it could run.
-    expect(queryByText(en.sindi.actions.take)).toBeNull();
+    const { getByText } = resolvePlace('Barcelona', {
+      status: 'ambiguous',
+      candidates: [{ id: 'a' }, { id: 'b' }],
+    });
+    getByText(en.sindi.place.ambiguous.replace('{{place}}', 'Barcelona'));
   });
 
   it('says it has no such place, for a name that matched nothing', () => {
-    const { getByText } = card({
-      envelope: clarification({ requested: 'Atlantis', reason: 'not_found' }),
-      outcome: 'inline',
-    });
-
-    getByText(en.sindi.actions.clarifyLocation.notFound.replace('{{place}}', 'Atlantis'));
+    const { getByText } = resolvePlace('Atlantis', { status: 'not_found' });
+    getByText(en.sindi.place.notFound.replace('{{place}}', 'Atlantis'));
   });
 
-  it('still says it when the person changed a filter mid-turn', () => {
-    // `stale` renders "you changed the search yourself, so this was left alone"
-    // for every other member, and for this one it would be a non-sequitur: the
-    // place stayed unresolvable whatever they did to their filters.
-    const { getByText, queryByText } = card({ envelope: clarification(), outcome: 'stale' });
+  it('says nothing for a place that resolved — the search goes ahead', () => {
+    expect(
+      SINDI_TOOL_RENDERERS['homiio:resolvePlace']?.({
+        app: 'homiio',
+        tool: 'resolvePlace',
+        toolCallId: 'call_1',
+        input: { city: 'Hamburg' },
+        output: { status: 'resolved', place: { id: 'city-hamburg' }, location: { kind: 'place' } },
+      }),
+    ).toBeNull();
+  });
+});
 
-    getByText(en.sindi.actions.clarifyLocation.ambiguous.replace('{{place}}', 'Barcelona'));
-    expect(queryByText(en.sindi.actions.stale)).toBeNull();
+describe('what the renderer reads from the call', () => {
+  it('quotes the name the person used, trimmed', () => {
+    expect(
+      placeClarificationOf({ input: { city: '  Hamburg ' }, output: { status: 'ambiguous' } }),
+    ).toEqual({ requested: 'Hamburg', reason: 'ambiguous' });
+  });
+
+  it.each([
+    ['no output', undefined],
+    ['an output that is not an object', 'ambiguous'],
+    ['a status it does not know', { status: 'rate_limited' }],
+  ])('draws nothing for %s', (_label, output) => {
+    expect(placeClarificationOf({ input: { city: 'Hamburg' }, output })).toBeNull();
+  });
+
+  it('draws nothing without a name to quote', () => {
+    expect(placeClarificationOf({ input: {}, output: { status: 'not_found' } })).toBeNull();
+    expect(
+      placeClarificationOf({ input: { city: '   ' }, output: { status: 'not_found' } }),
+    ).toBeNull();
   });
 });

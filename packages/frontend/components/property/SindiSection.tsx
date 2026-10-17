@@ -7,8 +7,9 @@
  *  - states the value proposition (a 24/7 assistant that knows THIS listing),
  *  - folds in the verification trust signal when the listing is verified
  *    (Sindi reviewed it for authenticity), and
- *  - offers quick AI prompt chips + ONE primary CTA, all of which open
- *    `SindiChatBottomSheet` (the live chat seeded with the property context).
+ *  - offers quick prompt chips + ONE primary CTA, all of which ask Sindi in
+ *    the SDK's one sheet (`useAskAgent().ask('sindi', turn)`), the turn naming
+ *    this listing so Sindi reads it with `getListing`.
  *
  * This deliberately replaces the prior pair of stacked gold banners
  * (`SindiSection` CTA + the static `SindiAnalysis` verified card) which
@@ -22,8 +23,9 @@
  * primary CTA — its label/icon use `colors.primaryForeground` (BLACK on the
  * `yellow` preset), resolved automatically by the Bloom `Button`.
  */
-import React, { useContext } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { useAskAgent } from '@alia.onl/sdk';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
@@ -33,44 +35,44 @@ import { Text } from '@oxy.so/bloom/typography';
 
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { SindiIcon } from '@/assets/icons';
-import { BottomSheetContext } from '@/context/BottomSheetContext';
-import { SindiChatBottomSheet } from './SindiChatBottomSheet';
-import { useSindiSuggestions } from '@/hooks/useSindiSuggestions';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import type { Property, SindiSuggestion } from '@homiio/shared-types';
+import { getPropertyTitle } from '@/utils/propertyUtils';
+import type { Property } from '@homiio/shared-types';
 
 interface SindiSectionProps {
   property: Property;
 }
 
 const SINDI_ICON_SIZE = 28;
-/** Quick-prompt chips are capped so the row stays a tidy two lines on phones. */
-const MAX_SUGGESTIONS = 4;
+/** The quick prompts, kept to four so the row stays a tidy two lines on phones. */
+const PROMPT_KEYS = [
+  'sindi.property.prompts.budget',
+  'sindi.property.prompts.costs',
+  'sindi.property.prompts.area',
+  'sindi.property.prompts.rights',
+] as const;
 
 export function SindiSection({ property }: SindiSectionProps) {
-  const bottomSheet = useContext(BottomSheetContext);
+  const { t } = useTranslation();
+  const { ask } = useAskAgent();
   const { colors: themeColors } = useTheme();
-  const { suggestions } = useSindiSuggestions({ property });
 
-  const openSindi = (initialMessage?: string) => {
-    bottomSheet.openBottomSheet(
-      <SindiChatBottomSheet
-        property={property}
-        onClose={bottomSheet.closeBottomSheet}
-        initialMessage={initialMessage}
-      />,
-    );
-  };
+  // The listing travels IN the turn, by id, so the question reads "this home"
+  // whatever page the sheet is later reopened over.
+  const askSindi = (question: string) =>
+    ask('sindi', {
+      text: `${question}\n\n${t('sindi.property.context', {
+        title: getPropertyTitle(property),
+        id: property.id,
+      })}`,
+    });
 
-  const visibleSuggestions = suggestions.slice(0, MAX_SUGGESTIONS);
   const isVerified = Boolean(property.isVerified);
 
   // Subtitle adapts to the verification state so the one section carries the
   // trust signal the old static card used to (without a second banner).
-  const subtitle = isVerified
-    ? 'Sindi reviewed this listing for authenticity. Ask anything about the home, the area, your rights, or hidden costs.'
-    : 'Your 24/7 rental assistant. Ask anything about the home, the area, your rights, or hidden costs.';
+  const subtitle = isVerified ? t('sindi.property.subtitleVerified') : t('sindi.property.subtitle');
 
   return (
     <View>
@@ -80,7 +82,7 @@ export function SindiSection({ property }: SindiSectionProps) {
         </View>
         <View style={styles.headerText}>
           <Text variant="title-3-bold" style={{ color: themeColors.text }}>
-            Ask Sindi about this home
+            {t('sindi.property.title')}
           </Text>
           <Text variant="body-2-regular" style={{ color: themeColors.textSecondary }}>
             {subtitle}
@@ -96,37 +98,30 @@ export function SindiSection({ property }: SindiSectionProps) {
               color="success"
               startIcon={<RiVerifiedBadgeFill width={16} height={16} fill={themeColors.success} />}
             >
-              Verified by Sindi
+              {t('sindi.property.verified')}
             </Chip>
           </View>
         ) : null}
 
-        {visibleSuggestions.length > 0 ? (
-          <View style={styles.chipRow}>
-            {visibleSuggestions.map((suggestion: SindiSuggestion, index: number) => (
-              <Chip
-                key={`${suggestion.text}-${index}`}
-                size="md"
-                onPress={() => openSindi(suggestion.text)}
-                accessibilityLabel={suggestion.text}
-              >
-                {suggestion.text}
-              </Chip>
-            ))}
-          </View>
-        ) : null}
+        <View style={styles.chipRow}>
+          {PROMPT_KEYS.map((key) => (
+            <Chip key={key} size="md" onPress={() => askSindi(t(key))} accessibilityLabel={t(key)}>
+              {t(key)}
+            </Chip>
+          ))}
+        </View>
 
         <Button
-          onPress={() => openSindi()}
+          onPress={() => askSindi(t('sindi.property.defaultQuestion'))}
           size="lg"
           icon={<SindiIcon size={18} color={colors.primaryForeground} />}
           iconPosition="left"
-          accessibilityLabel="Ask Sindi AI about this home"
-          accessibilityHint="Opens a chat with Sindi about this property"
+          accessibilityLabel={t('sindi.property.askAccessible')}
+          accessibilityHint={t('sindi.property.askHint')}
           tone="accent"
           appearance="solid"
         >
-          Ask Sindi about this home
+          {t('sindi.property.title')}
         </Button>
       </View>
     </View>

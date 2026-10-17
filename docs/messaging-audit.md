@@ -25,9 +25,9 @@ person before Homiio writes a line of messaging code. They are in §5.
   There is no reply, no thread and no second participant. Wiring "Message
   landlord" to it would produce a button that sends nothing, which is what §7.3
   names in its own sentence.
-- **Sindi is not person-to-person.** It is an Alia agent. The bearer on that path
-  authenticates a human to Homiio and a requester assertion to Alia; no other
-  Homiio user is ever on the other end.
+- **Sindi is not person-to-person.** It is an Alia agent the app reaches through
+  `@alia.onl/sdk` under the person's own Oxy session; no other Homiio user is
+  ever on the other end.
 - **There is no realtime socket client** (`AGENTS.md`), so any "typing…" or live
   delivery would need a transport this app does not have.
 

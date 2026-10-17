@@ -17,7 +17,7 @@ Homiio is a Bun workspaces monorepo with three packages: `@homiio/frontend` (Exp
 - **Android development**: Android Studio with at least one configured AVD.
 - **Web only**: nothing extra — `bun run dev:frontend` then press `w`.
 
-Optional but recommended: Stripe CLI (for webhook forwarding in dev) and AWS credentials with S3 access (for the image pipeline). Homiio's point-inference features additionally need its Oxy service credential and an Oxy routing profile. Interactive Sindi chat uses Homiio's Oxy service credential plus a requester assertion that Oxy mints for the already-verified user; the caller's bearer goes to Oxy for that mint and never to Alia.
+Optional but recommended: Stripe CLI (for webhook forwarding in dev) and AWS credentials with S3 access (for the image pipeline). Sindi and Alia need nothing from the backend: the app talks to Alia through `@alia.onl/sdk` under the signed-in person's Oxy session, so they work against a local backend as they do in production.
 
 ## Clone and install
 
@@ -49,19 +49,12 @@ STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=http://localhost:8130/success
 STRIPE_CANCEL_URL=http://localhost:8130/profile/subscriptions
 
-# Oxy service identity + Oxy-owned routing profile — required for point inference
-# These are product-to-Oxy credentials, never an upstream provider key.
-# The pair is LOCAL ONLY: a deployed Homiio attests its ECS task role instead
-# (oxy ADR 0026) and carries neither variable. Set both here, or leave both
-# unset and inference refuses rather than failing at the edge.
+# Homiio's Oxy service identity (the capability catalogue, reviews, evictions).
+# A product-to-Oxy credential, never an upstream provider key. The pair is
+# LOCAL ONLY: a deployed Homiio attests its ECS task role instead (oxy ADR 0026)
+# and carries neither variable.
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
-OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd
-
-# The private Sindi agent. Sindi is Homiio's attested ECS task role (oxy ADR
-# 0026) and has no key pair, so Sindi chat does not work from a laptop. This
-# value does not prove the Oxy desired state has been applied or read back.
-SINDI_ALIA_AGENT_ID=01a0646a-078f-7514-9800-9f43ceed7df8
 
 # AWS S3 — required for image uploads (production bucket from oxy-infra)
 AWS_ACCESS_KEY_ID=...

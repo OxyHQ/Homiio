@@ -106,8 +106,8 @@ describe('expiry sweep registry', () => {
     //
     // The set is CLOSED: asserting the exact list in both directions makes it
     // a checked statement rather than an arithmetic claim in a comment.
-    // `conversations.sharing_expires_at` is the deadline column that must never
-    // be swept, and is checked separately below.
+    // `eviction_cases.archived_at` is the deadline column that must never be
+    // swept, and is checked separately below.
     //
     // `housing_domain_events.expires_at` (#356) and `address_candidates.expires_at`
     // (#360) were registered when their tables were created. That is the shape
@@ -138,9 +138,7 @@ describe('expiry sweep registry', () => {
     // The rule `db/expiry.ts` states as data. Without this check, a later reader
     // comparing the source's five TTL indexes against the four registered above
     // finds the registry one short and closes the gap — which is precisely the
-    // change that would start deleting people's conversations, because
-    // `Conversation.sharing.expiresAt` is a SHARE LINK's deadline and its TTL
-    // takes the whole transcript with it.
+    // change that would start deleting archived eviction cases.
     const registered = new Set(
       EXPIRY_SWEEP_TARGETS.map(
         (target) => `${getTableName(target.table)}.${sqlColumnName(target.column)}`,
@@ -158,7 +156,7 @@ describe('expiry sweep registry', () => {
     // (ADR 0003 §7.5 keeps the anonymised outcome deliberately). Registering it
     // as a sweep target would delete a notice ninety days after its last edit
     // and would read as housekeeping in the diff.
-    expect(forbidden).toEqual(['conversations.sharing_expires_at', 'eviction_cases.archived_at']);
+    expect(forbidden).toEqual(['eviction_cases.archived_at']);
     expect(forbidden.filter((label) => registered.has(label))).toEqual([]);
 
     const unexplained = EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE.filter(
@@ -169,9 +167,7 @@ describe('expiry sweep registry', () => {
 
   it('gives every target a retention and a reason', () => {
     // A registry entry with no note reads as "unconditionally safe to sweep",
-    // which is exactly the reading that ports a destructive TTL faithfully. The
-    // one Homiio has that is NOT safe — `Conversation.sharing.expiresAt`, which
-    // deletes the whole conversation — must never appear here as a delete.
+    // which is exactly the reading that ports a destructive TTL faithfully.
     const unexplained = EXPIRY_SWEEP_TARGETS.filter(
       (target) => target.reason.trim().length < 40,
     ).map((target) => getTableName(target.table));

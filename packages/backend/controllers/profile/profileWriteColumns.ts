@@ -25,10 +25,7 @@
  * the ones the client omitted, which are written NULL. Anything else would make
  * "clear my bio" impossible to express.
  *
- * The blocks are the seven `personalProfile` keys. `chatHistory` is deliberately
- * NOT one of them: it is the assistant transcript, `/api/ai/history` owns it,
- * and letting a profile save replace it would let a client rewrite its own
- * conversation with Sindi.
+ * The blocks are the seven `personalProfile` keys.
  *
  * ## Vocabularies are FILTERED, not rejected
  *

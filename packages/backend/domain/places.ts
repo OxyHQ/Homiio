@@ -1,7 +1,8 @@
 /**
  * Which city a person means — the place resolution behind "show me flats in
- * Barcelona", shared by the `resolvePlace` tool and Sindi's server-side turn
- * (`services/sindiActions.ts`).
+ * Barcelona", behind the `resolvePlace` capability tool
+ * (`capabilities/handlers/listings.ts`), which Sindi and every other agent call
+ * before searching a named place.
  *
  * ## Ambiguity is refused, and the refusal says why
  *

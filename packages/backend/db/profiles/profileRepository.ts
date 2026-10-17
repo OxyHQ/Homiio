@@ -48,7 +48,6 @@ import type { SQL } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '../postgres';
 import { escapeLikePattern } from '@oxy.so/utils/sql';
 import {
-  profileChatMessages,
   profilePreferredLocations,
   profileReferences,
   profileRentalHistory,
@@ -59,14 +58,6 @@ import {
 // that declares it beside the column it constrains.
 import type { GENDER_PREFERENCES } from '../schema/profiles';
 import { type HydratedProfile, type ProfileRow, profileSelection } from './profileSerializer';
-
-/**
- * How many transcript turns the profile keeps.
- *
- * `POST /api/ai/history` keeps the last 100 turns on every append. The cap is
- * the only thing bounding a transcript that grows with every turn — see {@link appendProfileChatTurn}.
- */
-export const PROFILE_CHAT_HISTORY_LIMIT = 100;
 
 /** Columns a write may set. Derived from the table, so it cannot name a phantom. */
 export type ProfileWriteColumns = Partial<typeof profiles.$inferInsert>;
@@ -101,14 +92,13 @@ export interface ProfileUpdate {
   readonly roommateHistory?: readonly ProfileRoommateHistoryInput[];
 }
 
-/** A freshly created profile has no child rows. Stated once rather than five times. */
+/** A freshly created profile has no child rows. Stated once rather than four times. */
 function emptyChildren(): Omit<HydratedProfile, 'profile'> {
   return {
     references: [],
     rentalHistory: [],
     preferredLocations: [],
     roommateHistory: [],
-    chatHistory: [],
   };
 }
 
@@ -128,22 +118,22 @@ export async function findProfileByOxyUserId(
 /**
  * Every child collection for a SET of profiles, grouped by profile id.
  *
- * Five statements in parallel rather than one join: the collections are
+ * Four statements in parallel rather than one join: the collections are
  * independent of each other, so a join would multiply their rows together and
- * the reader would have to undo five cartesian products to recover what five
+ * the reader would have to undo four cartesian products to recover what four
  * plain reads already return.
  *
- * Five statements for ONE page rather than five per profile, which is the
+ * Four statements for ONE page rather than four per profile, which is the
  * reason this takes a list. The roommate discover feed hydrates up to a page of
  * candidates at a time, and the per-profile version issued underneath it would
- * be 5 × N round trips for a browse screen.
+ * be 4 × N round trips for a browse screen.
  *
  * **Every ordering here names a real sort column and uses the id only to break a
  * tie.** A `text` primary key holds a 24-char ObjectId hex for a pre-cutover row
  * and a uuid v7 for a new one, and those two shapes do NOT interleave in
  * creation order — a uuid v7 minted today begins `0…` and every ObjectId minted
  * this year begins `6…`, so a lexicographic sort puts every new row FIRST. See
- * `db/conversations/conversationRepository.ts`, which carries the measurement.
+ * `db/MIGRATION-CONTRACT.md` ("Ids are text, and two shapes coexist").
  */
 async function loadChildrenByProfileId(
   db: DatabaseOrTransaction,
@@ -153,29 +143,23 @@ async function loadChildrenByProfileId(
   if (profileIds.length === 0) return grouped;
 
   const ids = [...profileIds];
-  const [references, rentalHistory, preferredLocations, roommateHistory, chatHistory] =
-    await Promise.all([
-      db.select().from(profileReferences).where(inArray(profileReferences.profileId, ids)),
-      db
-        .select()
-        .from(profileRentalHistory)
-        .where(inArray(profileRentalHistory.profileId, ids))
-        .orderBy(asc(profileRentalHistory.startDate), asc(profileRentalHistory.id)),
-      db
-        .select()
-        .from(profilePreferredLocations)
-        .where(inArray(profilePreferredLocations.profileId, ids)),
-      db
-        .select()
-        .from(profileRoommateHistory)
-        .where(inArray(profileRoommateHistory.profileId, ids))
-        .orderBy(asc(profileRoommateHistory.startDate), asc(profileRoommateHistory.id)),
-      db
-        .select()
-        .from(profileChatMessages)
-        .where(inArray(profileChatMessages.profileId, ids))
-        .orderBy(asc(profileChatMessages.position), asc(profileChatMessages.timestamp)),
-    ]);
+  const [references, rentalHistory, preferredLocations, roommateHistory] = await Promise.all([
+    db.select().from(profileReferences).where(inArray(profileReferences.profileId, ids)),
+    db
+      .select()
+      .from(profileRentalHistory)
+      .where(inArray(profileRentalHistory.profileId, ids))
+      .orderBy(asc(profileRentalHistory.startDate), asc(profileRentalHistory.id)),
+    db
+      .select()
+      .from(profilePreferredLocations)
+      .where(inArray(profilePreferredLocations.profileId, ids)),
+    db
+      .select()
+      .from(profileRoommateHistory)
+      .where(inArray(profileRoommateHistory.profileId, ids))
+      .orderBy(asc(profileRoommateHistory.startDate), asc(profileRoommateHistory.id)),
+  ]);
 
   // Bucketing preserves the statement's own `ORDER BY` inside each group, since
   // rows arrive sorted and are appended in arrival order.
@@ -193,7 +177,6 @@ async function loadChildrenByProfileId(
   const rentalHistoryByProfile = byProfile(rentalHistory);
   const preferredLocationsByProfile = byProfile(preferredLocations);
   const roommateHistoryByProfile = byProfile(roommateHistory);
-  const chatHistoryByProfile = byProfile(chatHistory);
 
   for (const profileId of ids) {
     grouped.set(profileId, {
@@ -201,7 +184,6 @@ async function loadChildrenByProfileId(
       rentalHistory: rentalHistoryByProfile.get(profileId) ?? [],
       preferredLocations: preferredLocationsByProfile.get(profileId) ?? [],
       roommateHistory: roommateHistoryByProfile.get(profileId) ?? [],
-      chatHistory: chatHistoryByProfile.get(profileId) ?? [],
     });
   }
   return grouped;
@@ -478,8 +460,7 @@ export async function searchRoommateCandidates(
  * The obvious spelling — insert, catch the unique violation, re-read — is wrong
  * HERE even though it is right in `db/roommates/roommateRepository.ts`, and the
  * difference is the caller. Every call site of this function runs inside a
- * transaction the CALLER opened (`updateMyProfile`, and the three `/ai/history`
- * handlers). In Postgres a failed statement aborts the enclosing transaction, so
+ * transaction the CALLER opened (`updateMyProfile`). In Postgres a failed statement aborts the enclosing transaction, so
  * the recovery `SELECT` would answer `25P02 current transaction is aborted`
  * rather than the row — turning the race the unique index exists to absorb into
  * a 500, and only under concurrency, which is where it would never be noticed.
@@ -488,10 +469,6 @@ export async function searchRoommateCandidates(
  * empty `RETURNING` set IS the "somebody else got there first" answer, and the
  * read that follows runs in a healthy transaction. Same mechanism, and the same
  * reasoning, as `enqueueModerationOutboxEvent`'s claim.
- *
- * `appendMessages` in the conversation repository solves the same hazard the
- * other way — by opening its own transaction per attempt — because it genuinely
- * needs to RETRY with a recomputed value. Nothing here needs recomputing.
  */
 export async function ensureProfile(
   db: DatabaseOrTransaction,
@@ -604,89 +581,4 @@ export async function updateProfile(
     throw new Error(`Profile for ${oxyUserId} vanished during its own update.`);
   }
   return updated;
-}
-
-/** The profile's Sindi transcript, oldest first. */
-export async function listProfileChatHistory(
-  db: DatabaseOrTransaction,
-  profileId: string,
-): Promise<readonly (typeof profileChatMessages.$inferSelect)[]> {
-  return db
-    .select()
-    .from(profileChatMessages)
-    .where(eq(profileChatMessages.profileId, profileId))
-    .orderBy(asc(profileChatMessages.position), asc(profileChatMessages.timestamp));
-}
-
-/**
- * Append one user turn and its assistant reply, then trim to
- * {@link PROFILE_CHAT_HISTORY_LIMIT}.
- *
- * The profile row is locked FOR UPDATE first, which serialises concurrent
- * appends for one person. That matters because `position` is `max + 1` and
- * `profile_chat_messages` carries no `UNIQUE(profile_id, position)` — unlike
- * `conversation_messages`, which does, and where the index is what catches the
- * race. Here the lock is the mechanism, and without it two turns posted at once
- * would both take the same position and the transcript would have no defined
- * order at that point.
- *
- * Both messages get the SAME timestamp — one `new Date()` for the pair.
- * `position` is what tells them apart.
- *
- * Runs several statements, so the caller supplies the transaction.
- */
-export async function appendProfileChatTurn(
-  db: DatabaseOrTransaction,
-  profileId: string,
-  turn: { readonly userMessage: string; readonly assistantMessage: string },
-): Promise<void> {
-  await db
-    .select({ id: profiles.id })
-    .from(profiles)
-    .where(eq(profiles.id, profileId))
-    .for('update');
-
-  // `::double precision` for the same reason `conversation_messages` casts to
-  // `::int`: an aggregate's driver representation is not the column's, and a
-  // string coming back here would make `+ 1` string concatenation — silently,
-  // past `tsc`, and only visible once a transcript is out of order.
-  const [highest] = await db
-    .select({
-      position: sql<number>`coalesce(max(${profileChatMessages.position}), -1)::double precision`,
-    })
-    .from(profileChatMessages)
-    .where(eq(profileChatMessages.profileId, profileId));
-  const next = highest.position + 1;
-  const timestamp = new Date();
-
-  await db.insert(profileChatMessages).values([
-    { profileId, role: 'user', content: turn.userMessage, timestamp, position: next },
-    { profileId, role: 'assistant', content: turn.assistantMessage, timestamp, position: next + 1 },
-  ]);
-
-  // Keep the newest N. Expressed as "delete everything at or below the cutoff
-  // position" rather than "keep the last N ids", because the cutoff is computed
-  // from `position` — the column that defines the order — and an id-based
-  // version would depend on the id shape, which is exactly what this migration
-  // makes unreliable.
-  const cutoff = next + 1 - PROFILE_CHAT_HISTORY_LIMIT;
-  if (cutoff >= 0) {
-    await db
-      .delete(profileChatMessages)
-      .where(
-        sql`${profileChatMessages.profileId} = ${profileId} and ${profileChatMessages.position} <= ${cutoff}`,
-      );
-  }
-}
-
-/** Clear the profile's Sindi transcript. Returns how many turns went. */
-export async function clearProfileChatHistory(
-  db: DatabaseOrTransaction,
-  profileId: string,
-): Promise<number> {
-  const rows = await db
-    .delete(profileChatMessages)
-    .where(eq(profileChatMessages.profileId, profileId))
-    .returning({ id: profileChatMessages.id });
-  return rows.length;
 }

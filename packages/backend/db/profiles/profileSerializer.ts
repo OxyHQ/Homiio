@@ -38,7 +38,6 @@
 import type { InferSelectModel } from 'drizzle-orm';
 import { publicColumns } from '../schema/protectedColumns';
 import type {
-  profileChatMessages,
   profilePreferredLocations,
   profileReferences,
   profileRentalHistory,
@@ -82,7 +81,6 @@ export type ProfileReferenceRow = InferSelectModel<typeof profileReferences>;
 export type ProfileRentalHistoryRow = InferSelectModel<typeof profileRentalHistory>;
 export type ProfilePreferredLocationRow = InferSelectModel<typeof profilePreferredLocations>;
 export type ProfileRoommateHistoryRow = InferSelectModel<typeof profileRoommateHistory>;
-export type ProfileChatMessageRow = InferSelectModel<typeof profileChatMessages>;
 
 /** One profile plus every child row a response carries with it. */
 export interface HydratedProfile {
@@ -91,7 +89,6 @@ export interface HydratedProfile {
   readonly rentalHistory: readonly ProfileRentalHistoryRow[];
   readonly preferredLocations: readonly ProfilePreferredLocationRow[];
   readonly roommateHistory: readonly ProfileRoommateHistoryRow[];
-  readonly chatHistory: readonly ProfileChatMessageRow[];
   /**
    * Present ONLY when the repository was asked for the owner's own view.
    * `undefined` on every public read, which is what keeps the protected column
@@ -186,10 +183,6 @@ function toRoommateHistoryDTO(row: ProfileRoommateHistoryRow): Record<string, un
     roommateCount: row.roommateCount,
     reason: row.reason,
   };
-}
-
-function toChatMessageDTO(row: ProfileChatMessageRow): Record<string, unknown> {
-  return { id: row.id, role: row.role, content: row.content, timestamp: row.timestamp };
 }
 
 /**
@@ -360,10 +353,6 @@ function toPersonalProfile(
       timezone: profile.settingsTimezone,
       currency: profile.settingsCurrency,
     },
-    // The Sindi transcript kept on the profile. Owner-only: it is the person's
-    // own conversation with the assistant and no privacy flag ever gated it,
-    // because it is only ever read back by its owner.
-    chatHistory: visibility === 'owner' ? hydrated.chatHistory.map(toChatMessageDTO) : [],
   };
 }
 

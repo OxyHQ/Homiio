@@ -6,7 +6,7 @@ order: 0
 
 # Homiio
 
-Homiio is the housing trust and transparency layer: find a place, research its history, learn what it really costs, understand what living there was like, and manage or defend the tenancy. The frontend is a single Expo / React Native codebase targeting iOS, Android and Web. The backend is a Node + Express API on PostgreSQL with PostGIS, plus Stripe for subscriptions, AWS S3 + Sharp for media, and **Sindi**, the in-app tenant-rights assistant powered by Alia.
+Homiio is the housing trust and transparency layer: find a place, research its history, learn what it really costs, understand what living there was like, and manage or defend the tenancy. The frontend is a single Expo / React Native codebase targeting iOS, Android and Web. The backend is a Node + Express API on PostgreSQL with PostGIS, plus Stripe for subscriptions, AWS S3 + Sharp for media, and **Sindi**, the housing agent on Alia that the app opens through `@alia.onl/sdk`.
 
 <Badge variant="success">App</Badge> <Badge>iOS / Android / Web</Badge>
 
@@ -33,7 +33,7 @@ Inside the repo:
 | Package | Role |
 |---------|------|
 | `frontend` (`@homiio/frontend`) | Expo Router app. NativeWind + Tailwind for styling, Zustand for local state, TanStack Query for server state, `@oxy.so/bloom` for primitives. |
-| `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL + PostGIS) API, plus a separate worker process. Stripe billing, Sharp + S3 image pipeline, BullMQ ingestion, AI SDK streaming endpoints. |
+| `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL + PostGIS) API, plus a separate worker process. Stripe billing, Sharp + S3 image pipeline, BullMQ ingestion, and the capability catalogue Alia and MCP clients call. |
 | `listing-providers` (`@homiio/listing-providers`) | The provider plugin contract, the shared fetch runtime, and the portal plugins. Consumed by the worker. |
 | `shared-types` (`@homiio/shared-types`) | Pure TypeScript — the entity DTOs, the `format/` money/unit/date module, and the observability event schema. Built first via `postinstall`. |
 
@@ -43,17 +43,16 @@ Inside the repo:
    ┌──────────────────────┐                  ┌──────────────────────┐
    │   Homiio Frontend    │  ── REST ─────▶  │   Homiio Backend     │
    │   (Expo / RN / Web)  │                  │  (Express + Postgres)│
-   │                      │  ◀── AI stream ─ │                      │
    └──────────────────────┘                  └──────────────────────┘
-            │                                          │
-            ▼                                          ▼
-     @oxy.so/services                           Stripe + S3 + Alia + Oxy inference
-     (auth, account switcher)                  + Oxy API (identity)
-                                                       │
-                                                       ▼
-                                                 PostgreSQL
-                                        (Property, Profile, Billing, Lease,
-                                         City, Address, Review, Conversation)
+       │            │                             ▲          │
+       ▼            ▼                             │          ▼
+ @oxy.so/services  @alia.onl/sdk ──▶ Alia ── capability   Stripe + S3
+ (auth, account    (Sindi, Ask Alia;       tickets (MCP)  + Oxy API (identity)
+  switcher)         person's session)                        │
+                                                             ▼
+                                                       PostgreSQL
+                                              (Property, Profile, Billing, Lease,
+                                               City, Address, Review)
 ```
 
 Build order matters: `@homiio/shared-types` is built ahead of the others via a root `postinstall`, then `frontend` and `backend` can build in parallel.
@@ -93,16 +92,11 @@ STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=https://homiio.com/success
 STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
 
-# Point inference: Homiio service identity + Oxy routing profile.
+# Homiio's Oxy service identity (the capability catalogue, reviews, evictions).
 # The pair is LOCAL ONLY — a deployed Homiio attests its ECS task role instead
-# (oxy ADR 0026) and carries neither variable. Set both here, or leave both
-# unset and inference refuses rather than failing at the edge.
+# (oxy ADR 0026) and carries neither variable.
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
-OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd
-
-# The private Sindi agent (Sindi is the attested task role; it has no key pair)
-SINDI_ALIA_AGENT_ID=01a0646a-078f-7514-9800-9f43ceed7df8
 
 # Image pipeline (production bucket from oxy-infra)
 AWS_ACCESS_KEY_ID=...
@@ -165,27 +159,15 @@ Homiio sits behind Oxy identity. Each Oxy user gets one or more **profiles** (Pe
 
 The frontend's `ProfileProvider` loads profiles immediately after `useOxy()` reports authentication; the backend's `getOrCreateActiveProfile` endpoint creates a default Personal profile on first sign-in. There's no separate "create your account" step — profile creation is transparent.
 
-### Sindi (AI tenant-rights assistant)
+### Sindi and Alia
 
-Sindi is the in-app AI assistant designed as a private Alia agent backed by its canonical bot account. Once the Oxy desired state is applied and read back, its interactive, persisted chat route sends the byte-exact `SINDI_ALIA_AGENT_ID` to Alia with Homiio's attested Oxy service token (its ECS task role, oxy ADR 0026; no key pair) and a present-requester assertion (`X-Oxy-Requester-Assertion`, OxyHQServices ADR 0025). Homiio mints that assertion per turn by sending the request's verified Oxy bearer to Oxy — and only to Oxy — so the human bearer never reaches Alia; Oxy binds it to Sindi, the Homiio task role and the signed-in person for two minutes, and Alia consumes it once through Oxy's live introspection. Alia therefore remains the owner of the agent, chat, tools and memory before inference reaches Oxy and Kaana. The reserved target is project account `6a50444ce8026582b949089d`, bot account `01a0646a-078f-7974-9645-a5e8be237f47`, agent `01a0646a-078f-7514-9800-9f43ceed7df8`, service app `6a2f851751b784a86fd0e922` and task role `arn:aws:iam::237343248947:role/oxy-homiio-task` (the former service credential `01a0648e-ad3f-7608-aa8b-c07bfef6cf73` is retired). Those relations are pending until provisioner apply plus exact-ID readback; source values alone are not evidence that Sindi is live. Homiio never creates, rebinds, normalizes or discovers those IDs by name/list/order, and Sindi's intended capability grant is exactly `web`.
+Alia is Homiio's main AI ("Ask Alia"); Sindi, the housing agent, is an ordinary public Alia agent owned by the Homiio project account, and "Ask Sindi" opens the same dialog with Sindi's character (Alia ADR 0020). **Sindi and Alia are reached from the frontend through `@alia.onl/sdk` under the person's Oxy session; Homiio's backend never calls Alia.** The person present pays for the turn with their own Alia credits.
 
-Chat asks for no consent: the person is signed in and present, which is what the assertion proves, and a signed-out or revoked session simply fails the turn (`chat_auth_required`). Offline delegation (`acting-as:offline` through `X-Oxy-User-Id`) is reserved for future work with no person present; the frontend's consent action (`hooks/sindiConsent.ts`) stays for that lane and is unreachable from chat.
+The app mounts the SDK's one sheet (`AliaAskProvider`, `context/AskAgentProvider.tsx`), the docked/overlay panel and the full-screen `/sindi` chat. It declares **host tools** — the five things Sindi may do to the screen (`apply_search`, `show_saved`, `open_listing`, `set_results_view`, `navigate`), executed by `hooks/useSindiActions.ts` — sends what the screen shows as the turn's `clientContext`, and draws the catalogue's results with its own **renderers** (`PropertyCard`, saved homes, "which Barcelona?"). Conversations, titles, share links, files and voice are Alia's.
 
-Homiio's one-shot features — conversation titles, filter extraction, smart suggestions, and contract or image analysis — call the Oxy inference edge with Homiio's service identity and an Oxy-owned routing profile. Homiio never calls Kaana or an upstream provider directly, and never constructs Kaana's `authorizedRoutes`; Oxy resolves policy and the signed data-plane envelope for those point requests. Kaana is the sole hosted inference data plane and its only canonical signed origin is `https://kaana.ai`, never an `oxy.so` hostname. Provider credentials live only encrypted in Kaana PostgreSQL/KMS; Homiio's Oxy service credentials are application identities, not provider keys.
+What Sindi can do to the person's Homiio data is the **capability catalogue** (`packages/backend/capabilities/`): 167 tools Alia calls with Oxy capability tickets, bounded by Sindi's published ceiling (Oxy ADR 0042), and the same catalogue serves Homiio's public MCP. Homiio+ unlocks documents through the `sindi.files` feature gate. Homiio never calls Kaana or an inference provider, and holds no provider key.
 
-Interactive Sindi chat consumes Alia's SSE response incrementally through **`@alia.onl/server`**, Alia's own server-side client, and translates each text delta to the AI Data Stream protocol already consumed by the frontend. Text is forwarded verbatim — including property ids that may span arbitrary stream chunks — Alia's named `alia.*` events are dropped by a branch that exists rather than by a parser that never saw them, and the upstream request is aborted when the Homiio client disconnects. Alia writes an error INTO the stream, and that frame is now an `error` event carrying the server's own code: `aliaChatService` logs the code and answers the person from its own two-code allowlist. Homiio-owned one-shot features remain non-streaming through `OxyInferenceClient.respond()`.
-
-The system prompt is explicit:
-
-> You are Sindi, an AI tenant-rights assistant for Homiio. Be concise, accurate, and pro-tenant. Prioritize tenant rights, fair housing, and current local law. Search Homiio properties first when asked for places to rent; then add rights tips. Prefer official sources and Sindicat de Llogateres for Catalonia queries.
-
-When the user asks Sindi for listings, it can embed a machine-readable property block at the end of its reply:
-
-```
-<PROPERTIES_JSON>["propertyId1","propertyId2","propertyId3"]</PROPERTIES_JSON>
-```
-
-The frontend parses that tag and renders inline property cards under Sindi's message. Conversations are persisted as rows in PostgreSQL.
+Detail, and where every former Sindi capability now lives: [Sindi is an Alia agent](./sindi).
 
 ### Stripe billing (Homiio+ / file credits / Founder)
 

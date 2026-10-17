@@ -173,7 +173,6 @@ Review **writes** are on the authenticated router. Only reads are public.
 | `GET` | `/api/images/file/*` | Self-hosted image bytes; photos must load without a token |
 | `GET` | `/api/public/profiles/by-user/:oxyUserId` | Read-only |
 | `GET` | `/api/public/profiles/oxy/:oxyUserId` | Read-only |
-| `GET` | `/api/ai/shared/:token` | A shared conversation; freshness is in the query, so an expired link is 404 whether or not the sweep has run |
 | `GET` | `/api/telegram/status` | Bot status |
 | `GET` | `/api/telegram/groups/:city` | |
 | `GET` | `/api/telegram/webhook` | |
@@ -360,7 +359,6 @@ handshake.
 | `/api/evictions` | `POST /`, `PUT|DELETE /:id`, `POST /:id/attend|follow|comments|updates|report`, `GET /:id/team`, `POST /:id/collaborators`, `DELETE /:id/collaborators/:oxyUserId`, `POST /:id/hold/clear`, `POST /:id/vouch/:oxyUserId`, `POST /:id/supporters/:oxyUserId/revoke`, `GET|POST /:id/location/grants`, `POST /:id/location/grants/:oxyUserId/revoke`, `GET /:id/location/exact`, `GET /:id/location/audit`, `DELETE /:id/comments/:commentId`, `GET /me/list`, `GET /me/attending`, `GET /me/following` |
 | `/api/partners` | `POST /join`, `GET /me`, `GET /me/earnings`, `GET /me/referrals` |
 | `/api/analytics` | `GET /`, `GET /stats` |
-| `/api/ai` | Sindi: conversations CRUD, `POST /stream`, `POST /analyze-file[/stream]`, `POST /conversations/:id/share`, `POST /suggestions`, history |
 | `/api/images` | `POST /upload`, `POST /upload-multiple`, `GET /info/:imageKey`, `DELETE /:imageKey`, `DELETE /variants` |
 | `/api/billing` | Checkout, customer portal, subscription lifecycle — see [Payments](./payments) |
 | `/api/telegram` | Notification and bot management |
@@ -397,7 +395,7 @@ Expo Router, `packages/frontend/app/`.
 
 | Segment | Screens |
 |---|---|
-| `(tabs)` | `index` (home), `inbox`, `saved` (+ `[folderId]`, `notes`), `profile` (+ `edit`, `subscriptions`), `sindi` (+ `[conversationId]`, `shared/[token]`) |
+| `(tabs)` | `index` (home), `inbox`, `saved` (+ `[folderId]`, `notes`), `profile` (+ `edit`, `subscriptions`), `sindi` (+ `[conversationId]` — `new` for one Alia has not made yet — and `shared/[token]`, Alia's read-only share) |
 | `explore` | `index`, `[query]` — **the discovery surface** |
 | `search` | `index`, `[query]` — **redirects to `/explore`, nothing else** |
 | `properties` | `index`, `[id]` (+ `apply`, `book-viewing`, `report`), `create`, `drafts`, `my`, `recently-viewed`, `city/[id]`, `type/[type]`, `address-detail` |

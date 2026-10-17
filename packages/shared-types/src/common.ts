@@ -150,11 +150,6 @@ export enum LeaseDuration {
   FLEXIBLE = 'flexible',
 }
 
-// AI Assistant Types
-export interface SindiSuggestion {
-  text: string;
-}
-
 export enum ReferenceRelationship {
   LANDLORD = 'landlord',
   EMPLOYER = 'employer',

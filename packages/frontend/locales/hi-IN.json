@@ -1353,16 +1353,12 @@
       "conversations": "Conversations",
       "empty": "Start a new conversation to get help."
     },
-    "status": {
-      "thinking": "Thinking..."
-    },
     "auth": {
       "required": "Authentication Required",
       "message": "Please sign in to access Sindi, your AI-powered housing justice advocate"
     },
     "chat": {
-      "placeholder": "Ask Sindi about your tenant rights...",
-      "you": "You",
+      "placeholder": "{{name}} से पूछें…",
       "field": "संदेश",
       "attach": "फ़ाइल संलग्न करें",
       "send": "संदेश भेजें",
@@ -1372,33 +1368,13 @@
       "voice": "वॉइस इनपुट",
       "removeAttachment": "हटाएँ"
     },
-    "errors": {
-      "connection": "Connection Error",
-      "connectionMessage": "Please check your connection and try again.",
-      "consentTitle": "Permission needed",
-      "consentMessage": "Allow Homiio to let Sindi continue helping you while you are away.",
-      "consentAction": "Review permissions",
-      "consentRequesting": "Opening permissions...",
-      "consentUnavailableTitle": "Permission unavailable",
-      "consentUnavailableMessage": "Update Homiio and try again. No permission was granted.",
-      "uploadFailedTitle": "Upload failed",
-      "uploadAnalyzeFailed": "Could not analyze the file."
-    },
     "shared": {
-      "loading": "Loading Shared Conversation",
-      "loadingMessage": "Loading conversation...",
       "subtitle": "Shared Conversation",
       "badge": "Shared Conversation",
       "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
       "error": {
-        "title": "Conversation Not Found",
         "notFound": "This shared conversation could not be found or has expired.",
-        "failed": "Failed to load shared conversation. Please try again.",
-        "description": "The conversation may have been removed or the link may be invalid."
-      },
-      "empty": {
-        "title": "Empty Conversation",
-        "subtitle": "This shared conversation doesn't have any messages yet."
+        "failed": "Failed to load shared conversation. Please try again."
       }
     },
     "share": {
@@ -1409,65 +1385,55 @@
       },
       "error": {
         "title": "Cannot Share Conversation",
-        "saveFirst": "Please save the conversation by sending a message before sharing.",
-        "emptyConversation": "Cannot share an empty conversation. Please add some messages first.",
         "failed": "Failed to generate share link. Please try again."
       }
     },
     "conversation": {
-      "title": "Conversation",
-      "subtitle": "AI Housing Justice Advocate",
-      "loading": "Loading Conversation",
-      "loadingMessage": "Loading conversation..."
+      "title": "Conversation"
     },
     "settings": {
-      "resetMessage": "This will reset all Sindi preferences to their defaults.",
+      "resetMessage": "इससे सिंडी के साथ आपकी बातचीत हट जाएगी और उसकी प्राथमिकताएँ डिफ़ॉल्ट पर लौट आएँगी।",
       "resetTitle": "Reset Sindi?",
-      "reset": "Reset Sindi to defaults",
+      "reset": "बातचीत हटाएँ और रीसेट करें",
       "actions": "Actions",
-      "tipsDescription": "Surface inline guidance while you chat.",
+      "tipsDescription": "बातचीत शुरू करते समय प्रश्न सुझाएँ।",
       "tips": "Show tips & hints",
       "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
       "behavior": "Behavior",
       "title": "Sindi preferences",
-      "resetDone": "Sindi preferences reset."
+      "resetDone": "सिंडी रीसेट हो गई।",
+      "resetFailed": "सिंडी को रीसेट नहीं किया जा सका। फिर से कोशिश करें।"
     },
     "voice": {
-      "unsupportedBrowser": "यह ब्राउज़र वॉइस इनपुट का समर्थन नहीं करता",
       "unsupportedDevice": "इस डिवाइस पर वॉइस इनपुट उपलब्ध नहीं है",
-      "deniedTitle": "माइक्रोफ़ोन की अनुमति नहीं दी गई",
       "deniedMessage": "संदेश बोलकर लिखने के लिए सेटिंग्स में माइक्रोफ़ोन और वाक् पहचान की अनुमति दें।",
       "failed": "वॉइस इनपुट अचानक बंद हो गया"
-    },
-    "actions": {
-      "take": "करें",
-      "takeAccessible": "Sindi का सुझाव लागू करें",
-      "applySearch": "इन फ़िल्टर के साथ एक्सप्लोर खोलें",
-      "showSaved": "अपने सहेजे गए घर खोलें",
-      "openListing": "यह घर खोलें",
-      "showMap": "नतीजे मानचित्र पर दिखाएँ",
-      "showList": "नतीजे सूची में दिखाएँ",
-      "navigate": {
-        "explore": "एक्सप्लोर खोलें",
-        "saved": "सहेजे गए खोलें",
-        "home": "होम स्क्रीन खोलें",
-        "my_home": "मेरा घर खोलें",
-        "evictions": "बेदख़ली बोर्ड खोलें"
-      },
-      "clarifyLocation": {
-        "ambiguous": "मैं नहीं समझ पाई कि आपका मतलब कौन-सा “{{place}}” था — इस नाम की एक से ज्यादा जगहें हैं। यह किस क्षेत्र में है?",
-        "notFound": "मेरे पास “{{place}}” नाम की कोई जगह नहीं है, इसलिए खोज जैसी थी वैसी ही रही।"
-      },
-      "applied": "हो गया: {{what}}।",
-      "stale": "आपने खुद खोज बदली, इसलिए इसे वैसा ही छोड़ा गया।",
-      "failed": "यह नहीं हो सका: {{what}}।"
     },
     "saved": {
       "loading": "आपके सहेजे गए घर देख रहा हूँ…",
       "failed": "आपके सहेजे गए घर लोड नहीं हो सके।",
       "empty": "आपने अभी तक कोई घर नहीं सहेजा है।",
-      "emptyFolder": "वह संग्रह खाली है।",
       "more": "और {{count}} और"
+    },
+    "place": {
+      "ambiguous": "मैं नहीं समझ पाई कि आपका मतलब कौन-सा “{{place}}” था — इस नाम की एक से ज्यादा जगहें हैं। यह किस क्षेत्र में है?",
+      "notFound": "मेरे पास “{{place}}” नाम की कोई जगह नहीं है, इसलिए खोज जैसी थी वैसी ही रही।"
+    },
+    "property": {
+      "title": "इस घर के बारे में सिंडी से पूछें",
+      "subtitle": "आपकी 24/7 किराया सहायक। घर, इलाके, अपने अधिकारों या छिपी लागतों के बारे में कुछ भी पूछें।",
+      "subtitleVerified": "सिंडी ने इस लिस्टिंग की प्रामाणिकता की जाँच की है। घर, इलाके, अपने अधिकारों या छिपी लागतों के बारे में कुछ भी पूछें।",
+      "verified": "सिंडी द्वारा सत्यापित",
+      "askAccessible": "इस घर के बारे में सिंडी से पूछें",
+      "askHint": "इस घर के बारे में सिंडी के साथ चैट खोलता है",
+      "defaultQuestion": "क्या आप मुझे यह घर और किरायेदार के रूप में मेरे अधिकार समझने में मदद कर सकती हैं?",
+      "context": "इस घर के बारे में: {{title}} (Homiio लिस्टिंग {{id}})।",
+      "prompts": {
+        "budget": "मुझे कितना बजट रखना चाहिए?",
+        "costs": "क्या कोई छिपी लागत है?",
+        "area": "इस इलाके के बारे में बताइए",
+        "rights": "मेरे अधिकार क्या हैं?"
+      }
     }
   },
   "sidebar": {
@@ -4082,7 +4048,6 @@
   },
   "alia": {
     "clientContext": "यूज़र Homiio इस्तेमाल कर रहा है, जो आवास का ऐप है: किराए पर लेने, खरीदने या ठहरने की जगह खोजना, किसी घर का इतिहास और उसकी असली लागत जानना, और किरायेदारी को संभालना या उसकी रक्षा करना।",
-    "onScreen": "वे अभी {{path}} स्क्रीन पर हैं।",
     "suggestion": {
       "find": "रहने की जगह ढूँढ़ने में मेरी मदद करो",
       "costs": "इस घर का असली खर्च कितना होगा?",
