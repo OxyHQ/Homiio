@@ -6,6 +6,12 @@
  *
  */
 
+// Neither module loads `config` or the SDK at runtime (the seam and the fake
+// import only types), so importing them here cannot freeze the environment
+// below — the reason `db/postgres` is required lazily further down.
+import { setLinkedDownloadForTests, setOxyFilesForTests } from '../services/files/oxyFilesSeam';
+import { fakeOxyFiles } from './helpers/fakeOxyFiles';
+
 // Give config a real https public URL so self-hosted image URLs
 // (`${publicUrl}/api/images/file/...`) are accepted by the Property image-URL
 // validator during tests (a bare localhost host can trip `validator.isURL`).
@@ -36,7 +42,20 @@ process.env.CROWDSOURCE_WEBHOOK_SECRET =
 process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS =
   process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS || 'test-previous-secret-at-least-16-chars';
 
+/**
+ * Oxy file events are verified against this secret (`config` reads it once at
+ * module load, so it is set here for the reason the CrowdSource secret is).
+ */
+process.env.OXY_FILES_WEBHOOK_SECRET =
+  process.env.OXY_FILES_WEBHOOK_SECRET || 'whsec_test-oxy-files-secret';
+
 beforeAll(async () => {
+  // Oxy Files, in memory, for every suite: no test may reach a real Oxy, and
+  // a suite that stores a photo needs somewhere for it to go.
+  fakeOxyFiles.reset();
+  setOxyFilesForTests(fakeOxyFiles.api());
+  setLinkedDownloadForTests((url) => fakeOxyFiles.download(url));
+
   // Postgres, for every suite rather than only the `__tests__/db` ones:
   // from batch 1 on, request-path code (geo, addresses, cities, neighborhoods)
   // reads it through `getDb()`, which THROWS when no pool has been published. A

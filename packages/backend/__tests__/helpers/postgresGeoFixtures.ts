@@ -60,6 +60,7 @@ import {
   partners,
   cities,
   countries,
+  fileReferenceChanges,
   images,
   leases,
   neighborhoods,
@@ -185,6 +186,11 @@ export async function resetGeoTables(): Promise<void> {
   await db.delete(regions);
   await db.delete(countries);
   await db.delete(images);
+  // Every delete above that touched a photo in Oxy Files marked its (file,
+  // entity) pair for the reference drain (the triggers of migration
+  // `0037_oxy_files`). Those marks are this reset's own by-product, so they go
+  // with it, or the next suite's drain would find them.
+  await db.delete(fileReferenceChanges);
 }
 
 /**

@@ -9,7 +9,13 @@
  * DB-backed photos + names without an external image host.
  */
 
-import type { City, Country, ImageVariantName, Region } from '@homiio/shared-types';
+import type {
+  City,
+  Country,
+  ImageAttribution,
+  ImageVariantName,
+  Region,
+} from '@homiio/shared-types';
 
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 
@@ -65,10 +71,23 @@ export function getCityImageSource(
   for (const name of ordered) {
     const url = urls[name];
     if (typeof url === 'string' && url.length > 0) {
-      // City covers are self-hosted by our backend; re-home the URL onto the
-      // active API origin so a baked-in dev/emulator host resolves on web too.
+      // An Oxy Files rendition passes through untouched; a legacy URL from
+      // our own backend is re-homed onto the active API origin so a baked-in
+      // dev/emulator host resolves on web too.
       return { uri: resolveBackendImageUrl(url) };
     }
   }
   return null;
+}
+
+/**
+ * The credit a city's cover carries (a Wikimedia Commons photo: author,
+ * licence, source page), or null. The licence requires showing it with the
+ * photo, so the city page renders it under the hero.
+ */
+export function getCityImageAttribution(city: City | undefined): ImageAttribution | null {
+  const cover = city?.coverImageId;
+  if (!cover || typeof cover !== 'object') return null;
+  const attribution = cover.attribution;
+  return attribution && attribution.sourceUrl && attribution.license ? attribution : null;
 }

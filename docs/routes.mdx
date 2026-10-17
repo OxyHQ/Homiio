@@ -170,7 +170,7 @@ Review **writes** are on the authenticated router. Only reads are public.
 |---|---|---|
 | `POST` | `/api/observability/events` | Always `202`; see [Analytics](./analytics) |
 | `GET` | `/api/analytics/stats` | Marketplace aggregates |
-| `GET` | `/api/images/file/*` | Self-hosted image bytes; photos must load without a token |
+| `GET` | `/api/images/file/*` | The legacy photo door: 301 to the photo's Oxy file once migrated, bytes from Homiio's bucket until then ([Oxy Files](./oxy-files)) |
 | `GET` | `/api/public/profiles/by-user/:oxyUserId` | Read-only |
 | `GET` | `/api/public/profiles/oxy/:oxyUserId` | Read-only |
 | `GET` | `/api/telegram/status` | Bot status |
@@ -178,8 +178,9 @@ Review **writes** are on the authenticated router. Only reads are public.
 | `GET` | `/api/telegram/webhook` | |
 | `POST` | `/api/telegram/test` | |
 
-Outside `/api`: `GET /` (welcome), `GET /health` (database status), and
-`POST /webhooks/crowdsource` (signed CrowdSource moderation webhook).
+Outside `/api`: `GET /` (welcome), `GET /health` (database status),
+`POST /webhooks/crowdsource` (signed CrowdSource moderation webhook), and
+`POST /webhooks/oxy/files` (signed Oxy file events — [Oxy Files](./oxy-files)).
 
 ### The capability catalogue's MCP lanes
 
@@ -359,7 +360,7 @@ handshake.
 | `/api/evictions` | `POST /`, `PUT|DELETE /:id`, `POST /:id/attend|follow|comments|updates|report`, `GET /:id/team`, `POST /:id/collaborators`, `DELETE /:id/collaborators/:oxyUserId`, `POST /:id/hold/clear`, `POST /:id/vouch/:oxyUserId`, `POST /:id/supporters/:oxyUserId/revoke`, `GET|POST /:id/location/grants`, `POST /:id/location/grants/:oxyUserId/revoke`, `GET /:id/location/exact`, `GET /:id/location/audit`, `DELETE /:id/comments/:commentId`, `GET /me/list`, `GET /me/attending`, `GET /me/following` |
 | `/api/partners` | `POST /join`, `GET /me`, `GET /me/earnings`, `GET /me/referrals` |
 | `/api/analytics` | `GET /`, `GET /stats` |
-| `/api/images` | `POST /upload`, `POST /upload-multiple`, `GET /info/:imageKey`, `DELETE /:imageKey`, `DELETE /variants` |
+| `/api/images` | `POST /upload`, `POST /upload-multiple` (into the uploader's own Oxy account), `DELETE /:imageKey` (deletes nothing; kept for app builds in use) |
 | `/api/billing` | Checkout, customer portal, subscription lifecycle — see [Payments](./payments) |
 | `/api/telegram` | Notification and bot management |
 | `/api/scraper` | **Admin only** (`requireAdmin`): `GET /health`, `GET /sources`, `POST /run`, `POST /cleanup` |

@@ -383,6 +383,13 @@ export const evictionCases = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
+    /**
+     * Every "is this photo still shown?" question asks it by image id — the
+     * foreign key's own SET NULL on an image delete, the unused-image sweep
+     * (`db/images/unusedImages.ts`) and the reference triggers of migration
+     * `0037_oxy_files`. Postgres does not index a foreign key's child column.
+     */
+    index('eviction_cases_cover_image_id_idx').on(table.coverImageId),
     // The public board: filter by status, order by date.
     index('eviction_cases_status_scheduled_idx').on(table.status, table.scheduledAt),
     // "My cases".

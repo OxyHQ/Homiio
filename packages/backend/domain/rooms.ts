@@ -199,7 +199,7 @@ export async function createRoom(oxyUserId: string, body: Body): Promise<Seriali
   if (precisionError) throw precisionError;
   // `images` is on the same whitelist the listing paths use, so a room
   // carrying a photo needs the same intake.
-  await normalizePropertyPhotos(roomData);
+  await normalizePropertyPhotos(roomData, oxyUserId);
   const created = await insertProperty({
     ...roomData,
     oxyUserId,
@@ -254,7 +254,7 @@ export async function updateRoom(
   const updateData = pickFields<PropertyWriteInput>(body, EDITABLE_PROPERTY_FIELDS);
   const precisionError = invalidAddressPublishedPrecision(updateData);
   if (precisionError) throw precisionError;
-  await normalizePropertyPhotos(updateData);
+  await normalizePropertyPhotos(updateData, oxyUserId);
   const previousStatus = existing.property.status;
   const updated = await updateProperty(roomId, updateData, { ownedBy: oxyUserId });
   if (!updated) throw new AppError('Room not found', 404, 'NOT_FOUND');

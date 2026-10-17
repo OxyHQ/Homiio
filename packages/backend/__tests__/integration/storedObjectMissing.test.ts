@@ -1,5 +1,5 @@
 /**
- * A missing image is a 404, from either store.
+ * A missing image is a 404.
  *
  * ## What was happening in production
  *
@@ -13,10 +13,10 @@
  *
  * ## Why this is a unit test over error shapes
  *
- * The condition is "what does the store raise when the object is not there",
- * and the local store cannot raise an S3 error. Reproducing it end to end would
- * mean standing up S3 or mocking the client's internals — the first is not
- * available here and the second asserts the mock. What matters is the CLASSIFIER,
+ * The condition is "what does the store raise when the object is not there".
+ * Reproducing it end to end would mean standing up S3 or mocking the client's
+ * internals — the first is not available here and the second asserts the mock.
+ * What matters is the CLASSIFIER (`legacyObjectStore.isMissingObjectError`),
  * and its inputs are three documented error shapes.
  */
 
@@ -24,28 +24,17 @@ import express, { type Express } from 'express';
 import request from 'supertest';
 
 import imageController from '../../controllers/imageController';
-import imageUploadService from '../../services/imageUploadService';
+import { isMissingObjectError as isMissing } from '../../services/files/legacyObjectStore';
 import { errorHandler } from '../../middlewares/errorHandler';
 
 function publicImages(): Express {
   const app = express();
-  app.get('/images/file/*', (req, res) => imageController.serveLocalImage(req, res));
+  app.get('/images/file/*', (req, res) => imageController.serveLegacyImage(req, res));
   app.use(errorHandler);
   return app;
 }
 
-/** The private method under test, reached without widening its visibility. */
-const isMissing = (error: unknown): boolean =>
-  (imageUploadService as unknown as { isFileMissingError(e: unknown): boolean }).isFileMissingError(
-    error,
-  );
-
 describe('what counts as "there is no such object"', () => {
-  it('still recognises the local store', () => {
-    expect(isMissing(Object.assign(new Error('nope'), { code: 'ENOENT' }))).toBe(true);
-    expect(isMissing(Object.assign(new Error('nope'), { code: 'ENOTDIR' }))).toBe(true);
-  });
-
   it('recognises what S3 raises for an absent key', () => {
     // The shape the SDK gives when the role MAY list the bucket.
     expect(isMissing(Object.assign(new Error('x'), { name: 'NoSuchKey' }))).toBe(true);

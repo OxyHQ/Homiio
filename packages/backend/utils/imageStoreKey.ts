@@ -1,11 +1,13 @@
 /**
- * Safety contract for self-hosted LOCAL image store keys.
+ * Safety contract for keys in Homiio's own (legacy) bucket.
  *
  * A "key" is the bucket-relative path of a processed image variant, e.g.
- * `city/<uuid>-medium.webp` or `property/<uuid>-original.jpeg`. It arrives from
- * untrusted input — the wildcard tail of `GET /api/images/file/*` — and is used
- * to build a filesystem path under the store root, so it MUST be validated
- * before it ever touches `fs`. Express decodes percent-escapes in the wildcard
+ * `city/<uuid>-medium.webp` or `property/<uuid>-original.jpeg`, or of a private
+ * document. It arrives from untrusted input — the wildcard tail of
+ * `GET /api/images/file/*`, or a key a publish echoes back — and names an
+ * object, so it MUST be validated before it is looked up. (The local-disk
+ * store these rules were first written for is gone; the path rules stay
+ * because a key is still a path.) Express decodes percent-escapes in the wildcard
  * (`..%2f..` becomes `../..`), so the value we validate is the already-decoded,
  * filesystem-bound string; we do NOT decode again (that would corrupt legitimate
  * keys and is unnecessary for safety).

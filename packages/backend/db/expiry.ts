@@ -44,6 +44,7 @@ import { addressCandidates } from './schema/addressMaterialization';
 import { capabilityEffectReceipts } from './schema/capabilities';
 import { evictionCases } from './schema/evictions';
 import { moderationEvents, moderationOutbox } from './schema/moderation';
+import { fileReferenceChanges, oxyFileEvents } from './schema/oxyFiles';
 import { placePois } from './schema/placePois';
 import { properties } from './schema/properties';
 import { housingDomainEvents } from './schema/watches';
@@ -171,6 +172,29 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
       'itself — the viewing, the declaration, the spent credit live in their ' +
       'own tables. Deleting one costs only the replay of a key nobody retries ' +
       'after 30 days. Registered at BIRTH: every agent write adds a row.',
+  },
+  {
+    table: oxyFileEvents,
+    column: oxyFileEvents.expiresAt,
+    retentionSeconds: 0,
+    reason:
+      'The dedupe window of Oxy file events (ADR 0043 D9). INTENT CHECKED: the ' +
+      'row is only "this event was already applied", and Oxy retires a delivery ' +
+      '30 days after creating it, so no redelivery can arrive after the ' +
+      'deadline. What the event CHANGED lives on `images` and is untouched. ' +
+      'Registered at birth: one row per event per file, for every takedown and ' +
+      'visibility change of every photo Homiio uses.',
+  },
+  {
+    table: fileReferenceChanges,
+    column: fileReferenceChanges.settledAt,
+    retentionSeconds: 7 * 24 * 60 * 60,
+    reason:
+      'A (file, entity) pair Oxy already agrees with. INTENT CHECKED: a ' +
+      'settled row is kept only so a reconciliation can re-check the pairs ' +
+      'that moved during its snapshot (one night), and a pending row has a ' +
+      'NULL `settled_at`, which this sweep can never match — so it removes ' +
+      'finished work and nothing that is still owed to Oxy.',
   },
 ];
 

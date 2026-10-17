@@ -290,6 +290,31 @@ export interface Config {
      */
     enforcementMode: ModerationEnforcementMode;
   };
+  /** Oxy Files (ADR 0043) — where every photo lives. `docs/oxy-files.md`. */
+  oxyFiles: {
+    /**
+     * The `whsec_…` secret Oxy showed once when Homiio's file-events endpoint
+     * was set (console → Webhooks → File events). Without it the endpoint
+     * answers only the verification challenge and refuses every event (503),
+     * so a missing secret is loud rather than silently accepting unsigned
+     * takedowns.
+     */
+    webhookSecret?: string;
+    /**
+     * Whether a NEW private document (lease, application, maintenance photo)
+     * is stored in its uploader's Oxy account as a private file (ADR 0043
+     * stage 4c) rather than in Homiio's bucket. OFF until Oxy's 4c release is
+     * verified in production (`docs/oxy-files.md`); when on, a refusal or an
+     * outage still stores the document in the bucket. Reading never depends on
+     * it: an `oxy:` document is always read from Oxy, a bucket one from the
+     * bucket.
+     */
+    privateDocumentsEnabled: boolean;
+    /** Whether this task drains `file_reference_changes`. On by default. */
+    referenceSyncEnabled: boolean;
+    referenceSyncIntervalMs: number;
+    referenceSyncBatchSize: number;
+  };
 }
 
 const config: Config = {
@@ -400,9 +425,9 @@ const config: Config = {
   },
 
   // Public, externally-reachable base URL of THIS backend. Used to build
-  // absolute URLs the client can fetch directly — most importantly the
-  // self-hosted local image store served at `/api/images/file/*` when object
-  // storage (S3) is not configured. Sourced from `PUBLIC_API_URL`, falling back
+  // absolute URLs the client can fetch directly — the legacy photo door
+  // `/api/images/file/*` (`services/files/legacyImages.ts`) and the delivery
+  // URL a private document row carries. Sourced from `PUBLIC_API_URL`, falling back
   // to the local dev server. (For an Android emulator pointing at the host's
   // 10.0.2.2 alias, set `PUBLIC_API_URL=http://10.0.2.2:<port>`.)
   publicUrl:
@@ -515,6 +540,26 @@ const config: Config = {
       300_000,
     ),
     enforcementMode: crowdSourceEnforcementMode(process.env.CROWDSOURCE_ENFORCEMENT_MODE),
+  },
+
+  oxyFiles: {
+    webhookSecret: optionalEnvironmentValue(process.env.OXY_FILES_WEBHOOK_SECRET),
+    // On only when said so: the bucket path stays the default until verified.
+    privateDocumentsEnabled: process.env.OXY_PRIVATE_DOCUMENTS_ENABLED === 'true',
+    // Off only when said so; the suite never starts it (server.ts is not booted).
+    referenceSyncEnabled: process.env.OXY_FILE_REFERENCE_SYNC_ENABLED !== 'false',
+    referenceSyncIntervalMs: boundedInteger(
+      process.env.OXY_FILE_REFERENCE_SYNC_INTERVAL_MS,
+      10_000,
+      1_000,
+      600_000,
+    ),
+    referenceSyncBatchSize: boundedInteger(
+      process.env.OXY_FILE_REFERENCE_SYNC_BATCH_SIZE,
+      200,
+      1,
+      1_000,
+    ),
   },
 };
 

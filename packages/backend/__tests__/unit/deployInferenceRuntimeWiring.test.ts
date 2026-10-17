@@ -115,13 +115,16 @@ describe('Homiio deployment keeps the API off every inference runtime', () => {
   it('injects no Sindi credential, and no longer requires one to exist', () => {
     expect(apiStep).not.toContain(SINDI_SERVICE_KEY_ARN);
     expect(apiStep).not.toContain(SINDI_SERVICE_SECRET_ARN);
-    // Team-chat capability encryption has a separate, reviewed key. Allow only
-    // that binding; legacy inference credentials must never return via overrides.
+    // Team-chat capability encryption has a separate, reviewed key, and Oxy
+    // file events (ADR 0043 D9) their signing secret. Allow only those two
+    // bindings; legacy inference credentials must never return via overrides.
     const secretMatch = apiStep.match(/TASK_SECRET_OVERRIDES_JSON:\s*'(\{[^']*\})'/);
     expect(secretMatch).not.toBeNull();
     expect(JSON.parse(secretMatch?.[1] ?? '{}')).toEqual({
       HOMIIO_TEAM_CHAT_KEY:
         'arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/HOMIIO_TEAM_CHAT_KEY',
+      OXY_FILES_WEBHOOK_SECRET:
+        'arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/OXY_FILES_WEBHOOK_SECRET',
     });
     expect(workflowDirectives).not.toContain(
       'require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"',

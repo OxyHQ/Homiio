@@ -320,8 +320,10 @@ jobs:
       - name: Register immutable task definition and deploy (API)
         env:
           IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.api_digest }}
-          # Provision this SecureString before rollout. Only its ARN enters the task definition.
-          TASK_SECRET_OVERRIDES_JSON: '{"HOMIIO_TEAM_CHAT_KEY":"arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/HOMIIO_TEAM_CHAT_KEY"}'
+          # Provision each SecureString before rollout. Only its ARN enters the task definition.
+          # OXY_FILES_WEBHOOK_SECRET is the `whsec_…` Oxy shows once when Homiio's file-events
+          # endpoint is set (docs/oxy-files.md § Rollout); the API task alone serves the webhook.
+          TASK_SECRET_OVERRIDES_JSON: '{"HOMIIO_TEAM_CHAT_KEY":"arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/HOMIIO_TEAM_CHAT_KEY","OXY_FILES_WEBHOOK_SECRET":"arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/OXY_FILES_WEBHOOK_SECRET"}'
           # Taken away from inherited live revisions: the superseded slug
           # selector, and the Oxy service credential Homiio no longer holds.
           #

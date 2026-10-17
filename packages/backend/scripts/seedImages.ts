@@ -1,53 +1,40 @@
 /**
  * Seed Images helper
  *
- * Turns the demo dataset's image URLs into rows of the canonical `images`
- * table, then links them back to their owning entity. Two flows:
+ * Turns the demo dataset's image URLs into photos in Oxy Files and rows of the
+ * canonical `images` table. Two flows:
  *
- *   - Property photos: each property's seed photo URLs are fetched once, run
- *     through the Sharp pipeline and persisted as `images` rows
- *     (`entity_type: 'property'`). The resolved `PropertyImageRef[]` (the
- *     `{ url, caption, isPrimary }` shape the frontend already consumes, `url` =
- *     stored medium variant, plus the full variant `urls`) is returned so the
- *     seeder can point `property_images` at them.
+ *   - Property photos: each seed photo URL is imported once by Oxy as a file
+ *     owned by the Homiio application (`importApplicationImages`, the same path
+ *     the listing ingest takes), with the listing's use registered, and
+ *     recorded as an `images` row (`entity_type: 'property'`). The resolved
+ *     `PropertyImageRef[]` is returned so the seeder can point
+ *     `property_images` at them.
  *
  *   - City covers (local demo seed only): the six curated city images (the SAME
- *     URLs the frontend `CITY_SHOWCASE` array hardcodes) are fetched ONCE,
- *     processed and stored as `images` rows (`entity_type: 'city'`). Production
- *     covers use `cityCoverSyncService` (Wikimedia Commons), not this seed path.
+ *     URLs the frontend `CITY_SHOWCASE` array hardcodes), imported once and
+ *     stored as `images` rows (`entity_type: 'city'`). Production covers come
+ *     from `cityCoverSyncService` (Wikimedia Commons, credited).
  *
- * Storage: when object storage is not configured (no S3 credentials — e.g. this
- * local seed environment) the processed bytes are persisted to the SELF-HOSTED
- * local store and served by the backend at `/api/images/file/*`; a credentialed
- * environment uploads the same bytes to S3 instead. Either way the `images` row
- * carries REAL Sharp-derived dimensions/format/byte sizes and resolves to real
- * bytes — nothing is faked.
- *
- * `allowUnconfiguredStorage` no longer skips the upload — `processAndUpload`
- * reads `void skipUpload` and persists either way — so the flag now only means
- * "this caller accepts the local store". Stated because the obvious reading of
- * the name is the opposite one.
+ * The seed needs an Oxy API and a Homiio service credential holding
+ * `files:app:write` and `files:references:write` (`OXY_API_URL`,
+ * `OXY_SERVICE_API_KEY`/`SECRET`). Without them the import fails and the seed
+ * says so — there is no local storage to fall back to.
  */
 
-import type { ImageEntityType, PropertyImageRef } from '@homiio/shared-types';
-import imageUploadService, { type ImageBufferInput } from '../services/imageUploadService';
+import type { PropertyImageRef } from '@homiio/shared-types';
+
+import config from '../config';
+import type { ImageRow } from '../db/images/imageWrites';
+import {
+  importApplicationImage,
+  importApplicationImages,
+  insertOxyImage,
+} from '../services/files/publicImages';
 import { toPropertyImages } from '../services/imageSerializer';
 import { Logger } from '../utils/logger';
 
 const logger = new Logger('SeedImages');
-
-/** Abort budget (ms) for fetching one seed image. */
-const FETCH_TIMEOUT_MS = 20_000;
-
-/** Fallback MIME type when a fetched image omits a usable Content-Type. */
-const DEFAULT_IMAGE_MIME = 'image/jpeg';
-
-/**
- * Descriptive User-Agent for image fetches. Wikimedia Commons (a source of some
- * curated city covers) REQUIRES an identifying User-Agent and rate-limits
- * generic ones; this also keeps Unsplash fetches polite.
- */
-const FETCH_USER_AGENT = 'Homiio-Seed/1.0 (+https://homiio.com)';
 
 /**
  * Curated city cover images, keyed by the seeded city name (must match `seedGeo`
@@ -78,102 +65,59 @@ export const CITY_COVER_IMAGE_URLS: Readonly<Record<string, string>> = {
 };
 
 /**
- * How the seed obtains an image's bytes.
- *
- * Injectable for the same reason `ExternalMediaIngest` takes a `fetchImage`:
- * the property under test is what the seed WRITES on a repeat, and a test that
- * had to reach Unsplash to observe it would be measuring the network. The
- * default is the real fetch, so the CLI is unchanged.
- */
-export type SeedImageFetcher = (url: string) => Promise<ImageBufferInput>;
-
-/** Fetch one image URL into a buffer + its resolved MIME type. Throws on failure. */
-export async function fetchImageBuffer(url: string): Promise<ImageBufferInput> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: { 'User-Agent': FETCH_USER_AGENT },
-    });
-    if (!response.ok) {
-      throw new Error(`Image fetch failed: ${response.status} ${response.statusText}`);
-    }
-    const contentType = response.headers.get('content-type');
-    const mimetype =
-      contentType && contentType.startsWith('image/') ? contentType : DEFAULT_IMAGE_MIME;
-    const arrayBuffer = await response.arrayBuffer();
-    return { buffer: Buffer.from(arrayBuffer), mimetype };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/**
- * Whether the seed should skip the actual byte upload (storage unconfigured).
- * When true, Image docs are still created with real metadata + keys/urls.
- */
-function shouldAllowUnconfiguredStorage(): boolean {
-  return !imageUploadService.isStorageConfigured();
-}
-
-/**
- * Create Image docs (`entityType: 'property'`) for a property's photo URLs and
- * return the resolved embedded `PropertyImageRef[]` (ordered, exactly one
- * primary). The first URL becomes the primary/cover image.
+ * Import a property's photo URLs as `images` rows (`entityType: 'property'`)
+ * and return the resolved `PropertyImageRef[]` (ordered, exactly one primary).
+ * The first URL becomes the cover. A photo Oxy cannot import fails the seed:
+ * a demo listing silently missing photos is a fixture nobody can trust.
  */
 export async function seedPropertyImages(
   propertyId: string,
   imageUrls: readonly string[],
-  fetchImage: SeedImageFetcher = fetchImageBuffer,
 ): Promise<PropertyImageRef[]> {
-  const allowUnconfiguredStorage = shouldAllowUnconfiguredStorage();
-  const created = [];
-
-  for (let index = 0; index < imageUrls.length; index += 1) {
-    const input = await fetchImage(imageUrls[index]);
-    const image = await imageUploadService.createImageForEntity('property', propertyId, input, {
-      isPrimary: index === 0,
-      order: index,
-      allowUnconfiguredStorage,
-    });
-    created.push(image);
+  const outcomes = await importApplicationImages(imageUrls, {
+    entityType: 'property',
+    entityId: propertyId,
+  });
+  const rows: ImageRow[] = [];
+  for (const [index, outcome] of outcomes.entries()) {
+    if (!outcome.ok) {
+      throw new Error(
+        `Seed photo #${index} of ${propertyId} could not be imported (${outcome.status} ${outcome.code})`,
+      );
+    }
+    rows.push(
+      await insertOxyImage('property', propertyId, outcome.image, {
+        isPrimary: index === 0,
+        order: index,
+      }),
+    );
   }
-
-  return toPropertyImages(created);
+  return toPropertyImages(rows);
 }
 
 /**
- * Fetch + store a single cover image for a geo entity (city / region / country)
- * and return the created Image document's id. Returns null when no curated URL
- * is available for the entity.
+ * Import a single cover image for a city or region and return the created
+ * `images` row's id. Returns null when no curated URL is available.
  */
 export async function seedEntityCoverImage(
-  entityType: ImageEntityType,
+  entityType: 'city' | 'region',
   entityId: string,
   url: string | undefined,
   caption: string,
-  fetchImage: SeedImageFetcher = fetchImageBuffer,
 ): Promise<string | null> {
   if (!url) return null;
-  const allowUnconfiguredStorage = shouldAllowUnconfiguredStorage();
-  const input = await fetchImage(url);
-  const image = await imageUploadService.createImageForEntity(entityType, entityId, input, {
+  const stored = await importApplicationImage(url, { entityType, entityId });
+  const row = await insertOxyImage(entityType, entityId, stored, {
     isPrimary: true,
     order: 0,
     caption,
-    allowUnconfiguredStorage,
   });
-  return image.id;
+  return row.id;
 }
 
-/** Log the storage mode once at the start of an image-seeding run. */
+/** Say once, at the start of a run, where seed photos are going. */
 export function logStorageMode(): void {
-  if (imageUploadService.isStorageConfigured()) {
-    logger.info('Object storage configured — seed images will be uploaded to S3.');
-  } else {
-    logger.info(
-      'Object storage NOT configured (no S3 credentials): processed image bytes are persisted to the self-hosted local store and served by the backend at /api/images/file/*. Set AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY to use S3 instead.',
-    );
-  }
+  logger.info(
+    `Seed photos are imported into Oxy Files through ${config.oxy.baseURL} as the Homiio application.`,
+  );
 }

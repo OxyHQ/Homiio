@@ -149,15 +149,18 @@ describe('publishing a listing with photos', () => {
     const [row] = await getDb().select().from(images).where(eq(images.id, photo.imageId));
     expect(row.entityType).toBe('property');
     expect(row.entityId).toBe(res.body.data.id);
-    expect(row.keysOriginal).toBe(uploaded.keys.original);
+    // The photo is the host's own Oxy file (the upload answered its keys as
+    // `oxy:<fileId>`); no bucket key is stored for it.
+    expect(`oxy:${row.oxyFileId}`).toBe(uploaded.keys.original);
+    expect(row.oxyFileOwner).toBe('account');
+    expect(row.keysOriginal).toBeNull();
     expect(row.format).toBe('jpeg');
     expect(row.bytes).toBeGreaterThan(0);
     expect(row.width).toBe(40);
     expect(row.height).toBe(30);
 
-    // Every URL is DERIVED from the validated key, so the stored URL ends in
-    // the key and nothing the client sent could have replaced it.
-    expect(row.urlsMedium.endsWith(uploaded.keys.variants.medium)).toBe(true);
+    // Every URL is DERIVED from the file id, never taken from the body.
+    expect(row.urlsMedium).toBe(`https://cloud.oxy.test/${row.oxyFileId}?variant=w640`);
     expect(photo.url).toBe(row.urlsMedium);
   });
 
@@ -200,9 +203,34 @@ describe('publishing a listing with photos', () => {
     expect(persisted.images.map((image) => image.isPrimary)).toEqual([true, false]);
   });
 
+  // A photo uploaded before the move to Oxy Files and published after it still
+  // carries bucket keys; those go through the legacy door's own gate.
+  function legacyPhoto() {
+    const uuid = '0192f4a2-aaaa-7bbb-8ccc-1234567890ab';
+    return {
+      keys: {
+        original: `property/${uuid}-original.jpeg`,
+        small: `property/${uuid}-small.webp`,
+        medium: `property/${uuid}-medium.webp`,
+        large: `property/${uuid}-large.webp`,
+      },
+      caption: '',
+      isPrimary: false,
+    };
+  }
+
+  it("accepts a legacy photo's validated keys and derives its URLs", async () => {
+    const res = await publish([legacyPhoto()]);
+    expect(res.status).toBe(201);
+    const persisted = await findPropertyById(res.body.data.id);
+    assertFound(persisted, 'persisted');
+    expect(persisted.images[0].urlsMedium).toBe(
+      'https://api.homiio.test/api/images/file/property/0192f4a2-aaaa-7bbb-8ccc-1234567890ab-medium.webp',
+    );
+  });
+
   it('refuses a storage key that climbs out of the store', async () => {
-    const uploaded = await uploadPhoto(46);
-    const photo = wizardPhoto(uploaded);
+    const photo = legacyPhoto();
     photo.keys.medium = '../../../etc/passwd.webp';
     const res = await publish([photo]);
     expect(res.status).toBe(400);
@@ -210,8 +238,7 @@ describe('publishing a listing with photos', () => {
   });
 
   it('refuses a key under the private documents prefix', async () => {
-    const uploaded = await uploadPhoto(47);
-    const photo = wizardPhoto(uploaded);
+    const photo = legacyPhoto();
     // A tenant's payslip lives here. The publish path must not be able to
     // republish one as a listing photo.
     photo.keys.large = 'applications/documents/some-uuid-original.jpeg';

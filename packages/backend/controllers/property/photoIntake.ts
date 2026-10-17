@@ -1,56 +1,37 @@
 /**
  * The publish wizard's photos, turned into something the write path can store.
  *
- * ## The defect this module exists to close
- *
- * `property_images.image_id` is `NOT NULL` and RESTRICT-references `images.id`,
- * and the write path built its rows from `image.imageId`. The wizard's body
- * carried `{ url, caption, isPrimary }` and nothing else, so every publish that
- * carried a photo raised `23502` and answered 500 — since the property write
- * path moved to Postgres (#281), for every host who added a photo.
- *
- * It could not be fixed by forwarding the id the upload endpoint returns:
- * `POST /api/images/upload` with no `entityType`/`entityId` persists nothing,
- * and its `imageId` is the first segment of a storage key, not a row id.
- *
- * ## Where the canonical `images` row is created: at PUBLISH, from the keys
+ * ## Where the canonical `images` row is created: at PUBLISH
  *
  * `images.entity_id` is `NOT NULL` and names the listing. While the wizard is
- * uploading there is no listing — so the upload CANNOT mint the row, and this
- * module instead carries the upload's own keys forward to the write
- * transaction, which mints it once the listing has an id
- * (`db/properties/propertyWrites.ts#resolveImageRows`). The upload response
- * already returns everything needed; nothing new is stored in between.
+ * uploading there is no listing, so the upload (`POST /api/images/upload`)
+ * stores the photo in the uploader's own Oxy account and answers its file id;
+ * this module carries that id forward to the write transaction, which mints
+ * the row once the listing has an id (`db/properties/propertyWrites.ts#resolveImageRows`).
  *
- * ## Nothing the client sends reaches a URL column
+ * ## A file id is checked, not trusted
  *
- * A key is a bucket-relative path the SERVER minted
- * (`<folder>/<uuid>-<variant>.<ext>`). The client echoes it back, so it is
- * untrusted input: every key goes through `validateImageStoreKey` — the same
- * gate the delivery route uses, which rejects traversal, absolute and Windows
- * paths, the private `applications/documents/` prefix and any non-image
- * extension. The four public URLs are then DERIVED from the validated keys by
- * `imageUploadService.getImageUrl`, never taken from the body, so a caller
- * cannot get an arbitrary string rendered as a listing photo.
+ * The client echoes the id back, so it is untrusted input — and unlike a bucket
+ * key it CAN be proven: Oxy is asked who owns each file
+ * (`services/files/publicImages.requireOwnAccountImages`, one call for the
+ * whole payload) and a file that is not the publisher's own, live image is a
+ * 400 naming the photo. A host can no longer publish a photo from somebody
+ * else's listing by naming it. The four URLs are derived from the id
+ * server-side (`services/files/imageUrls`), never taken from the body.
  *
- * What a key is NOT is a capability. Nothing here proves the caller uploaded
- * the object it names, so an authenticated host could name the key of a photo
- * already published on somebody else's listing and show it on their own. That
- * is the same thing they could do by right-clicking the image, and it is the
- * reason the private prefix is refused above — the keys this route can reach
- * are the ones the public delivery route already serves to anyone. Proving
- * ownership would mean remembering who uploaded what, which is a table, and the
- * thing it would prevent is a copied photo rather than a leaked one.
+ * The id arrives as `fileId`, or — from an app build released before the move,
+ * which only knows `keys` — as `keys.original = "oxy:<fileId>"`.
  *
- * `bytes`, `width` and `height` are the one soft spot: they are advisory
- * metadata echoed from the upload response, clamped to non-negative integers
- * here, and never a security boundary. Verifying them would mean fetching every
- * variant back out of object storage on every publish, which buys nothing — the
- * worst a wrong number can do is misreport a file size.
+ * ## Legacy keys, until the bucket retires
+ *
+ * A photo uploaded before the deploy and published after it carries bucket
+ * keys. Each goes through `validateImageStoreKey` (the legacy door's own gate:
+ * no traversal, no private prefix, images only) and its URLs are derived from
+ * the validated key. `scripts/migrateImagesToOxy.ts` copies such rows like any
+ * other, so they do not outlive the soak.
  *
  * A photo that already HAS a row (every photo an edit loads back from the
- * server) is identified by `imageId` alone; its URLs are read from the row
- * rather than from the request, for the same reason.
+ * server) is identified by `imageId` alone; its URLs are read from the row.
  */
 
 import type { ImageVariantName } from '@homiio/shared-types';
@@ -60,7 +41,9 @@ import type {
   NewPropertyImageUpload,
   PropertyImageInput,
 } from '../../db/properties/propertyWrites';
-import imageUploadService from '../../services/imageUploadService';
+import { fileIdFromOxyKey, oxyImageUrls } from '../../services/files/imageUrls';
+import { legacyImageUrl } from '../../services/files/legacyImages';
+import { requireOwnAccountImages, storedFromMetadata } from '../../services/files/publicImages';
 import { validateImageStoreKey } from '../../utils/imageStoreKey';
 import { AppError } from '../../middlewares/errorHandler';
 
@@ -126,7 +109,17 @@ function variantKeys(entry: Record<string, unknown>, index: number): Record<stri
   return validated;
 }
 
-function uploadBlock(entry: Record<string, unknown>, index: number): NewPropertyImageUpload {
+/** The Oxy file a photo names, as `fileId` or as an `oxy:` key, or undefined. */
+function fileIdOf(entry: Record<string, unknown>): string | undefined {
+  const direct = text(entry.fileId);
+  if (direct !== undefined) return direct;
+  const keys = asRecord(entry.keys);
+  const original = text(keys?.original);
+  return original === undefined ? undefined : (fileIdFromOxyKey(original) ?? undefined);
+}
+
+/** A legacy-keys photo: four validated bucket keys and the URLs derived from them. */
+function legacyUploadBlock(entry: Record<string, unknown>, index: number): NewPropertyImageUpload {
   const keys = variantKeys(entry, index);
   const metadata = asRecord(entry.metadata) ?? {};
   const complete = {
@@ -138,10 +131,10 @@ function uploadBlock(entry: Record<string, unknown>, index: number): NewProperty
   return {
     keys: complete,
     urls: {
-      original: imageUploadService.getImageUrl(complete.original),
-      small: imageUploadService.getImageUrl(complete.small),
-      medium: imageUploadService.getImageUrl(complete.medium),
-      large: imageUploadService.getImageUrl(complete.large),
+      original: legacyImageUrl(complete.original),
+      small: legacyImageUrl(complete.small),
+      medium: legacyImageUrl(complete.medium),
+      large: legacyImageUrl(complete.large),
     },
     format: formatOf(complete.original),
     // `images.bytes` is NOT NULL; 0 is this codebase's existing "not measured"
@@ -169,6 +162,9 @@ function refFromRow(row: ImageRow): Pick<PropertyImageInput, 'url' | 'urls'> {
  * Normalize `payload.images` in place into {@link PropertyImageInput}s the write
  * path can store, or throw a 400 naming the offending photo.
  *
+ * `publisherOxyUserId` is the session's account: a photo named by Oxy file id
+ * must be that account's own.
+ *
  * Position in the array IS the order: `order` is assigned from the index unless
  * the caller stated one, so a reordered photo list publishes in the order the
  * host arranged it. The first photo flagged primary is the only one that keeps
@@ -179,7 +175,10 @@ function refFromRow(row: ImageRow): Pick<PropertyImageInput, 'url' | 'urls'> {
  * update that means "do not touch the photos", which is the contract
  * `replacePropertyImages` is called under.
  */
-export async function normalizePropertyPhotos(payload: Record<string, unknown>): Promise<void> {
+export async function normalizePropertyPhotos(
+  payload: Record<string, unknown>,
+  publisherOxyUserId: string,
+): Promise<void> {
   if (!Array.isArray(payload.images)) return;
 
   const entries = payload.images.map((entry, index) => {
@@ -199,6 +198,16 @@ export async function normalizePropertyPhotos(payload: Record<string, unknown>):
   );
   const byId = new Map(rows.map((row) => [row.id, row]));
 
+  // And one call to Oxy for every newly uploaded photo.
+  const owned = await requireOwnAccountImages(
+    publisherOxyUserId,
+    entries.flatMap((entry) => {
+      if (text(entry.imageId) !== undefined) return [];
+      const fileId = fileIdOf(entry);
+      return fileId === undefined ? [] : [fileId];
+    }),
+  );
+
   let primaryTaken = false;
   payload.images = entries.map((entry, index): PropertyImageInput => {
     const caption = typeof entry.caption === 'string' ? entry.caption : null;
@@ -213,6 +222,26 @@ export async function normalizePropertyPhotos(payload: Record<string, unknown>):
       if (!row) reject(index, 'names an image that does not exist');
       return { imageId, caption, isPrimary, order, ...refFromRow(row) };
     }
-    return { upload: uploadBlock(entry, index), caption, isPrimary, order };
+
+    const fileId = fileIdOf(entry);
+    if (fileId !== undefined) {
+      const metadata = owned.get(fileId);
+      if (!metadata) reject(index, 'names a photo that could not be checked');
+      const stored = storedFromMetadata(metadata);
+      return {
+        upload: {
+          oxyFile: { id: stored.fileId, owner: stored.owner },
+          urls: oxyImageUrls(stored.fileId),
+          format: stored.format,
+          bytes: stored.bytes,
+          width: stored.width ?? count(entry.width),
+          height: stored.height ?? count(entry.height),
+        },
+        caption,
+        isPrimary,
+        order,
+      };
+    }
+    return { upload: legacyUploadBlock(entry, index), caption, isPrimary, order };
   });
 }

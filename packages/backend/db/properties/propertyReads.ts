@@ -42,6 +42,7 @@ import {
   count,
   desc,
   eq,
+  getTableColumns,
   inArray,
   isNotNull,
   ne,
@@ -55,6 +56,7 @@ import {
   addresses,
   cities,
   countries,
+  images,
   neighborhoods,
   properties,
   propertyAvailabilityWindows,
@@ -63,6 +65,7 @@ import {
   regions,
 } from '../schema';
 import { ADDRESS_GEO_NAME_COLUMNS, toAddressWithGeoNames } from '../addresses/addressSerializer';
+import { servableImageCondition } from '../images/servableImages';
 import { distanceTo } from './propertyGeo';
 import {
   propertySelection,
@@ -102,13 +105,18 @@ function groupByProperty<T extends { propertyId: string }>(rows: readonly T[]): 
   return grouped;
 }
 
-/** A page's photos, ordered as the listing lists them. */
+/**
+ * A page's photos, ordered as the listing lists them — only the ones that can
+ * be SHOWN (`servableImageCondition`): a photo whose Oxy file was taken down,
+ * trashed or made private is left out rather than rendered broken.
+ */
 async function loadImages(propertyIds: string[]): Promise<Map<string, PropertyImageRow[]>> {
   if (propertyIds.length === 0) return new Map();
   const rows = await getDb()
-    .select()
+    .select(getTableColumns(propertyImages))
     .from(propertyImages)
-    .where(inArray(propertyImages.propertyId, propertyIds))
+    .innerJoin(images, eq(images.id, propertyImages.imageId))
+    .where(and(inArray(propertyImages.propertyId, propertyIds), servableImageCondition()))
     // `(property_id, order)` is the index, so this ordering is free.
     .orderBy(asc(propertyImages.propertyId), asc(propertyImages.order));
   return groupByProperty(rows);

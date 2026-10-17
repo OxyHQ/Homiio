@@ -50,8 +50,6 @@ import {
   seedEntityCoverImage,
   CITY_COVER_IMAGE_URLS,
   logStorageMode,
-  fetchImageBuffer,
-  type SeedImageFetcher,
 } from './seedImages';
 
 /**
@@ -1086,10 +1084,7 @@ function resolveOfferings(seed: SeedProperty): OfferingType[] {
   return offerings;
 }
 
-async function upsertProperty(
-  seed: SeedProperty,
-  fetchImage: SeedImageFetcher,
-): Promise<'created' | 'unchanged'> {
+async function upsertProperty(seed: SeedProperty): Promise<'created' | 'unchanged'> {
   // The natural key IS the idempotency mechanism. `properties_source_source_id_key`
   // is unique on `(source, source_id) WHERE source_id IS NOT NULL`, so a seeded
   // listing is identified by `('internal', sourceId)` and nothing else — not by a
@@ -1108,11 +1103,7 @@ async function upsertProperty(
     // its images — a resumed partial run, the case the idempotence rule exists
     // for. A listing that already has photos is left completely alone.
     if (existing.imageCount === 0) {
-      const refs = await seedPropertyImages(
-        existing.id,
-        withUnsplashParams(seed.imageUrls),
-        fetchImage,
-      );
+      const refs = await seedPropertyImages(existing.id, withUnsplashParams(seed.imageUrls));
       await replacePropertyImages(existing.id, refs);
     }
     return 'unchanged';
@@ -1232,7 +1223,6 @@ async function upsertProperty(
   const imageRefs = await seedPropertyImages(
     property.property.id,
     withUnsplashParams(seed.imageUrls),
-    fetchImage,
   );
   await replacePropertyImages(property.property.id, imageRefs);
 
@@ -1245,7 +1235,7 @@ async function upsertProperty(
  * `entityId = city._id`) and set the city's `coverImageId` + `imageIds`. Runs
  * after geo is seeded so the City rows (and their `_id`s) exist.
  */
-async function seedCityCoverImages(fetchImage: SeedImageFetcher): Promise<void> {
+async function seedCityCoverImages(): Promise<void> {
   const cityRows = await getDb()
     .select({ id: cities.id, name: cities.name, coverImageId: cities.coverImageId })
     .from(cities);
@@ -1263,13 +1253,7 @@ async function seedCityCoverImages(fetchImage: SeedImageFetcher): Promise<void> 
     // table over.
     if (city.coverImageId) continue;
     try {
-      const imageId = await seedEntityCoverImage(
-        'city',
-        city.id,
-        url,
-        `${city.name} cityscape`,
-        fetchImage,
-      );
+      const imageId = await seedEntityCoverImage('city', city.id, url, `${city.name} cityscape`);
       if (imageId) {
         // Only the cover pointer. Membership is `images.(entity_type,
         // entity_id)`, which
@@ -1299,8 +1283,6 @@ export interface SeedPropertiesOptions {
    * That is a rewrite, not a no-op.
    */
   fresh?: boolean;
-  /** Injected by the test so the repeat-is-a-no-op property is observable offline. */
-  fetchImage?: SeedImageFetcher;
 }
 
 /** What one seeding pass did, per listing. */
@@ -1312,8 +1294,6 @@ export interface SeedPropertiesSummary {
 export async function seedProperties(
   options: SeedPropertiesOptions = {},
 ): Promise<SeedPropertiesSummary> {
-  const fetchImage = options.fetchImage ?? fetchImageBuffer;
-
   if (options.fresh) {
     // ONE `TRUNCATE ... CASCADE`. It has to be one statement: these tables
     // reference each other (`properties.address_id` is ON DELETE RESTRICT,
@@ -1336,18 +1316,18 @@ export async function seedProperties(
     `[seed-properties] Geo seeded: ${geoSummary.countries} country, ${geoSummary.regions} regions, ${geoSummary.cities} cities, ${geoSummary.neighborhoods} neighborhoods`,
   );
 
-  // Seed each city's cover image: fetch the curated photo ONCE, store it as an
-  // `images` row (entity_type 'city') in our own object storage, and link it via
+  // Seed each city's cover image: import the curated photo ONCE into Oxy Files,
+  // record it as an `images` row (entity_type 'city'), and link it via
   // `cover_image_id` — so the runtime never depends on an external image host.
-  console.log('[seed-properties] Seeding city cover images (fetch-once-then-store)...');
-  await seedCityCoverImages(fetchImage);
+  console.log('[seed-properties] Seeding city cover images (import once into Oxy Files)...');
+  await seedCityCoverImages();
 
   let created = 0;
   let unchanged = 0;
 
   for (const seed of properties) {
     try {
-      const result = await upsertProperty(seed, fetchImage);
+      const result = await upsertProperty(seed);
       if (result === 'created') {
         created += 1;
       } else {

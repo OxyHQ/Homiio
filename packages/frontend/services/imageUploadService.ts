@@ -4,10 +4,15 @@ export interface UploadedImage {
   /**
    * The photo's identity WITHIN THE PICKER — the grid's React key and what a
    * reorder or a remove looks it up by. It comes from the upload response,
-   * where it is the leading segment of the storage key, so it is unique per
-   * upload but is NOT a database id and must never be published as one.
+   * where it is the Oxy file id, so it is unique per photo but is NOT an
+   * `images` row id and must never be published as one.
    */
   imageId: string;
+  /**
+   * The Oxy file the upload stored the photo as, in the uploader's own Oxy
+   * account (ADR 0043). Publishing sends it; the server checks it is yours.
+   */
+  fileId?: string;
   /**
    * The canonical `images` row this photo is, when it has one: set only for
    * photos the edit screen loaded back from the server. A freshly uploaded
@@ -45,6 +50,7 @@ interface MultipleUploadResponse {
     images: {
       originalName: string;
       imageId: string;
+      fileId?: string;
       urls: Record<string, string>;
       metadata: {
         originalSize: number;
@@ -102,40 +108,11 @@ class ImageUploadService {
     return response.data;
   }
 
-  async deleteImage(imageKey: string): Promise<{ success: boolean; message: string }> {
-    const response = await api.delete(`/api/images/${imageKey}`);
-
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'Delete failed');
-    }
-
-    return response.data;
-  }
-
-  async deleteMultipleImages(
-    imageKeys: string[],
-  ): Promise<{ success: boolean; message: string; results: any[] }> {
-    const response = await api.post('/api/images/variants', {
-      method: 'DELETE',
-      keys: imageKeys,
-    });
-
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'Delete failed');
-    }
-
-    return response.data;
-  }
-
-  async getImageInfo(imageKey: string): Promise<UploadedImage> {
-    const response = await api.get(`/api/images/info/${imageKey}`);
-
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'Failed to get image info');
-    }
-
-    return response.data.data;
-  }
+  /*
+   * There is no delete: an uploaded photo is a file in the uploader's own Oxy
+   * account. Removing it from the picker removes it from the listing; the file
+   * stays theirs, shown as "not in use" in their Oxy file manager.
+   */
 
   // Helper method to get the best image URL for a given size
   getImageUrl(

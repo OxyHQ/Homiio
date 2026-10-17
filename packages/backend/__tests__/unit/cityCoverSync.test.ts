@@ -3,21 +3,13 @@
  *
  * ## Images first, then the city
  *
- * `cityCoverSyncService` does not only WRITE a city, it creates the IMAGE first
- * through `imageUploadService.createImageForEntity`, and `cities.cover_image_id`
- * is a real foreign key to `images.id`.
- *
- * ## What the foreign key changed about these assertions
- *
- * `createImageForEntity` is mocked, so nothing here inserts a real `images`
- * row — which means a mocked id cannot simply be asserted onto
- * `cities.cover_image_id`. Every case therefore
- * seeds a REAL image row (`seedCityImage`) and returns its id from the mock.
- * That is not a workaround: it is the constraint doing its job, and a test that
- * dodged it with a random id would assert a write production cannot perform.
+ * `cityCoverSyncService` does not only WRITE a city, it imports the photo into
+ * Oxy Files (the suite's in-memory one) and creates the IMAGE row first, and
+ * `cities.cover_image_id` is a real foreign key to `images.id` — so these
+ * cases assert real rows, Oxy file ids and the stored credit.
  *
  * There is no `imageIds[]` on a city — the membership is
- * `images.(entity_type, entity_id)`, which `createImageForEntity` writes.
+ * `images.(entity_type, entity_id)`, which `insertOxyImage` writes.
  */
 
 import express, { type Express } from 'express';
@@ -25,8 +17,13 @@ import request from 'supertest';
 import { eq } from 'drizzle-orm';
 import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
-import imageUploadService from '../../services/imageUploadService';
-import { ensureCover, syncCovers, syncMissingCovers } from '../../services/cityCoverSyncService';
+import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
+import {
+  ensureCover,
+  plainText,
+  syncCovers,
+  syncMissingCovers,
+} from '../../services/cityCoverSyncService';
 import publicRoutes from '../../routes/public';
 
 import { getDb } from '../../db/postgres';
@@ -43,22 +40,17 @@ import {
   type GeoChain,
 } from '../helpers/postgresGeoFixtures';
 
-jest.mock('../../services/imageUploadService', () => ({
-  __esModule: true,
-  default: {
-    createImageForEntity: jest.fn(),
-    isStorageConfigured: jest.fn(() => false),
-    resolveStoredImageUrl: jest.fn((url: string) => url),
-  },
-}));
-
 const TEST_IMAGE_URL = 'https://api.homiio.test/api/images/file/test/medium.webp';
 const WIKIMEDIA_IMAGE_URL =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/example.jpg/1280px-example.jpg';
 
 const originalFetch = global.fetch;
-const mockedCreateImageForEntity = imageUploadService.createImageForEntity as jest.Mock;
-const mockedIsStorageConfigured = imageUploadService.isStorageConfigured as jest.Mock;
+const COMMONS_PAGE = 'https://commons.wikimedia.org/wiki/File:Example.jpg';
+
+/** How many photos the sync asked Oxy to import. */
+function imports(): unknown[][] {
+  return fakeOxyFiles.callsOf('importAppFile');
+}
 
 function buildApp(): Express {
   const app = express();
@@ -69,20 +61,6 @@ function buildApp(): Express {
   app.use('/api', publicRoutes());
   app.use(errorHandler);
   return app;
-}
-
-function sampleVariantStrings(): {
-  original: string;
-  small: string;
-  medium: string;
-  large: string;
-} {
-  return {
-    original: TEST_IMAGE_URL,
-    small: TEST_IMAGE_URL,
-    medium: TEST_IMAGE_URL,
-    large: TEST_IMAGE_URL,
-  };
 }
 
 /**
@@ -103,6 +81,15 @@ function mockWikimediaFetch(): void {
                   url: WIKIMEDIA_IMAGE_URL,
                   thumburl: WIKIMEDIA_IMAGE_URL,
                   mime: 'image/jpeg',
+                  descriptionurl: COMMONS_PAGE,
+                  extmetadata: {
+                    Artist: {
+                      value:
+                        '<a href="//commons.wikimedia.org/wiki/User:Someone">Some&nbsp;One</a>',
+                    },
+                    LicenseShortName: { value: 'CC BY-SA 4.0' },
+                    LicenseUrl: { value: 'https://creativecommons.org/licenses/by-sa/4.0' },
+                  },
                 },
               ],
             },
@@ -143,23 +130,12 @@ async function seedListingImage(propertyId: string): Promise<string> {
   return image.id;
 }
 
-/**
- * Point `createImageForEntity` at a REAL `images` row.
- *
- * The mock has to return an id that exists, because the service writes it into
- * `cities.cover_image_id`, which references `images.id`. Returning a random id
- * would fail with a `23503` — correctly.
- */
-function mockCreatesCityImage(cityId: string, imageId: string): void {
-  mockedCreateImageForEntity.mockResolvedValue({
-    id: imageId,
-    entityType: 'city',
-    entityId: cityId,
-    keys: sampleVariantStrings(),
-    urls: sampleVariantStrings(),
-    format: 'webp',
-    bytes: 1024,
-  });
+/** The city's cover row, read back. */
+async function coverRowOf(cityId: string) {
+  const id = await coverImageIdOf(cityId);
+  if (!id) return null;
+  const [row] = await getDb().select().from(images).where(eq(images.id, id)).limit(1);
+  return row ?? null;
 }
 
 /** The city's stored cover pointer, read back from the table. */
@@ -195,8 +171,7 @@ async function seedCityWithListing(chain: GeoChain, sourceId: string): Promise<s
 beforeEach(async () => {
   await resetGeoTables();
   mockWikimediaFetch();
-  mockedIsStorageConfigured.mockReturnValue(false);
-  mockedCreateImageForEntity.mockReset();
+  fakeOxyFiles.reset();
 });
 
 afterEach(() => {
@@ -204,27 +179,70 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
+describe('cityCoverSyncService.plainText (a Commons credit as text)', () => {
+  it('reduces tags and entities to words', () => {
+    expect(plainText('<a href="https://x">Jane &amp; John</a>&nbsp;(CC&nbsp;BY-SA)')).toBe(
+      'Jane & John (CC BY-SA)',
+    );
+  });
+
+  it('decodes once: an escaped entity stays the entity the author wrote', () => {
+    expect(plainText('Tom &amp;lt;3 Barcelona')).toBe('Tom &lt;3 Barcelona');
+    expect(plainText('&amp;quot;quoted&amp;quot;')).toBe('&quot;quoted&quot;');
+  });
+
+  it('is undefined for nothing', () => {
+    expect(plainText('<br/>')).toBeUndefined();
+    expect(plainText(42)).toBeUndefined();
+  });
+});
+
 describe('cityCoverSyncService.ensureCover', () => {
-  it('stores a Wikimedia city image when the city has no cover', async () => {
+  it("imports a credited Wikimedia photo as Homiio's file when the city has no cover", async () => {
     const chain = await seedGeoChain({ cityName: 'Valencia', propertiesCount: 1 });
-    const cityImageId = await seedCityImage(chain.cityId);
-    mockCreatesCityImage(chain.cityId, cityImageId);
 
     await ensureCover(chain.cityId);
 
-    expect(mockedCreateImageForEntity).toHaveBeenCalledWith(
-      'city',
-      chain.cityId,
-      expect.objectContaining({ mimetype: 'image/jpeg' }),
-      expect.objectContaining({
-        isPrimary: true,
-        order: 0,
-        caption: 'Valencia, Spain',
-        allowUnconfiguredStorage: true,
+    // Oxy fetched it (not Homiio), as Homiio's public file, with the city's use
+    // registered in the same request.
+    expect(imports()).toEqual([
+      [
+        WIKIMEDIA_IMAGE_URL,
+        { visibility: 'public', reference: { entityType: 'city', entityId: chain.cityId } },
+      ],
+    ]);
+    const cover = await coverRowOf(chain.cityId);
+    expect(cover?.entityType).toBe('city');
+    expect(cover?.oxyFileOwner).toBe('application');
+    expect(cover?.oxyFileId).toBeTruthy();
+    expect(cover?.caption).toBe('Valencia, Spain');
+    expect(cover?.urlsMedium).toContain('variant=w640');
+    // The credit Commons requires, stored with the photo, markup stripped.
+    expect(cover?.attributionSourceUrl).toBe(COMMONS_PAGE);
+    expect(cover?.attributionLicense).toBe('CC BY-SA 4.0');
+    expect(cover?.attributionAuthor).toBe('Some One');
+  });
+
+  it('skips a photo Commons states no licence for', async () => {
+    const chain = await seedGeoChain({ cityName: 'Cuenca', propertiesCount: 1 });
+    (global as { fetch: typeof originalFetch }).fetch = jest.fn(async () =>
+      Response.json({
+        query: {
+          pages: {
+            '1': {
+              imageinfo: [
+                { url: WIKIMEDIA_IMAGE_URL, mime: 'image/jpeg', descriptionurl: COMMONS_PAGE },
+              ],
+            },
+          },
+        },
       }),
     );
 
-    expect(await coverImageIdOf(chain.cityId)).toBe(cityImageId);
+    await ensureCover(chain.cityId);
+
+    expect(imports()).toHaveLength(0);
+    expect(await coverImageIdOf(chain.cityId)).toBeNull();
   });
 
   it('does not use listing image ids even when published properties exist', async () => {
@@ -233,15 +251,12 @@ describe('cityCoverSyncService.ensureCover', () => {
     await seedPropertyImage({ propertyId });
     const listingImageId = await seedListingImage(propertyId);
 
-    const cityImageId = await seedCityImage(chain.cityId);
-    mockCreatesCityImage(chain.cityId, cityImageId);
-
     await ensureCover(chain.cityId);
 
-    expect(mockedCreateImageForEntity).toHaveBeenCalledTimes(1);
-    const cover = await coverImageIdOf(chain.cityId);
-    expect(cover).toBe(cityImageId);
-    expect(cover).not.toBe(listingImageId);
+    expect(imports()).toHaveLength(1);
+    const cover = await coverRowOf(chain.cityId);
+    expect(cover?.entityType).toBe('city');
+    expect(cover?.id).not.toBe(listingImageId);
   });
 
   it('no-ops on a second call when a city-owned cover already exists', async () => {
@@ -254,7 +269,7 @@ describe('cityCoverSyncService.ensureCover', () => {
 
     await ensureCover(chain.cityId);
 
-    expect(mockedCreateImageForEntity).not.toHaveBeenCalled();
+    expect(imports()).toHaveLength(0);
     expect(await coverImageIdOf(chain.cityId)).toBe(existingCityImageId);
   });
 
@@ -267,15 +282,12 @@ describe('cityCoverSyncService.ensureCover', () => {
       .set({ coverImageId: listingImageId })
       .where(eq(cities.id, chain.cityId));
 
-    const replacementId = await seedCityImage(chain.cityId);
-    mockCreatesCityImage(chain.cityId, replacementId);
-
     await ensureCover(chain.cityId, { force: true });
 
-    expect(mockedCreateImageForEntity).toHaveBeenCalledTimes(1);
-    const cover = await coverImageIdOf(chain.cityId);
-    expect(cover).toBe(replacementId);
-    expect(cover).not.toBe(listingImageId);
+    expect(imports()).toHaveLength(1);
+    const cover = await coverRowOf(chain.cityId);
+    expect(cover?.entityType).toBe('city');
+    expect(cover?.id).not.toBe(listingImageId);
   });
 
   it('replaces a property-linked cover without force', async () => {
@@ -287,13 +299,10 @@ describe('cityCoverSyncService.ensureCover', () => {
       .set({ coverImageId: listingImageId })
       .where(eq(cities.id, chain.cityId));
 
-    const replacementId = await seedCityImage(chain.cityId);
-    mockCreatesCityImage(chain.cityId, replacementId);
-
     await ensureCover(chain.cityId);
 
-    expect(mockedCreateImageForEntity).toHaveBeenCalledTimes(1);
-    expect(await coverImageIdOf(chain.cityId)).toBe(replacementId);
+    expect(imports()).toHaveLength(1);
+    expect((await coverRowOf(chain.cityId))?.entityType).toBe('city');
   });
 
   it('skips implausible city names', async () => {
@@ -301,7 +310,7 @@ describe('cityCoverSyncService.ensureCover', () => {
 
     await ensureCover(chain.cityId);
 
-    expect(mockedCreateImageForEntity).not.toHaveBeenCalled();
+    expect(imports()).toHaveLength(0);
     expect(await coverImageIdOf(chain.cityId)).toBeNull();
   });
 });
@@ -309,14 +318,12 @@ describe('cityCoverSyncService.ensureCover', () => {
 describe('cityCoverSyncService.syncCovers', () => {
   it('processes cities that have listings but no cover', async () => {
     const chain = await seedGeoChain({ cityName: 'Bilbao', propertiesCount: 1 });
-    const cityImageId = await seedCityImage(chain.cityId);
-    mockCreatesCityImage(chain.cityId, cityImageId);
 
     const processed = await syncCovers({ limit: 10, forceReplaceListingCovers: true });
     expect(processed).toBe(1);
 
-    expect(await coverImageIdOf(chain.cityId)).toBe(cityImageId);
-    expect(mockedCreateImageForEntity).toHaveBeenCalledTimes(1);
+    expect((await coverRowOf(chain.cityId))?.entityType).toBe('city');
+    expect(imports()).toHaveLength(1);
   });
 
   it('replaces property-linked covers when forceReplaceListingCovers is true', async () => {
@@ -328,15 +335,12 @@ describe('cityCoverSyncService.syncCovers', () => {
       .set({ coverImageId: listingImageId })
       .where(eq(cities.id, chain.cityId));
 
-    const replacementId = await seedCityImage(chain.cityId);
-    mockCreatesCityImage(chain.cityId, replacementId);
-
     const processed = await syncMissingCovers({ limit: 10 });
     expect(processed).toBe(1);
 
-    const cover = await coverImageIdOf(chain.cityId);
-    expect(cover).toBe(replacementId);
-    expect(cover).not.toBe(listingImageId);
+    const cover = await coverRowOf(chain.cityId);
+    expect(cover?.entityType).toBe('city');
+    expect(cover?.id).not.toBe(listingImageId);
   });
 
   it('leaves a city with NO listings alone, however missing its cover', async () => {
@@ -348,7 +352,7 @@ describe('cityCoverSyncService.syncCovers', () => {
     const processed = await syncCovers({ limit: 10, forceReplaceListingCovers: true });
 
     expect(processed).toBe(0);
-    expect(mockedCreateImageForEntity).not.toHaveBeenCalled();
+    expect(imports()).toHaveLength(0);
   });
 });
 

@@ -110,6 +110,7 @@ export function ImageUpload({
         const current = latestImages.current;
         const uploaded: UploadedImage[] = response.data.images.map((image, index) => ({
           imageId: image.imageId,
+          fileId: image.fileId,
           urls: {
             small: image.urls.small ?? image.urls.original ?? '',
             medium: image.urls.medium ?? image.urls.original ?? '',
@@ -219,20 +220,16 @@ export function ImageUpload({
       destructive: true,
     });
     if (!ok) return;
-    try {
-      await imageUploadService.deleteImage(image.keys.original);
-      const remaining = coverFirst(latestImages.current).filter(
-        (candidate) => candidate.imageId !== id,
-      );
-      onImagesChange(
-        image.isPrimary && remaining.length > 0
-          ? [{ ...remaining[0], isPrimary: true }, ...remaining.slice(1)]
-          : remaining,
-      );
-    } catch (error) {
-      logger.error('Error deleting image', error);
-      toast.error(t('imageUpload.deleteFailed'));
-    }
+    // Nothing to delete server-side: the photo is a file in the person's own
+    // Oxy account, and leaving the listing is all removing it here means.
+    const remaining = coverFirst(latestImages.current).filter(
+      (candidate) => candidate.imageId !== id,
+    );
+    onImagesChange(
+      image.isPrimary && remaining.length > 0
+        ? [{ ...remaining[0], isPrimary: true }, ...remaining.slice(1)]
+        : remaining,
+    );
   };
 
   const handleRetry = (id: string) => {

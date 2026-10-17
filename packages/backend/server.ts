@@ -30,6 +30,9 @@ import { initCronJobs } from './services/cron';
 import { HealthService } from './services/healthService';
 import { createCrowdSourceWebhookRoutes } from './routes/crowdSourceWebhook';
 import { moderationOutboxDispatcher } from './services/moderation/ModerationOutboxDispatcher';
+import { createOxyFilesWebhookRoutes } from './routes/oxyFilesWebhook';
+import { fileReferenceSyncLoop } from './services/files/referenceSync';
+import { flushLegacyReads } from './services/files/legacyReadCounter';
 import { getErrorMessage } from './utils/errors';
 import { createCapabilityLanes, mountCapabilityLanes } from './capabilities/mount';
 
@@ -272,6 +275,13 @@ app.use('/api', apiLimiter);
  */
 app.use('/webhooks', createCrowdSourceWebhookRoutes());
 
+/**
+ * Oxy file events (ADR 0043 D9): takedowns, deletions and visibility changes
+ * of the files Homiio shows. Before every body parser and outside `/api`, for
+ * the CrowdSource webhook's reasons — `routes/oxyFilesWebhook.ts`.
+ */
+app.use('/webhooks', createOxyFilesWebhookRoutes());
+
 // Stripe webhook must be mounted BEFORE any body parser that consumes the body
 app.post('/api/billing/webhook', bodyParser.raw({ type: '*/*' }), (req: Request, res: Response) => {
   const rawRequest = req as RawBodyRequest;
@@ -383,6 +393,12 @@ async function startServer() {
          * losing it.
          */
         moderationOutboxDispatcher.start();
+        /**
+         * Register and remove Homiio's uses of Oxy files from every task — the
+         * claim is `FOR UPDATE SKIP LOCKED` with a lease, like the outbox above
+         * (`services/files/referenceSync.ts`).
+         */
+        fileReferenceSyncLoop.start();
       }
     });
 
@@ -403,6 +419,8 @@ async function startServer() {
       await Promise.all([
         new Promise<void>((resolve) => server.close(() => resolve())),
         moderationOutboxDispatcher.stop(),
+        fileReferenceSyncLoop.stop(),
+        flushLegacyReads(),
       ]);
       await activity?.stop();
       clearTimeout(timeout);

@@ -212,7 +212,7 @@ export async function createProperty(oxyUserId: string, body: Body): Promise<Ser
     // transaction can mint each one's canonical `images` row once the listing
     // has an id. Without this the insert hits `property_images.image_id`'s NOT
     // NULL and every publish with a photo is a 500 — see `photoIntake`.
-    await normalizePropertyPhotos(propertyData);
+    await normalizePropertyPhotos(propertyData, oxyUserId);
 
     // Handle address creation or reference
     let addressId: unknown;
@@ -332,7 +332,7 @@ export async function updateProperty(
     // Same intake as create: a photo added during an edit has no `images` row
     // either, and the reordered list's positions are its stored order. A body
     // that does not mention `images` leaves the listing's photos untouched.
-    await normalizePropertyPhotos(updateData);
+    await normalizePropertyPhotos(updateData, oxyUserId);
 
     if (body.address) {
       // Address writes go through the canonical resolver, which whitelists the

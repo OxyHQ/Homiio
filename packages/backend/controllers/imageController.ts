@@ -1,17 +1,45 @@
+/**
+ * `/api/images/*` — a person's photo uploads, and the legacy photo door.
+ *
+ * ## Uploads go to the uploader's own Oxy account (ADR 0043)
+ *
+ * `POST /api/images/upload` and `/upload-multiple` store each photo in the
+ * signed-in person's Oxy Files, as THEIR public file
+ * (`services/files/publicImages.uploadAccountImage`, which strips the EXIF on
+ * the way). Nothing is written to Homiio's storage and no `images` row is made
+ * yet: the row is minted when the photo is published on a listing or a case,
+ * after Oxy confirms the file is this person's own
+ * (`requireOwnAccountImages`). Until then it is simply a file in their account;
+ * if they never publish it, Oxy shows it to them as "not in use" — it is never
+ * deleted behind their back.
+ *
+ * The answer keeps the shape every app build already reads — `imageId`,
+ * `urls`, `metadata`, `keys` — and adds `fileId`. `keys` carries
+ * `oxy:<fileId>`, so a build that publishes `keys` publishes the right file.
+ *
+ * ## What was removed, and why
+ *
+ * - Uploads that named an `entityType`/`entityId` made an `images` row for ANY
+ *   entity — a city, a country — from any signed-in account, and nothing ever
+ *   showed it. No client sends them; the fields are ignored.
+ * - `DELETE /api/images/:imageKey` deleted ANY bucket object by key for any
+ *   signed-in account. It now deletes nothing and answers 200, because an app
+ *   build already in people's hands calls it when a photo is removed from the
+ *   picker: the photo is the person's own file in Oxy, to keep or delete there.
+ * - `DELETE /api/images/variants` and `GET /api/images/info/:imageKey` had no
+ *   caller.
+ */
+
 import type { Request, Response } from 'express';
-import { resolveStorageFolder } from '../services/imageUploadService';
-import type { ImageEntityType } from '@homiio/shared-types';
-import imageUploadService, {
-  type UploadedImage,
-  type ImageDocument,
-} from '../services/imageUploadService';
-import { validateImageStoreKey } from '../utils/imageStoreKey';
-import { isLiveEntityId } from '../db/ids';
-import { logUnexpectedError } from '../middlewares/errorHandler';
+import { requireSessionOxyUserId } from '../utils/sessionUser';
+import { AppError, logUnexpectedError } from '../middlewares/errorHandler';
+import { fileIdFromOxyKey, OXY_KEY_PREFIX, oxyImageUrls } from '../services/files/imageUrls';
+import { resolveLegacyImage } from '../services/files/legacyImages';
+import { oxyErrorCode, oxyErrorStatus } from '../services/files/oxyFilesClient';
+import { type StoredPublicImage, uploadAccountImage } from '../services/files/publicImages';
 
 // Minimal shape for an uploaded file to avoid relying on Express.Multer types
 type UploadedFile = {
-  fieldname?: string;
   originalname: string;
   mimetype: string;
   size: number;
@@ -23,62 +51,6 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'
 
 /** Maximum accepted upload size (bytes). Mirrors the multer route limit. */
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB
-
-/** Entity kinds an uploaded image may be attached to. */
-const IMAGE_ENTITY_TYPES: readonly ImageEntityType[] = [
-  'property',
-  'city',
-  'region',
-  'country',
-  'profile',
-];
-
-/** A resolved `{ entityType, entityId }` target, or a reason it could not resolve. */
-type EntityTarget =
-  | { kind: 'none' }
-  | { kind: 'invalid'; message: string }
-  | { kind: 'resolved'; entityType: ImageEntityType; entityId: string };
-
-/**
- * Resolve the optional `entityType` + `entityId` an upload should be attached to
- * from the request body. Absent entity info is valid (a generic upload, e.g. a
- * draft photo before its property exists) — `{ kind: 'none' }`. A partial or
- * malformed pair is rejected so a typo never silently produces an orphan upload.
- */
-function resolveEntityTarget(body: Record<string, unknown>): EntityTarget {
-  const rawType = body.entityType;
-  const rawId = body.entityId;
-
-  if (rawType === undefined && rawId === undefined) {
-    return { kind: 'none' };
-  }
-  if (typeof rawType !== 'string' || !IMAGE_ENTITY_TYPES.includes(rawType as ImageEntityType)) {
-    return {
-      kind: 'invalid',
-      message: `entityType must be one of: ${IMAGE_ENTITY_TYPES.join(', ')}`,
-    };
-  }
-  // `isLiveEntityId`, not `ObjectId.isValid`: both id shapes are live
-  // permanently (24-char hex for rows copied by the backfill, uuid v7 for rows
-  // minted since), so the ObjectId test this replaces rejected every entity
-  // created after the cutover — a documented API boundary is the one place a
-  // shape guard belongs, and it has to know both shapes. See `db/ids.ts`.
-  if (typeof rawId !== 'string' || !isLiveEntityId(rawId)) {
-    return { kind: 'invalid', message: 'entityId must be a valid id' };
-  }
-  return {
-    kind: 'resolved',
-    entityType: rawType as ImageEntityType,
-    entityId: rawId,
-  };
-}
-
-/** A non-negative integer parsed from a request body field, or undefined. */
-function parseOrder(value: unknown): number | undefined {
-  if (typeof value !== 'string' && typeof value !== 'number') return undefined;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
-}
 
 /** Validate a single file's MIME type + size; returns an error message or null. */
 function validateFile(file: {
@@ -97,105 +69,102 @@ function validateFile(file: {
   return null;
 }
 
-/** Whether a parsed body flag is truthy (`true` / `"true"`). */
-function isTrue(value: unknown): boolean {
-  return value === true || value === 'true';
+/** The upload answer every app build reads, for one stored photo. */
+function uploadAnswer(image: StoredPublicImage) {
+  const key = `${OXY_KEY_PREFIX}${image.fileId}`;
+  return {
+    imageId: image.fileId,
+    fileId: image.fileId,
+    urls: oxyImageUrls(image.fileId),
+    metadata: {
+      originalSize: image.bytes,
+      originalFormat: image.format,
+      uploadedAt: new Date(),
+      ...(image.width === undefined ? {} : { width: image.width }),
+      ...(image.height === undefined ? {} : { height: image.height }),
+    },
+    keys: {
+      original: key,
+      variants: { original: key, small: key, medium: key, large: key },
+    },
+  };
+}
+
+/**
+ * The status an Oxy refusal is answered with. A photo Oxy refused for what it
+ * IS (too large, not an image, bytes taken down after a rights claim — 451)
+ * is the uploader's to know about; anything else is Homiio's problem (502).
+ */
+function refusal(error: unknown): { status: number; message: string } | null {
+  // Homiio's own refusals (no session) answer as themselves.
+  if (error instanceof AppError) return { status: error.statusCode, message: error.message };
+  const status = oxyErrorStatus(error);
+  if (status === 413) return { status: 413, message: 'File size too large.' };
+  if (status === 415) return { status: 400, message: 'Invalid file type.' };
+  if (status === 451) {
+    return {
+      status: 451,
+      message: 'This photo was removed after a legal claim and cannot be uploaded again.',
+    };
+  }
+  if (oxyErrorCode(error) === 'STORAGE_QUOTA_EXCEEDED') {
+    return { status: 413, message: 'Your Oxy storage is full.' };
+  }
+  return null;
 }
 
 export class ImageController {
   async uploadImage(req: Request, res: Response): Promise<void> {
     try {
+      const oxyUserId = requireSessionOxyUserId(req);
       if (!req.file) {
         res.status(400).json({ success: false, message: 'No image file provided' });
         return;
       }
-
       const validationError = validateFile(req.file);
       if (validationError) {
         res.status(400).json({ success: false, message: validationError });
         return;
       }
-
-      const target = resolveEntityTarget(req.body);
-      if (target.kind === 'invalid') {
-        res.status(400).json({ success: false, message: target.message });
-        return;
-      }
-
-      // Allow-listed, not merely typed. `typeof === 'string'` let
-      // `{"folder": "../../.."}` through to a `path.join` against the store root.
-      const folder = resolveStorageFolder(req.body.folder);
-      const uploadedImage: UploadedImage = await imageUploadService.uploadImage(req.file, folder);
-      const imageUrls = imageUploadService.getAllImageUrls(uploadedImage);
-
-      // When the upload targets a known entity, persist the canonical Image doc
-      // (re-running the pipeline once via the service so keys/variants/metadata
-      // are stored, not discarded). The response keeps its existing shape and
-      // gains the persisted document id.
-      let persisted: ImageDocument | null = null;
-      if (target.kind === 'resolved') {
-        persisted = await imageUploadService.createImageForEntity(
-          target.entityType,
-          target.entityId,
-          req.file,
-          {
-            caption: typeof req.body.caption === 'string' ? req.body.caption : undefined,
-            isPrimary: isTrue(req.body.isPrimary),
-            order: parseOrder(req.body.order),
-            folder,
-          },
-        );
-      }
-
+      const stored = await uploadAccountImage(oxyUserId, {
+        buffer: req.file.buffer,
+        originalName: req.file.originalname,
+      });
       res.status(200).json({
         success: true,
         message: 'Image uploaded successfully',
-        data: {
-          imageId: uploadedImage.original.split('/').pop()?.split('-')[0],
-          imageDocId: persisted ? persisted.id : undefined,
-          urls: imageUrls,
-          metadata: uploadedImage.metadata,
-          keys: {
-            original: uploadedImage.original,
-            variants: uploadedImage.variants,
-          },
-        },
+        data: uploadAnswer(stored),
       });
     } catch (error) {
+      const known = refusal(error);
+      if (known) {
+        res.status(known.status).json({ success: false, message: known.message });
+        return;
+      }
       logUnexpectedError(error, req, 'Failed to upload image');
-      res.status(500).json({
+      res.status(502).json({
         success: false,
         message: 'Failed to upload image',
-        error: 'Internal server error',
+        error: 'Upstream storage error',
       });
     }
   }
 
   async uploadMultipleImages(req: Request, res: Response): Promise<void> {
     try {
+      const oxyUserId = requireSessionOxyUserId(req);
       if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
         res.status(400).json({ success: false, message: 'No image files provided' });
         return;
       }
-
-      // Normalize req.files which can be an array or a field map depending on multer usage
+      // Normalize req.files, which is an array or a field map depending on multer usage.
       const files: UploadedFile[] = Array.isArray(req.files)
         ? (req.files as unknown as UploadedFile[])
         : (Object.values(req.files as Record<string, UploadedFile[]>)
             .flat()
             .filter(Boolean) as UploadedFile[]);
 
-      // Allow-listed, not merely typed. `typeof === 'string'` let
-      // `{"folder": "../../.."}` through to a `path.join` against the store root.
-      const folder = resolveStorageFolder(req.body.folder);
-
-      const target = resolveEntityTarget(req.body);
-      if (target.kind === 'invalid') {
-        res.status(400).json({ success: false, message: target.message });
-        return;
-      }
-
-      // Validate every file before uploading any of them.
+      // Validate every file before storing any of them.
       for (const file of files) {
         const validationError = validateFile(file);
         if (validationError) {
@@ -204,182 +173,96 @@ export class ImageController {
         }
       }
 
-      const uploadedImages: Array<{
-        originalName: string;
-        imageId: string | undefined;
-        imageDocId?: string;
-        urls: Record<string, string>;
-        metadata: UploadedImage['metadata'];
-        keys: { original: string; variants: Record<string, string> };
-      }> = [];
-
-      // Upload each image; when targeting an entity, persist an ordered Image doc.
-      let nextOrder = parseOrder(req.body.order) ?? 0;
+      const uploaded = [];
       for (const file of files) {
-        try {
-          const uploadedImage = await imageUploadService.uploadImage(file, folder);
-          const imageUrls = imageUploadService.getAllImageUrls(uploadedImage);
-
-          let persisted: ImageDocument | null = null;
-          if (target.kind === 'resolved') {
-            persisted = await imageUploadService.createImageForEntity(
-              target.entityType,
-              target.entityId,
-              file,
-              {
-                isPrimary: nextOrder === 0 && isTrue(req.body.isPrimary),
-                order: nextOrder,
-                folder,
-              },
-            );
-            nextOrder += 1;
-          }
-
-          uploadedImages.push({
-            originalName: file.originalname,
-            imageId: uploadedImage.original.split('/').pop()?.split('-')[0],
-            imageDocId: persisted ? persisted.id : undefined,
-            urls: imageUrls,
-            metadata: uploadedImage.metadata,
-            keys: { original: uploadedImage.original, variants: uploadedImage.variants },
-          });
-        } catch (error) {
-          // One bad file should not fail the batch; record nothing for it and
-          // continue. A genuine systemic failure surfaces on every file.
-          const message = error instanceof Error ? error.message : 'Unknown error';
-          throw new Error(`Failed to process ${file.originalname}: ${message}`);
-        }
+        const stored = await uploadAccountImage(oxyUserId, {
+          buffer: file.buffer,
+          originalName: file.originalname,
+        });
+        uploaded.push({ originalName: file.originalname, ...uploadAnswer(stored) });
       }
 
       res.status(200).json({
         success: true,
-        message: `Successfully uploaded ${uploadedImages.length} images`,
-        data: { uploadedCount: uploadedImages.length, images: uploadedImages },
+        message: `Successfully uploaded ${uploaded.length} images`,
+        data: { uploadedCount: uploaded.length, images: uploaded },
       });
     } catch (error) {
+      const known = refusal(error);
+      if (known) {
+        res.status(known.status).json({ success: false, message: known.message });
+        return;
+      }
       logUnexpectedError(error, req, 'Failed to upload images');
-      res.status(500).json({
+      res.status(502).json({
         success: false,
         message: 'Failed to upload images',
-        error: 'Internal server error',
-      });
-    }
-  }
-
-  async deleteImage(req: Request, res: Response): Promise<void> {
-    try {
-      const { imageKey } = req.params;
-      if (!imageKey) {
-        res.status(400).json({ success: false, message: 'Image key is required' });
-        return;
-      }
-
-      await imageUploadService.deleteImage(imageKey);
-
-      res.status(200).json({ success: true, message: 'Image deleted successfully' });
-    } catch (error) {
-      logUnexpectedError(error, req, 'Failed to delete image');
-      res.status(500).json({
-        success: false,
-        message: 'Failed to delete image',
-        error: 'Internal server error',
-      });
-    }
-  }
-
-  async deleteImageVariants(req: Request, res: Response): Promise<void> {
-    try {
-      const { imageKeys } = req.body;
-      if (!imageKeys || !Array.isArray(imageKeys) || imageKeys.length === 0) {
-        res.status(400).json({ success: false, message: 'Image keys array is required' });
-        return;
-      }
-
-      await imageUploadService.deleteImageVariants(imageKeys);
-
-      res.status(200).json({ success: true, message: 'Image variants deleted successfully' });
-    } catch (error) {
-      logUnexpectedError(error, req, 'Failed to delete image variants');
-      res.status(500).json({
-        success: false,
-        message: 'Failed to delete image variants',
-        error: 'Internal server error',
+        error: 'Upstream storage error',
       });
     }
   }
 
   /**
-   * Serve a processed image's bytes from the self-hosted LOCAL store (used when
-   * object storage is not configured). The bucket-relative key is the wildcard
-   * tail of the route (`GET /api/images/file/*`), which Express delivers already
-   * URL-decoded — so `..%2f..` arrives as `../..`. The key is UNTRUSTED input and
-   * is the FIRST of two independent path-traversal gates:
-   *
-   *  1. (here) validate the key by string analysis — reject `..`, absolute paths,
-   *     backslashes, NUL bytes, drive/UNC prefixes, and any non-image extension —
-   *     before it can reach the filesystem; serve only allowlisted image types.
-   *  2. ({@link ImageUploadService.readLocalImage}) re-resolve under the store
-   *     root with realpath containment, so a bypass of this gate still cannot
-   *     escape the store.
-   *
-   * Filesystem errors are never surfaced: a missing/forbidden file is a flat 404
-   * so the route leaks neither paths nor existence of out-of-store files.
+   * Removing a photo from the picker. Deletes nothing — see the module header
+   * — and answers the shape an app build already in use expects.
    */
-  async serveLocalImage(req: Request, res: Response): Promise<void> {
+  async forgetUpload(req: Request, res: Response): Promise<void> {
+    const { imageKey } = req.params;
+    if (!imageKey) {
+      res.status(400).json({ success: false, message: 'Image key is required' });
+      return;
+    }
+    res.status(200).json({
+      success: true,
+      message: fileIdFromOxyKey(imageKey)
+        ? 'Image removed; the file stays in your Oxy account'
+        : 'Image removed',
+    });
+  }
+
+  /**
+   * `GET /api/images/file/*` — the legacy door (`services/files/legacyImages`).
+   *
+   * The key is the wildcard tail, already URL-decoded by Express, and is
+   * untrusted: `validateImageStoreKey` refuses traversal, absolute paths,
+   * private prefixes and non-image extensions before anything is looked up.
+   * A missing photo is a flat 404 that says nothing about why.
+   */
+  async serveLegacyImage(req: Request, res: Response): Promise<void> {
     try {
       const rawKey = req.params[0];
       if (typeof rawKey !== 'string' || rawKey.length === 0) {
         res.status(400).json({ success: false, message: 'Image key is required' });
         return;
       }
-
-      const validation = validateImageStoreKey(rawKey);
-      if (!validation.ok) {
-        res.status(400).json({ success: false, message: 'Invalid image key' });
-        return;
+      const answer = await resolveLegacyImage(rawKey);
+      switch (answer.kind) {
+        case 'invalid':
+          res.status(400).json({ success: false, message: 'Invalid image key' });
+          return;
+        case 'missing':
+          res.status(404).json({ success: false, message: 'Image not found' });
+          return;
+        case 'redirect':
+          // Permanent: the photo lives in Oxy now, and a browser that
+          // remembers that never asks this door again.
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          res.redirect(301, answer.location);
+          return;
+        case 'bytes':
+          res.setHeader('Content-Type', answer.contentType);
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+          // Embeddable from the Homiio frontend origin (and RN web).
+          res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+          res.status(200).end(answer.buffer);
+          return;
       }
-
-      const file = await imageUploadService.readStoredImage(validation.key);
-      if (!file) {
-        res.status(404).json({ success: false, message: 'Image not found' });
-        return;
-      }
-
-      // Trust the extension-derived content type from the (allowlisted) key over
-      // whatever the store reports, so the response can only be an image type.
-      res.setHeader('Content-Type', validation.contentType);
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      // Embeddable from the Homiio frontend origin (and RN web). Helmet keeps
-      // default `same-origin` CORP on other routes; only image bytes need cross-origin.
-      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-      res.status(200).end(file.buffer);
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to serve image');
       res.status(500).json({
         success: false,
         message: 'Failed to serve image',
-        error: 'Internal server error',
-      });
-    }
-  }
-
-  async getImageInfo(req: Request, res: Response): Promise<void> {
-    try {
-      const { imageKey } = req.params;
-      if (!imageKey) {
-        res.status(400).json({ success: false, message: 'Image key is required' });
-        return;
-      }
-
-      const imageUrl = imageUploadService.getImageUrl(imageKey);
-
-      res.status(200).json({ success: true, data: { key: imageKey, url: imageUrl } });
-    } catch (error) {
-      logUnexpectedError(error, req, 'Failed to get image info');
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get image info',
         error: 'Internal server error',
       });
     }

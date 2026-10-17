@@ -27,6 +27,7 @@
 import type { Request, Response } from 'express';
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { servableImageCondition } from '../db/images/servableImages';
 
 import { getDb } from '../db/postgres';
 import { escapeLikePattern } from '@oxy.so/utils/sql';
@@ -81,33 +82,41 @@ interface PropertyFilters {
  * is used for all three so no reader has to work out which is which.
  */
 function cityQuery() {
-  return getDb()
-    .select({
-      city: cities,
-      country: {
-        id: countries.id,
-        name: countries.name,
-        code: countries.code,
-        currency: countries.currency,
-        flag: countries.flag,
-      },
-      region: { id: regions.id, name: regions.name, code: regions.code },
-      coverImage: {
-        id: images.id,
-        urlsOriginal: images.urlsOriginal,
-        urlsSmall: images.urlsSmall,
-        urlsMedium: images.urlsMedium,
-        urlsLarge: images.urlsLarge,
-        caption: images.caption,
-        width: images.width,
-        height: images.height,
-        entityType: images.entityType,
-      },
-    })
-    .from(cities)
-    .leftJoin(countries, eq(cities.countryId, countries.id))
-    .leftJoin(regions, eq(cities.regionId, regions.id))
-    .leftJoin(images, eq(cities.coverImageId, images.id));
+  return (
+    getDb()
+      .select({
+        city: cities,
+        country: {
+          id: countries.id,
+          name: countries.name,
+          code: countries.code,
+          currency: countries.currency,
+          flag: countries.flag,
+        },
+        region: { id: regions.id, name: regions.name, code: regions.code },
+        coverImage: {
+          id: images.id,
+          urlsOriginal: images.urlsOriginal,
+          urlsSmall: images.urlsSmall,
+          urlsMedium: images.urlsMedium,
+          urlsLarge: images.urlsLarge,
+          caption: images.caption,
+          width: images.width,
+          height: images.height,
+          entityType: images.entityType,
+          attributionSourceUrl: images.attributionSourceUrl,
+          attributionLicense: images.attributionLicense,
+          attributionLicenseUrl: images.attributionLicenseUrl,
+          attributionAuthor: images.attributionAuthor,
+        },
+      })
+      .from(cities)
+      .leftJoin(countries, eq(cities.countryId, countries.id))
+      .leftJoin(regions, eq(cities.regionId, regions.id))
+      // Only a cover that can be SHOWN: one whose Oxy file was taken down or
+      // deleted joins nothing, and the city answers with no cover at all.
+      .leftJoin(images, and(eq(cities.coverImageId, images.id), servableImageCondition()))
+  );
 }
 
 type CityQueryRow = Awaited<ReturnType<typeof cityQuery>>[number];
@@ -168,8 +177,19 @@ function serializeCity(row: CityQueryRow): Record<string, unknown> {
           width: coverImage.width,
           height: coverImage.height,
           entityType: coverImage.entityType,
+          // The licence's credit (a Wikimedia Commons cover): shown with the
+          // photo, because CC BY-SA requires it.
+          attribution:
+            coverImage.attributionSourceUrl && coverImage.attributionLicense
+              ? withoutAbsent({
+                  sourceUrl: coverImage.attributionSourceUrl,
+                  license: coverImage.attributionLicense,
+                  licenseUrl: coverImage.attributionLicenseUrl,
+                  author: coverImage.attributionAuthor,
+                })
+              : undefined,
         })
-      : city.coverImageId,
+      : undefined,
     isActive: city.isActive,
     propertiesCount: city.propertiesCount,
     lastUpdated: city.lastUpdated,

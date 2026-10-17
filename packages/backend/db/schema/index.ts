@@ -92,6 +92,7 @@ export {
   moderationReports,
 } from './moderation';
 export { notifications } from './notifications';
+export { fileReferenceChanges, legacyMediaReads, oxyFileEvents } from './oxyFiles';
 export { commissions, partners } from './partners';
 export { placePoiCategories, placePois } from './placePois';
 export {

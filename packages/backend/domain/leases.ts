@@ -22,7 +22,6 @@ import path from 'node:path';
 
 import { LeaseStatus } from '@homiio/shared-types';
 
-import config from '../config';
 import { CREATABLE_LEASE_FIELDS, EDITABLE_LEASE_FIELDS } from '../controllers/lease/editableFields';
 import {
   toCoTenantRows,
@@ -51,11 +50,15 @@ import { getDb } from '../db/postgres';
 import { LEASE_DOCUMENT_TYPES } from '../db/schema/leases';
 import { AppError } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
-import imageUploadService from '../services/imageUploadService';
+import {
+  privateDocumentRefFromRowUrl,
+  privateDocumentRowUrl,
+  readPrivateDocument,
+  storePrivateUpload,
+} from '../services/files/privateDocuments';
 import { notificationDispatchService } from '../services/notificationDispatchService';
 import { SERVABLE_DOCUMENT_CONTENT_TYPES } from '../utils/imageStoreKey';
 import { pickFields } from '../utils/pickFields';
-import { storedDocumentKey } from '../utils/storedDocumentKey';
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 10;
@@ -657,26 +660,19 @@ export async function uploadLeaseDocument(
   const rawName = typeof input.name === 'string' ? input.name.trim() : '';
   const name = safeDocumentName(rawName.length > 0 ? rawName : file.originalname);
 
-  const stored =
-    file.mimetype === 'application/pdf'
-      ? await imageUploadService.uploadPrivateDocument(
-          file.buffer,
-          file.mimetype,
-          `leases/${leaseId}`,
-          extension,
-        )
-      : await imageUploadService.uploadPrivateImage(
-          file.buffer,
-          file.mimetype,
-          `leases/${leaseId}`,
-        );
+  // The party's own private document (`services/files/privateDocuments`):
+  // a PDF verbatim, a photo re-encoded. Stored only after the party check.
+  const stored = await storePrivateUpload(
+    { ownerOxyUserId: oxyUserId, kind: 'lease', entityId: leaseId },
+    file,
+  );
 
   const created = await getDb().transaction(async (tx) => {
     const document = await addLeaseDocument(tx, leaseId, {
       name,
-      // The key travels inside the delivery-route shape `storedDocumentKey`
-      // reads; nothing SERVES that URL publicly (it starts `private/`).
-      url: imageUploadService.getImageUrl(stored.key),
+      // `oxy:<fileId>` (the uploader's private Oxy file) or, from the bucket
+      // fallback, a delivery-route URL; nothing SERVES either publicly.
+      url: privateDocumentRowUrl(stored.ref),
       type: documentType,
       // Server-resolved, never from input.
       uploadedByOxyUserId: oxyUserId,
@@ -716,11 +712,10 @@ export async function readLeaseDocument(oxyUserId: string, leaseId: string, docu
   const document = await findLeaseDocument(db, leaseId, documentId);
   if (!document) throw new AppError('Document not found', 404, 'NOT_FOUND');
 
-  const key = storedDocumentKey(document.url, {
-    bucketName: config.s3.bucketName,
-    endpoint: config.s3.endpoint,
-  });
-  const file = key ? await imageUploadService.readPrivateDocument(key) : null;
+  // The party check above is the authorization; this only fetches the bytes
+  // (from the uploader's Oxy account, or the bucket for an unmigrated one).
+  const ref = privateDocumentRefFromRowUrl(document.url);
+  const file = ref ? await readPrivateDocument(ref) : null;
   if (!file) throw new AppError('Document not found', 404, 'NOT_FOUND');
 
   return {

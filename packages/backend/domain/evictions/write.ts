@@ -66,13 +66,15 @@ import {
   shouldRedrawPublicLocation,
 } from '../../db/evictions/locationApproximation';
 import { toEvictionDTO } from './toEvictionDTO';
+import { coverColumns, resolveCoverIntent } from './coverImage';
+import { getDb } from '../../db/postgres';
+import { uuidv7 } from '@oxy.so/db';
 import {
   notifyTimelineEvent,
   parseDate,
   parseEvictionStatus,
   resolveAgencyId,
   sanitizeContactInfo,
-  sanitizeCoverImage,
   sanitizeDescription,
   sanitizeHelpNeeds,
   sanitizeLocation,
@@ -160,40 +162,55 @@ export async function reportEvictionCase(oxyUserId: string, body: unknown) {
       : undefined;
 
   const contact = sanitizeContactInfo(picked.contactInfo);
-  const coverImage = sanitizeCoverImage(picked.coverImage);
   const helpNeeds = sanitizeHelpNeeds(picked.helpNeeds);
+  // Resolved BEFORE anything is written: a cover that is not the
+  // organiser's own photo is a 400, not a half-created case.
+  const coverIntent = await resolveCoverIntent(picked.coverImage, oxyUserId);
+  // The id is minted here because the cover's `images` row names the case
+  // and has to exist before the case can point at it.
+  const caseId = uuidv7();
+  // Read out of `location` here, where the check above has narrowed it; the
+  // transaction callback below cannot see that narrowing.
+  const locationLabel = location.label;
 
-  const created = await insertEvictionCase({
-    oxyUserId,
-    title,
-    description: description.text,
-    locationLabel: location.label,
-    locationLongitude: disc.longitude,
-    locationLatitude: disc.latitude,
-    locationRadiusMeters: disc.radiusMeters,
-    locationPrecision: location.precision ?? 'approximate_radius',
-    locationCity: location.city ?? null,
-    locationCountryCode: location.countryCode ?? null,
-    // Written ONLY under the household's own authorisation, and the CHECK
-    // `eviction_cases_exact_location_authorized_check` refuses the row
-    // otherwise — so a future caller that forgets this branch gets a failed
-    // insert rather than a silent disclosure.
-    locationHouseholdAuthorizedAt: householdAuthorized ? new Date() : null,
-    locationExactLongitude: householdAuthorized ? location.longitude : null,
-    locationExactLatitude: householdAuthorized ? location.latitude : null,
-    locationExactAddress: exactAddress,
-    scheduledAt,
-    // Status is ALWAYS server-set to `upcoming` at creation — never from the body.
-    status: 'upcoming',
-    agencyId: agencyId ?? null,
-    organizationId: organization?.id ?? null,
-    contactPhone: contact.contactPhone,
-    contactEmail: contact.contactEmail,
-    contactTelegram: contact.contactTelegram,
-    contactWhatsapp: contact.contactWhatsapp,
-    contactInstructions: contact.contactInstructions,
-    coverImageId: coverImage.coverImageId,
-    coverImageUrl: coverImage.coverImageUrl,
+  const created = await getDb().transaction(async (tx) => {
+    const coverImage = await coverColumns(coverIntent, caseId, tx);
+    return insertEvictionCase(
+      {
+        id: caseId,
+        oxyUserId,
+        title,
+        description: description.text,
+        locationLabel,
+        locationLongitude: disc.longitude,
+        locationLatitude: disc.latitude,
+        locationRadiusMeters: disc.radiusMeters,
+        locationPrecision: location.precision ?? 'approximate_radius',
+        locationCity: location.city ?? null,
+        locationCountryCode: location.countryCode ?? null,
+        // Written ONLY under the household's own authorisation, and the CHECK
+        // `eviction_cases_exact_location_authorized_check` refuses the row
+        // otherwise — so a future caller that forgets this branch gets a failed
+        // insert rather than a silent disclosure.
+        locationHouseholdAuthorizedAt: householdAuthorized ? new Date() : null,
+        locationExactLongitude: householdAuthorized ? location.longitude : null,
+        locationExactLatitude: householdAuthorized ? location.latitude : null,
+        locationExactAddress: exactAddress,
+        scheduledAt,
+        // Status is ALWAYS server-set to `upcoming` at creation — never from the body.
+        status: 'upcoming',
+        agencyId: agencyId ?? null,
+        organizationId: organization?.id ?? null,
+        contactPhone: contact.contactPhone,
+        contactEmail: contact.contactEmail,
+        contactTelegram: contact.contactTelegram,
+        contactWhatsapp: contact.contactWhatsapp,
+        contactInstructions: contact.contactInstructions,
+        coverImageId: coverImage.coverImageId,
+        coverImageUrl: coverImage.coverImageUrl,
+      },
+      tx,
+    );
   });
 
   if (helpNeeds.length) await replaceHelpNeeds(created.id, helpNeeds);
@@ -347,7 +364,10 @@ export async function updateEvictionCase(oxyUserId: string, id: string, body: un
   }
 
   if ('coverImage' in picked) {
-    const coverImage = sanitizeCoverImage(picked.coverImage);
+    const coverImage = await coverColumns(
+      await resolveCoverIntent(picked.coverImage, oxyUserId, id),
+      id,
+    );
     patch.coverImageId = coverImage.coverImageId;
     patch.coverImageUrl = coverImage.coverImageUrl;
   }

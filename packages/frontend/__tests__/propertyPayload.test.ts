@@ -297,6 +297,25 @@ describe('buildPropertyPayload', () => {
     ]);
   });
 
+  it('sends an uploaded photo by its Oxy file id when the upload gave one', () => {
+    const form = populatedForm();
+    form.media.images = [
+      { ...uploadedPhoto(3, { isPrimary: true, caption: 'patio' }), fileId: 'oxy-file-3' },
+    ];
+    // The server checks the file is the publisher's own; no keys are sent.
+    expect(wire(buildPropertyPayload(form)).images).toEqual([
+      {
+        fileId: 'oxy-file-3',
+        caption: 'patio',
+        isPrimary: true,
+        order: 0,
+        bytes: 4096,
+        width: 1600,
+        height: 1200,
+      },
+    ]);
+  });
+
   it('drops a photo that can identify itself neither way', () => {
     const form = populatedForm();
     const orphan = uploadedPhoto(9, { caption: 'orphan' });

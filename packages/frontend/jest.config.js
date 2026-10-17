@@ -19,6 +19,23 @@
  * transitively).
  */
 
+const fs = require('node:fs');
+const path = require('node:path');
+
+/**
+ * Where an installed package's directory is, found by walking up the
+ * `node_modules` directories from here — for a package whose `exports` admits
+ * only the `import` condition, which Jest's CommonJS resolver cannot satisfy
+ * and `require.resolve` cannot even locate.
+ */
+function packageDir(name) {
+  for (let dir = __dirname; ; dir = path.dirname(dir)) {
+    const candidate = path.join(dir, 'node_modules', name);
+    if (fs.existsSync(path.join(candidate, 'package.json'))) return candidate;
+    if (path.dirname(dir) === dir) throw new Error(`${name} is not installed`);
+  }
+}
+
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-expo',
@@ -51,6 +68,15 @@ module.exports = {
         'react-native-css-interop',
         // ESM-only transitive deps that surface through the above packages.
         'nanoid',
+        // `@oxy.so/services` >= 11.10 prices in the display currency through
+        // Peable's SDK, which imports FairCoin's core; both ship ESM only.
+        '@peable\\.to',
+        '@fairco\\.in',
+        // ...and FairCoin's core is built on these ESM-only crypto packages.
+        '@noble',
+        '@scure',
+        'bs58',
+        'base-x',
       ].join('|') +
       '))',
     // Keep these excluded exactly as jest-expo does — transforming them breaks
@@ -70,6 +96,10 @@ module.exports = {
     // gate reads the helper it is being edited alongside, not a stale `dist` —
     // the same mapping the backend suite already declares.
     '^@homiio/shared-types/(.*)$': '<rootDir>/../shared-types/src/$1',
+    // `@oxy.so/services` >= 11.10 reaches FairCoin's core through Peable's SDK;
+    // it exports only `import`, so it is mapped to its one entry (and
+    // transformed, above).
+    '^@fairco\\.in/core$': path.join(packageDir('@fairco.in/core'), 'dist/index.js'),
   },
   // Only pick up our own specs; never descend into build output.
   testMatch: ['<rootDir>/__tests__/**/*.(test|spec).(ts|tsx)'],

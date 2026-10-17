@@ -21,9 +21,6 @@
  * here it also has to leave the BUCKET alone, which is asserted separately.
  */
 
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-
 import express, { type Express } from 'express';
 import multer from 'multer';
 import request from 'supertest';
@@ -35,14 +32,17 @@ import * as maintenanceController from '../../controllers/maintenanceController'
 import imageController from '../../controllers/imageController';
 import { getDb } from '../../db/postgres';
 import {
+  fileReferenceChanges,
   leaseCoTenants,
   leases,
   maintenanceRequestAttachments,
   maintenanceRequests,
 } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
+import config from '../../config';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { LOCAL_IMAGE_STORE_DIR } from '../../services/imageUploadService';
+import { type MemoryObjectStore, legacyObjectStore } from '../../services/files/legacyObjectStore';
+import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
 import { objectIdHex, resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 const LANDLORD = 'oxy-landlord';
@@ -77,7 +77,7 @@ function buildApp(oxyUserId: string): Express {
 /** The PUBLIC image route, mounted exactly as `routes/public.ts` mounts it. */
 function publicImages(): Express {
   const app = express();
-  app.get('/images/file/*', (req, res) => imageController.serveLocalImage(req, res));
+  app.get('/images/file/*', (req, res) => imageController.serveLegacyImage(req, res));
   app.use(errorHandler);
   return app;
 }
@@ -206,7 +206,9 @@ describe('attaching a photo', () => {
 
     await attach(requestId, TENANT);
     const [row] = await rowsOf(requestId);
-    const stored = await fs.readFile(path.join(LOCAL_IMAGE_STORE_DIR, row.storageKey));
+    const object = await legacyObjectStore().get(row.storageKey);
+    if (!object) throw new Error('the attachment was not stored');
+    const stored = object.buffer;
 
     const metadata = await sharp(stored).metadata();
     // Re-encoded, so the whole EXIF block is gone — not the GPS tag edited out
@@ -237,8 +239,9 @@ describe('attaching a photo', () => {
     expect(await rowsOf(requestId)).toHaveLength(0);
     // And the BUCKET is untouched — authorization runs before any object is
     // written, so a stranger's upload never reaches storage.
-    const folder = path.join(LOCAL_IMAGE_STORE_DIR, 'private', 'maintenance', requestId);
-    await expect(fs.readdir(folder)).rejects.toThrow();
+    const store = legacyObjectStore() as MemoryObjectStore;
+    const prefix = `private/maintenance/${requestId}/`;
+    expect([...store.objects.keys()].filter((key) => key.startsWith(prefix))).toEqual([]);
   });
 
   it('refuses past the per-request ceiling', async () => {
@@ -325,5 +328,155 @@ describe('the public image route cannot reach them', () => {
     // These are the first rows under the private prefix. A path that quietly
     // served over the public route would pass every authorization case above.
     expect(res.status).toBe(400);
+  });
+});
+
+/**
+ * Oxy stage 4c (ADR 0043): with `OXY_PRIVATE_DOCUMENTS_ENABLED` the photo is a
+ * PRIVATE file in the uploader's own Oxy account, read back through Homiio's
+ * consent — and every refusal of Oxy's still leaves a working photo.
+ */
+describe("in the uploader's Oxy account (stage 4c)", () => {
+  beforeEach(() => {
+    fakeOxyFiles.reset();
+    config.oxyFiles.privateDocumentsEnabled = true;
+  });
+  afterEach(() => {
+    config.oxyFiles.privateDocumentsEnabled = false;
+  });
+
+  const bucketKeys = () =>
+    [...(legacyObjectStore() as MemoryObjectStore).objects.keys()].filter((key) =>
+      key.startsWith('private/maintenance/'),
+    );
+
+  it('stores a private file the uploader owns, re-encoded, and nothing in the bucket', async () => {
+    const { requestId } = await seedRequest();
+    const before = bucketKeys().length;
+
+    const res = await attach(requestId, TENANT);
+
+    expect(res.status).toBe(201);
+    const [row] = await rowsOf(requestId);
+    expect(row.storageKey).toMatch(/^oxy:[A-Za-z0-9_-]+$/);
+    const file = fakeOxyFiles.files.get(row.storageKey.slice(4));
+    expect(file).toMatchObject({ ownerUserId: TENANT, visibility: 'private', mime: 'image/webp' });
+    // The GPS went before the bytes left Homiio, exactly as on the bucket path.
+    expect((await sharp(file?.bytes as Buffer).metadata()).exif).toBeUndefined();
+    expect(bucketKeys()).toHaveLength(before);
+    // The row is the use: its trigger marked the pair for the drain.
+    const marks = await getDb()
+      .select()
+      .from(fileReferenceChanges)
+      .where(eq(fileReferenceChanges.oxyFileId, row.storageKey.slice(4)));
+    expect(marks.map((mark) => [mark.entityType, mark.entityId])).toEqual([
+      ['maintenance_request', requestId],
+    ]);
+  });
+
+  it('gives both sides of the lease the bytes, and a stranger a 404', async () => {
+    const { requestId } = await seedRequest();
+    const attachmentId = (await attach(requestId, TENANT)).body.data.id;
+    const [row] = await rowsOf(requestId);
+    const stored = fakeOxyFiles.files.get(row.storageKey.slice(4))?.bytes as Buffer;
+
+    for (const viewer of [TENANT, LANDLORD]) {
+      const res = await request(buildApp(viewer)).get(
+        `/maintenance/${requestId}/attachments/${attachmentId}`,
+      );
+      expect(res.status).toBe(200);
+      expect(Buffer.from(res.body.data.base64, 'base64').equals(stored)).toBe(true);
+      expect(res.headers['cache-control']).toBe('private, no-store');
+    }
+    const stranger = await request(buildApp(STRANGER)).get(
+      `/maintenance/${requestId}/attachments/${attachmentId}`,
+    );
+    expect(stranger.status).toBe(404);
+    // Homiio's party check refused the stranger; Oxy was never asked.
+    expect(fakeOxyFiles.callsOf('linkedDownloadUrls')).toHaveLength(2);
+  });
+
+  it('stores the same bytes again in the bucket once the owner revoked Homiio on them', async () => {
+    const { requestId } = await seedRequest();
+    await attach(requestId, TENANT);
+    const [first] = await rowsOf(requestId);
+    fakeOxyFiles.revokeAccess(first.storageKey.slice(4));
+
+    // The same photo again: Oxy answers the person's existing file, whose
+    // revocation survives a re-upload, so Homiio could never read it back.
+    const again = await attach(requestId, TENANT);
+
+    expect(again.status).toBe(201);
+    const second = (await rowsOf(requestId)).find((row) => row.id === again.body.data.id);
+    expect(second?.storageKey).toMatch(/^private\/maintenance\//);
+    const res = await request(buildApp(LANDLORD)).get(
+      `/maintenance/${requestId}/attachments/${again.body.data.id}`,
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it('answers 404 once the owner revokes Homiio, and nothing else', async () => {
+    const { requestId } = await seedRequest();
+    const attachmentId = (await attach(requestId, TENANT)).body.data.id;
+    const [row] = await rowsOf(requestId);
+
+    fakeOxyFiles.revokeAccess(row.storageKey.slice(4));
+
+    const res = await request(buildApp(LANDLORD)).get(
+      `/maintenance/${requestId}/attachments/${attachmentId}`,
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('never hands out bytes that do not hash to what Oxy recorded', async () => {
+    const { requestId } = await seedRequest();
+    const attachmentId = (await attach(requestId, TENANT)).body.data.id;
+    const [row] = await rowsOf(requestId);
+    fakeOxyFiles.tamperedDownloads.set(
+      fakeOxyFiles.linkedUrl(row.storageKey.slice(4)),
+      Buffer.from('not the photo'),
+    );
+
+    const res = await request(buildApp(TENANT)).get(
+      `/maintenance/${requestId}/attachments/${attachmentId}`,
+    );
+    expect(res.status).toBe(500);
+    expect(res.body.data?.base64).toBeUndefined();
+  });
+
+  it.each([
+    ['an outage', () => (fakeOxyFiles.largeUploadError = oxyError(503, 'UNAVAILABLE'))],
+    ['a refusal', () => (fakeOxyFiles.largeUploadError = oxyError(403, 'INSUFFICIENT_SCOPE'))],
+    [
+      'an answer that is not private',
+      () => (fakeOxyFiles.largeUploadVisibilityOverride = 'public'),
+    ],
+  ])('falls back to the bucket on %s, and the photo still reads', async (_label, arrange) => {
+    const { requestId } = await seedRequest();
+    arrange();
+
+    const created = await attach(requestId, TENANT);
+
+    expect(created.status).toBe(201);
+    const [row] = await rowsOf(requestId);
+    expect(row.storageKey).toMatch(/^private\/maintenance\//);
+    const res = await request(buildApp(LANDLORD)).get(
+      `/maintenance/${requestId}/attachments/${created.body.data.id}`,
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it('refuses an oxy ref that is not an Oxy file id, in the database', async () => {
+    const { requestId } = await seedRequest();
+    await expect(
+      getDb().insert(maintenanceRequestAttachments).values({
+        requestId,
+        uploadedByOxyUserId: TENANT,
+        role: 'tenant',
+        storageKey: 'oxy:../../etc',
+        contentType: 'image/webp',
+        bytes: 1,
+      }),
+    ).rejects.toThrow();
   });
 });

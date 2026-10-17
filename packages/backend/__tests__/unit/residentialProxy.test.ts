@@ -19,9 +19,8 @@ import {
   type PlaywrightModule,
 } from '@homiio/listing-providers';
 import {
-  createRemoteImageFetcherFromEnv,
-  fetchRemoteImage,
-  fetchRemoteImageWithProxyFallback,
+  createProxyFallbackFromEnv,
+  fetchRemoteImageViaProxy,
 } from '../../services/ingestion/ExternalMediaIngest';
 
 const PROXY_URL = 'http://mylogin:mypass@gw.dataimpulse.com:823';
@@ -374,42 +373,30 @@ describe('createListingFetchRuntime — explicit HTTP proxy option', () => {
 /* -------------------------------------------------------------------------- */
 
 describe('ExternalMediaIngest — media proxy policy', () => {
-  it('uses direct fetch by default (no proxy env)', async () => {
+  // Oxy imports listing photos itself (ADR 0043 D7); the residential proxy is
+  // only a fallback for a photo Oxy could not fetch, and only when asked for.
+  it('has no fallback by default (no proxy env)', () => {
     delete process.env.LISTING_RESIDENTIAL_PROXY_URL;
     delete process.env.LISTING_MEDIA_PROXY_FALLBACK;
 
-    const fetcher = createRemoteImageFetcherFromEnv();
-    expect(fetcher).toBe(fetchRemoteImage);
-
-    const calls: Array<{ url: string; proxy?: string }> = [];
-    (global as { fetch: unknown }).fetch = jest.fn(
-      async (url: string, init?: RequestInit & { proxy?: string }) => {
-        calls.push({ url, proxy: init?.proxy });
-        return {
-          ok: true,
-          status: 200,
-          headers: { get: () => 'image/png' },
-          arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
-        };
-      },
-    );
-
-    await fetcher('https://cdn.portal.example/photo.jpg');
-    expect(calls).toHaveLength(1);
-    expect(calls[0].proxy).toBeUndefined();
+    expect(createProxyFallbackFromEnv()).toBeNull();
   });
 
-  it('retries via proxy only after direct fetch fails when fallback is enabled', async () => {
+  it('has no fallback when a proxy exists but the fallback is not switched on', () => {
+    process.env.LISTING_RESIDENTIAL_PROXY_URL = PROXY_URL;
+    delete process.env.LISTING_MEDIA_PROXY_FALLBACK;
+
+    expect(createProxyFallbackFromEnv()).toBeNull();
+    delete process.env.LISTING_RESIDENTIAL_PROXY_URL;
+  });
+
+  it('fetches through the proxy, never directly', async () => {
     const config = parseResidentialProxyUrl(PROXY_URL);
     expect(config).toBeDefined();
     if (!config) return;
 
-    let directAttempts = 0;
-    (global as { fetch: unknown }).fetch = jest.fn(async () => {
-      directAttempts += 1;
-      return new Response(null, { status: 403 });
-    });
-
+    const direct = jest.fn();
+    (global as { fetch: unknown }).fetch = direct;
     const proxiedFetch = jest.fn(
       async () =>
         new Response(new Uint8Array([9]), {
@@ -419,12 +406,9 @@ describe('ExternalMediaIngest — media proxy policy', () => {
     );
     jest.spyOn(proxyModule, 'createProxiedFetch').mockResolvedValue(proxiedFetch);
 
-    const result = await fetchRemoteImageWithProxyFallback(
-      'https://cdn.portal.example/p.jpg',
-      config,
-    );
+    const result = await fetchRemoteImageViaProxy('https://cdn.portal.example/p.jpg', config);
     expect(result.mimetype).toBe('image/jpeg');
-    expect(directAttempts).toBe(1);
     expect(proxiedFetch).toHaveBeenCalledTimes(1);
+    expect(direct).not.toHaveBeenCalled();
   });
 });

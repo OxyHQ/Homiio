@@ -21,7 +21,6 @@
     "test:watch": "jest --watch",
     "test:bun": "bun test --isolate --path-ignore-patterns='**/likePattern.test.ts' --path-ignore-patterns='**/gbIngest.test.ts' --path-ignore-patterns='**/ingestionGeocode.test.ts' --path-ignore-patterns='**/cityCoverSync.test.ts' --path-ignore-patterns='**/cityPropertiesPagination.test.ts' --path-ignore-patterns='**/responseInternalLeaks.test.ts' --path-ignore-patterns='**/priceEthicsService.test.ts' __tests__/unit",
     "test:constraints:mutate": "node scripts/mutation-test-property-constraints.mjs",
-    "test:images": "ts-node --transpile-only scripts/test-image-upload.ts",
     "test:webhook": "node scripts/test-stripe-webhook.js",
     "clean": "rm -rf dist",
     "backfill:price-ethics": "ts-node --transpile-only scripts/backfillPriceEthics.ts"
@@ -33,8 +32,8 @@
     "@crowdsource.you/core": "3.0.0",
     "@homiio/listing-providers": "workspace:*",
     "@homiio/shared-types": "workspace:*",
-    "@oxy.so/contracts": "4.21.0",
-    "@oxy.so/core": "4.17.0",
+    "@oxy.so/contracts": "4.24.0",
+    "@oxy.so/core": "4.21.0",
     "@oxy.so/db": "^1.1.0",
     "@oxy.so/utils": "^1.2.0",
     "@peable.to/sdk": "0.2.2",

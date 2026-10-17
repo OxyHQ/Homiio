@@ -29,10 +29,10 @@
  * next pass (cleanup deletes every Image for the entity not in the new gallery).
  *
  * ## Safety
- * Dry-run by default (counts + width distribution, no writes, no S3 deletes).
- * `--apply` performs the replacement. Per property: re-fetch → normalize → ingest
- * clean media (new Image docs) → swap `Property.images` → then delete the stale
- * Image docs + their S3 blobs. New media is created and referenced BEFORE the old
+ * Dry-run by default (counts + width distribution, no writes).
+ * `--apply` performs the replacement. Per property: re-fetch → normalize → import
+ * clean media into Oxy Files (new Image rows) → swap `Property.images` → then
+ * delete the stale Image rows. New media is created and referenced BEFORE the old
  * is deleted, so a crash never leaves a property imageless, and a property is only
  * ever touched when a good clean replacement was produced.
  *
@@ -61,7 +61,6 @@ import { images, properties, propertyImages } from '../db/schema';
 import { deleteImagesByIds, findImagesForEntity } from '../db/images/imageWrites';
 import { replacePropertyImages } from '../db/properties/propertyWrites';
 import { ExternalMediaIngest } from '../services/ingestion/ExternalMediaIngest';
-import imageUploadService from '../services/imageUploadService';
 
 /** Min original width (px) that marks a re-hosted rendition as a watermarked hero. */
 const DEFAULT_WATERMARK_MIN_WIDTH = 700;
@@ -132,18 +131,6 @@ function parseCli(argv: string[]): CliOptions {
     shardIndex,
     shardTotal,
   };
-}
-
-/** All variant storage keys present on an Image doc (for S3 deletion). */
-function storageKeysOf(image: {
-  keysOriginal: string;
-  keysSmall: string;
-  keysMedium: string;
-  keysLarge: string;
-}): string[] {
-  return [image.keysOriginal, image.keysSmall, image.keysMedium, image.keysLarge].filter(
-    (key): key is string => typeof key === 'string' && key.length > 0,
-  );
 }
 
 interface ScanResult {
@@ -304,28 +291,18 @@ async function replaceOne(
 
   // Sweep every `images` row for this property that the new gallery does NOT
   // reference (the stale watermarked set + any orphan from a prior interrupted
-  // run) and delete its S3 blobs, then the rows. The order matters and is
+  // run), then the rows. The order matters and is
   // unchanged: `property_images.image_id` is an ON DELETE RESTRICT reference, so
   // the gallery has to stop pointing at a photo before the photo can go — which
   // is now enforced by the database rather than by this function's ordering.
   const keepIds = new Set(newRefs.map((newRef) => newRef.imageId));
   const allImages = await findImagesForEntity('property', candidate.id);
   const stale = allImages.filter((image) => !keepIds.has(image.id));
-  const staleKeys = stale.flatMap(storageKeysOf);
-
-  let deletedBlobs = 0;
-  if (staleKeys.length > 0) {
-    try {
-      await imageUploadService.deleteImageVariants(staleKeys);
-      deletedBlobs = staleKeys.length;
-    } catch (error) {
-      console.warn(
-        `  ! S3 blob delete failed for ${candidate.id} (${staleKeys.length} keys): ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    }
-  }
+  // Rows only. The bytes are not this script's to delete any more: a legacy
+  // row's objects go with the bucket's retirement, and an Oxy file stops being
+  // used the moment no listing shows it (the reference triggers), after which
+  // Oxy collects a Homiio-owned file on its own (ADR 0043 D5).
+  const deletedBlobs = 0;
   if (stale.length > 0) {
     await deleteImagesByIds(stale.map((image) => image.id));
   }
@@ -396,7 +373,7 @@ async function main(): Promise<void> {
   }
 
   if (!options.apply) {
-    console.log('\nDry-run only — no writes, no S3 deletions. Re-run with --apply to replace.');
+    console.log('\nDry-run only — no writes. Re-run with --apply to replace.');
     await closePostgres();
     return;
   }

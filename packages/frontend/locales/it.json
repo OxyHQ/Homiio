@@ -980,7 +980,10 @@
       "sortPriceDesc": "Price: High to Low",
       "noPropertiesFound": "No properties found",
       "tryAdjustFilters": "Try adjusting your filters or check back later",
-      "clearFilters": "Clear Filters"
+      "clearFilters": "Clear Filters",
+      "photoCredit": "Foto: {{author}} · {{license}}",
+      "photoCreditNoAuthor": "Foto: {{license}}",
+      "photoCreditSource": "Vedi la fonte e la licenza della foto"
     }
   },
   "property": {
@@ -2004,7 +2007,6 @@
     "uploadFailed": "Impossibile caricare alcune immagini. Riprova.",
     "deleteTitle": "Elimina immagine",
     "deleteMessage": "Eliminare questa immagine?",
-    "deleteFailed": "Impossibile eliminare l'immagine. Riprova.",
     "takePhoto": "Take Photo",
     "imageCount": "{{current}} of {{max}} images uploaded",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",

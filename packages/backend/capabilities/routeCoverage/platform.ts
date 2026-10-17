@@ -51,9 +51,6 @@ export const PLATFORM_ROUTE_COVERAGE: RouteCoverage = {
   'POST /api/images/upload': { excluded: IMAGE_BYTES },
   'POST /api/images/upload-multiple': { excluded: IMAGE_BYTES },
   'DELETE /api/images/:imageKey': { excluded: IMAGE_BYTES },
-  'DELETE /api/images/variants': { excluded: IMAGE_BYTES },
-  'GET /api/images/info/:imageKey': { excluded: IMAGE_BYTES },
-  'GET /api/images/test': { excluded: 'A diagnostics endpoint, not a person action.' },
 
   'POST /api/cities': {
     excluded: 'Admin-only city maintenance (owner veto on admin tools, AGENTS.md).',

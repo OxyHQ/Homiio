@@ -297,7 +297,12 @@ export const maintenanceRequestAttachments = pgTable(
     uploadedByOxyUserId: text().notNull(),
     /** Which side they were on when they did, resolved from the lease then. */
     role: text({ enum: MAINTENANCE_ROLES }).notNull(),
-    /** A bucket key under a private prefix. Server-generated, never a URL. */
+    /**
+     * Where the photo is: `oxy:<fileId>` — a private file in the uploader's own
+     * Oxy account (ADR 0043 stage 4c) — or, for one stored before that or by
+     * the bucket fallback, a bucket key under a private prefix. Server-
+     * generated, never a URL. `services/files/privateDocuments.ts` reads both.
+     */
     storageKey: text().notNull(),
     /** The re-encoded type, which is what the delivery route answers with. */
     contentType: text().notNull(),
@@ -330,7 +335,7 @@ export const maintenanceRequestAttachments = pgTable(
      */
     check(
       'maintenance_request_attachments_private_key_check',
-      sql`${table.storageKey} like 'private/%'`,
+      sql`${table.storageKey} like 'private/%' or ${table.storageKey} ~ '^oxy:[A-Za-z0-9_-]{1,128}$'`,
     ),
     check('maintenance_request_attachments_bytes_check', sql`${table.bytes} > 0`),
   ],
