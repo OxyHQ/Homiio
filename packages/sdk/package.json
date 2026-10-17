@@ -34,9 +34,10 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "test": "bun test tests",
-    "prepack": "bun run build",
-    "prepublishOnly": "bun run build && bun run test"
+    "prepack": "bun run clean && bun run build && node ../../scripts/assert-package-dist.mjs",
+    "prepublishOnly": "bun run clean && bun run build && node ../../scripts/assert-package-dist.mjs && bun run test"
   },
   "dependencies": {
     "@oxy.so/homiio-contracts": "0.2.0"
