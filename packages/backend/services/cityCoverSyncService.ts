@@ -24,6 +24,7 @@ import type { ImageAttribution } from '@homiio/shared-types';
 
 import { getDb } from '../db/postgres';
 import { cities, countries, images } from '../db/schema';
+import { oxyErrorStatus } from './files/oxyFilesClient';
 import { importApplicationImage, insertOxyImage } from './files/publicImages';
 import { isPlausibleCityName } from '../utils/plausibleCityName';
 import { Logger } from '../utils/logger';
@@ -46,7 +47,29 @@ type CityCoverFields = {
 
 type EnsureCoverOptions = {
   force?: boolean;
+  /**
+   * Runs the one metered Oxy call (the import). The bucket backfill passes its
+   * pacer here, so a cover import waits out Oxy's rate limit instead of
+   * failing; everyone else calls Oxy directly.
+   */
+  runOxyCall?: <T>(call: () => Promise<T>) => Promise<T>;
 };
+
+/**
+ * What `ensureCover` did. The difference between `uncreditable` and `failed`
+ * is load-bearing: the bucket backfill CLEARS a legacy cover Commons cannot
+ * credit, and must never clear one only because Commons or Oxy failed to
+ * answer this time (a rate limit, a timeout) — that cover is tried again.
+ */
+export type EnsureCoverOutcome =
+  /** A credited cover was imported and the city points at it. */
+  | { kind: 'stored'; imageId: string }
+  /** The city already shows a city-owned cover and `force` was not given. */
+  | { kind: 'kept' }
+  /** No city, or nothing Homiio could credit: every Commons query answered. */
+  | { kind: 'uncreditable'; reason: 'no_city' | 'implausible_name' | 'no_country' | 'no_cover' }
+  /** Commons or Oxy did not answer; nothing was changed. */
+  | { kind: 'failed'; stage: 'commons' | 'oxy'; status?: number };
 
 type SyncCoversOptions = {
   limit?: number;
@@ -154,10 +177,18 @@ export function pickCoverFromSearchResponse(data: WikimediaSearchResponse): Wiki
   return null;
 }
 
-async function fetchWikimediaCover(
-  cityName: string,
-  countryName: string,
-): Promise<WikimediaCover | null> {
+/**
+ * The first creditable Commons photo for a city — or, when there is none,
+ * whether that is Commons' answer (`failed: false`) or a request that did not
+ * get one (`failed: true`, with the HTTP status when there was one).
+ */
+type CommonsSearch =
+  | { cover: WikimediaCover }
+  | { cover: null; failed: false }
+  | { cover: null; failed: true; status?: number };
+
+async function fetchWikimediaCover(cityName: string, countryName: string): Promise<CommonsSearch> {
+  let failure: { status?: number } | null = null;
   for (const query of buildWikimediaSearchQueries(cityName, countryName)) {
     const params = new URLSearchParams({
       action: 'query',
@@ -184,22 +215,24 @@ async function fetchWikimediaCover(
           query,
           status: response.status,
         });
+        failure = { status: response.status };
         continue;
       }
 
       const data = (await response.json()) as WikimediaSearchResponse;
       const cover = pickCoverFromSearchResponse(data);
       if (cover) {
-        return cover;
+        return { cover };
       }
     } catch (error) {
       logger.warn('Wikimedia search error', { query, error });
+      failure = {};
     } finally {
       clearTimeout(timer);
     }
   }
 
-  return null;
+  return failure ? { cover: null, failed: true, ...failure } : { cover: null, failed: false };
 }
 
 async function resolveCountryName(countryId: string): Promise<string | null> {
@@ -224,7 +257,11 @@ async function shouldSkipExistingCover(coverImageId: string, force: boolean): Pr
 }
 
 /** Fetch a Wikimedia cityscape and store it as this city's cover image. */
-export async function ensureCover(cityId: string, options: EnsureCoverOptions = {}): Promise<void> {
+export async function ensureCover(
+  cityId: string,
+  options: EnsureCoverOptions = {},
+): Promise<EnsureCoverOutcome> {
+  let stage: 'commons' | 'oxy' = 'commons';
   try {
     const [city]: CityCoverFields[] = await getDb()
       .select({
@@ -237,16 +274,16 @@ export async function ensureCover(cityId: string, options: EnsureCoverOptions = 
       .where(eq(cities.id, cityId))
       .limit(1);
     if (!city) {
-      return;
+      return { kind: 'uncreditable', reason: 'no_city' };
     }
     if (!isPlausibleCityName(city.name)) {
-      return;
+      return { kind: 'uncreditable', reason: 'implausible_name' };
     }
 
     if (city.coverImageId) {
       const skip = await shouldSkipExistingCover(city.coverImageId, options.force === true);
       if (skip) {
-        return;
+        return { kind: 'kept' };
       }
     }
 
@@ -256,23 +293,35 @@ export async function ensureCover(cityId: string, options: EnsureCoverOptions = 
         cityId: city.id,
         countryId: city.countryId,
       });
-      return;
+      return { kind: 'uncreditable', reason: 'no_country' };
     }
 
-    const cover = await fetchWikimediaCover(city.name, countryName);
-    if (!cover) {
+    const search = await fetchWikimediaCover(city.name, countryName);
+    if (!search.cover) {
+      if (search.failed) {
+        return {
+          kind: 'failed',
+          stage: 'commons',
+          ...(search.status === undefined ? {} : { status: search.status }),
+        };
+      }
       logger.info('No creditable Wikimedia cover found for city', {
         cityId: city.id,
         cityName: city.name,
         countryName,
       });
-      return;
+      return { kind: 'uncreditable', reason: 'no_cover' };
     }
+    const { cover } = search;
 
-    const stored = await importApplicationImage(cover.imageUrl, {
-      entityType: 'city',
-      entityId: city.id,
-    });
+    stage = 'oxy';
+    const runOxyCall = options.runOxyCall ?? (<T>(call: () => Promise<T>) => call());
+    const stored = await runOxyCall(() =>
+      importApplicationImage(cover.imageUrl, {
+        entityType: 'city',
+        entityId: city.id,
+      }),
+    );
     const image = await insertOxyImage('city', city.id, stored, {
       isPrimary: true,
       order: 0,
@@ -291,8 +340,11 @@ export async function ensureCover(cityId: string, options: EnsureCoverOptions = 
       oxyFileId: stored.fileId,
       sourceUrl: cover.attribution.sourceUrl,
     });
+    return { kind: 'stored', imageId: image.id };
   } catch (error) {
     logger.error('Failed to ensure city cover', error);
+    const status = oxyErrorStatus(error);
+    return { kind: 'failed', stage, ...(status === undefined ? {} : { status }) };
   }
 }
 

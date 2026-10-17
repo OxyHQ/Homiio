@@ -150,7 +150,7 @@ AWS_S3_BUCKET=oxy-homiio-media-usw2-237343248947
 
 Production uses native AWS S3 — omit `AWS_ENDPOINT_URL`. The bucket name and region are set in `~/Oxy/oxy-infra/terraform-uswest2/app-services.tf`.
 
-Photos no longer go to that bucket: they are files in Oxy Files (ADR 0043). The bucket holds only the private tenancy documents not yet moved into their owners' Oxy accounts (`scripts/migratePrivateDocumentsToOxy.ts`; new ones go to Oxy once `OXY_PRIVATE_DOCUMENTS_ENABLED=true`) and the photos not yet copied by `scripts/migrateImagesToOxy.ts`; [Oxy Files](./oxy-files) has the rollout, `OXY_FILES_WEBHOOK_SECRET`, and the gate for retiring the bucket. Without a bucket (local development, CI) a private-document upload answers 503 — there is no local-disk store any more.
+Photos no longer go to that bucket: they are files in Oxy Files (ADR 0043). The bucket holds only the private tenancy documents not yet moved into their owners' Oxy accounts (`scripts/migratePrivateDocumentsToOxy.ts`; new ones go to Oxy, and to the bucket only when Oxy refuses one) and the photos not yet copied by `scripts/migrateImagesToOxy.ts`; [Oxy Files](./oxy-files) has the rollout, `OXY_FILES_WEBHOOK_SECRET`, and the gate for retiring the bucket. Without a bucket (local development, CI) a private-document upload answers 503 — there is no local-disk store any more.
 
 **The API carries no Oxy service credential of its own.** It proves what it is
 by attesting its ECS task role and gets a short-lived Oxy service token back

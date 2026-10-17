@@ -19,6 +19,7 @@ import {
 } from '../../services/files/legacyObjectStore';
 import { storePrivateFile } from '../../services/files/privateDocuments';
 import { validatePrivateDocumentKey } from '../../utils/imageStoreKey';
+import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
 
 // Installed here rather than relied on from the jest setup, so the file runs
 // the same under Bun's runner (`test:bun`), which has no setup files.
@@ -33,6 +34,12 @@ afterAll(() => {
 const PDF = Buffer.from('%PDF-1.4\n%fake\n');
 
 describe('private document keys', () => {
+  // A key is built only on the bucket path — what a document falls back to
+  // when Oxy is down or refuses it — so Oxy is down here.
+  beforeEach(() => {
+    fakeOxyFiles.largeUploadError = oxyError(503, 'UNAVAILABLE');
+  });
+
   it('are built from the kind and a real-looking entity id', async () => {
     const stored = await storePrivateFile(
       { ownerOxyUserId: 'user-1', kind: 'lease', entityId: '0192f4a2-aaaa-7bbb-8ccc-1234567890ab' },

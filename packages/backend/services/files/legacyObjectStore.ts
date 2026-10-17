@@ -10,8 +10,7 @@
  *    has read zero `served` for the soak (`docs/oxy-files.md`).
  * 2. **Private documents** — lease documents, application documents,
  *    maintenance photos — through `privateDocuments.ts`: those stored before
- *    the move, and new ones while `OXY_PRIVATE_DOCUMENTS_ENABLED` is off or
- *    Oxy refuses one. Ends when `scripts/migratePrivateDocumentsToOxy.ts` has
+ *    the move, and new ones Oxy refuses (an outage, a refusal). Ends when `scripts/migratePrivateDocumentsToOxy.ts` has
  *    moved every row into its owner's Oxy account (ADR 0043 stage 4c).
  * 3. **The migration scripts**, reading each object once to copy it.
  *

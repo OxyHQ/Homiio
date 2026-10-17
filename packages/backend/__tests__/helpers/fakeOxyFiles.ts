@@ -68,6 +68,10 @@ export class FakeOxyFiles {
   readonly refusedUsers = new Set<string>();
   /** Source URLs whose import fails with this status. */
   readonly failingSources = new Map<string, number>();
+  /** What a source URL serves when it is not the deterministic default (the legacy door). */
+  readonly servedSources = new Map<string, Buffer>();
+  /** Thrown by the next batch-import requests, one per request (a 429, an outage). */
+  readonly batchImportErrors: Error[] = [];
   /** Every call, for assertions. */
   readonly calls: Array<{ method: string; args: unknown[] }> = [];
   /** When set, every references call throws this. */
@@ -92,6 +96,8 @@ export class FakeOxyFiles {
     this.sources.clear();
     this.refusedUsers.clear();
     this.failingSources.clear();
+    this.servedSources.clear();
+    this.batchImportErrors.length = 0;
     this.calls.length = 0;
     this.referencesError = null;
     this.largeUploadError = null;
@@ -177,7 +183,7 @@ export class FakeOxyFiles {
 
   /** The bytes a source URL serves: deterministic, so dedupe is observable. */
   sourceBytes(url: string): Buffer {
-    return Buffer.from(`image-bytes:${url}`);
+    return this.servedSources.get(url) ?? Buffer.from(`image-bytes:${url}`);
   }
 
   private importOne(
@@ -342,6 +348,8 @@ export class FakeOxyFiles {
         }>,
       ): Promise<ApplicationFileImportBatchResult[]> => {
         this.calls.push({ method: 'importAppFiles', args: [items] });
+        const refusal = this.batchImportErrors.shift();
+        if (refusal) throw refusal;
         return items.map((item, index): ApplicationFileImportBatchResult => {
           try {
             return { index, ok: true, ...this.importOne(item.sourceUrl, item) };

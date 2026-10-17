@@ -239,8 +239,26 @@ describe('cityCoverSyncService.ensureCover', () => {
       }),
     );
 
-    await ensureCover(chain.cityId);
+    expect(await ensureCover(chain.cityId)).toEqual({
+      kind: 'uncreditable',
+      reason: 'no_cover',
+    });
 
+    expect(imports()).toHaveLength(0);
+    expect(await coverImageIdOf(chain.cityId)).toBeNull();
+  });
+
+  it('says it FAILED, not that nothing is creditable, when Commons does not answer', async () => {
+    const chain = await seedGeoChain({ cityName: 'Teruel', propertiesCount: 1 });
+    (global as { fetch: typeof originalFetch }).fetch = jest.fn(
+      async () => new Response('busy', { status: 503 }),
+    );
+
+    expect(await ensureCover(chain.cityId)).toEqual({
+      kind: 'failed',
+      stage: 'commons',
+      status: 503,
+    });
     expect(imports()).toHaveLength(0);
     expect(await coverImageIdOf(chain.cityId)).toBeNull();
   });

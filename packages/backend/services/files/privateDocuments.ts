@@ -24,13 +24,11 @@
  * is called (the party checks in `domain/*`): Oxy's consent says Homiio may
  * read the file, never which of Homiio's users may.
  *
- * ## The bucket path, and the switch
+ * ## The bucket path
  *
- * New documents go to Oxy only while `OXY_PRIVATE_DOCUMENTS_ENABLED=true`
- * (`config.oxyFiles.privateDocumentsEnabled`), off by default until Oxy's 4c
- * release is verified in production; even then a refusal, an outage or an
- * answer that is not private stores the document in Homiio's bucket under
- * `private/` instead, as before, so an upload never fails because of Oxy. A
+ * Every new document goes to Oxy. A refusal, an outage or an answer that is
+ * not private stores it in Homiio's bucket under `private/` instead, as
+ * before, so an upload never fails because of Oxy. A
  * bucket document keeps reading from the bucket (every read counted in
  * `legacy_media_reads`, surface `private_document`) until
  * `scripts/migratePrivateDocumentsToOxy.ts` moves it — which is how the
@@ -156,8 +154,8 @@ function keyFor(owner: PrivateDocumentOwner, extension: string): string {
 }
 
 /**
- * Where the processed bytes go: the uploader's Oxy account when the switch is
- * on and Oxy takes them as a private file, the bucket otherwise.
+ * Where the processed bytes go: the uploader's Oxy account when Oxy takes them
+ * as a private file, the bucket otherwise.
  */
 async function persist(
   owner: PrivateDocumentOwner,
@@ -166,10 +164,8 @@ async function persist(
   contentType: string,
   extension: string,
 ): Promise<string> {
-  if (config.oxyFiles.privateDocumentsEnabled) {
-    const fileId = await storeInOxy(owner, bytes, sha256, contentType, extension);
-    if (fileId) return oxyDocumentRef(fileId);
-  }
+  const fileId = await storeInOxy(owner, bytes, sha256, contentType, extension);
+  if (fileId) return oxyDocumentRef(fileId);
   const key = keyFor(owner, extension);
   await legacyObjectStore().putPrivate(key, bytes, contentType);
   return key;

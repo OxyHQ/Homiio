@@ -150,7 +150,7 @@ async function legacyApplication() {
 
 async function moveAll(table: 'lease_documents' | 'tenant_application_documents') {
   const rows = await findLegacyPrivateDocuments(table, null, 1000);
-  return Promise.all(rows.map(migratePrivateDocument));
+  return Promise.all(rows.map((row) => migratePrivateDocument(row)));
 }
 
 beforeEach(async () => {
