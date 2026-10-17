@@ -31,6 +31,13 @@
  * `freeLabel`. English defaults ship here so a caller without i18n still reads
  * sensibly, exactly like `OFFERING_SUMMARY_META`'s `fallback` fields.
  */
+import {
+  formatMoney as formatOxyMoney,
+  formatMoneyRange as formatOxyMoneyRange,
+  isIsoCurrencyCode,
+  type FormatMoneyOptions as OxyFormatMoneyOptions,
+} from '@oxy.so/utils/currency';
+
 import { PriceUnit } from '../common';
 
 /**
@@ -111,7 +118,7 @@ export const DEFAULT_PRICE_UNIT_LABELS: PriceUnitLabels = {
 };
 
 /** How the currency itself is written. Maps to `Intl`'s `currencyDisplay`. */
-export type CurrencyDisplay = 'symbol' | 'narrowSymbol' | 'code' | 'name';
+export type CurrencyDisplay = NonNullable<OxyFormatMoneyOptions['currencyDisplay']>;
 
 /** Options accepted by {@link formatMoney}. */
 export interface FormatMoneyOptions {
@@ -131,73 +138,23 @@ export interface FormatMoneyOptions {
   currencyDisplay?: CurrencyDisplay;
 }
 
-/** Separator between the two ends of a formatted range (en dash, unspaced). */
-const RANGE_SEPARATOR = '–';
-
-/** Narrow no-break space between a fallback amount and its raw currency code. */
-const CODE_SEPARATOR = ' ';
-
-/** ISO 4217 alphabetic codes are exactly three ASCII letters. */
-const ISO_4217_PATTERN = /^[A-Za-z]{3}$/;
-
 /**
- * Whether `Intl` will accept `code` as a currency.
- *
- * Two distinct rejections are folded together on purpose, because both must land
- * on the same fallback: a code that is not three letters (`FAIR`, `''`), and a
- * well-formed code an old ICU build happens not to know. The probe is a real
- * `Intl.NumberFormat` construction, so the answer comes from the engine that
- * will do the formatting rather than from a list this module would have to keep
- * in sync with it.
+ * Whether `Intl` will accept `code` as a currency — `FAIR` (four letters) and a
+ * code the engine's ICU lacks are not. Oxy's shared `@oxy.so/utils/currency`.
  */
 export function isSupportedCurrencyCode(code: string): boolean {
-  if (!ISO_4217_PATTERN.test(code)) return false;
-  try {
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: code });
-    return true;
-  } catch {
-    return false;
-  }
+  return isIsoCurrencyCode(code.trim().toUpperCase());
 }
 
 /**
- * Format `value` as a plain grouped number in `locale`, falling back to the
- * runtime's default locale when the tag itself is malformed.
+ * Format `amount` of `currency` for `locale` with Oxy's shared formatter
+ * (`@oxy.so/utils/currency`), at Homiio's precision: whole amounts print no
+ * decimals (`1.700 €`), anything else up to two.
  *
- * A bad locale tag is a `RangeError` from `Intl`, and the callers here are
- * render paths, so it degrades rather than propagating.
- */
-function formatDecimal(
-  value: number,
-  locale: string,
-  minimumFractionDigits: number,
-  maximumFractionDigits: number,
-): string {
-  try {
-    return new Intl.NumberFormat(locale, {
-      minimumFractionDigits,
-      maximumFractionDigits,
-    }).format(value);
-  } catch {
-    return new Intl.NumberFormat(undefined, {
-      minimumFractionDigits,
-      maximumFractionDigits,
-    }).format(value);
-  }
-}
-
-/**
- * Format `amount` of `currency` for `locale`.
- *
- * The locale decides the separators and where the symbol goes (`1.700,00 €` in
- * `es-ES`, `€1,700.00` in `en-US`); the CURRENCY is whatever the entity carries
- * and is never derived from the locale. Nothing is converted.
- *
- * A non-finite amount formats as `0` in the same currency rather than
- * `NaN`/`∞` reaching a card. An unsupported currency code (`FAIR`, a typo, a
- * code the engine's ICU lacks) yields the grouped amount followed by the raw
- * code — the amount survives, and no symbol is invented for a currency nobody
- * can name.
+ * The locale decides the separators and where the symbol goes; the CURRENCY is
+ * whatever the entity carries and is never derived from the locale. Nothing is
+ * converted. A non-finite amount formats as `0`; an unsupported code (`FAIR`, a
+ * typo) yields the grouped amount followed by the raw code.
  */
 export function formatMoney(
   amount: number,
@@ -205,28 +162,16 @@ export function formatMoney(
   locale: string,
   options: FormatMoneyOptions = {},
 ): string {
+  return formatOxyMoney(amount, currency, locale, homiioPrecision(options));
+}
+
+function homiioPrecision(options: FormatMoneyOptions): OxyFormatMoneyOptions {
   const minimumFractionDigits = options.minimumFractionDigits ?? 0;
-  const maximumFractionDigits = Math.max(minimumFractionDigits, options.maximumFractionDigits ?? 2);
-  const safeAmount = Number.isFinite(amount) ? amount : 0;
-  const code = currency.trim().toUpperCase();
-
-  if (!isSupportedCurrencyCode(code)) {
-    const digits = formatDecimal(safeAmount, locale, minimumFractionDigits, maximumFractionDigits);
-    return code ? `${digits}${CODE_SEPARATOR}${code}` : digits;
-  }
-
-  const currencyOptions: Intl.NumberFormatOptions = {
-    style: 'currency',
-    currency: code,
-    currencyDisplay: options.currencyDisplay ?? 'symbol',
+  return {
+    ...options,
     minimumFractionDigits,
-    maximumFractionDigits,
+    maximumFractionDigits: Math.max(minimumFractionDigits, options.maximumFractionDigits ?? 2),
   };
-  try {
-    return new Intl.NumberFormat(locale, currencyOptions).format(safeAmount);
-  } catch {
-    return new Intl.NumberFormat(undefined, currencyOptions).format(safeAmount);
-  }
 }
 
 /** Options accepted by {@link formatPrice} and {@link formatPriceLabel}. */
@@ -293,14 +238,7 @@ export function formatMoneyRange(
   locale: string,
   options: FormatMoneyOptions = {},
 ): string {
-  const hasMin = typeof min === 'number' && Number.isFinite(min);
-  const hasMax = typeof max === 'number' && Number.isFinite(max);
-  if (hasMin && hasMax) {
-    return `${formatMoney(min, currency, locale, options)}${RANGE_SEPARATOR}${formatMoney(max, currency, locale, options)}`;
-  }
-  if (hasMin) return formatMoney(min, currency, locale, options);
-  if (hasMax) return formatMoney(max, currency, locale, options);
-  return '';
+  return formatOxyMoneyRange(min, max, currency, locale, homiioPrecision(options));
 }
 
 /**
