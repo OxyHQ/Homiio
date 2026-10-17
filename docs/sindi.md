@@ -107,11 +107,11 @@ history executes nothing.
 The sheet is mounted above the app frame, so a navigation never unmounts it:
 the executor changes the page UNDER the sheet as soon as a call arrives. A call
 arrives MID-STREAM, though — the model asks for the effect and keeps writing —
-so the sheet itself closes only when the SDK's conversation store says the
-stream stopped (`streamingConversationId` leaving the conversation that was
-streaming), after Stop as much as after the last word, through the provider's
-ref (`useAskAgent().dismiss`). An executor that unmounts first takes its held
-close with it.
+so the sheet itself closes only when the SDK says the turn stopped streaming
+(`runtime.onTurnEnd`), after Stop or a failure as much as after the last word,
+through the provider's ref (`useAskAgent().dismiss`). A conversation that
+unmounts mid-turn is never called back, and the next turn starts with nothing
+held.
 
 ### `apply_search` is a patch
 
