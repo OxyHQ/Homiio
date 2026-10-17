@@ -1374,15 +1374,6 @@
       "voice": "الإدخال الصوتي",
       "removeAttachment": "إزالة"
     },
-    "shared": {
-      "subtitle": "Shared Conversation",
-      "badge": "Shared Conversation",
-      "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
-      "error": {
-        "notFound": "This shared conversation could not be found or has expired.",
-        "failed": "Failed to load shared conversation. Please try again."
-      }
-    },
     "share": {
       "text": "Check out this conversation with Sindi, your AI housing justice advocate",
       "success": {

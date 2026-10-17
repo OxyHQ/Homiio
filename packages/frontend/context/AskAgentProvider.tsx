@@ -32,6 +32,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { HOMIIO_AGENTS } from '@/components/sindi/sindiAgent';
+import { SINDI_HOST_APP } from '@/components/sindi/sindiHostTools';
 import { useSindiChat } from '@/hooks/useSindiChat';
 
 export function AskAgentProvider({ children }: { children: React.ReactNode }) {
@@ -51,9 +52,12 @@ export function AskAgentProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AliaRuntimeProvider host={chat.runtime}>
+    // `app`: the conversations the sheet starts are Homiio's, its recents list only those, and
+    // its host tools are Homiio's (SDK 21, Alia `docs/agent-embedding.md` §6).
+    <AliaRuntimeProvider host={chat.runtime} app={SINDI_HOST_APP}>
       <AliaAskProvider
         ref={sheet}
+        app={SINDI_HOST_APP}
         agents={HOMIIO_AGENTS}
         hostTools={chat.hostTools}
         toolRenderers={chat.toolRenderers}

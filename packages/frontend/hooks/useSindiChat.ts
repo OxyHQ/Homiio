@@ -8,14 +8,13 @@
  *  - `labels` — the chat's words from Homiio's i18n;
  *  - `onFeatureLocked` — Homiio+'s upsell, when Sindi's `sindi.files` gate
  *    refuses a document (Alia ADR 0020 §6);
- *  - `onShare` — Homiio's own share link for a minted token.
+ *  - `onShare` — hands on the minted link, Alia's one shared page.
  */
 
 import type { AliaChatLabels, AliaConversationShare } from '@alia.onl/sdk';
 import { VOICE_ERROR_MESSAGES, type VoiceErrorCode } from '@alia.onl/sdk';
 import { toast } from '@oxy.so/bloom/toast';
 import { useCallback, useMemo } from 'react';
-import { Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -25,28 +24,12 @@ import { useSindiActions } from '@/hooks/useSindiActions';
 import { useSindiUpsell } from '@/hooks/useSindiUpsell';
 import { shareContent } from '@/utils/share';
 
-/**
- * Public origin for share links. Overridable via `EXPO_PUBLIC_WEB_URL`; on web
- * the live origin wins, so a preview host shares its own URLs.
- */
-const SHARE_WEB_ORIGIN = process.env.EXPO_PUBLIC_WEB_URL || 'https://homiio.com';
-
-function shareOrigin(): string {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') return window.location.origin;
-  return SHARE_WEB_ORIGIN;
-}
-
-/** Homiio's read-only page for a shared conversation (`app/(tabs)/sindi/shared/[token].tsx`). */
-export function sindiShareUrl(token: string, origin: string = shareOrigin()): string {
-  return `${origin}/sindi/shared/${encodeURIComponent(token)}`;
-}
-
 /** Hand a minted share to the platform's share sheet, falling back to the clipboard. */
 export async function shareSindiConversation(
   share: AliaConversationShare,
   t: TFunction,
 ): Promise<void> {
-  const url = sindiShareUrl(share.token);
+  const { url } = share;
   const text = t('sindi.share.text');
   const outcome = await shareContent({
     message: `${text}\n${url}`,
