@@ -3,12 +3,13 @@
  *
  * ## Why this is a pure reducer and not four lines inside the results view
  *
- * The rule has to hold on two map adapters (a MapLibre instance on web, a
- * WebView document on native) and it is decided from data neither of them can
- * be asked about afterwards: a viewport that arrived because the app framed a
- * city and one the user dragged there are the same four numbers. The decision
- * is therefore taken once, here, from the movement's own {@link MapMoveSource},
- * and both adapters feed it the same event shape.
+ * The rule has to hold on every platform the map runs on (`@goway.to/maps`:
+ * MapLibre GL JS on web, MapLibre Native on iOS and Android) and it is decided
+ * from data the map cannot be asked about afterwards: a viewport that arrived
+ * because the app framed a city and one the user dragged there are the same
+ * four numbers. The decision is therefore taken once, here, from the
+ * movement's own {@link MapMoveSource}, which the map reports with every
+ * camera change.
  *
  * It is also the only place the three failure modes below are prevented, and
  * none of them announces itself:
@@ -46,7 +47,7 @@ import {
   type LocationSelection,
 } from '@homiio/shared-types';
 
-import type { MapMoveSource } from '@/components/mapTypes';
+import type { MapMoveSource } from '@goway.to/maps';
 
 /**
  * How far a viewport may drift from the anchor and still count as the same

@@ -3,9 +3,8 @@
  * route. Single tree, laid out by NativeWind breakpoint classes (`sm:`):
  *
  *  - Wide: a scrollable list of property cards on the left + a sticky map on
- *    the right. Selecting a pin highlights the matching card; selecting a card
- *    highlights its pin (via `Map`'s `highlightMarker` API + the shared
- *    `highlightedId` state).
+ *    the right. Selecting a pin highlights the matching card; selecting or
+ *    hovering a card draws its pin active (`ResultsMap`'s `selectedId`).
  *  - Narrow: the list with a floating "Map" toggle → full-screen map, and a
  *    "List" toggle back.
  *
@@ -20,7 +19,7 @@
  * owns no fetching logic beyond reading that hook and forwarding map bounds.
  */
 import type React from 'react';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -40,7 +39,10 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
-import MapView, { type MapApi } from '@/components/Map';
+import type { MapCameraTarget, MapMarkerData, MapViewRef } from '@goway.to/maps';
+
+import { DEVICE_ZOOM, HOMIIO_OPENING_VIEW } from '@/components/map/mapDefaults';
+import { useOpeningFix } from '@/components/map/useOpeningFix';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -53,7 +55,7 @@ import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
-import { boundsCenter, OfferingType } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types';
 import type { GeoBounds, LocationSelection, Property, PropertyType } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import {
@@ -73,6 +75,7 @@ import { SortMenu } from './SortMenu';
 import { HomeSearch } from './HomeSearch';
 import { committedScopeBounds, reduceMapMovement, type MapMovement } from './searchArea';
 import { toMarkers } from './searchMarkers';
+import { ResultsMap } from './ResultsMap';
 import {
   mapBoundsSelection,
   useSearchQueryStore,
@@ -80,7 +83,7 @@ import {
 } from '@/store/searchQueryStore';
 import { useExploreViewStore } from '@/store/exploreViewStore';
 
-/** Default zoom applied when no location bbox is known. */
+/** The zoom a selection's centre is framed at when it declares no extent. */
 const DEFAULT_MAP_ZOOM = 12;
 /** Number of skeleton cards shown during the first load. */
 const SKELETON_COUNT = 6;
@@ -100,19 +103,6 @@ const LIST_WIDTH = 900;
 const LIST_MIN_WIDTH = 520;
 const LIST_MAX_WIDTH = 1200;
 const MAP_MIN_WIDTH = 380;
-
-/**
- * The centre of a declared box, as the map's `[lng, lat]` pair.
- *
- * Delegates to the shared wrap-aware `boundsCenter` rather than averaging the
- * corners: for a box crossing the antimeridian the naive average is 13,000 km
- * away, and the symptom is a map framed on the wrong ocean beside a list of
- * perfectly correct results.
- */
-function boundsCameraTarget(bounds: GeoBounds): [number, number] {
-  const { longitude, latitude } = boundsCenter(bounds);
-  return [longitude, latitude];
-}
 
 interface SearchResultsViewProps {
   /** The active search query (source of truth for the data + map + summary). */
@@ -157,7 +147,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const handleEditSearch = useCallback(() => onOpenStepChange('where'), [onOpenStepChange]);
 
-  const mapRef = useRef<MapApi>(null);
+  const mapRef = useRef<MapViewRef>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   /**
    * The narrow layout's list/map switch, in a STORE rather than in this
@@ -197,9 +187,8 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
    *
    * It changes only on a finished PROGRAMMATIC movement (an opening frame, a
    * return, a re-frame after a new area is confirmed), so the re-render is
-   * rare. It also cannot reload the map: the WebView document and the MapLibre
-   * instance are both built once and fed through refs, so a re-render of this
-   * component reaches neither.
+   * rare. It also cannot move the map: the map follows `camera` by value, and a
+   * re-render with an equal target is not a new one.
    */
   const [anchor, setAnchor] = useState<GeoBounds | null>(null);
 
@@ -245,118 +234,65 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   );
 
   /**
-   * The map's opening camera. Only a framing hint — once results arrive the map
-   * frames from the server's `location` echo, so the two cannot disagree.
+   * Where the map should be, as a VALUE: `@goway.to/maps` frames it whenever its
+   * numbers change — a place picked, a saved search applied, back/forward, a
+   * deep link — and never on a re-render with an equal target, so a reader who
+   * has panned is not pulled back.
    *
-   * A place may legitimately have NO centre: `PlaceGeometry` says an `area`
-   * carries an extent and no representative point, and a city Homiio knows by
-   * id but has no coordinates for is a real, selectable place — its search
-   * scopes by `cityId` and needs no geometry at all.
+   * The selection's EXTENT first, because a centre says where and an extent
+   * says how much: without it a city and a neighbourhood opened at an identical
+   * zoom (#395). Then its centre, at city zoom. A place may legitimately have
+   * neither — an `area` carries an extent and no representative point, and a
+   * city Homiio knows only by id needs no geometry to scope a search — and the
+   * honest answer then is to frame nothing rather than INVENT a point: the
+   * invented value would be `(0, 0)`, which is how "Spain" ended up over the
+   * Gulf of Guinea. The LIST is correctly scoped either way.
    *
-   * So the order is bounds → centre → nothing, and the last arm is the one that
-   * matters. Deriving the centre of a declared box is a real framing point;
-   * INVENTING one is not, and the invented value would be `(0, 0)` — an actual
-   * location in the Atlantic, which is how "Spain" ended up over the Gulf of
-   * Guinea. `undefined` lets the map keep its own default, which is honest
-   * about having nothing to frame from, and the LIST is still correctly scoped
-   * either way.
-   *
-   * This is the OPENING camera only — a point, because `initialCoordinates` is
-   * all the map accepts before it has mounted. The zoom that makes a city and a
-   * neighbourhood open differently comes from the effect below, which calls
-   * `fitBounds` once the map exists (#395).
+   * With nothing selected to frame, the map opens on the device — only a
+   * position the reader already granted (`useOpeningFix`) — else on Homiio's
+   * default.
    */
-  const initialCoordinates = useMemo<[number, number] | undefined>(() => {
+  const openingFix = useOpeningFix();
+  const selectionCamera = useMemo<MapCameraTarget | undefined>(() => {
     const selection = query.location;
     if (!selection || selection.kind === 'multi_area') return undefined;
-
-    if (selection.kind === 'polygon' || selection.kind === 'map_bounds') {
-      return boundsCameraTarget(selection.bounds);
-    }
     if (selection.kind === 'current_location') {
-      return [selection.center.longitude, selection.center.latitude];
+      return { center: selection.center, zoom: DEFAULT_MAP_ZOOM };
     }
-    if (selection.bounds) return boundsCameraTarget(selection.bounds);
-    return selection.center ? [selection.center.longitude, selection.center.latitude] : undefined;
+    if (selection.kind === 'polygon' || selection.kind === 'map_bounds') {
+      return { bounds: selection.bounds };
+    }
+    if (selection.bounds) return { bounds: selection.bounds };
+    return selection.center ? { center: selection.center, zoom: DEFAULT_MAP_ZOOM } : undefined;
   }, [query.location]);
-
-  /**
-   * The extent to frame, when the selection declares one.
-   *
-   * Separate from `initialCoordinates` because they answer different questions:
-   * a centre says WHERE, an extent says HOW MUCH. Without the second, a city
-   * and a neighbourhood opened at an identical zoom — the map was told the
-   * middle of each and nothing about their size.
-   */
-  const framedBounds = useMemo<GeoBounds | undefined>(() => {
-    const selection = query.location;
-    if (!selection || selection.kind === 'multi_area') return undefined;
-    if (selection.kind === 'current_location') return undefined;
-    return selection.bounds;
-  }, [query.location]);
-
-  /**
-   * Frame the box once the map can be commanded.
-   *
-   * `fitBounds` is imperative and `initialCoordinates` is a mount-time prop, so
-   * this cannot be expressed as a prop: the ref is null on the first render.
-   * It stays an effect because the box comes from `query.location`, which
-   * changes from the URL (a place picked, a saved search applied, back/forward,
-   * a deep link) rather than from an event this view handles; a declarative
-   * camera-bounds prop on the map is what would retire it.
-   * Keyed on the SERIALISED box rather than the object so a re-render with an
-   * equal box does not re-animate the camera under the user.
-   *
-   * A selection with no bounds is deliberately not handled here — the opening
-   * centre already covers it, and re-framing on every selection change would
-   * fight a user who has panned.
-   */
-  const framedBoundsKey = framedBounds
-    ? `${framedBounds.west},${framedBounds.south},${framedBounds.east},${framedBounds.north}`
-    : null;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `framedBoundsKey` is the dependency that matters; `framedBounds` is the value it stands for
-  useEffect(() => {
-    if (!framedBounds) return;
-    mapRef.current?.fitBounds(framedBounds);
-    // `framedBoundsKey` is the dependency that matters; `framedBounds` is the
-    // value it stands for.
-  }, [framedBoundsKey]);
+  const camera: MapCameraTarget | undefined =
+    selectionCamera ?? (openingFix ? { center: openingFix, zoom: DEVICE_ZOOM } : undefined);
 
   const selectedProperty = useMemo(
     () => (highlightedId ? (properties.find((p) => p.id === highlightedId) ?? null) : null),
     [highlightedId, properties],
   );
 
-  const handleMarkerPress = useCallback(({ id }: { id: string }) => {
-    setHighlightedId(id);
-    mapRef.current?.highlightMarker(id);
-  }, []);
+  const handleMarkerPress = useCallback(({ id }: MapMarkerData) => setHighlightedId(id), []);
 
-  // Card → chip (web only, wired in PropertyResultsGrid). Hovering a result card
-  // highlights its map price chip imperatively — the same `.is-selected` look a
-  // marker click gives — without touching the sticky `highlightedId` selection.
-  const handleCardHoverIn = useCallback((id: string) => {
-    mapRef.current?.highlightMarker(id);
-  }, []);
-
-  // Hover-out reverts the chip to the sticky marker-click selection (or clears
-  // it when nothing is selected), so a transient hover never leaves the map in a
-  // highlighted state that disagrees with `highlightedId`.
-  const handleCardHoverOut = useCallback(() => {
-    mapRef.current?.highlightMarker(highlightedId);
-  }, [highlightedId]);
+  // Card → pin (web only, wired in PropertyResultsGrid). Hovering a result card
+  // draws its pin active — the look a pin press gives — without touching the
+  // sticky `highlightedId` selection; leaving the card hands the pin back to it.
+  const setHoveredResultId = useExploreViewStore((s) => s.setHoveredResultId);
+  const handleCardHoverIn = useCallback(
+    (id: string) => setHoveredResultId(id),
+    [setHoveredResultId],
+  );
+  const handleCardHoverOut = useCallback(() => setHoveredResultId(null), [setHoveredResultId]);
 
   /**
    * Fold a map movement into the camera state.
    *
-   * The decision itself is in `searchArea.reduceMapMovement`, which is pure and
-   * shared by both map adapters. This callback only routes the two halves of
-   * the result to where each belongs.
-   *
-   * The pending viewport is read through `getState()` rather than from the
-   * subscribed value, so this callback's identity does not change on every pan
-   * — `onRegionChange` is compared by the map's memo, and a new function on
-   * each pan would re-render it constantly.
+   * The decision itself is in `searchArea.reduceMapMovement`, which is pure.
+   * This callback only routes the two halves of the result to where each
+   * belongs. The pending viewport is read through `getState()` rather than
+   * from the subscribed value, so this callback's identity does not change on
+   * every pan.
    */
   const handleRegionChange = useCallback(
     (movement: MapMovement) => {
@@ -385,11 +321,13 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
    * Stable (`[]`), so React attaches it once; the cleanup reads the store
    * through `getState()` rather than closing over it.
    */
-  const attachMap = useCallback((api: MapApi | null) => {
+  const attachMap = useCallback((api: MapViewRef | null) => {
     mapRef.current = api;
     return () => {
       mapRef.current = null;
       useSearchQueryStore.getState().setPendingViewport(null);
+      // A card hovered as the view went is not hovered on the next one.
+      useExploreViewStore.getState().setHoveredResultId(null);
     };
   }, []);
 
@@ -754,15 +692,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   const mapPanel = (
     <View style={styles.mapPanel} nativeID={`search-map-${queryId}`}>
-      <MapView
+      <ResultsMap
         ref={attachMap}
         style={styles.mapFill}
-        screenId="search-results"
-        startFromCurrentLocation={!initialCoordinates}
-        initialCoordinates={initialCoordinates}
-        initialZoom={DEFAULT_MAP_ZOOM}
         markers={markers}
-        onRegionChange={handleRegionChange}
+        selectedId={highlightedId}
+        initialViewState={camera ? undefined : HOMIIO_OPENING_VIEW}
+        camera={camera}
+        onCameraChanged={handleRegionChange}
         onMarkerPress={handleMarkerPress}
       />
       {pendingViewport ? (
@@ -821,10 +758,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           <MapMarkerPopover
             property={selectedProperty}
             onPress={() => onPropertyPress(selectedProperty)}
-            onDismiss={() => {
-              setHighlightedId(null);
-              mapRef.current?.highlightMarker(null);
-            }}
+            onDismiss={() => setHighlightedId(null)}
           />
         </View>
       ) : null}

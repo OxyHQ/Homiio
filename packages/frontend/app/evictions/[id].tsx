@@ -60,7 +60,7 @@ import { EvictionReportCard, EvictionTimeline, type EvictionEvent } from '@oxy.s
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 
-import Map from '@/components/Map';
+import { PlaceMap } from '@/components/map/PlaceMap';
 import { IconButton } from '@/components/ui/IconButton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
@@ -505,19 +505,11 @@ export default function EvictionDetailScreen() {
           <CardTitle>{t('evictions.detail.where')}</CardTitle>
           {hasPin ? (
             <View className="bg-muted" style={styles.mapWrap}>
-              <Map
+              <PlaceMap
                 style={styles.mapInner}
-                screenId={`eviction-${caseId}`}
-                startFromCurrentLocation={false}
-                initialCoordinates={[coords[0], coords[1]]}
-                initialZoom={15}
-                markers={[
-                  {
-                    id: eviction.id,
-                    coordinates: [coords[0], coords[1]],
-                    priceLabel: eviction.location.label,
-                  },
-                ]}
+                coordinate={{ longitude: coords[0], latitude: coords[1] }}
+                pin
+                label={eviction.location.label}
               />
             </View>
           ) : null}

@@ -182,6 +182,8 @@ module.exports = (config) => {
             },
           },
         ],
+        // MapLibre Native for `@goway.to/maps` (not in Expo Go: a dev or store build).
+        '@goway.to/maps',
         'expo-web-browser',
         'expo-image',
         'expo-localization',

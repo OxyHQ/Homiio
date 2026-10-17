@@ -8,7 +8,7 @@ import { DatePicker } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
 import { RiExpandDiagonalSLine, RiEyeLine, RiEyeOffLine } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
-import Map from '@/components/Map';
+import { AddressPickerMap } from '@/components/map/AddressPickerMap';
 import { COUNTRY_OPTIONS, STATE_OPTIONS, MAP_HEIGHT } from './constants';
 import { WizardSelect, WizardTextField } from './fields';
 import { createPropertyStyles as styles } from './styles';
@@ -26,7 +26,7 @@ export function LocationStep({
   formData,
   validationErrors,
   updateFormField,
-  mapRef,
+  mapPoint,
   onAddressSelect,
   onOpenFullscreenMap,
   onFloorChange,
@@ -60,14 +60,7 @@ export function LocationStep({
       <Field error={validationErrors.coordinates}>
         <View className="border-border" style={styles.mapContainer}>
           <View style={styles.mapWrapper}>
-            <Map
-              ref={mapRef}
-              style={mapStyle}
-              enableAddressLookup={true}
-              showAddressInstructions={true}
-              onAddressSelect={onAddressSelect}
-              screenId="create-property"
-            />
+            <AddressPickerMap value={mapPoint} onAddressSelect={onAddressSelect} style={mapStyle} />
             <Button
               iconOnly
               leadingIcon={RiExpandDiagonalSLine}

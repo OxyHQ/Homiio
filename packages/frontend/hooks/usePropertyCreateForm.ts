@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { MapApi, GeocodedAddress } from '@/components/Map';
+import type { GeoCoordinate } from '@goway.to/maps';
+import type { GeocodedAddress } from '@homiio/shared-types';
 import {
   useCreatePropertyFormStore,
   useCreatePropertyFormSelectors,
@@ -256,8 +257,6 @@ export function usePropertyCreateForm(id: string | undefined) {
   const { loading: propertyLoading, error: propertyError } = useProperty(id ?? '');
 
   const [validationErrors, setValidationErrors] = useState<StepValidationErrors>({});
-  const mapRef = useRef<MapApi | null>(null);
-  const fullscreenMapRef = useRef<MapApi | null>(null);
 
   // Derived step list for the active property type AND the selected offerings
   // (no effect needed). The flow grows a per-offering pricing step for each
@@ -345,6 +344,11 @@ export function usePropertyCreateForm(id: string | undefined) {
     latitude === PROPERTY_FORM_DEFAULTS.DEFAULT_LATITUDE &&
     longitude === PROPERTY_FORM_DEFAULTS.DEFAULT_LONGITUDE;
   const needsLocationResolve = !latitude || !longitude || isAtDefaultBarcelona;
+  /** The point the maps pin (and frame): none until the form has a real one. */
+  const mapPoint = useMemo<GeoCoordinate | null>(
+    () => (needsLocationResolve ? null : { latitude, longitude }),
+    [needsLocationResolve, latitude, longitude],
+  );
 
   // Resolve the user's location the first time they reach the Location step
   // without usable coordinates. Reaching it is a press (Next / Back), so the
@@ -361,10 +365,11 @@ export function usePropertyCreateForm(id: string | undefined) {
   );
 
   // --- Address autofill from the map ----------------------------------------
-  const applyAddressSelection = useCallback(
-    (address: GeocodedAddress, coordinates: [number, number]) => {
-      updateFormField('location', 'latitude', coordinates[1]);
-      updateFormField('location', 'longitude', coordinates[0]);
+  // The maps frame the new point themselves: they follow `mapPoint`.
+  const handleAddressSelect = useCallback(
+    (address: GeocodedAddress, coordinate: GeoCoordinate) => {
+      updateFormField('location', 'latitude', coordinate.latitude);
+      updateFormField('location', 'longitude', coordinate.longitude);
 
       if (address.street) updateFormField('location', 'address', address.street);
       if (address.houseNumber) updateFormField('location', 'number', address.houseNumber);
@@ -375,17 +380,8 @@ export function usePropertyCreateForm(id: string | undefined) {
       if (address.state) updateFormField('location', 'state', address.state);
       if (address.country) updateFormField('location', 'country', address.country);
       if (address.postalCode) updateFormField('location', 'postal_code', address.postalCode);
-
-      mapRef.current?.navigateToLocation(coordinates, 15);
     },
     [updateFormField],
-  );
-
-  const handleAddressSelect = useCallback(
-    (address: GeocodedAddress, coordinates: [number, number]) => {
-      applyAddressSelection(address, coordinates);
-    },
-    [applyAddressSelection],
   );
 
   // --- Field handlers -------------------------------------------------------
@@ -488,15 +484,12 @@ export function usePropertyCreateForm(id: string | undefined) {
     isEditMode,
     propertyLoading,
     propertyError,
-    // refs
-    mapRef,
-    fullscreenMapRef,
+    mapPoint,
     // store actions used directly by steps/orchestrator
     setFormData,
     updateFormField,
     // handlers
     handlePrevStep,
-    applyAddressSelection,
     handleAddressSelect,
     handleShowFloorToggle,
     handleFloorChange,

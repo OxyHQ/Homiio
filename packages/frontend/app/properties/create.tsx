@@ -14,7 +14,8 @@ import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { WizardFooter, WizardProgress, type WizardStep } from '@oxy.so/bloom/wizard';
-import type { GeocodedAddress } from '@/components/Map';
+import type { GeoCoordinate } from '@goway.to/maps';
+import type { GeocodedAddress } from '@homiio/shared-types';
 import { useHasRightBar } from '@/components/RightBar';
 import { usePropertyCreateForm } from '@/hooks/usePropertyCreateForm';
 import { useCreatePropertyWizard } from '@/hooks/useCreatePropertyWizard';
@@ -86,11 +87,9 @@ export default function CreatePropertyScreen() {
     isEditMode,
     propertyLoading,
     propertyError,
-    mapRef,
-    fullscreenMapRef,
+    mapPoint,
     setFormData,
     updateFormField,
-    applyAddressSelection,
     handleAddressSelect,
     handleShowFloorToggle,
     handleFloorChange,
@@ -191,11 +190,11 @@ export default function CreatePropertyScreen() {
   const closeFullscreenMap = useCallback(() => setShowFullscreenMap(false), []);
 
   const handleFullscreenAddressSelect = useCallback(
-    (address: GeocodedAddress, coordinates: [number, number]) => {
-      applyAddressSelection(address, coordinates);
+    (address: GeocodedAddress, coordinate: GeoCoordinate) => {
+      handleAddressSelect(address, coordinate);
       setShowFullscreenMap(false);
     },
-    [applyAddressSelection],
+    [handleAddressSelect],
   );
 
   const title = isEditMode ? t('propertyCreate.title.edit') : t('propertyCreate.title.create');
@@ -292,7 +291,7 @@ export default function CreatePropertyScreen() {
           isLoading={isLoading}
           submitError={submitError}
           routeHasRail={routeHasRail}
-          mapRef={mapRef}
+          mapPoint={mapPoint}
           updateFormField={updateFormField}
           setFormData={setFormData}
           onPropertyTypeChange={handlePropertyTypeChange}
@@ -306,7 +305,7 @@ export default function CreatePropertyScreen() {
 
       <FullscreenMapModal
         visible={showFullscreenMap}
-        mapRef={fullscreenMapRef}
+        mapPoint={mapPoint}
         onClose={closeFullscreenMap}
         onAddressSelect={handleFullscreenAddressSelect}
       />

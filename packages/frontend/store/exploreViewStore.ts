@@ -35,6 +35,13 @@ interface ExploreViewState {
   resultsView: SindiResultsView;
   setResultsView: (view: SindiResultsView) => void;
   toggleResultsView: () => void;
+  /**
+   * The result card under the pointer (web), which the map draws active. Here
+   * rather than in the results view so a hover re-renders the map alone, not
+   * the list it came from.
+   */
+  hoveredResultId: string | null;
+  setHoveredResultId: (id: string | null) => void;
 }
 
 export const useExploreViewStore = create<ExploreViewState>()((set) => ({
@@ -45,4 +52,6 @@ export const useExploreViewStore = create<ExploreViewState>()((set) => ({
   setResultsView: (view) => set({ resultsView: view }),
   toggleResultsView: () =>
     set((state) => ({ resultsView: state.resultsView === 'map' ? 'list' : 'map' })),
+  hoveredResultId: null,
+  setHoveredResultId: (id) => set({ hoveredResultId: id }),
 }));

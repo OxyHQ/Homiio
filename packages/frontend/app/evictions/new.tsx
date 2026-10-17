@@ -12,7 +12,7 @@ import { AgencyDirectoryField } from '@/components/agencies/AgencyDirectoryField
  * the form initialises its state from that snapshot (no prefill `useEffect`).
  */
 import type React from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -35,8 +35,9 @@ import { Textarea } from '@oxy.so/bloom/textarea';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import type { CreateEvictionCaseData, EvictionCase } from '@homiio/shared-types';
-import Map, { type MapApi, type GeocodedAddress, type LonLat } from '@/components/Map';
+import type { GeoCoordinate } from '@goway.to/maps';
+import type { CreateEvictionCaseData, EvictionCase, GeocodedAddress } from '@homiio/shared-types';
+import { AddressPickerMap } from '@/components/map/AddressPickerMap';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import {
@@ -129,8 +130,6 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
-  const mapRef = useRef<MapApi | null>(null);
-
   /**
    * The map seed when EDITING.
    *
@@ -141,9 +140,9 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
    * and does NOT redraw: each redraw is an independent sample around the true
    * point, and a watcher collecting several can average towards it.
    */
-  const initialCoords = useMemo<LonLat | null>(() => {
+  const initialCoords = useMemo<GeoCoordinate | null>(() => {
     const published = existing?.location.approximateCoordinates;
-    return published ? [published[0], published[1]] : null;
+    return published ? { longitude: published[0], latitude: published[1] } : null;
   }, [existing]);
 
   const [form, setForm] = useState<EvictionFormState>(() =>
@@ -170,7 +169,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
   const [householdAuthorizedExact, setHouseholdAuthorizedExact] = useState(
     existing?.exactLocationAvailable ?? false,
   );
-  const [coords, setCoords] = useState<LonLat | null>(initialCoords);
+  const [coords, setCoords] = useState<GeoCoordinate | null>(initialCoords);
   const [cover, setCover] = useState<{ imageId?: string; url?: string } | undefined>(
     existing?.coverImage,
   );
@@ -180,8 +179,6 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
   const updateMutation = useUpdateEviction(editId ?? '');
   const submitting = createMutation.isPending || updateMutation.isPending;
 
-  const initialCoordinates = initialCoords ?? undefined;
-
   const update = useCallback(
     <K extends keyof EvictionFormState>(key: K, value: EvictionFormState[K]) => {
       setForm((prev) => ({ ...prev, [key]: value }));
@@ -189,8 +186,8 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
     [],
   );
 
-  const handleAddressSelect = useCallback((address: GeocodedAddress, coordinates: LonLat) => {
-    setCoords(coordinates);
+  const handleAddressSelect = useCallback((address: GeocodedAddress, coordinate: GeoCoordinate) => {
+    setCoords(coordinate);
     const composed =
       address.fullAddress ||
       [address.street, address.houseNumber].filter(Boolean).join(' ') ||
@@ -286,7 +283,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
         // The TRUE point the organiser dropped. The server derives the published
         // disc from it and, without the household's authorisation below, never
         // writes it anywhere.
-        coordinates: [coords[0], coords[1]],
+        coordinates: [coords.longitude, coords.latitude],
         city: form.city.trim() || undefined,
       },
       householdAuthorizedExact,
@@ -388,15 +385,10 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
         <Card radius="radius-16" style={styles.section} appearance="outline">
           <CardTitle>{t('evictions.form.whereSection')}</CardTitle>
           <View className="bg-muted" style={styles.mapWrap}>
-            <Map
-              ref={mapRef}
-              style={styles.mapInner}
-              enableAddressLookup
-              showAddressInstructions
+            <AddressPickerMap
+              value={coords}
               onAddressSelect={handleAddressSelect}
-              initialCoordinates={initialCoordinates}
-              startFromCurrentLocation={!initialCoordinates}
-              screenId="eviction-create"
+              style={styles.mapInner}
             />
           </View>
           <BloomText className="text-center text-xs text-muted-foreground">

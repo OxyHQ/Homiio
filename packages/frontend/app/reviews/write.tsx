@@ -16,7 +16,7 @@
  * derives it from the dates.
  */
 import type React from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -30,7 +30,8 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { WizardFooter, WizardProgress, type WizardStep } from '@oxy.so/bloom/wizard';
 import { useOxy } from '@oxy.so/services';
 
-import type { MapApi, GeocodedAddress } from '@/components/Map';
+import type { GeoCoordinate } from '@goway.to/maps';
+import type { GeocodedAddress } from '@homiio/shared-types';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { StepAddress } from '@/components/reviews/write/StepAddress';
 import { StepApartment } from '@/components/reviews/write/StepApartment';
@@ -198,7 +199,6 @@ export default function WriteReviewPage() {
 function WriteReviewWizard({ initialData }: { initialData: ReviewWizardData }) {
   const router = useRouter();
   const { t } = useTranslation();
-  const mapRef = useRef<MapApi | null>(null);
 
   const [data, setData] = useState<ReviewWizardData>(initialData);
   const [step, setStep] = useState(0);
@@ -233,23 +233,19 @@ function WriteReviewWizard({ initialData }: { initialData: ReviewWizardData }) {
     [],
   );
 
-  const handleAddressSelect = useCallback(
-    (address: GeocodedAddress, coordinates: [number, number]) => {
-      setData((prev) => ({
-        ...prev,
-        latitude: coordinates[1],
-        longitude: coordinates[0],
-        ...(address.street ? { street: address.street } : null),
-        ...(address.houseNumber ? { number: address.houseNumber } : null),
-        ...(address.city ? { city: address.city } : null),
-        ...(address.state ? { state: address.state } : null),
-        ...(address.country ? { country: address.country } : null),
-        ...(address.postalCode ? { postal_code: address.postalCode } : null),
-      }));
-      mapRef.current?.navigateToLocation(coordinates, 15);
-    },
-    [],
-  );
+  const handleAddressSelect = useCallback((address: GeocodedAddress, coordinate: GeoCoordinate) => {
+    setData((prev) => ({
+      ...prev,
+      latitude: coordinate.latitude,
+      longitude: coordinate.longitude,
+      ...(address.street ? { street: address.street } : null),
+      ...(address.houseNumber ? { number: address.houseNumber } : null),
+      ...(address.city ? { city: address.city } : null),
+      ...(address.state ? { state: address.state } : null),
+      ...(address.country ? { country: address.country } : null),
+      ...(address.postalCode ? { postal_code: address.postalCode } : null),
+    }));
+  }, []);
 
   const canProceed = useMemo(() => {
     switch (step) {
@@ -365,14 +361,7 @@ function WriteReviewWizard({ initialData }: { initialData: ReviewWizardData }) {
   const renderStep = () => {
     switch (step) {
       case 0:
-        return (
-          <StepAddress
-            data={data}
-            update={update}
-            mapRef={mapRef}
-            onAddressSelect={handleAddressSelect}
-          />
-        );
+        return <StepAddress data={data} update={update} onAddressSelect={handleAddressSelect} />;
       case 1:
         return <StepApartment data={data} update={update} />;
       case 2:

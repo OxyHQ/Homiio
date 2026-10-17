@@ -1,20 +1,22 @@
-import React, { type MutableRefObject } from 'react';
+import type { GeoCoordinate } from '@goway.to/maps';
+import type { GeocodedAddress } from '@homiio/shared-types';
 import { Modal, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@oxy.so/bloom/button';
 import { RiCloseLine } from '@oxy.so/bloom/icons';
 import { H4 } from '@oxy.so/bloom/typography';
-import Map, { type MapApi, type GeocodedAddress } from '@/components/Map';
+import { AddressPickerMap } from '@/components/map/AddressPickerMap';
 import { createPropertyStyles as styles } from './styles';
 
 const fullscreenMapStyle = { flex: 1 };
 
 interface FullscreenMapModalProps {
   visible: boolean;
-  mapRef: MutableRefObject<MapApi | null>;
+  /** The point the form holds, pinned on the map. */
+  mapPoint: GeoCoordinate | null;
   onClose: () => void;
-  onAddressSelect: (address: GeocodedAddress, coordinates: [number, number]) => void;
+  onAddressSelect: (address: GeocodedAddress, coordinate: GeoCoordinate) => void;
 }
 
 /**
@@ -27,7 +29,7 @@ interface FullscreenMapModalProps {
  */
 export function FullscreenMapModal({
   visible,
-  mapRef,
+  mapPoint,
   onClose,
   onAddressSelect,
 }: FullscreenMapModalProps) {
@@ -60,12 +62,10 @@ export function FullscreenMapModal({
             {t('common.confirm')}
           </Button>
         </View>
-        <Map
-          ref={mapRef}
-          style={fullscreenMapStyle}
-          enableAddressLookup={true}
+        <AddressPickerMap
+          value={mapPoint}
           onAddressSelect={onAddressSelect}
-          screenId="create-property-fullscreen"
+          style={fullscreenMapStyle}
         />
       </View>
     </Modal>

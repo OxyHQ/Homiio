@@ -44,7 +44,7 @@ describe('toMarkers', () => {
     );
 
     expect(markers.map((marker) => marker.id)).toEqual(['a', 'b']);
-    expect(markers[0].coordinates).toEqual([2.17, 41.38]);
+    expect(markers[0].coordinate).toEqual({ longitude: 2.17, latitude: 41.38 });
   });
 
   it('emits NO marker that has no card', () => {

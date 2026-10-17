@@ -1,5 +1,5 @@
-import type { MutableRefObject } from 'react';
-import type { MapApi } from '@/components/Map';
+import type { GeoCoordinate } from '@goway.to/maps';
+import type { GeocodedAddress } from '@homiio/shared-types';
 import type {
   CreatePropertyFormData,
   CreatePropertyFormSection,
@@ -32,11 +32,9 @@ export interface PropertyStepProps {
 }
 
 export interface LocationStepProps extends PropertyStepProps {
-  mapRef: MutableRefObject<MapApi | null>;
-  onAddressSelect: (
-    address: import('@/components/Map').GeocodedAddress,
-    coordinates: [number, number],
-  ) => void;
+  /** The point the form holds, pinned on the map; `null` until there is one. */
+  mapPoint: GeoCoordinate | null;
+  onAddressSelect: (address: GeocodedAddress, coordinate: GeoCoordinate) => void;
   onOpenFullscreenMap: () => void;
   onFloorChange: (text: string) => void;
   onShowFloorToggle: (show: boolean) => void;

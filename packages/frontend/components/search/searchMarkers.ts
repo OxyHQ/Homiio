@@ -1,27 +1,19 @@
 /**
  * Map pins for a result set — the projection, and nothing else.
  *
- * Its own module rather than a helper inside `SearchResultsView` for two
- * reasons, and the second is the one that matters: the results view imports the
- * map component, which imports `react-native-webview`, which needs a native
- * module no test environment has. A pure rule that cannot be unit-tested is a
- * pure rule nobody checks.
+ * Its own module rather than a helper inside `SearchResultsView`, because the
+ * results view imports the map, whose engines no test environment has. A pure
+ * rule that cannot be unit-tested is a pure rule nobody checks.
  */
+import type { MapMarkerData } from '@goway.to/maps';
 import { formatMoney, type OfferingType, type Property } from '@homiio/shared-types';
 
 import { resolvePrimaryOffering, toPriceDescriptor } from '@/utils/propertyUtils';
 import type { Formatting } from '@/utils/format';
 import { browseModeFromOffering } from './types';
 
-/** A price pin: where it goes, and what it says. */
-export interface MapMarker {
-  id: string;
-  coordinates: [number, number];
-  priceLabel: string;
-}
-
 /**
- * Build map markers ([lng, lat] pins) from a property list.
+ * Build the map's price pins from a property list.
  *
  * The pin label used to be `€${Math.round(amount).toLocaleString()}` — a euro
  * sign on every marker in the catalogue, whatever the listing was priced in, and
@@ -44,32 +36,26 @@ export function toMarkers(
   properties: readonly Property[],
   offering: OfferingType,
   formatting: Formatting,
-): MapMarker[] {
+): MapMarkerData[] {
   const browseMode = browseModeFromOffering(offering);
-  return properties
-    .map((p) => {
-      const coords = p.address?.coordinates?.coordinates ?? p.location?.coordinates;
-      if (
-        !coords ||
-        coords.length !== 2 ||
-        typeof coords[0] !== 'number' ||
-        typeof coords[1] !== 'number'
-      ) {
-        return null;
-      }
-      // Price the pin off the ACTIVE offering's block (monthly / nightly / sale).
-      const primary = resolvePrimaryOffering(p, browseMode);
-      const price = toPriceDescriptor(primary);
-      const priceLabel = price
-        ? formatMoney(price.amount, price.currency, formatting.locale, {
-            maximumFractionDigits: 0,
-          })
-        : primary.label;
-      return {
-        id: p.id,
-        coordinates: [coords[0], coords[1]] as [number, number],
-        priceLabel,
-      };
-    })
-    .filter((marker): marker is MapMarker => marker !== null);
+  return properties.flatMap<MapMarkerData>((p) => {
+    const coords = p.address?.coordinates?.coordinates ?? p.location?.coordinates;
+    if (
+      !coords ||
+      coords.length !== 2 ||
+      typeof coords[0] !== 'number' ||
+      typeof coords[1] !== 'number'
+    ) {
+      return [];
+    }
+    // Price the pin off the ACTIVE offering's block (monthly / nightly / sale).
+    const primary = resolvePrimaryOffering(p, browseMode);
+    const price = toPriceDescriptor(primary);
+    const label = price
+      ? formatMoney(price.amount, price.currency, formatting.locale, {
+          maximumFractionDigits: 0,
+        })
+      : primary.label;
+    return [{ id: p.id, coordinate: { longitude: coords[0], latitude: coords[1] }, label }];
+  });
 }

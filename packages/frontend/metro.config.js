@@ -1,12 +1,10 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const { withGoWayMaps } = require('@goway.to/maps/metro');
 const path = require('path');
 
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, '../..');
 
-// maplibre-gl 6 starts its worker by URL; put the worker modules where the web
-// map points `setWorkerUrl` before Metro serves or exports `public/`.
-require('./scripts/vendor-maplibre-worker').vendorMaplibreWorker();
 // Web fetches the active locale from `public/locales/` instead of bundling all
 // twelve; publish this checkout's `locales/` there before Metro serves `public/`.
 require('./scripts/publish-web-locales').publishWebLocales();
@@ -59,7 +57,9 @@ const { withNativeWind } = require('nativewind/metro');
 // box model and typography identical across web and native.
 const REM_PX = 16;
 
-module.exports = withNativeWind(config, {
+// `withGoWayMaps` serves MapLibre's worker from `public/vendor/` (maplibre-gl 6
+// starts it by URL), before Metro serves or exports `public/`.
+module.exports = withNativeWind(withGoWayMaps(config), {
   input: './styles/global.css',
   inlineRem: REM_PX,
   inlineVariables: false,
