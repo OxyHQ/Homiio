@@ -2279,7 +2279,7 @@
     "cta": {
       "housingAuthority": "Vivienda pública",
       "landlord": "Arrendador",
-      "applyOnStateWebsite": "Solicitar en la web oficial",
+      "applyOnOfficialWebsite": "Solicitar en la web oficial",
       "viewOnSourceWebsite": "Ver en el portal de origen",
       "callNow": "Llamar ahora",
       "moreByOwner": "Más propiedades de este propietario"
@@ -3250,9 +3250,6 @@
     }
   },
   "error": {
-    "publicHousing": {
-      "openFailed": "No se pudo abrir el sitio web de vivienda"
-    },
     "auth": {
       "required": "Inicia sesión para llamar al propietario"
     },

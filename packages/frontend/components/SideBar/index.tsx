@@ -9,7 +9,6 @@ import type {
   SidebarProps,
   SidebarTeam,
   SidebarTree,
-  SidebarTreeFolder,
   SidebarTreeItem,
 } from '@oxy.so/bloom/sidebar';
 import {
@@ -67,9 +66,8 @@ const SindiSidebarIcon: SidebarIcon = ({ width, height, fill }) => (
 );
 
 /**
- * The browse modes, in display order. The `⌥⌃` + digit hint Bloom shows on
- * hover is bound below in {@link useModeShortcuts}; the digit is the row's
- * 1-based position, so the hint and the binding cannot drift apart.
+ * The browse modes, in display order. Each declares its `⌥⌃` + digit shortcut
+ * (the row's 1-based position); Bloom's `Sidebar` shows and binds it.
  */
 const MODE_ROWS: readonly { mode: BrowseMode; icon: SidebarIcon; labelKey: string }[] = [
   { mode: 'long_term', icon: RiHomeLine, labelKey: 'sidebar.mode.longTerm' },
@@ -99,48 +97,13 @@ const dayBucket = (
 };
 
 /**
- * Web-only `⌥⌃1..4` (Alt+Ctrl+digit) browse-mode shortcuts. Bloom only renders
- * the hint; binding the keys is the app's job.
- */
-function useModeShortcuts(setBrowseMode: (mode: BrowseMode) => void) {
-  React.useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only Alt+Ctrl chords; let Cmd-based combos (e.g. macOS) fall through.
-      if (!e.altKey || !e.ctrlKey || e.metaKey) return;
-
-      // Never hijack a digit the user is typing into a field.
-      const target = e.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
-      ) {
-        return;
-      }
-
-      // `code` (physical key) is layout-stable while Alt is held; `key` can
-      // mutate to an alternate glyph under Alt on macOS.
-      const index = MODE_ROWS.findIndex((_, i) => e.code === `Digit${i + 1}`);
-      if (index === -1) return;
-
-      e.preventDefault();
-      setBrowseMode(MODE_ROWS[index].mode);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setBrowseMode]);
-}
-
-/**
  * Homiio's navigation sidebar, as the PROPS for Bloom's `Sidebar`. It renders
  * nothing: `app/_layout.tsx` hands the result to `AppShell`, which owns the
  * frame — the rail in flow from `lg`, the overlay drawer below it — so there is
  * one sidebar mount and one drawer, not a copy per breakpoint.
  *
- * Call it ONCE per app (it binds the `⌥⌃1..4` mode shortcuts). The collapse
- * choice persists in `uiStore`.
+ * Call it ONCE per app. Bloom's `Sidebar` binds the `⌥⌃1..4` mode shortcuts it
+ * shows; the collapse choice persists in `uiStore`.
  *
  * The Oxy account lives in the `team` card at the foot of the rail (signed in)
  * or a "Sign in" row (signed out): Bloom's `Sidebar` has no slot for an
@@ -167,8 +130,6 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
 
   const { folders } = useSavedPropertiesContext();
   const { properties: recentProperties } = useRecentlyViewed();
-
-  useModeShortcuts(setBrowseMode);
 
   /* --------------------------------------------------------------
      Handlers
@@ -397,7 +358,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   /* --------------------------------------------------------------
      Tree — saved folders and recently viewed, one folder each
      -------------------------------------------------------------- */
-  const tree = React.useMemo<SidebarTree | undefined>(() => {
+  const tree = React.useMemo<SidebarTree[]>(() => {
     const safeFolders = Array.isArray(folders) ? folders : [];
     const folderItems: SidebarTreeItem[] = safeFolders
       .filter((folder) => !folder.isDefault && (folder.propertyCount ?? 0) > 0)
@@ -436,26 +397,24 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
         href: `/properties/${entry.id}`,
       }));
 
-    const treeFolders: SidebarTreeFolder[] = [];
-    if (folderItems.length > 0) {
-      treeFolders.push({
-        key: 'saved-folders',
-        label: t('sidebar.savedProperties.title'),
-        items: folderItems,
-        defaultOpen: true,
-      });
-    }
+    // "Recently viewed" is its own section of homes; "Saved" lists the folders
+    // the person made, and only when they have made some.
+    const sections: SidebarTree[] = [];
     if (recentItems.length > 0) {
-      treeFolders.push({
+      sections.push({
         key: 'recently-viewed',
         label: t('sidebar.recent.title'),
         items: recentItems,
-        defaultOpen: true,
       });
     }
-    return treeFolders.length > 0
-      ? { label: t('profile.sections.activity'), folders: treeFolders }
-      : undefined;
+    if (folderItems.length > 0) {
+      sections.push({
+        key: 'saved',
+        label: t('sidebar.savedProperties.title'),
+        items: folderItems,
+      });
+    }
+    return sections;
   }, [folders, recentProperties, t]);
 
   const selectedTreeItem = React.useMemo(() => {
@@ -493,7 +452,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     modes,
     mode: browseMode,
     onModeChange: handleModeChange,
-    tree,
+    tree: tree.length > 0 ? tree : undefined,
     selectedTreeItem,
     onTreeItemPress: handleNavItem,
     team,

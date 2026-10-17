@@ -56,10 +56,10 @@ import { View } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { EmptyState } from '@oxy.so/bloom/empty-state';
+import { SurfaceFade } from '@oxy.so/bloom/fill';
 import { Shelf, ShelfSkeleton } from '@oxy.so/bloom/media-shelf';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { H1, P } from '@oxy.so/bloom/typography';
@@ -67,6 +67,8 @@ import { H1, P } from '@oxy.so/bloom/typography';
 import { formatRelativeDate, serializeLocationToken, type Property } from '@homiio/shared-types';
 
 import { useLocationScope } from '@/hooks/useLocationScope';
+import { useCity } from '@/hooks/useCityQueries';
+import { getCityImageSource } from '@/utils/cityDisplay';
 import { homeSurfaceState, useHomeSections } from '@/hooks/useHomeSections';
 import { HomeDiscoveryBoard } from '@/components/home/HomeDiscoveryBoard';
 import { ApproximateAreaNotice } from '@/components/home/ApproximateAreaNotice';
@@ -82,11 +84,11 @@ import type { SearchQuery, SearchStep } from '@/components/search/types';
 import { CtaBanner } from '@/components/CtaBanner';
 import { exploreHref } from '@/utils/searchUrl';
 
+const HERO_PHOTO = require('@/assets/images/hero.jpg');
+
 /** Photos for the two closing calls to action. */
-const HOST_CTA_IMAGE =
-  'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80';
-const AGENT_CTA_IMAGE =
-  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1600&q=80';
+const HOST_CTA_IMAGE = require('@/assets/images/cta-host.jpg');
+const AGENT_CTA_IMAGE = require('@/assets/images/cta-agent.jpg');
 
 /** The width every card in a row is laid out at. */
 const CARD_WIDTH = 240;
@@ -102,6 +104,17 @@ export default function HomePage() {
   const [searchStep, setSearchStep] = useState<SearchStep | null>(null);
 
   const scope = useLocationScope();
+  // The hero shows the chosen city's own photo, when the area is one of
+  // Homiio's cities; otherwise the default street.
+  const selection = scope.selection;
+  const selectedCityId =
+    selection?.kind === 'place' &&
+    selection.source.kind === 'homiio' &&
+    selection.source.entity === 'city'
+      ? selection.source.id
+      : undefined;
+  const { data: selectedCity } = useCity(selectedCityId);
+  const heroPhoto = getCityImageSource(selectedCity ?? undefined, 'large') ?? HERO_PHOTO;
   const { locale } = useFormatting();
   const home = useHomeSections(scope.selection, browseOffering, { enabled: scope.canQuery });
   const { properties: recentlyViewedProperties } = useRecentlyViewed();
@@ -174,18 +187,17 @@ export default function HomePage() {
       >
         <View className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
           <Image
-            source={require('@/assets/images/hero.jpg')}
+            source={heroPhoto}
             className="absolute inset-0"
             contentFit="cover"
+            transition={300}
           />
-          <LinearGradient
-            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
-            className="absolute inset-0"
-          />
+          {/* The photo ends in the panel's own colour, not a black scrim. */}
+          <SurfaceFade edge="bottom" size={0.6} />
         </View>
 
         <View className="w-full items-start gap-3 px-4 pb-4 md:items-center md:px-8">
-          <H1 className="text-display-4-bold text-white md:text-center lg:text-display-3-bold">
+          <H1 className="text-display-4-bold md:text-center lg:text-display-3-bold">
             {t(`home.hero.title.${browseMode}`)}
           </H1>
           <View className="z-20 w-full max-w-[880px] self-center">
@@ -293,14 +305,14 @@ export default function HomePage() {
             title={t(`home.hostCta.${browseMode}.title`)}
             subtitle={t(`home.hostCta.${browseMode}.subtitle`)}
             ctaLabel={t(`home.hostCta.${browseMode}.cta`)}
-            imageUrl={HOST_CTA_IMAGE}
+            image={HOST_CTA_IMAGE}
             onPress={() => router.push('/properties/create')}
           />
           <CtaBanner
             title={t('agent.banner.title')}
             subtitle={t('agent.banner.subtitle')}
             ctaLabel={t('agent.banner.cta')}
-            imageUrl={AGENT_CTA_IMAGE}
+            image={AGENT_CTA_IMAGE}
             trustLine={t('agent.banner.trust')}
             onPress={() => router.push('/agent')}
           />

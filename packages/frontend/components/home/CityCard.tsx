@@ -29,7 +29,7 @@ export function CityCard({ city, onPress }: CityCardProps) {
   // Hover anywhere on the card zooms its photo (web); press does it on native.
   // `onHoverIn/Out` are Pressable-only + web-only (native ignores them).
   const [hovered, setHovered] = useState(false);
-  const imageSource = getCityImageSource(city, 'large');
+  const imageSource = getCityImageSource(city, 'medium');
   // Subtitle: the city's region (e.g. "Catalonia"), resolved from the populated
   // region ref. Falls back to a short property-count line when no region name.
   const subtitle =

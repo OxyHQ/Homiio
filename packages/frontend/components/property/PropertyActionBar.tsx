@@ -79,7 +79,7 @@ export const PropertyActionBar: React.FC<Props> = ({
 
   let actions: BarActions;
   if (property.housingType === HousingType.PUBLIC) {
-    actions = { primaryLabel: t('listing.cta.applyOnStateWebsite'), onPrimary: onApplyPublic };
+    actions = { primaryLabel: t('listing.cta.applyOnOfficialWebsite'), onPrimary: onApplyPublic };
   } else if (property.isExternal) {
     actions = { primaryLabel: t('listing.cta.viewOnSourceWebsite'), onPrimary: onContact, ...call };
   } else if (isExchangeListing && onRequestExchange) {
