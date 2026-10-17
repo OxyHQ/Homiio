@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
-import {
-  View,
-  StyleSheet,
-  Image,
-  FlatList,
-  RefreshControl,
-  ScrollView,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, Image, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -39,6 +30,7 @@ import { PropertyType, formatArea, formatMoney } from '@homiio/shared-types';
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
 import { spacing } from '@/constants/styles';
+import type { RoomsFeed } from '@/hooks/useRoomsFeed';
 
 const FEATURE_ICON_SIZE = 16;
 
@@ -46,6 +38,8 @@ const FEATURE_ICON_SIZE = 16;
 const FILTERS_DIALOG_PLACEMENT = { base: 'bottom', md: 'center' } as const;
 
 interface RoomListProps {
+  /** The page's feed: the page owns the scroller, so it paginates and refreshes. */
+  feed: RoomsFeed;
   filters?: RoomFilterOptions;
   onFilterChange?: (filters: RoomFilterOptions) => void;
 }
@@ -181,65 +175,15 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
 });
 RoomCard.displayName = 'RoomCard';
 
-export function RoomList({ filters, onFilterChange }: RoomListProps) {
+export function RoomList({ feed, filters, onFilterChange }: RoomListProps) {
   const { t } = useTranslation();
   const { locale } = useFormatting();
-  const { colors } = useTheme();
   // A rent filter bound carries the search-filter currency, like every other
   // numeric price filter in the app.
   const rentBound = (value: unknown): string =>
     formatMoney(Number(value), SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
-  const [refreshing, setRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-
-  // One cache entry per filter set; a filter change starts a new feed while the
-  // previous rooms stay on screen until the first page of the new one lands.
-  const roomsQuery = useInfiniteQuery({
-    queryKey: ['rooms', filters ?? null],
-    initialPageParam: 1,
-    // Typed as RoomFilterOptions so the room-only `sortBy` / `sortOrder`
-    // query params flow through to the (subtype-compatible) PropertyFilters
-    // expected by the service and on to the properties list endpoint.
-    queryFn: ({ pageParam }) => {
-      const params: RoomFilterOptions = {
-        ...filters,
-        type: PropertyType.ROOM,
-        page: pageParam,
-        limit: 10,
-        sortBy: filters?.sortBy || 'createdAt',
-        sortOrder: filters?.sortOrder || 'desc',
-      };
-      return propertyService.getRooms(params);
-    },
-    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
-    placeholderData: keepPreviousData,
-  });
-  const rooms = roomsQuery.data?.pages.flatMap((page) => page.rooms) ?? [];
-  const loading = roomsQuery.isPending;
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await roomsQuery.refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const handleLoadMore = () => {
-    if (roomsQuery.hasNextPage && !roomsQuery.isFetchingNextPage) {
-      void roomsQuery.fetchNextPage();
-    }
-  };
-
-  const renderFooter = () => {
-    if (!roomsQuery.isFetchingNextPage) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <Loading size="sm" showText={false} />
-      </View>
-    );
-  };
+  const { rooms, loading } = feed;
 
   const filtersDialog = (
     <Dialog
@@ -298,7 +242,7 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
     : [];
 
   return (
-    <View style={styles.container}>
+    <View>
       <View className="border-border" style={styles.header}>
         <View style={styles.searchBar}>
           <Search
@@ -358,24 +302,16 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
         </ScrollView>
       ) : null}
 
-      <FlatList
-        data={rooms}
-        renderItem={({ item }) => <RoomCard property={item} />}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={renderFooter}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void handleRefresh()}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        }
-      />
+      <View style={styles.listContainer}>
+        {rooms.map((room) => (
+          <RoomCard key={room.id} property={room} />
+        ))}
+        {feed.loadingMore ? (
+          <View style={styles.footerLoader}>
+            <Loading size="sm" showText={false} />
+          </View>
+        ) : null}
+      </View>
 
       {filtersDialog}
     </View>
@@ -383,9 +319,6 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -411,9 +344,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: spacing['3xl'],
   },
   footerLoader: {
     paddingVertical: spacing.lg,
