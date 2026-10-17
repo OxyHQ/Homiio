@@ -583,10 +583,10 @@ describe('leaseController.uploadLeaseDocument', () => {
     expect(row.uploadedByOxyUserId).toBe('oxy-tenant');
     // An undeclared type falls back rather than hitting the CHECK.
     expect(row.type).toBe('other');
-    // The stored location is the server's, under a private key — not the one
-    // the request asked for.
+    // The stored location is the server's — a private file in the uploader's
+    // Oxy account — not the one the request asked for.
     expect(row.url).not.toContain('attacker');
-    expect(row.url).toContain(`/api/images/file/private/leases/${id}/`);
+    expect(row.url).toMatch(/^oxy:/);
   });
 });
 

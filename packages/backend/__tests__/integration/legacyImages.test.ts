@@ -31,12 +31,15 @@ import {
   detachMissingImage,
   findLegacyImages,
   migrateLegacyImage,
+  migrateLegacyImages,
 } from '../../services/files/imageMigration';
+import { legacyImageUrl } from '../../services/files/legacyImages';
 import { legacyObjectStore } from '../../services/files/legacyObjectStore';
+import { OxyCallPacer } from '../../services/files/oxyCallPacer';
 import { flushLegacyReads } from '../../services/files/legacyReadCounter';
 import { storageRetirementStatus } from '../../services/files/storageStatus';
 import { setOxyFilesForTests } from '../../services/files/oxyFilesClient';
-import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
+import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
 import {
   resetGeoTables,
   seedAddress,
@@ -71,6 +74,8 @@ async function legacyRow(
   const bytes = Buffer.from(`legacy-original-${uuid}`);
   if (!options.missing) {
     await legacyObjectStore().putPrivate(keys.keysOriginal, bytes, 'image/jpeg');
+    // What Oxy fetches from the legacy door: the bucket's bytes.
+    fakeOxyFiles.servedSources.set(legacyImageUrl(keys.keysOriginal), bytes);
   }
   const [row] = await getDb()
     .insert(images)
@@ -97,6 +102,49 @@ async function listing(overrides: Partial<typeof properties.$inferInsert> = {}):
 
 async function showOn(propertyId: string, imageId: string): Promise<void> {
   await replacePropertyImages(propertyId, [{ imageId, isPrimary: true }]);
+}
+
+async function scrapedListing(): Promise<string> {
+  return listing({
+    isExternal: true,
+    source: 'fixture',
+    sourceId: `mig-${uuidv7()}`,
+    sourceUrl: `https://fixtures.homiio.com/${uuidv7()}`,
+  });
+}
+
+/** A pacer on a clock that moves only when it sleeps: no test waits a minute. */
+function instantPacer(): OxyCallPacer {
+  let now = 0;
+  return new OxyCallPacer({
+    perMinute: 30,
+    now: () => now,
+    sleep: async (ms) => {
+      now += ms;
+    },
+  });
+}
+
+/** A Commons search that answers this photo, credited. */
+function commonsAnswers(): typeof fetch {
+  return jest.fn(async () =>
+    Response.json({
+      query: {
+        pages: {
+          '1': {
+            imageinfo: [
+              {
+                thumburl: 'https://upload.wikimedia.org/x/1280px-y.jpg',
+                mime: 'image/jpeg',
+                descriptionurl: 'https://commons.wikimedia.org/wiki/File:Y.jpg',
+                extmetadata: { LicenseShortName: { value: 'CC BY 4.0' } },
+              },
+            ],
+          },
+        },
+      },
+    }),
+  ) as unknown as typeof fetch;
 }
 
 beforeEach(async () => {
@@ -193,25 +241,60 @@ describe('the unused-image sweep', () => {
     expect(ids).toContain(fresh.row.id);
     expect(ids).not.toContain(orphan.row.id);
   });
+
+  it('walks the table once in id windows, deleting the unused rows of every window', async () => {
+    const old = new Date(Date.now() - 48 * 3_600_000);
+    const shownOn = await listing();
+    const created = [];
+    for (let i = 0; i < 5; i += 1) {
+      created.push(await legacyRow('property', `expired-${i}`, { createdAt: old }));
+    }
+    // Shown rows between the unused ones: a window never stops at them.
+    await showOn(shownOn, created[2].row.id);
+    const seen: string[][] = [];
+
+    const deleted = await sweepUnusedImages(getDb(), {
+      window: 2,
+      onWindow: (ids) => seen.push([...ids]),
+    });
+
+    expect(deleted).toBe(4);
+    // Three windows of two (the last one partial), and one that finds the end.
+    expect(seen.flat().sort()).toEqual(
+      [created[0], created[1], created[3], created[4]].map((c) => c.row.id).sort(),
+    );
+    const left = await getDb().select({ id: images.id }).from(images);
+    expect(left.map((row) => row.id)).toEqual([created[2].row.id]);
+  });
 });
 
 describe('migrateLegacyImage', () => {
-  it("copies a scraped listing's photo as Homiio's file, verified, and repoints every copy", async () => {
-    const propertyId = await listing({
-      isExternal: true,
-      source: 'fixture',
-      sourceId: `mig-${uuidv7()}`,
-      sourceUrl: 'https://fixtures.homiio.com/x',
-    });
+  it("imports a scraped listing's photo as Homiio's file through the legacy door, verified, and repoints every copy", async () => {
+    const propertyId = await scrapedListing();
     const { row, sha256 } = await legacyRow('property', propertyId);
     await showOn(propertyId, row.id);
 
     const [candidate] = await findLegacyImages(null, 10);
-    expect(candidate.target).toEqual({ kind: 'application' });
+    expect(candidate.target).toEqual({ kind: 'application', listingId: propertyId });
     const line = await migrateLegacyImage(candidate);
 
     expect(line).toMatchObject({ outcome: 'migrated', owner: 'application', sha256 });
     expect(JSON.stringify(line)).not.toContain('http');
+    // Oxy fetched the bucket's bytes from the legacy door, as Homiio's public
+    // file, with the listing's use registered in the same request.
+    expect(fakeOxyFiles.callsOf('importAppFiles')).toEqual([
+      [
+        [
+          {
+            sourceUrl: legacyImageUrl(row.keysOriginal as string),
+            visibility: 'public',
+            reference: { entityType: 'property', entityId: propertyId },
+          },
+        ],
+      ],
+    ]);
+    expect(fakeOxyFiles.callsOf('uploadAppFile')).toEqual([]);
+    expect(fakeOxyFiles.hasReference(line.oxyFileId as string, 'property', propertyId)).toBe(true);
     const [after] = await getDb().select().from(images).where(eq(images.id, row.id));
     expect(after.oxyFileId).toBe(line.oxyFileId);
     expect(after.urlsMedium).toBe(`https://cloud.oxy.test/${line.oxyFileId}?variant=w640`);
@@ -270,19 +353,30 @@ describe('migrateLegacyImage', () => {
   });
 
   it('refuses to point a row at bytes Oxy says differ', async () => {
-    const propertyId = await listing({
-      isExternal: true,
-      source: 'fixture',
-      sourceId: `mig-${uuidv7()}`,
-      sourceUrl: 'https://fixtures.homiio.com/y',
-    });
+    const propertyId = await scrapedListing();
+    const { row } = await legacyRow('property', propertyId);
+    await showOn(propertyId, row.id);
+    // What Oxy fetched is not what the bucket holds.
+    fakeOxyFiles.servedSources.set(
+      legacyImageUrl(row.keysOriginal as string),
+      Buffer.from('altered in transit'),
+    );
+
+    const [candidate] = await findLegacyImages(null, 10);
+    expect((await migrateLegacyImage(candidate)).outcome).toBe('hash_mismatch');
+    const [after] = await getDb().select().from(images).where(eq(images.id, row.id));
+    expect(after.oxyFileId).toBeNull();
+  });
+
+  it("refuses to point a host's row at bytes Oxy says it stored differently", async () => {
+    const propertyId = await listing({ oxyUserId: 'host-z' });
     const { row } = await legacyRow('property', propertyId);
     await showOn(propertyId, row.id);
     const api = fakeOxyFiles.api();
-    const realUpload = api.uploadAppFile;
-    api.uploadAppFile = async (...args) => {
+    const realUpload = api.uploadUserMedia;
+    api.uploadUserMedia = async (...args) => {
       const answer = await realUpload(...args);
-      return { ...answer, file: { ...answer.file, sha256: '0'.repeat(64) } };
+      return { ...answer, sha256: '0'.repeat(64) };
     };
     setOxyFilesForTests(api);
     try {
@@ -293,6 +387,48 @@ describe('migrateLegacyImage', () => {
     }
     const [after] = await getDb().select().from(images).where(eq(images.id, row.id));
     expect(after.oxyFileId).toBeNull();
+  });
+
+  it('imports a page of Homiio-owned photos in one metered request, and waits out a 429 instead of failing them', async () => {
+    const rows = [];
+    for (let i = 0; i < 3; i += 1) {
+      const propertyId = await scrapedListing();
+      const legacy = await legacyRow('property', propertyId);
+      await showOn(propertyId, legacy.row.id);
+      rows.push(legacy.row.id);
+    }
+    // Oxy's per-app budget is spent (the live ingest shares it): twice.
+    fakeOxyFiles.batchImportErrors.push(
+      Object.assign(oxyError(429, 'RATE_LIMITED'), { details: { retryAfterSeconds: 20 } }),
+      Object.assign(oxyError(429, 'RATE_LIMITED'), { details: { retryAfterSeconds: 20 } }),
+    );
+    const pacer = instantPacer();
+
+    const lines = await migrateLegacyImages(await findLegacyImages(null, 10), { pacer });
+
+    expect(lines.map((line) => line.outcome)).toEqual(['migrated', 'migrated', 'migrated']);
+    expect(lines.map((line) => line.imageId)).toEqual(rows);
+    expect(pacer.rateLimited).toBe(2);
+    // The same batch, sent three times; never split into uploads.
+    const calls = fakeOxyFiles.callsOf('importAppFiles');
+    expect(calls).toHaveLength(3);
+    expect(calls.every(([items]) => (items as unknown[]).length === 3)).toBe(true);
+    expect(fakeOxyFiles.callsOf('uploadAppFile')).toEqual([]);
+    expect(await countLegacyImages()).toEqual([]);
+  });
+
+  it('reports a photo Oxy could not fetch as failed and leaves it for the next run', async () => {
+    const propertyId = await scrapedListing();
+    const { row } = await legacyRow('property', propertyId);
+    await showOn(propertyId, row.id);
+    fakeOxyFiles.failingSources.set(legacyImageUrl(row.keysOriginal as string), 502);
+
+    const [candidate] = await findLegacyImages(null, 10);
+    expect(await migrateLegacyImage(candidate)).toMatchObject({
+      outcome: 'upload_failed',
+      error: '502 SOURCE_FETCH_FAILED',
+    });
+    expect(await findLegacyImages(null, 10)).toHaveLength(1);
   });
 
   it('re-sources a legacy city cover with credit, and clears a region cover it cannot source', async () => {
@@ -306,24 +442,7 @@ describe('migrateLegacyImage', () => {
       .update(regions)
       .set({ coverImageId: region.row.id })
       .where(eq(regions.id, chain.regionId));
-    (global as { fetch: typeof originalFetch }).fetch = jest.fn(async () =>
-      Response.json({
-        query: {
-          pages: {
-            '1': {
-              imageinfo: [
-                {
-                  thumburl: 'https://upload.wikimedia.org/x/1280px-y.jpg',
-                  mime: 'image/jpeg',
-                  descriptionurl: 'https://commons.wikimedia.org/wiki/File:Y.jpg',
-                  extmetadata: { LicenseShortName: { value: 'CC BY 4.0' } },
-                },
-              ],
-            },
-          },
-        },
-      }),
-    ) as unknown as typeof fetch;
+    (global as { fetch: typeof originalFetch }).fetch = commonsAnswers();
 
     for (const candidate of await findLegacyImages(null, 10)) {
       await migrateLegacyImage(candidate);
@@ -342,6 +461,41 @@ describe('migrateLegacyImage', () => {
       .where(eq(regions.id, chain.regionId));
     expect(regionAfter.coverImageId).toBeNull();
     expect(await countLegacyImages()).toEqual([]);
+  });
+
+  it('keeps a legacy city cover when Commons does not answer, and clears it only when Commons has nothing creditable', async () => {
+    const city = await legacyRow('city', chain.cityId);
+    await getDb()
+      .update(cities)
+      .set({ coverImageId: city.row.id })
+      .where(eq(cities.id, chain.cityId));
+
+    // Commons is rate-limiting or down: nothing is decided, nothing cleared.
+    (global as { fetch: typeof originalFetch }).fetch = jest.fn(
+      async () => new Response('slow down', { status: 429 }),
+    ) as unknown as typeof fetch;
+    const [candidate] = await findLegacyImages(null, 10);
+    expect(await migrateLegacyImage(candidate)).toMatchObject({
+      outcome: 'cover_failed',
+      error: 'commons 429',
+    });
+    let [cityAfter] = await getDb().select().from(cities).where(eq(cities.id, chain.cityId));
+    expect(cityAfter.coverImageId).toBe(city.row.id);
+
+    // Oxy refuses the import (not a rate limit): also kept for the next run.
+    (global as { fetch: typeof originalFetch }).fetch = commonsAnswers();
+    fakeOxyFiles.failingSources.set('https://upload.wikimedia.org/x/1280px-y.jpg', 502);
+    expect((await migrateLegacyImage(candidate)).outcome).toBe('cover_failed');
+    [cityAfter] = await getDb().select().from(cities).where(eq(cities.id, chain.cityId));
+    expect(cityAfter.coverImageId).toBe(city.row.id);
+
+    // Commons answers every query, with nothing Homiio may credit: cleared.
+    (global as { fetch: typeof originalFetch }).fetch = jest.fn(async () =>
+      Response.json({ query: { pages: {} } }),
+    ) as unknown as typeof fetch;
+    expect((await migrateLegacyImage(candidate)).outcome).toBe('cleared_cover');
+    [cityAfter] = await getDb().select().from(cities).where(eq(cities.id, chain.cityId));
+    expect(cityAfter.coverImageId).toBeNull();
   });
 });
 

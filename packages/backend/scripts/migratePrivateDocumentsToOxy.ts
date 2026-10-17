@@ -7,7 +7,7 @@
  *
  *   bun run packages/backend/scripts/migratePrivateDocumentsToOxy.ts            # preview
  *   bun run packages/backend/scripts/migratePrivateDocumentsToOxy.ts --apply    # move
- *   ... --apply --limit=500 --concurrency=4 --report=/tmp/oxy-private-docs.jsonl
+ *   ... --apply --limit=500 --concurrency=4 --per-minute=20 --report=/tmp/oxy-private-docs.jsonl
  *
  * PREVIEW (the default) writes nothing and uploads nothing: it counts, per
  * table, the rows still on the bucket and the rows that name nothing Homiio
@@ -40,6 +40,7 @@ import {
   PRIVATE_DOCUMENT_TABLES,
   type PrivateDocumentReportLine,
 } from '../services/files/privateDocumentMigration';
+import { OXY_APP_UPLOADS_PER_MINUTE, OxyCallPacer } from '../services/files/oxyCallPacer';
 import { mapWithConcurrency } from '../utils/concurrency';
 
 const APPLY = process.argv.includes('--apply');
@@ -56,6 +57,8 @@ function intFlag(name: string, fallback: number): number {
 
 const LIMIT = intFlag('limit', Number.MAX_SAFE_INTEGER);
 const CONCURRENCY = intFlag('concurrency', 4);
+/** Uploads started a minute; Oxy's budget is shared with the live app (see oxyCallPacer.ts). */
+const PER_MINUTE = Math.min(intFlag('per-minute', 20), OXY_APP_UPLOADS_PER_MINUTE);
 const PAGE = 200;
 const REPORT = flag('report');
 
@@ -75,6 +78,13 @@ async function main(): Promise<void> {
     return;
   }
 
+  const pacer = new OxyCallPacer({
+    perMinute: PER_MINUTE,
+    onRateLimited: (waitMs) =>
+      console.error(
+        `[oxy-private-docs] Oxy rate limit: waiting ${Math.round(waitMs / 1000)}s, then resending`,
+      ),
+  });
   const totals = new Map<string, number>();
   let done = 0;
   let refused = false;
@@ -84,7 +94,9 @@ async function main(): Promise<void> {
       const page = await findLegacyPrivateDocuments(table, afterId, Math.min(PAGE, LIMIT - done));
       if (page.length === 0) break;
       afterId = page[page.length - 1].id;
-      const lines = await mapWithConcurrency(page, CONCURRENCY, migratePrivateDocument);
+      const lines = await mapWithConcurrency(page, CONCURRENCY, (row) =>
+        migratePrivateDocument(row, { pacer }),
+      );
       for (const line of lines) {
         report(line);
         totals.set(line.outcome, (totals.get(line.outcome) ?? 0) + 1);

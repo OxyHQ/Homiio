@@ -39,7 +39,6 @@ import {
   maintenanceRequests,
 } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
-import config from '../../config';
 import { serializeWireIds } from '../../middlewares/wireIds';
 import { type MemoryObjectStore, legacyObjectStore } from '../../services/files/legacyObjectStore';
 import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
@@ -165,6 +164,12 @@ beforeEach(async () => {
 });
 
 describe('attaching a photo', () => {
+  // The bucket path: where a photo goes when Oxy is down or refuses it. The
+  // Oxy path is "in the uploader's Oxy account" below.
+  beforeEach(() => {
+    fakeOxyFiles.largeUploadError = oxyError(503, 'UNAVAILABLE');
+  });
+
   it('stores it under a private key and answers a path, never a link', async () => {
     const { requestId } = await seedRequest();
 
@@ -332,17 +337,13 @@ describe('the public image route cannot reach them', () => {
 });
 
 /**
- * Oxy stage 4c (ADR 0043): with `OXY_PRIVATE_DOCUMENTS_ENABLED` the photo is a
+ * Oxy stage 4c (ADR 0043): the photo is a
  * PRIVATE file in the uploader's own Oxy account, read back through Homiio's
  * consent — and every refusal of Oxy's still leaves a working photo.
  */
 describe("in the uploader's Oxy account (stage 4c)", () => {
   beforeEach(() => {
     fakeOxyFiles.reset();
-    config.oxyFiles.privateDocumentsEnabled = true;
-  });
-  afterEach(() => {
-    config.oxyFiles.privateDocumentsEnabled = false;
   });
 
   const bucketKeys = () =>

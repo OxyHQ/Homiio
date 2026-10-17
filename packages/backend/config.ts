@@ -300,16 +300,6 @@ export interface Config {
      * takedowns.
      */
     webhookSecret?: string;
-    /**
-     * Whether a NEW private document (lease, application, maintenance photo)
-     * is stored in its uploader's Oxy account as a private file (ADR 0043
-     * stage 4c) rather than in Homiio's bucket. OFF until Oxy's 4c release is
-     * verified in production (`docs/oxy-files.md`); when on, a refusal or an
-     * outage still stores the document in the bucket. Reading never depends on
-     * it: an `oxy:` document is always read from Oxy, a bucket one from the
-     * bucket.
-     */
-    privateDocumentsEnabled: boolean;
     /** Whether this task drains `file_reference_changes`. On by default. */
     referenceSyncEnabled: boolean;
     referenceSyncIntervalMs: number;
@@ -544,8 +534,6 @@ const config: Config = {
 
   oxyFiles: {
     webhookSecret: optionalEnvironmentValue(process.env.OXY_FILES_WEBHOOK_SECRET),
-    // On only when said so: the bucket path stays the default until verified.
-    privateDocumentsEnabled: process.env.OXY_PRIVATE_DOCUMENTS_ENABLED === 'true',
     // Off only when said so; the suite never starts it (server.ts is not booted).
     referenceSyncEnabled: process.env.OXY_FILE_REFERENCE_SYNC_ENABLED !== 'false',
     referenceSyncIntervalMs: boundedInteger(

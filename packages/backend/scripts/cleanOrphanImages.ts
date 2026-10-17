@@ -10,8 +10,9 @@
  *
  * PREVIEW (the default) counts the rows by entity type and by where their
  * bytes are (a legacy bucket object, or an Oxy file) and deletes nothing.
- * `--apply` deletes in batches of 1,000, re-checking "shown by nothing" in the
- * DELETE itself, and prints the ids it removed. The bytes are not deleted
+ * `--apply` walks the table once in id windows (`deleteUnusedImages`),
+ * re-checking "shown by nothing" in the DELETE itself, and prints the ids it
+ * removed. The bytes are not deleted
  * here: a legacy row's objects go with the bucket's retirement, and an Oxy
  * file stopped being used when its last listing went (Oxy collects a
  * Homiio-owned one; a person's stays theirs).
@@ -24,7 +25,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 import { closePostgres, connectPostgres, getDb } from '../db/postgres';
 import {
   countUnusedImages,
-  deleteUnusedImages,
+  sweepUnusedImages,
   UNUSED_IMAGE_GRACE_HOURS,
 } from '../db/images/unusedImages';
 
@@ -52,16 +53,13 @@ async function main(): Promise<void> {
     console.log('[orphan-images] PREVIEW only — nothing deleted. Re-run with --apply.');
     return;
   }
-  let deleted = 0;
-  while (deleted < MAX) {
-    const ids = await deleteUnusedImages(getDb(), {
-      limit: Math.min(1000, MAX - deleted),
-      graceHours: GRACE_HOURS,
-    });
-    if (ids.length === 0) break;
-    deleted += ids.length;
-    for (const id of ids) console.log(`deleted ${id}`);
-  }
+  const deleted = await sweepUnusedImages(getDb(), {
+    maxRows: MAX,
+    graceHours: GRACE_HOURS,
+    onWindow: (ids) => {
+      for (const id of ids) console.log(`deleted ${id}`);
+    },
+  });
   console.log(`[orphan-images] deleted ${deleted}`);
 }
 

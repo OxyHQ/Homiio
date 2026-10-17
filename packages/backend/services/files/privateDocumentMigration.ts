@@ -41,6 +41,7 @@ import { sql } from 'drizzle-orm';
 import { getDb } from '../../db/postgres';
 import { validatePrivateDocumentKey } from '../../utils/imageStoreKey';
 import { legacyObjectStore } from './legacyObjectStore';
+import type { OxyCallPacer } from './oxyCallPacer';
 import { downloadLinked, oxyErrorCode, oxyErrorStatus, oxyFiles } from './oxyFilesClient';
 import { oxyDocumentRef, privateDocumentRefFromRowUrl } from './privateDocuments';
 
@@ -146,10 +147,17 @@ function bucketKeyOf(row: LegacyPrivateDocument): string | null {
   return validation.ok ? validation.key : null;
 }
 
-/** Move one row. Never throws for a per-row problem: the outcome says it. */
+/**
+ * Move one row. Never throws for a per-row problem: the outcome says it. The
+ * upload is metered by Oxy like every upload, so the CLI passes its pacer
+ * (`oxyCallPacer.ts`): a 429 is waited out and sent again, never an outcome.
+ */
 export async function migratePrivateDocument(
   row: LegacyPrivateDocument,
+  options: { pacer?: OxyCallPacer } = {},
 ): Promise<PrivateDocumentReportLine> {
+  const { pacer } = options;
+  const run = <T>(call: () => Promise<T>): Promise<T> => (pacer ? pacer.run(call) : call());
   const base = { table: row.table, id: row.id };
   const key = bucketKeyOf(row);
   if (!key) return { ...base, outcome: 'not_stored_here' };
@@ -166,15 +174,13 @@ export async function migratePrivateDocument(
 
   let fileId: string;
   try {
-    const { file } = await oxyFiles().uploadUserMediaLarge(
-      row.ownerOxyUserId,
-      new Uint8Array(object.buffer),
-      {
+    const { file } = await run(() =>
+      oxyFiles().uploadUserMediaLarge(row.ownerOxyUserId, new Uint8Array(object.buffer), {
         mime: validation.contentType,
         visibility: 'private',
         filename: key.slice(key.lastIndexOf('/') + 1),
         sha256,
-      },
+      }),
     );
     if (file.visibility !== 'private' || file.sha256 !== sha256) {
       return { ...base, ...measured, outcome: 'upload_failed', code: 'NOT_PRIVATE_OR_ALTERED' };

@@ -52,6 +52,9 @@ expiry sweep, through the CASCADE), a cover replaced or cleared.
 - **Nightly reconciliation** (`referenceReconcile.ts`, 04:10 UTC, one task per
   type) sends Oxy the full inventory per entity type from one snapshot, then
   re-marks the pairs the drain settled during it.
+  `scripts/reconcileFileReferences.ts` runs the same thing on demand — a dry
+  run by default (Oxy answers what it would add, remove and refuse, and
+  changes nothing), `--apply` to commit, `--type=` for one entity type.
 - **Orphans end at the root.** An `images` row nothing shows is deleted 24 hours
   after it was written (`db/images/unusedImages.ts`, 03:40 UTC). Before this,
   expired listings left ~950 rows (and their objects) behind and nothing would
@@ -100,13 +103,12 @@ stage 4c, OxyHQ/oxy#1774).
   bucket URL) is refused with 400 `INVALID_DOCUMENTS`, because the document
   route reads through Homiio's own access.
 
-**The switch.** New documents go to Oxy only while
-`OXY_PRIVATE_DOCUMENTS_ENABLED=true` (default off). With it off — or when Oxy
-refuses, is down, answers a file that is not private, or answers a file Homiio
-may not read — the document is stored in Homiio's bucket under `private/` as
-before, so an upload never fails because of Oxy. Reading never depends on the
-switch: an `oxy:` row reads from Oxy, a bucket row from the bucket (counted in
-`legacy_media_reads`, `private_document`).
+**Where a new one goes.** Every new document goes to Oxy. When Oxy refuses,
+is down, answers a file that is not private, or answers a file Homiio may not
+read, the document is stored in Homiio's bucket under `private/` instead, so an
+upload never fails because of Oxy. Reading follows the row: an `oxy:` row reads
+from Oxy, a bucket row from the bucket (counted in `legacy_media_reads`,
+`private_document`).
 
 **Moving the existing ones.** `scripts/migratePrivateDocumentsToOxy.ts`
 (preview by default; `--apply`, `--limit`, `--concurrency`, `--report`). Each
@@ -152,21 +154,38 @@ the scripts run as one-off ECS tasks of the API image.
    `pre`) are applied by the deploy.
 5. **Orphans:** `scripts/cleanOrphanImages.ts` (preview), then `--apply`.
 6. **Copy:** `scripts/migrateImagesToOxy.ts` (preview), then `--apply
-   --report=…` until the preview reports nothing left. Read the
+   --report=…` until the preview reports nothing left. A Homiio-owned photo
+   is IMPORTED, 50 to a request: Oxy fetches it from the legacy door
+   (`PUBLIC_API_URL` + `/api/images/file/<key>`), Homiio compares the SHA-256
+   Oxy stored with the bucket object's, and the listing's use is registered in
+   the same request. Oxy meters an application's uploads and imports together
+   at 30 requests a minute — about two million photos is a day of batch
+   imports, and would be seven weeks of uploads — and the live listing ingest
+   spends from the same budget, so `--per-minute` (default 20) leaves it a
+   third, and a 429 is waited out and the same request sent again
+   (`services/files/oxyCallPacer.ts`); it is never a row's outcome. A run
+   killed or redeployed under resumes where it stopped. Oxy's fetches are
+   counted as legacy-door `served` reads, so the soak (step 7) starts when the
+   copy ends. Read the
    `missing_object` lines (a shown photo whose object is gone — broken today)
    and re-run with `--detach-missing`. Legacy city covers are re-sourced with
-   credit, or cleared if Commons cannot credit them; a region cover is cleared.
+   credit, or cleared if Commons answers with nothing creditable; one whose
+   re-sourcing failed (Commons or Oxy did not answer) is `cover_failed` and
+   kept for the next run. A region cover is cleared.
    The report carries row ids, outcomes and SHA-256s, never keys or URLs.
 7. **Soak.** The legacy door keeps every old URL working: a migrated photo's
    old URL answers 301 to its Oxy rendition, an unmigrated one is still served
    from the bucket. `scripts/oxyFilesStatus.ts` prints the gate daily.
-8. **Private documents, after Oxy stage 4c is deployed** (OxyHQ/oxy#1774) and
-   Homiio holds `files:linked:read`: run `scripts/migratePrivateDocumentsToOxy.ts
-   --apply --limit=5` and read the report — `migrated` lines mean read-back
-   works; exit 2 (`read_back_refused`) means it does not, and nothing moved.
-   Then set `OXY_PRIVATE_DOCUMENTS_ENABLED=true` on the API service so new
-   documents go to Oxy, and run the script without `--limit` until the preview
-   shows nothing `onBucket`.
+8. **Private documents** (needs Oxy stage 4c, OxyHQ/oxy#1774, and
+   `files:linked:read`): run `scripts/migratePrivateDocumentsToOxy.ts --apply
+   --limit=5` and read the report — `migrated` lines mean read-back works;
+   exit 2 (`read_back_refused`) means it does not, and nothing moved. Then run
+   it without `--limit` until the preview shows nothing `onBucket`. New
+   documents already go to Oxy ([Where a new one goes](#private-documents)).
+9. **References:** `scripts/reconcileFileReferences.ts` (dry run), read it,
+   then `--apply`. Run it before Oxy's unused-file sweep is enforced for
+   Homiio: an application file Homiio shows but never referenced reads as
+   unused there.
 
 ## Retiring the bucket
 

@@ -50,7 +50,7 @@ import { legacyObjectStore } from '../../services/files/legacyObjectStore';
 import { legacyImageUrl } from '../../services/files/legacyImages';
 import config from '../../config';
 import { createHash } from 'node:crypto';
-import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
+import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 const LANDLORD = 'oxy-landlord';
@@ -336,6 +336,9 @@ describe('a lease document can be a PDF, and the client no longer names where it
   });
 
   it('stores it under a private key the public route refuses', async () => {
+    // Oxy is down, so the document falls back to the bucket — the path whose
+    // keys must never be reachable through the public image route.
+    fakeOxyFiles.largeUploadError = oxyError(503, 'UNAVAILABLE');
     const leaseId = await seedLease();
 
     await request(authed(LANDLORD))
@@ -396,10 +399,6 @@ describe('a lease document can be a PDF, and the client no longer names where it
 describe('in the uploader’s Oxy account (stage 4c)', () => {
   beforeEach(() => {
     fakeOxyFiles.reset();
-    config.oxyFiles.privateDocumentsEnabled = true;
-  });
-  afterEach(() => {
-    config.oxyFiles.privateDocumentsEnabled = false;
   });
 
   it('stores a PDF as the uploader’s private file, bound to its digest, and serves the parties', async () => {
