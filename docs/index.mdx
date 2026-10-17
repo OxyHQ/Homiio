@@ -192,26 +192,24 @@ See [Analytics](./analytics) for the aggregation pipelines, the Insights screen 
 
 ### Identity via Oxy
 
-`OxyProvider` from `@oxy.so/services` owns the auth context, account switcher, and the bottom-sheet system. The frontend wires it inside `BloomThemeProvider` (from `@oxy.so/bloom`) and a TanStack `QueryClientProvider` so Homiio's own contexts coexist with Oxy's.
+`OxyProvider` from `@oxy.so/services` owns the auth context, account switcher, and the bottom-sheet system. The frontend wires it inside `BloomProvider` (from `@oxy.so/bloom`) and hands it the app's one TanStack `QueryClient`, which `OxyProvider` provides to the whole tree, so Homiio's queries and Oxy's share a cache.
 
 ```tsx
-<BloomThemeProvider fonts>
-  <QueryClientProvider client={queryClient}>
-    <RentalModeProvider>
-      <OxyProvider baseURL={OXY_BASE_URL}>
-        <ProfileProvider>
-          <SavedPropertiesProvider>
-            <NotificationProvider>
-              <BottomSheetProvider>
-                {/* ... */}
-              </BottomSheetProvider>
-            </NotificationProvider>
-          </SavedPropertiesProvider>
-        </ProfileProvider>
-      </OxyProvider>
-    </RentalModeProvider>
-  </QueryClientProvider>
-</BloomThemeProvider>
+<BloomProvider>
+  <RentalModeProvider>
+    <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID} queryClient={queryClient}>
+      <ProfileProvider>
+        <SavedPropertiesProvider>
+          <NotificationProvider>
+            <BottomSheetProvider>
+              {/* ... */}
+            </BottomSheetProvider>
+          </NotificationProvider>
+        </SavedPropertiesProvider>
+      </ProfileProvider>
+    </OxyProvider>
+  </RentalModeProvider>
+</BloomProvider>
 ```
 
 See [Auth](./auth) for the full sign-in lifecycle, profile bootstrap, and the backend `oxy.auth()` middleware.

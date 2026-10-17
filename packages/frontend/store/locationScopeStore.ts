@@ -81,9 +81,10 @@ interface LocationScopeState {
    * Apply an inferred scope, ONCE per session.
    *
    * Idempotent by construction: a second call is ignored while one is in force.
-   * That is not an optimisation — it is the invariant. The hook calls this from
-   * an effect that runs on every render where an inference is in force, so a
-   * version that overwrote would reintroduce exactly the jump it prevents.
+   * That is not an optimisation — it is the invariant. `observeInferredScope`
+   * calls this whenever the ladder's sources change while an inference is in
+   * force, so a version that overwrote would reintroduce exactly the jump it
+   * prevents.
    */
   commitAutoScope: (scope: CommittedAutoScope) => void;
   /** Record that the OS prompt has been shown, so it is not shown again. */

@@ -102,21 +102,20 @@ no console output.
   <GestureHandlerRootView>
     <BloomProvider defaultMode="system" defaultColorPreset="yellow" persistKey storage>   {/* TOP: wraps the splash branch too */}
       <BloomNavigationTheme>                                  {/* nav theme + StatusBar from Bloom's mode */}
-      <QueryClientProvider>
-        <RentalModeProvider>
-          <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID}>
-            <MediaResolverProvider>
-              <ProfileProvider>
-                <SavedPropertiesProvider>
-                  <NotificationProvider>
-                    <I18nextProvider>
-                      <BottomSheetProvider>
-                        <MenuProvider>
-                          <PortalProvider>
-                            <ErrorBoundary>
-                              <MapStateProvider>
-                                <SearchModeProvider>
-                                  <AppFrame />   {/* Bloom AppShell: sidebar + <Slot /> + RightBar aside */}
+      <RentalModeProvider>
+        <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID} queryClient={queryClient}>   {/* provides the ONE QueryClient */}
+          <MediaResolverProvider>
+            <ProfileProvider>
+              <SavedPropertiesProvider>
+                <NotificationProvider>
+                  <I18nextProvider>
+                    <BottomSheetProvider>
+                      <MenuProvider>
+                        <PortalProvider>
+                          <ErrorBoundary>
+                            <MapStateProvider>
+                              <AskAgentProvider>
+                                <AppFrame />   {/* Bloom AppShell: sidebar + <Slot /> + RightBar aside */}
 ```
 
 Two rules this shape encodes:
@@ -142,6 +141,14 @@ bun run --cwd packages/frontend check:cold-start:test   # mutation-tests the che
 
 `NetInfo` drives `onlineManager` and `AppState` drives `focusManager`, so
 TanStack Query refetches on reconnect and on foreground.
+
+The QueryClient is created once, at module scope in `_layout.tsx`, and handed to
+`OxyProvider`, which provides it. Do not wrap the tree in a `QueryClientProvider`
+of its own: given no client, `OxyProvider` creates one and every query below it
+runs there — which is how the client this layout used to create cached nothing.
+Module scope is also what lets `observeInferredScope`
+(`hooks/useLocationScope.ts`) commit the first inferred location scope from the
+cache rather than from a component.
 
 ## Backend stack
 

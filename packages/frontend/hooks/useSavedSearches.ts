@@ -21,7 +21,7 @@ import {
  * write the freshly-returned server object back to this cache, so the list and
  * every widget reading it stay in sync without a refetch flash.
  */
-const SAVED_SEARCHES_KEY = ['savedSearches'] as const;
+export const SAVED_SEARCHES_KEY = ['savedSearches'] as const;
 
 /** Stable empty-list reference for the logged-out / not-yet-loaded state. */
 const EMPTY_SEARCHES: SavedSearch[] = [];
@@ -322,15 +322,30 @@ export const usePrimarySavedArea = (): PrimarySavedArea => {
   const { isAuthenticated } = useOxy();
   const query = useQuery(savedSearchesQueryOptions(isAuthenticated));
 
-  return useMemo<PrimarySavedArea>(() => {
-    if (!isAuthenticated) return { selection: null, pending: false };
-    // `isPending` is true while disabled too, so the guard above has to come
-    // first — otherwise a logged-out Home would wait forever for a request that
-    // is never sent.
-    if (query.isPending) return { selection: null, pending: true };
-    return { selection: primaryAreaOf(query.data ?? []), pending: false };
-  }, [isAuthenticated, query.isPending, query.data]);
+  return useMemo(
+    () => primarySavedAreaOf(isAuthenticated, { isPending: query.isPending, data: query.data }),
+    [isAuthenticated, query.isPending, query.data],
+  );
 };
+
+/**
+ * The saved-area rung from the session and the saved-searches query.
+ *
+ * Pure, and separate from {@link usePrimarySavedArea}, because the rung is read
+ * in two places that must agree: the hook, and `observeInferredScope`, which
+ * reads the same query out of the cache.
+ */
+export function primarySavedAreaOf(
+  isAuthenticated: boolean,
+  query: { readonly isPending: boolean; readonly data: readonly SavedSearch[] | undefined },
+): PrimarySavedArea {
+  if (!isAuthenticated) return { selection: null, pending: false };
+  // `isPending` is true while disabled too, so the guard above has to come
+  // first — otherwise a logged-out Home would wait forever for a request that
+  // is never sent.
+  if (query.isPending) return { selection: null, pending: true };
+  return { selection: primaryAreaOf(query.data ?? []), pending: false };
+}
 
 export const useSavedSearches = (): UseSavedSearches => {
   const { t } = useTranslation();
