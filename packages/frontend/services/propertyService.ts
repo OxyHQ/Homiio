@@ -110,7 +110,7 @@ class PropertyService {
     };
   }
 
-  // Get property details by ID
+  /** One listing's details. Records nothing — cards, prefetches and refreshes read this. */
   async getPropertyById(propertyId: string): Promise<Property | null> {
     try {
       const response = await api.get(`${this.baseUrl}/${propertyId}`);
@@ -121,6 +121,15 @@ class PropertyService {
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;
     }
+  }
+
+  /**
+   * Tell the server the person OPENED this listing: it counts the view and,
+   * signed in, adds it to their recently-viewed history. Sent once per visit to
+   * the detail screen (`useRecordPropertyOpen`), never on a refresh.
+   */
+  async recordOpen(propertyId: string): Promise<void> {
+    await api.post(`${this.baseUrl}/${propertyId}/open`);
   }
 
   // Get properties owned by the authenticated user (session oxyUserId)

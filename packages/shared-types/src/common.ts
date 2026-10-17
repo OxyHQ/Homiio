@@ -172,12 +172,6 @@ export enum ProfileVisibility {
   CONTACTS_ONLY = 'contacts_only',
 }
 
-export enum RecentlyViewedType {
-  PROPERTY = 'property',
-  ROOM = 'room',
-  ROOMMATE = 'roommate',
-}
-
 export enum GenderPreference {
   MALE = 'male',
   FEMALE = 'female',

@@ -4,4 +4,5 @@ export {
   useNearbyServices,
   useProperty,
   usePropertyStats,
+  useRecordPropertyOpen,
 } from './usePropertyQueries';

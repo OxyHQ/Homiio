@@ -34,9 +34,7 @@ export const LISTING_HANDLERS: HomiioToolHandlers = {
   },
 
   async getListing(input, { accountId }) {
-    const { listing } = await getListing(accountId, requiredString(input, 'propertyId'), {
-      recordView: false,
-    });
+    const { listing } = await getListing(accountId, requiredString(input, 'propertyId'));
     return { data: listing };
   },
 

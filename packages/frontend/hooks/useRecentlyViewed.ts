@@ -1,88 +1,53 @@
-import { useRecentlyViewedStore } from '@/store/recentlyViewedStore';
+/**
+ * The signed-in person's recently viewed listings — a React Query read of the
+ * server's history, and nothing else.
+ *
+ * Account-only. The server records a view when the detail screen opens a
+ * listing (`useRecordPropertyOpen`), so nothing here records anything, and a
+ * signed-out viewer has no history: every surface reading this renders nothing.
+ */
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
+import { toast } from '@oxy.so/bloom/toast';
+import { useTranslation } from 'react-i18next';
 import type { Property } from '@homiio/shared-types';
-import { RecentlyViewedType } from '@homiio/shared-types';
-import { useCallback, useMemo } from 'react';
-import {
-  useRecentlyViewedProperties,
-  useTrackPropertyView,
-  useClearRecentlyViewed,
-} from './useRecentlyViewedQueries';
+import { recentlyViewedService } from '@/services/recentlyViewedService';
+
+/** Every account's history lives under this prefix; opening a listing marks it stale. */
+export const RECENTLY_VIEWED_KEY = ['recentlyViewed'] as const;
+
+const NO_PROPERTIES: Property[] = [];
 
 export function useRecentlyViewed() {
-  const { addItem, removeItem, clearAll, setError, clearError } = useRecentlyViewedStore();
+  const { t } = useTranslation();
   const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
+  // Keyed by session, so switching account never shows the previous one's history.
+  const queryKey = [...RECENTLY_VIEWED_KEY, activeSessionId];
 
-  // React Query hooks - only fetch if we don't have local data
-  const { data: properties = [], isLoading, error, refetch } = useRecentlyViewedProperties();
+  const query = useQuery({
+    queryKey,
+    queryFn: () => recentlyViewedService.list(),
+    enabled: Boolean(oxyServices && activeSessionId),
+    staleTime: 1000 * 30,
+  });
 
-  const trackPropertyViewMutation = useTrackPropertyView();
-  const clearRecentlyViewedMutation = useClearRecentlyViewed();
-
-  // Add property to recently viewed
-  const addProperty = useCallback(
-    async (property: Property) => {
-      const propertyId = property.id;
-
-      if (!propertyId) return;
-
-      // Add to local state immediately for instant UI feedback
-      addItem(propertyId, RecentlyViewedType.PROPERTY, property);
-
-      // Track view in backend if authenticated
-      if (oxyServices && activeSessionId) {
-        trackPropertyViewMutation.mutate(propertyId, {
-          onError: (error) => {},
-        });
-      }
+  const clearMutation = useMutation({
+    mutationFn: () => recentlyViewedService.clear(),
+    onSuccess: () => {
+      queryClient.setQueryData(queryKey, NO_PROPERTIES);
+      toast.success(t('recentlyViewed.clearSuccess'));
     },
-    [addItem, oxyServices, activeSessionId, trackPropertyViewMutation],
-  );
-
-  // Remove property from recently viewed
-  const removeProperty = useCallback(
-    async (propertyId: string) => {
-      removeItem(propertyId);
+    onError: () => {
+      toast.error(t('recentlyViewed.clearFailed'));
     },
-    [removeItem],
-  );
-
-  // Clear all recently viewed properties
-  const clear = useCallback(async () => {
-    clearAll();
-
-    if (oxyServices && activeSessionId) {
-      try {
-        await clearRecentlyViewedMutation.mutateAsync();
-      } catch (error) {
-        await refetch();
-      }
-    }
-  }, [clearAll, oxyServices, activeSessionId, clearRecentlyViewedMutation, refetch]);
-
-  // Subscribe to items array directly to avoid infinite loops
-  const items = useRecentlyViewedStore((state) => state.items);
-
-  // Process items to get properties
-  const localProperties = useMemo(() => {
-    return items
-      .filter((item) => item.type === RecentlyViewedType.PROPERTY)
-      .map((item) => item.data)
-      .slice(0, 10);
-  }, [items]);
-
-  // Always use local state as the source of truth for instant updates
-  const displayProperties = localProperties;
+  });
 
   return {
-    properties: displayProperties,
-    isLoading:
-      isLoading || trackPropertyViewMutation.isPending || clearRecentlyViewedMutation.isPending,
-    error: error?.message || null,
-    refetch,
-    clear,
-    addProperty,
-    removeProperty,
-    clearError,
+    properties: query.data ?? NO_PROPERTIES,
+    isLoading: query.isLoading,
+    error: query.error?.message ?? null,
+    refetch: query.refetch,
+    clear: () => clearMutation.mutate(),
   };
 }

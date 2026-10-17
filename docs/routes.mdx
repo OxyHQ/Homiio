@@ -79,10 +79,11 @@ Participation continues in Homiio.
 | `GET` | `/api/properties/by-ids` | Batched hydration |
 | `GET` | `/api/properties/nearby` | `lat`, `lng`, `radius` — PostGIS `ST_DWithin` |
 | `GET` | `/api/properties/radius` | Bounding-box variant — `ST_MakeEnvelope` |
-| `GET` | `/api/properties/:propertyId` | Detail |
+| `GET` | `/api/properties/:propertyId` | Detail; records nothing (cards, prefetches, every other screen) |
 | `GET` | `/api/properties/:propertyId/stats` | View and save counts |
 | `GET` | `/api/properties/:propertyId/area-insights` | Price comparison against comparables |
 | `GET` | `/api/properties/:propertyId/nearby-services` | Presence-only everyday services |
+| `POST` | `/api/properties/:propertyId/open` | The person opened the listing: counts the view and, signed in, writes their recently-viewed history. Sent once per visit to the detail screen, never on a refresh |
 | `GET` | `/api/properties/:id/availability` | The stay calendar: blocked windows and committed dates |
 | `POST` | `/api/properties/calculate-ethical-pricing` | Stateless calculator |
 

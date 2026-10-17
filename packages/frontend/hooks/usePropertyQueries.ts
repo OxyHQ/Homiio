@@ -4,8 +4,9 @@ import { propertyService } from '@/services/propertyService';
 import type { PropertyAreaInsights, PropertyNearbyServices } from '@homiio/shared-types';
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
+import { RECENTLY_VIEWED_KEY } from './useRecentlyViewed';
 
 /** Area-scale lookups (price insights, nearby services) are comparatively
  *  expensive to compute server-side and change slowly (they aggregate a whole
@@ -39,6 +40,43 @@ export const useProperty = (id: string) => {
     error: error instanceof Error ? error.message : null,
     loadProperty: refetch,
   };
+};
+
+/**
+ * Record that the person OPENED this listing — once per visit to its detail
+ * screen, and never again while they stay on it.
+ *
+ * Mounting the detail screen IS the open, so this is a query on the screen
+ * rather than a mutation somebody presses. What keeps a refresh from counting
+ * as another open is its cache entry:
+ *
+ *  - It is keyed apart from the listing's data (`['property', id]`), so
+ *    invalidating or refetching the listing never reaches it. The screen shows
+ *    the listing through `useProperty`, which refreshes as usual.
+ *  - It never refetches by itself: always fresh, no refetch on focus or
+ *    reconnect, no retry — a retry after a lost response could count twice.
+ *  - `gcTime: 0` drops it once the screen unmounts, so the next visit is a new
+ *    open and records again.
+ *
+ * The recently-viewed history is stale once the server has recorded the view,
+ * so it is invalidated here — the write and its consequence in one place.
+ */
+export const useRecordPropertyOpen = (id: string) => {
+  const queryClient = useQueryClient();
+  useQuery({
+    queryKey: ['propertyOpen', id],
+    queryFn: async () => {
+      await propertyService.recordOpen(id);
+      void queryClient.invalidateQueries({ queryKey: RECENTLY_VIEWED_KEY });
+      return null;
+    },
+    enabled: Boolean(id),
+    staleTime: Infinity,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+  });
 };
 
 /** A property's stats, straight from React Query (keyed by id; no store copy). */

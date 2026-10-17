@@ -28,6 +28,10 @@ export default function () {
   // `services/recentlyViewedService` posted here — to a route no router served.
   // Both spellings are now mounted on the same handler; the upsert is idempotent
   // per (owner, listing), so which one a client uses cannot matter.
+  //
+  // The current app posts to neither: the server records the view itself when
+  // the detail screen sends `POST /api/properties/:propertyId/open`. Both stay
+  // mounted for installed builds, which still post here and cannot be recalled.
   router.post(
     '/me/recent-properties/:propertyId',
     asyncHandler(profileController.trackPropertyView),

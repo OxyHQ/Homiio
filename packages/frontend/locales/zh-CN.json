@@ -2910,7 +2910,6 @@
     }
   },
   "recentlyViewed": {
-    "trackFailed": "Failed to track property view",
     "clearSuccess": "Recently viewed properties cleared",
     "clearFailed": "Failed to clear recently viewed properties"
   },

@@ -2957,7 +2957,6 @@
     }
   },
   "recentlyViewed": {
-    "trackFailed": "No s'ha pogut registrar la visita a la propietat",
     "clearSuccess": "Propietats vistes recentment esborrades",
     "clearFailed": "No s'han pogut esborrar les propietats vistes recentment"
   },

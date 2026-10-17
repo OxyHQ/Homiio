@@ -16,7 +16,7 @@
  *    background and aligns to one gutter.
  *  - Action bar (footer): PropertyActionBar for every other listing.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -53,11 +53,10 @@ import {
 } from '@oxy.so/bloom/zoomable-media-gallery';
 
 import { ErrorState } from '@/components/ui/ErrorState';
-import { useAreaInsights, useNearbyServices, useProperty } from '@/hooks';
+import { useAreaInsights, useNearbyServices, useProperty, useRecordPropertyOpen } from '@/hooks';
 import { useAddressReviews } from '@/hooks/useAddressReviews';
 import { useStayBooking } from '@/hooks/useStayBooking';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { resolveHeadlinePrice } from '@/utils/propertyPricing';
 import { useFormatting } from '@/utils/format';
@@ -131,10 +130,11 @@ export default function PropertyDetailPage() {
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
   const { mode: rentalMode, browseMode } = useRentalMode();
-  const { addProperty } = useRecentlyViewed();
   const propertyIdParam = typeof id === 'string' ? id : '';
 
   const { property: apiProperty, loading: isLoading, error } = useProperty(propertyIdParam);
+  // Opening this screen is the view; a refresh of the listing above is not.
+  useRecordPropertyOpen(propertyIdParam);
 
   // Area price-insights drive the "Prices in this area" + "Similar homes"
   // block. We read it here (the child sections share the same React Query
@@ -171,7 +171,6 @@ export default function PropertyDetailPage() {
   const showNearbyServicesSection =
     !nearbyServicesError && (nearbyServicesLoading || nearbyHasContent);
 
-  const trackedViewIdRef = useRef<string | null>(null);
   const [exchangeSheetVisible, setExchangeSheetVisible] = useState(false);
 
   const landlordOxyUserId = apiProperty?.oxyUserId;
@@ -246,18 +245,6 @@ export default function PropertyDetailPage() {
       size: apiProperty.squareFootage || 0,
     };
   }, [apiProperty, browseMode, t, formatting]);
-
-  // Track the view once per property shown.
-  //
-  // Left as an effect on purpose: recording a view belongs to the navigation
-  // that opens a property, and that is ~25 call sites plus `PropertyCard`'s
-  // `href`, deep links and the sidebar — not one handler this screen owns.
-  useEffect(() => {
-    if (!apiProperty?.id || apiProperty.id !== propertyIdParam) return;
-    if (trackedViewIdRef.current === apiProperty.id) return;
-    trackedViewIdRef.current = apiProperty.id;
-    addProperty(apiProperty);
-  }, [apiProperty, propertyIdParam, addProperty]);
 
   const handleContact = useCallback(async () => {
     if (apiProperty?.isExternal) {

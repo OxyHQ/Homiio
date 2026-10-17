@@ -638,23 +638,15 @@ export interface ListingView {
 }
 
 /**
- * One listing, as `viewerOxyUserId` may see it.
+ * The listing `viewerOxyUserId` may see, or a 404.
  *
  * Soft-deleted listings, and ones a community jury has restricted, are
  * invisible to everyone except their owner, who keeps their own view: a
  * listing that silently vanished from its owner's account with no explanation
  * is worse than one they can still see and appeal. The check reads the ROW, not
  * the serialized body.
- *
- * `recordView` is the person LOOKING at it — the view counter and their
- * recently-viewed history, both best-effort. The route records; a tool does
- * not, because an agent reading a listing is not the person viewing it.
  */
-export async function getListing(
-  viewerOxyUserId: string | undefined,
-  propertyId: string,
-  options: { readonly recordView: boolean },
-): Promise<ListingView> {
+async function findVisibleListing(viewerOxyUserId: string | undefined, propertyId: string) {
   // No id-SHAPE guard: a `text` primary key takes any string, so a nonsense id
   // simply matches no row and 404s (`db/MIGRATION-CONTRACT.md`).
   const hydrated = await findPropertyById(propertyId);
@@ -664,23 +656,53 @@ export async function getListing(
     const isOwner = Boolean(viewerOxyUserId) && hydrated.property.oxyUserId === viewerOxyUserId;
     if (!isOwner) throw new AppError('Property not found', 404, 'NOT_FOUND');
   }
+  return hydrated;
+}
 
-  if (options.recordView) {
-    // Best-effort: a failed counter must never fail the read that triggered it.
-    void incrementPropertyViews(propertyId).catch((error: unknown) => {
-      logger.warn('Failed to increment property view count', { propertyId, error });
-    });
-    if (viewerOxyUserId) {
-      void trackPropertyView(getDb(), viewerOxyUserId, propertyId).catch((error: unknown) => {
-        logger.warn('Failed to update recently viewed property', { propertyId, error });
-      });
-    }
-  }
-
+/**
+ * One listing, as `viewerOxyUserId` may see it. A pure read: it records
+ * nothing, because a card prefetching a listing, a screen refreshing one or an
+ * agent reading one is not somebody opening it — {@link openListing} is.
+ */
+export async function getListing(
+  viewerOxyUserId: string | undefined,
+  propertyId: string,
+): Promise<ListingView> {
+  const hydrated = await findVisibleListing(viewerOxyUserId, propertyId);
   // The owner reads their exact floor and unit; everybody else reads the
   // listing's published precision.
   const audience = propertyAudienceFor(hydrated, viewerOxyUserId);
   return { listing: serializeProperty(hydrated, audience), audience };
+}
+
+/**
+ * Record that a person OPENED a listing: the view counter, and their
+ * recently-viewed history when signed in. `POST /properties/:id/open`, sent
+ * once per visit to the detail screen, is its only caller.
+ *
+ * The writes are best-effort — a failed counter is logged, not answered — but
+ * AWAITED, so the history a client re-reads after this answers already holds
+ * the view.
+ */
+export async function openListing(
+  viewerOxyUserId: string | undefined,
+  propertyId: string,
+): Promise<void> {
+  await findVisibleListing(viewerOxyUserId, propertyId);
+
+  const writes: Promise<unknown>[] = [
+    incrementPropertyViews(propertyId).catch((error: unknown) => {
+      logger.warn('Failed to increment property view count', { propertyId, error });
+    }),
+  ];
+  if (viewerOxyUserId) {
+    writes.push(
+      trackPropertyView(getDb(), viewerOxyUserId, propertyId).catch((error: unknown) => {
+        logger.warn('Failed to update recently viewed property', { propertyId, error });
+      }),
+    );
+  }
+  await Promise.all(writes);
 }
 
 const ALLOWED_REPORT_REASONS: ReadonlySet<string> = new Set(Object.values(ListingReportReason));
