@@ -2960,7 +2960,6 @@
     }
   },
   "recentlyViewed": {
-    "trackFailed": "No se pudo registrar la visita a la propiedad",
     "clearSuccess": "Propiedades vistas recientemente borradas",
     "clearFailed": "No se pudieron borrar las propiedades vistas recientemente"
   },

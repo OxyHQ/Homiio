@@ -6,8 +6,8 @@
  * photo-carousel `PropertyCard`, with `PropertyResultsGridSkeleton` /
  * `EmptyState` / `ErrorState` for the non-content states.
  *
- * Data source is unchanged — `useRecentlyViewed` (the recently-viewed Zustand
- * store, hydrated from the backend when authenticated). There is no search bar:
+ * Data source: `useRecentlyViewed`, the signed-in person's history on the
+ * server (signed out, there is none and the empty state shows). There is no search bar:
  * this is a short, capped history (≤10 items), not a searchable catalog, so the
  * old `SearchBar` + view-mode toggle were removed. The "clear history" action is
  * preserved as a header action.

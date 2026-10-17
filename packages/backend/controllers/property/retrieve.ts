@@ -2,10 +2,18 @@
  * Single-listing and own-listings reads.
  *
  * The single-listing read is `getListing` in `domain/listings.ts`, shared with
- * the catalogue's `getListing` tool. The route records the view (the counter in
- * `properties.views` and the viewer's recently-viewed history, keyed by the Oxy
- * user id so the write and the read always find each other's rows); the tool
- * does not, because an agent reading a listing is not the person viewing it.
+ * the catalogue's `getListing` tool. Two routes serve it:
+ *
+ *  - `GET /properties/:propertyId` is a plain read. Cards, prefetches and every
+ *    screen that merely needs a listing's data use it, so it records nothing.
+ *  - `GET /properties/:propertyId/open` is the detail screen's read: the person
+ *    OPENING the listing. It records the view (the counter in
+ *    `properties.views` and, when signed in, the viewer's recently-viewed
+ *    history, keyed by the Oxy user id so the write and the read always find
+ *    each other's rows).
+ *
+ * The tool records nothing, because an agent reading a listing is not the
+ * person viewing it.
  */
 
 import { AppError, successResponse, paginationResponse } from '../../middlewares/errorHandler';
@@ -15,10 +23,12 @@ import { getErrorName } from '../../utils/errors';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger } from '../queryParams';
 
-export async function getPropertyById(
+/** Answer one listing for the session's viewer, recording the view when `recordView`. */
+async function sendListing(
   req: ControllerRequest,
   res: ControllerResponse,
   next: ControllerNext,
+  options: { readonly recordView: boolean },
 ) {
   try {
     const { propertyId } = req.params;
@@ -28,7 +38,7 @@ export async function getPropertyById(
     const { listing, audience } = await getListing(
       typeof viewer === 'string' && viewer.length > 0 ? viewer : undefined,
       propertyId,
-      { recordView: true },
+      options,
     );
     // One URL now answers two bodies, so the owner's must never be stored by
     // anything in front of the API and replayed to somebody else.
@@ -39,6 +49,24 @@ export async function getPropertyById(
       return next(new AppError('Invalid property ID', 400, 'INVALID_ID'));
     next(error);
   }
+}
+
+/** `GET /properties/:propertyId` — the listing, recording nothing. */
+export function getPropertyById(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
+  return sendListing(req, res, next, { recordView: false });
+}
+
+/** `GET /properties/:propertyId/open` — the listing, as the person opening it. */
+export function openPropertyById(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
+  return sendListing(req, res, next, { recordView: true });
 }
 
 export async function getMyProperties(

@@ -12,7 +12,6 @@
 import { Platform, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
-import { useOxy } from '@oxy.so/services';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Carousel, CarouselItem } from '@oxy.so/bloom/carousel';
@@ -32,10 +31,8 @@ const CARD_GAP = 12;
 export function RecentlyViewedWidget() {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { oxyServices, activeSessionId } = useOxy();
   const { properties: recentProperties, isLoading, error } = useRecentlyViewed();
 
-  const isAuthenticated = !!(oxyServices && activeSessionId);
   // Arrows are a pointer affordance; touch swipes. Only when there is more
   // than fits.
   const showArrows = Platform.OS === 'web' && recentProperties.length > 2;
@@ -44,7 +41,7 @@ export function RecentlyViewedWidget() {
     router.push(`/properties/${property.id}`);
   };
 
-  if (!isAuthenticated || error || isLoading || recentProperties.length === 0) {
+  if (error || isLoading || recentProperties.length === 0) {
     return null;
   }
 

@@ -781,7 +781,7 @@ export async function softDeleteProperty(
  * that increments are lost.
  *
  * Best-effort by contract: a failed increment must never fail the read that
- * triggered it, so callers do not await it in the response path.
+ * triggered it, so callers swallow its errors.
  */
 export async function incrementPropertyViews(propertyId: string): Promise<void> {
   await getDb()

@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
 import { propertyService } from '@/services/propertyService';
-import type { PropertyAreaInsights, PropertyNearbyServices } from '@homiio/shared-types';
+import type { Property, PropertyAreaInsights, PropertyNearbyServices } from '@homiio/shared-types';
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
+import { RECENTLY_VIEWED_KEY } from './useRecentlyViewed';
 
 /** Area-scale lookups (price insights, nearby services) are comparatively
  *  expensive to compute server-side and change slowly (they aggregate a whole
@@ -38,6 +39,41 @@ export const useProperty = (id: string) => {
     loading: isLoading,
     error: error instanceof Error ? error.message : null,
     loadProperty: refetch,
+  };
+};
+
+/**
+ * The listing the person has OPENED — the detail screen's read, and only its.
+ *
+ * Its request is what records the view on the server (the counter, and the
+ * signed-in person's recently-viewed history), which is why it is not
+ * `useProperty`: that read is shared with cards, prefetches and every other
+ * screen, none of which is somebody opening the listing.
+ *
+ * A card's hover prefetch warms `['property', id]`; the screen paints that copy
+ * at once as placeholder data while this request, the one that records, runs.
+ * The history it wrote is then stale, so it is invalidated here — the write and
+ * its consequence in one place.
+ */
+export const useOpenedProperty = (id: string) => {
+  const queryClient = useQueryClient();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['property', id, 'opened'],
+    queryFn: async () => {
+      const property = await propertyService.openProperty(id);
+      void queryClient.invalidateQueries({ queryKey: RECENTLY_VIEWED_KEY });
+      return property;
+    },
+    placeholderData: () => queryClient.getQueryData<Property | null>(['property', id]) ?? undefined,
+    enabled: Boolean(id),
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  return {
+    property: data ?? null,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : null,
   };
 };
 

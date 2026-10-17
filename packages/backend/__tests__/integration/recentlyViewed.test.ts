@@ -1,6 +1,6 @@
 /**
- * Recently-viewed listings — the unique key, the ordering, and the 90-day
- * retention sweep that is the table's ONLY bound.
+ * Recently-viewed listings — which read records a view, the unique key, the
+ * ordering, and the 90-day retention sweep that is the table's ONLY bound.
  *
  * The real handlers against the REAL Postgres this worker owns. The table was
  * empty in production because BOTH of its write paths were broken (see
@@ -20,6 +20,7 @@ import request from 'supertest';
 import { eq } from 'drizzle-orm';
 
 import * as recentlyViewedController from '../../controllers/profile/recentlyViewed';
+import { getPropertyById, openPropertyById } from '../../controllers/property/retrieve';
 import { getDb } from '../../db/postgres';
 import { properties as propertiesTable, recentlyViewed } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
@@ -46,6 +47,8 @@ function buildApp(oxyUserId?: string): Express {
   app.delete('/recent-properties', (req, res, next) =>
     recentlyViewedController.clearRecentProperties(req, res, next),
   );
+  app.get('/properties/:propertyId', getPropertyById);
+  app.get('/properties/:propertyId/open', openPropertyById);
   app.use(errorHandler);
   return app;
 }
@@ -54,6 +57,14 @@ let listingA: string;
 let listingB: string;
 let listingC: string;
 let addressId: string;
+
+async function viewCountOf(propertyId: string): Promise<number> {
+  const [row] = await getDb()
+    .select({ views: propertiesTable.views })
+    .from(propertiesTable)
+    .where(eq(propertiesTable.id, propertyId));
+  return row.views;
+}
 
 async function viewsOf(oxyUserId: string) {
   return getDb().select().from(recentlyViewed).where(eq(recentlyViewed.oxyUserId, oxyUserId));
@@ -135,6 +146,41 @@ describe('trackPropertyView', () => {
 
   it('requires authentication', async () => {
     expect((await request(buildApp()).post(`/recent-properties/${listingA}`)).status).toBe(401);
+  });
+});
+
+describe('reading a listing', () => {
+  it('records the view when the person OPENS it — their history and the counter', async () => {
+    const res = await request(buildApp('oxy-a')).get(`/properties/${listingA}/open`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(listingA);
+
+    // Awaited before the response, so a client re-reading the history once the
+    // listing has arrived finds this view.
+    const views = await viewsOf('oxy-a');
+    expect(views.map((view) => view.propertyId)).toEqual([listingA]);
+    expect(await viewCountOf(listingA)).toBe(1);
+  });
+
+  it('counts a signed-out open, and writes no history', async () => {
+    expect((await request(buildApp()).get(`/properties/${listingA}/open`)).status).toBe(200);
+
+    expect(await getDb().select().from(recentlyViewed)).toHaveLength(0);
+    expect(await viewCountOf(listingA)).toBe(1);
+  });
+
+  it('records nothing on the plain read — a card prefetching a listing is not opening it', async () => {
+    const res = await request(buildApp('oxy-a')).get(`/properties/${listingA}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.id).toBe(listingA);
+
+    expect(await viewsOf('oxy-a')).toHaveLength(0);
+    expect(await viewCountOf(listingA)).toBe(0);
+  });
+
+  it('answers 404 for a listing that does not exist, and records nothing', async () => {
+    expect((await request(buildApp('oxy-a')).get('/properties/missing/open')).status).toBe(404);
+    expect(await viewsOf('oxy-a')).toHaveLength(0);
   });
 });
 

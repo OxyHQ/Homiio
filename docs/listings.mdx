@@ -411,8 +411,15 @@ never creates a second commission.
 
   A server-side draft resource would need its own table and is deliberately not
   built here.
-- **Recently viewed** is written by `POST /api/properties/:propertyId/track-view`
-  into `recently_viewed`.
+- **Recently viewed** is account-only and lives in `recently_viewed`. The
+  server writes it when the detail screen opens a listing
+  (`GET /api/properties/:propertyId/open`); the plain detail read that cards,
+  prefetches and other screens use records nothing, because hovering a card is
+  not opening the listing. The app reads the history from
+  `GET /api/profiles/me/recent-properties` and never writes it; signed out
+  there is none. `POST /api/profiles/me/recent-properties/:propertyId` (and its
+  older `/api/properties/:propertyId/track-view` spelling) stays mounted only
+  for installed builds that still post a view.
 - **Saved** listings live in `saved_items`, organised into `saved_property_folders`
   with `saved_property_folder_items`. `SavedPropertiesContext` hydrates the saved
   set right after profile load, so heart icons render correctly on first paint

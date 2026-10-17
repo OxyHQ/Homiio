@@ -110,10 +110,23 @@ class PropertyService {
     };
   }
 
-  // Get property details by ID
+  /** One listing's details. Records nothing — cards and prefetches read this. */
   async getPropertyById(propertyId: string): Promise<Property | null> {
+    return this.readListing(`${this.baseUrl}/${propertyId}`);
+  }
+
+  /**
+   * One listing, as the person OPENING it: the server records the view (and,
+   * signed in, adds it to their recently-viewed history). The detail screen's
+   * read, and only that.
+   */
+  async openProperty(propertyId: string): Promise<Property | null> {
+    return this.readListing(`${this.baseUrl}/${propertyId}/open`);
+  }
+
+  private async readListing(endpoint: string): Promise<Property | null> {
     try {
-      const response = await api.get(`${this.baseUrl}/${propertyId}`);
+      const response = await api.get(endpoint);
       return response.data.data;
     } catch (error) {
       // A 404 is an answer — this listing does not exist. Anything else is a

@@ -96,6 +96,12 @@ export default function () {
   router.get('/properties/nearby', asyncHandler(propertyController.findNearbyProperties));
   router.get('/properties/radius', asyncHandler(propertyController.findPropertiesInRadius));
   router.get('/properties/:propertyId', asyncHandler(propertyController.getPropertyById));
+  // The detail screen's read: the person OPENING the listing, so it records the
+  // view — the counter for everyone, and the recently-viewed history when the
+  // optional session names a viewer. The session only says WHO is looking; it
+  // authorizes nothing here. Every other read of a listing (cards, prefetches,
+  // the rest of the app) uses the plain route above, which records nothing.
+  router.get('/properties/:propertyId/open', asyncHandler(propertyController.openPropertyById));
   router.get('/properties/:propertyId/stats', asyncHandler(propertyController.getPropertyStats));
   router.get(
     '/properties/:propertyId/area-insights',

@@ -631,6 +631,33 @@ export async function findNearbyListings(
   );
 }
 
+/**
+ * Record that a person opened a listing: the counter, and their history when
+ * signed in.
+ *
+ * Best-effort — a failed record must never fail the read that triggered it —
+ * but AWAITED, so the recently-viewed history a client re-reads once the
+ * listing has arrived already holds this view.
+ */
+async function recordListingView(
+  viewerOxyUserId: string | undefined,
+  propertyId: string,
+): Promise<void> {
+  const writes: Promise<unknown>[] = [
+    incrementPropertyViews(propertyId).catch((error: unknown) => {
+      logger.warn('Failed to increment property view count', { propertyId, error });
+    }),
+  ];
+  if (viewerOxyUserId) {
+    writes.push(
+      trackPropertyView(getDb(), viewerOxyUserId, propertyId).catch((error: unknown) => {
+        logger.warn('Failed to update recently viewed property', { propertyId, error });
+      }),
+    );
+  }
+  await Promise.all(writes);
+}
+
 /** One listing, serialized for the viewer, and which audience it was serialized for. */
 export interface ListingView {
   readonly listing: ReturnType<typeof serializeProperty>;
@@ -646,9 +673,10 @@ export interface ListingView {
  * is worse than one they can still see and appeal. The check reads the ROW, not
  * the serialized body.
  *
- * `recordView` is the person LOOKING at it — the view counter and their
- * recently-viewed history, both best-effort. The route records; a tool does
- * not, because an agent reading a listing is not the person viewing it.
+ * `recordView` is the person OPENING it — the view counter and their
+ * recently-viewed history, both best-effort. Only `GET /properties/:id/open`
+ * records; the plain read and the tool do not, because a card prefetching a
+ * listing or an agent reading one is not the person viewing it.
  */
 export async function getListing(
   viewerOxyUserId: string | undefined,
@@ -665,17 +693,7 @@ export async function getListing(
     if (!isOwner) throw new AppError('Property not found', 404, 'NOT_FOUND');
   }
 
-  if (options.recordView) {
-    // Best-effort: a failed counter must never fail the read that triggered it.
-    void incrementPropertyViews(propertyId).catch((error: unknown) => {
-      logger.warn('Failed to increment property view count', { propertyId, error });
-    });
-    if (viewerOxyUserId) {
-      void trackPropertyView(getDb(), viewerOxyUserId, propertyId).catch((error: unknown) => {
-        logger.warn('Failed to update recently viewed property', { propertyId, error });
-      });
-    }
-  }
+  if (options.recordView) await recordListingView(viewerOxyUserId, propertyId);
 
   // The owner reads their exact floor and unit; everybody else reads the
   // listing's published precision.

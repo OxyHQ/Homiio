@@ -1,55 +1,21 @@
 import { api } from '@/utils/api';
 import type { Property } from '@homiio/shared-types';
 
-export interface RecentlyViewedResponse {
-  success: boolean;
-  data?: Property[];
-  error?: string;
-}
-
+/**
+ * The signed-in person's recently-viewed history on the server.
+ *
+ * There is no write here: the server records a view when the detail screen
+ * opens a listing (`propertyService.openProperty`).
+ */
 export const recentlyViewedService = {
-  /**
-   * Get recently viewed properties
-   */
-  async getRecentlyViewedProperties(): Promise<RecentlyViewedResponse> {
-    try {
-      const response = await api.get('/api/profiles/me/recent-properties');
-      return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || 'Failed to fetch recently viewed properties',
-      };
-    }
+  /** The listings this person opened most recently, newest first. */
+  async list(): Promise<Property[]> {
+    const response = await api.get('/api/profiles/me/recent-properties');
+    return response.data.data ?? [];
   },
 
-  /**
-   * Track property view
-   */
-  async trackPropertyView(propertyId: string): Promise<RecentlyViewedResponse> {
-    try {
-      const response = await api.post(`/api/profiles/me/recent-properties/${propertyId}`);
-      return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || 'Failed to track property view',
-      };
-    }
-  },
-
-  /**
-   * Clear all recently viewed properties
-   */
-  async clearRecentlyViewedProperties(): Promise<RecentlyViewedResponse> {
-    try {
-      const response = await api.delete('/api/profiles/me/recent-properties');
-      return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message || 'Failed to clear recently viewed properties',
-      };
-    }
+  /** Forget this person's whole history. */
+  async clear(): Promise<void> {
+    await api.delete('/api/profiles/me/recent-properties');
   },
 };

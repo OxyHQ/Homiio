@@ -2959,7 +2959,6 @@
     }
   },
   "recentlyViewed": {
-    "trackFailed": "Impossibile registrare la visualizzazione della proprietà",
     "clearSuccess": "Proprietà visualizzate di recente cancellate",
     "clearFailed": "Impossibile cancellare le proprietà visualizzate di recente"
   },
