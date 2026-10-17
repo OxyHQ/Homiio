@@ -5,6 +5,7 @@ import type { MapApi, GeocodedAddress } from '@/components/Map';
 import {
   useCreatePropertyFormStore,
   useCreatePropertyFormSelectors,
+  whenFormRestored,
 } from '@/store/createPropertyFormStore';
 import { useProperty } from '@/hooks/usePropertyQueries';
 import { propertyService } from '@/services/propertyService';
@@ -100,22 +101,10 @@ const mapPropertyImages = (images: Property['images']): UploadedImage[] => {
   return images.map((image, index) => toUploadedImage(image, index));
 };
 
-/** Resolves once the persisted form has been read back (or the read gave up). */
-function whenFormRestored(): Promise<void> {
-  if (useCreatePropertyFormStore.getState().hasHydrated) return Promise.resolve();
-  return new Promise((resolve) => {
-    const unsubscribe = useCreatePropertyFormStore.subscribe((state) => {
-      if (!state.hasHydrated) return;
-      unsubscribe();
-      resolve();
-    });
-  });
-}
-
 /**
  * Seed the form store from a stored listing, for editing it.
  *
- * Called by the edit-session loader once BOTH the listing and the persisted
+ * Called by the form-session loader once BOTH the listing and the persisted
  * form are in, which is what makes the dirty-edit check below reachable.
  */
 function seedEditForm(property: Property) {
@@ -250,7 +239,8 @@ function seedEditForm(property: Property) {
  *
  * Responsibilities:
  *  - Wire the Zustand form store (single source of truth for form data).
- *  - Load + hydrate the form in edit mode via React Query (the edit session).
+ *  - Open the form session via React Query: seed an edit from its listing, or
+ *    clear a leftover edit before a new listing.
  *  - Resolve the user's location on arrival at the Location step (from the
  *    Next/Back press) via a React Query mutation.
  *  - Derive the active step list and visible fields (no effects).
@@ -287,26 +277,37 @@ export function usePropertyCreateForm(id: string | undefined) {
     [currentType, stepName],
   );
 
-  // --- Edit-mode hydration --------------------------------------------------
-  // Opening a listing for editing LOADS an edit session: wait for the persisted
-  // form to be read back, get the listing (through the same cache entry
-  // `useProperty` reads), then seed the form from it. That is one async load,
-  // so React Query runs it — once per visit (`gcTime: 0` drops it when the
-  // screen goes, `staleTime: Infinity` keeps a focus or reconnect from
-  // re-seeding over the host's edits while it is open).
+  // --- The form session -----------------------------------------------------
+  // Arriving at the flow OPENS a form session, and that is one async load, so
+  // React Query runs it — once per visit (`gcTime: 0` drops it when the screen
+  // goes, `staleTime: Infinity` keeps a focus or reconnect from re-running it
+  // over the host's work while it is open). Both kinds wait for the persisted
+  // form to be read back first: acting on the defaults would see nothing to
+  // keep and write over the very work being restored.
+  //
+  //  - Editing: get the listing (through the same cache entry `useProperty`
+  //    reads) and seed the form from it.
+  //  - A new listing: the restored form IS the resumption — what was typed, at
+  //    the step it was typed on — or the draft the drafts screen just opened.
+  //    The one form that must not survive is a listing opened for EDITING:
+  //    "Create" never starts from somebody's home.
   const queryClient = useQueryClient();
   useQuery({
-    queryKey: ['propertyForm', 'editSession', id ?? null],
+    queryKey: ['propertyForm', 'session', id ?? null],
     queryFn: async () => {
       await whenFormRestored();
+      if (!id) {
+        const store = useCreatePropertyFormStore.getState();
+        if (store.editingPropertyId) store.resetForm();
+        return null;
+      }
       const loaded = await queryClient.ensureQueryData({
         queryKey: ['property', id],
-        queryFn: async () => propertyService.getPropertyById(id ?? ''),
+        queryFn: async () => propertyService.getPropertyById(id),
       });
       if (loaded) seedEditForm(loaded);
       return loaded?.id ?? null;
     },
-    enabled: isEditMode,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 0,
     retry: false,

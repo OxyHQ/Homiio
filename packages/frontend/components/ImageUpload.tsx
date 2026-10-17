@@ -10,8 +10,14 @@
  * first, and a reorder makes the new first photo the primary one. Nothing is
  * rewritten until the host reorders or removes, so an untouched list is saved
  * exactly as it was loaded.
+ *
+ * Every change is handed to the owner as an UPDATE of the current list, the way
+ * `setState` takes one, never as a finished list. An upload resolves renders
+ * after it started, and the list it started from may have changed meanwhile —
+ * another upload landed, a photo was removed — so only the owner, applying the
+ * update to what it holds now, can produce the right next list.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,9 +32,13 @@ import { logger } from '@/utils/logger';
 import { coverFirst } from '@/utils/propertyPhotos';
 import { imageUploadService, type UploadedImage } from '@/services/imageUploadService';
 
+/** The next photo list, from the current one. */
+export type ImagesUpdate = (current: UploadedImage[]) => UploadedImage[];
+
 interface ImageUploadProps {
   images: UploadedImage[];
-  onImagesChange: (images: UploadedImage[]) => void;
+  /** Apply `update` to the photos as they are when it is applied. */
+  onImagesChange: (update: ImagesUpdate) => void;
   maxImages?: number;
   folder?: string;
   disabled?: boolean;
@@ -53,12 +63,6 @@ export function ImageUpload({
 }: ImageUploadProps) {
   const { t } = useTranslation();
   const [pending, setPending] = useState<PendingPhoto[]>([]);
-  // Uploads resolve after renders: read the latest list, not the one the
-  // upload started with.
-  const latestImages = useRef(images);
-  useEffect(() => {
-    latestImages.current = images;
-  }, [images]);
 
   const ordered = useMemo(() => coverFirst(images), [images]);
   const total = images.length + pending.length;
@@ -107,22 +111,24 @@ export function ImageUpload({
           batch.map((photo) => photo.uri),
           folder,
         );
-        const current = latestImages.current;
-        const uploaded: UploadedImage[] = response.data.images.map((image, index) => ({
-          imageId: image.imageId,
-          fileId: image.fileId,
-          urls: {
-            small: image.urls.small ?? image.urls.original ?? '',
-            medium: image.urls.medium ?? image.urls.original ?? '',
-            large: image.urls.large ?? image.urls.original ?? '',
-            original: image.urls.original ?? '',
-          },
-          keys: image.keys,
-          metadata: image.metadata,
-          isPrimary: current.length === 0 && index === 0,
-        }));
         setPending((list) => list.filter((photo) => !ids.has(photo.id)));
-        onImagesChange([...current, ...uploaded]);
+        onImagesChange((current) => [
+          ...current,
+          ...response.data.images.map<UploadedImage>((image, index) => ({
+            imageId: image.imageId,
+            fileId: image.fileId,
+            urls: {
+              small: image.urls.small ?? image.urls.original ?? '',
+              medium: image.urls.medium ?? image.urls.original ?? '',
+              large: image.urls.large ?? image.urls.original ?? '',
+              original: image.urls.original ?? '',
+            },
+            keys: image.keys,
+            metadata: image.metadata,
+            // The first photo of an empty list is the cover.
+            isPrimary: current.length === 0 && index === 0,
+          })),
+        ]);
       } catch (error) {
         logger.error('Error uploading images', error);
         setPending((list) =>
@@ -196,12 +202,14 @@ export function ImageUpload({
 
   /** A reorder of the uploaded photos: store the grid's order, the first as the cover. */
   const handleReorder = (next: SortablePhoto[]) => {
-    const byId = new Map(latestImages.current.map((image) => [image.imageId, image]));
-    const reordered = next.flatMap((photo) => {
-      const image = byId.get(photo.id);
-      return image ? [image] : [];
+    onImagesChange((current) => {
+      const byId = new Map(current.map((image) => [image.imageId, image]));
+      const reordered = next.flatMap((photo) => {
+        const image = byId.get(photo.id);
+        return image ? [image] : [];
+      });
+      return reordered.map((image, index) => ({ ...image, isPrimary: index === 0 }));
     });
-    onImagesChange(reordered.map((image, index) => ({ ...image, isPrimary: index === 0 })));
     // Uploads in flight keep their place after the uploaded photos.
   };
 
@@ -222,14 +230,12 @@ export function ImageUpload({
     if (!ok) return;
     // Nothing to delete server-side: the photo is a file in the person's own
     // Oxy account, and leaving the listing is all removing it here means.
-    const remaining = coverFirst(latestImages.current).filter(
-      (candidate) => candidate.imageId !== id,
-    );
-    onImagesChange(
-      image.isPrimary && remaining.length > 0
+    onImagesChange((current) => {
+      const remaining = coverFirst(current).filter((candidate) => candidate.imageId !== id);
+      return image.isPrimary && remaining.length > 0
         ? [{ ...remaining[0], isPrimary: true }, ...remaining.slice(1)]
-        : remaining,
-    );
+        : remaining;
+    });
   };
 
   const handleRetry = (id: string) => {

@@ -36,7 +36,7 @@ export const StepPhotosRecommend: React.FC<StepProps> = ({ data, update }) => {
         <Label>{t('reviews.write.fields.photos')}</Label>
         <ImageUpload
           images={data.images}
-          onImagesChange={(images) => update('images', images)}
+          onImagesChange={(change) => update('images', change)}
           folder="reviews"
           maxImages={MAX_REVIEW_PHOTOS}
         />

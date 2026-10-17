@@ -49,12 +49,7 @@ import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 import { formatPrice } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
-import {
-  deleteDraft,
-  markDraftForResume,
-  readDrafts,
-  type PropertyDraft,
-} from '@/utils/propertyDrafts';
+import { deleteDraft, openDraft, readDrafts, type PropertyDraft } from '@/utils/propertyDrafts';
 
 type RemixIcon = typeof RiHomeLine;
 
@@ -219,10 +214,10 @@ export default function PropertyDraftsScreen() {
   const continueEditing = useCallback(
     async (draft: PropertyDraft) => {
       try {
-        await markDraftForResume(draft);
+        await openDraft(draft);
         router.push('/properties/create');
       } catch (error: unknown) {
-        logger.error('Error setting current draft:', error);
+        logger.error('Error opening draft:', error);
         toast.error(t('property.drafts.toastLoadFailed'));
       }
     },

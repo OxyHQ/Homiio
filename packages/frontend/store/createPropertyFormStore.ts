@@ -435,6 +435,24 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()(
   ),
 );
 
+/**
+ * Resolves once the persisted form has been read back (or the read gave up).
+ *
+ * Anything that writes a whole form — opening an edit, resuming a draft — waits
+ * for this first: the restore is asynchronous, and landing after such a write
+ * would put the previous session back over it.
+ */
+export function whenFormRestored(): Promise<void> {
+  if (useCreatePropertyFormStore.getState().hasHydrated) return Promise.resolve();
+  return new Promise((resolve) => {
+    const unsubscribe = useCreatePropertyFormStore.subscribe((state) => {
+      if (!state.hasHydrated) return;
+      unsubscribe();
+      resolve();
+    });
+  });
+}
+
 // Selector hooks for easier access
 export const useCreatePropertyFormSelectors = () => {
   const formData = useCreatePropertyFormStore((state) => state.formData);

@@ -118,6 +118,16 @@ export function useSindiActions(closeSheet: () => void): UseSindiActions {
   }, []);
 
   // A turn ends when the SDK stops streaming the conversation that was.
+  //
+  // These two stay effects, deliberately. The end of a turn is an EVENT in the
+  // SDK's store, not a value to render, and the steps waiting for it belong to
+  // THIS mount: the panel remounts per conversation (`key={open.serial}`) and
+  // the route can be left mid-answer, and a step from the old mount must not
+  // run then. Subscribing from `execute` would cover the first half but not the
+  // second — the hook renders no element of its own whose ref could carry the
+  // mount's lifetime (the SDK draws the whole chat). What would retire both is
+  // a host callback in `@alia.onl/sdk` — `AliaRuntimeHost.onTurnEnd`, called by
+  // the mounted thread, which dies with the surface.
   useEffect(
     () =>
       useConversationStore.subscribe((state, previous) => {
