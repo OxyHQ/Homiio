@@ -101,7 +101,7 @@ docker run -d --name "$NAME" --network host \
 
 started=
 for _ in $(seq 1 90); do
-  if docker logs "$NAME" 2>&1 | grep -q 'Listing worker started on BullMQ'; then
+  if docker logs "$NAME" 2>&1 | grep 'Listing worker started on BullMQ' >/dev/null; then
     started=1
     break
   fi
@@ -116,7 +116,7 @@ if [ -z "$started" ]; then
 fi
 # `browserTier: true` means Playwright loaded on this runtime at boot; without
 # it the worker silently runs HTTP-only and every challenged portal fails.
-docker logs "$NAME" 2>&1 | grep -q '"browserTier": true' || {
+docker logs "$NAME" 2>&1 | grep '"browserTier": true' >/dev/null || {
   docker logs "$NAME" || true
   fail "the worker booted without its browser tier (Playwright did not load)"
 }
