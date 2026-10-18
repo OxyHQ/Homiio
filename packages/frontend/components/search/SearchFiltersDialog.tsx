@@ -34,6 +34,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Dialog } from '@oxy.so/bloom/dialog';
 import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
+import {
   AmenityFilter,
   AreaRangeFilter,
   AvailabilityFilter,
@@ -41,7 +46,6 @@ import {
   FeatureFilter,
   FilterFooter,
   FloorFilter,
-  SegmentedFilter,
   FilterSection,
   PriceRangeFilter,
   SwitchFilterRow,
@@ -440,15 +444,20 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
                 controls cannot come to disagree — and `placeKindOf` returns
                 `any` for any selection that is not exactly one side, so a
                 mixed selection does not light up a side it did not choose. */}
-            <SegmentedFilter<PlaceKind>
-              options={placeKindOptions}
+            <SegmentedControl<PlaceKind>
               value={placeKindOf(draft.propertyTypes)}
-              onValueChange={(kind) =>
-                patch({ propertyTypes: [...propertyTypesForPlaceKind(kind)] })
-              }
-              accessibilityLabel={t('search.filters.placeKind')}
-              style={styles.placeKind}
-            />
+              onChange={(kind) => patch({ propertyTypes: [...propertyTypesForPlaceKind(kind)] })}
+              label={t('search.filters.placeKind')}
+              style={[{ alignSelf: 'stretch' }, styles.placeKind]}
+              type="radio"
+              size="lg"
+            >
+              {placeKindOptions.map((option) => (
+                <SegmentedControlItem key={option.value} value={option.value}>
+                  <SegmentedControlItemText>{option.label}</SegmentedControlItemText>
+                </SegmentedControlItem>
+              ))}
+            </SegmentedControl>
             <TypeStep
               offering={query.offering}
               selected={draft.propertyTypes}

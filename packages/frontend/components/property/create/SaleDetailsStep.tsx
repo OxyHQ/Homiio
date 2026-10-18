@@ -3,7 +3,12 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { PropertySale } from '@homiio/shared-types';
 import { Field } from '@oxy.so/bloom/field';
-import { SegmentedFilter, SwitchFilterRow } from '@oxy.so/bloom/stay-filters';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
+import { SwitchFilterRow } from '@oxy.so/bloom/stay-filters';
 import { CHAIN_STATUS_OPTIONS, CURRENCY_OPTIONS } from './constants';
 import { WizardTextField } from './fields';
 import { createPropertyStyles as styles } from './styles';
@@ -54,28 +59,43 @@ export function SaleDetailsStep({
 
       <Field label={t('listing.sale.currency')}>
         {/* Unset until picked: the sale then uses the listing's currency. */}
-        <SegmentedFilter<string>
-          options={CURRENCY_OPTIONS.map((code) => ({ value: code, label: code }))}
+        <SegmentedControl<string>
           value={offering.saleCurrency ?? ''}
-          onValueChange={(value) => updateFormField('offering', 'saleCurrency', value)}
-          accessibilityLabel={t('listing.sale.currency')}
-          testID="create-sale-currency"
-        />
+          onChange={(value) => updateFormField('offering', 'saleCurrency', value)}
+          label={t('listing.sale.currency')}
+          style={{ alignSelf: 'stretch' }}
+          type="radio"
+          size="lg"
+        >
+          {CURRENCY_OPTIONS.map((code) => (
+            <SegmentedControlItem key={code} value={code} testID={`create-sale-currency-${code}`}>
+              <SegmentedControlItemText>{code}</SegmentedControlItemText>
+            </SegmentedControlItem>
+          ))}
+        </SegmentedControl>
       </Field>
 
       <Field label={t('listing.sale.chainStatus.label')}>
-        <SegmentedFilter<ChainStatus | ''>
-          options={CHAIN_STATUS_OPTIONS.map((option) => ({
-            value: option.value,
-            label: t(option.i18nKey),
-          }))}
+        <SegmentedControl<ChainStatus | ''>
           value={
             offering.chainStatus && isChainStatus(offering.chainStatus) ? offering.chainStatus : ''
           }
-          onValueChange={(value) => updateFormField('offering', 'chainStatus', value || undefined)}
-          accessibilityLabel={t('listing.sale.chainStatus.label')}
-          testID="create-sale-chain"
-        />
+          onChange={(value) => updateFormField('offering', 'chainStatus', value || undefined)}
+          label={t('listing.sale.chainStatus.label')}
+          style={{ alignSelf: 'stretch' }}
+          type="radio"
+          size="lg"
+        >
+          {CHAIN_STATUS_OPTIONS.map((option) => (
+            <SegmentedControlItem
+              key={option.value}
+              value={option.value}
+              testID={`create-sale-chain-${option.value}`}
+            >
+              <SegmentedControlItemText>{t(option.i18nKey)}</SegmentedControlItemText>
+            </SegmentedControlItem>
+          ))}
+        </SegmentedControl>
       </Field>
 
       <SwitchFilterRow
