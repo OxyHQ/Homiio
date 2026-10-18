@@ -3,7 +3,11 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { CheckboxCard } from '@oxy.so/bloom/checkbox';
 import { Field } from '@oxy.so/bloom/field';
-import { SegmentedFilter } from '@oxy.so/bloom/stay-filters';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
 import { OfferingType } from '@homiio/shared-types';
 import { PRICING_OFFERING_OPTIONS, CURRENCY_OPTIONS } from './constants';
 import { createPropertyStyles as styles } from './styles';
@@ -59,13 +63,20 @@ export function OfferingSelector({ formData, setFormData }: PropertyStepProps) {
       </View>
 
       <Field label={t('listing.offering.currency')}>
-        <SegmentedFilter<string>
-          options={CURRENCY_OPTIONS.map((code) => ({ value: code, label: code }))}
+        <SegmentedControl<string>
           value={currency}
-          onValueChange={(value) => setFormData('pricing', { currency: value })}
-          accessibilityLabel={t('listing.offering.currency')}
-          testID="create-currency"
-        />
+          onChange={(value) => setFormData('pricing', { currency: value })}
+          label={t('listing.offering.currency')}
+          style={{ alignSelf: 'stretch' }}
+          type="radio"
+          size="lg"
+        >
+          {CURRENCY_OPTIONS.map((code) => (
+            <SegmentedControlItem key={code} value={code} testID={`create-currency-${code}`}>
+              <SegmentedControlItemText>{code}</SegmentedControlItemText>
+            </SegmentedControlItem>
+          ))}
+        </SegmentedControl>
       </Field>
     </View>
   );

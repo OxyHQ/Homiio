@@ -29,7 +29,12 @@ import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { PriceRangeFilter, SegmentedFilter } from '@oxy.so/bloom/stay-filters';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
+import { PriceRangeFilter } from '@oxy.so/bloom/stay-filters';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { OfferingType, formatMoney, type ListingCurrency } from '@homiio/shared-types';
@@ -176,12 +181,20 @@ export const PriceCurrencyChoice: React.FC<{
   const { t } = useTranslation();
   if (!histogram || histogram.currencies.length < 2) return null;
   return (
-    <SegmentedFilter
-      options={histogram.currencies.map((currency) => ({ value: currency, label: currency }))}
+    <SegmentedControl
       value={histogram.currency}
-      onValueChange={(value) => onChange(value as ListingCurrency)}
-      accessibilityLabel={t('search.step.price.currencyChoice')}
-    />
+      onChange={(value) => onChange(value as ListingCurrency)}
+      label={t('search.step.price.currencyChoice')}
+      style={{ alignSelf: 'stretch' }}
+      type="radio"
+      size="lg"
+    >
+      {histogram.currencies.map((currency) => (
+        <SegmentedControlItem key={currency} value={currency}>
+          <SegmentedControlItemText>{currency}</SegmentedControlItemText>
+        </SegmentedControlItem>
+      ))}
+    </SegmentedControl>
   );
 };
 

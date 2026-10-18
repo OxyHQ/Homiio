@@ -22,11 +22,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
+import {
   AmenityFilter,
   FilterFooter,
   FilterSection,
   PriceRangeFilter,
-  SegmentedFilter,
   SwitchFilterRow,
   type FilterIconComponent,
   type ToggleChipOption,
@@ -194,14 +198,20 @@ export function RoomFilters({ filters, onApplyFilters, onClose }: RoomFiltersPro
         </FilterSection>
 
         <FilterSection title={t('search.sort.title')} divider={false}>
-          <SegmentedFilter<RoomSortKey>
-            options={sortOptions}
+          <SegmentedControl<RoomSortKey>
             value={sortKey}
-            onValueChange={(value) =>
-              patch({ sortBy: value, sortOrder: SORT_OPTIONS[value].order })
-            }
-            accessibilityLabel={t('search.sort.title')}
-          />
+            onChange={(value) => patch({ sortBy: value, sortOrder: SORT_OPTIONS[value].order })}
+            label={t('search.sort.title')}
+            style={{ alignSelf: 'stretch' }}
+            type="radio"
+            size="lg"
+          >
+            {sortOptions.map((option) => (
+              <SegmentedControlItem key={option.value} value={option.value}>
+                <SegmentedControlItemText>{option.label}</SegmentedControlItemText>
+              </SegmentedControlItem>
+            ))}
+          </SegmentedControl>
         </FilterSection>
       </ScrollView>
       <FilterFooter
