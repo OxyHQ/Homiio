@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import type { ScrollView } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useReferralStore } from '@/store/referralStore';
@@ -135,7 +135,7 @@ export default function CreatePropertyScreen() {
 
   // --- Navigation -------------------------------------------------------------
   // The screen's scroller: the window on web, the scroll view on native.
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollToTop = useCallback(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, []);

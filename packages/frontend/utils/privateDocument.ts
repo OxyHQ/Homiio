@@ -118,6 +118,6 @@ export async function openPrivateDocument(downloadPath: string): Promise<void> {
   // `write` creates the file; a previous open of the same document leaves one
   // behind, and overwriting is what makes a second tap show the same bytes
   // rather than fail.
-  file.write(document.base64, { encoding: EncodingType.Base64 });
+  await file.write(document.base64, { encoding: EncodingType.Base64 });
   await Sharing.shareAsync(file.uri, { mimeType: document.contentType });
 }

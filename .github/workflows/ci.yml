@@ -521,6 +521,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Expo SDK 58's CLI needs Node 22.13+; the runner image's default Node is
+      # not pinned, so pin the same major as engines.node and deploy-frontends.yml.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}

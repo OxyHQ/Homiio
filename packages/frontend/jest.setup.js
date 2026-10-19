@@ -5,11 +5,18 @@
  * real modules call into a native Worklets runtime that doesn't exist in the
  * Node test environment. We use Reanimated's own official Jest mock and its
  * `setUpTests()` helper (which installs the animated-style matchers). Paired
- * with `resolver: 'react-native-worklets/jest/resolver.js'` in jest.config.js
- * — which strips the `.native` extension so Worklets resolves its mockable
- * build — this lets any component that transitively imports Reanimated (most of
- * the app, via Bloom's dialog/bottom-sheet) render in tests.
+ * with `resolver: 'react-native-reanimated/jest/resolver.js'` in jest.config.js
+ * — which strips the `.native` extension so Worklets and Reanimated's
+ * initialisers resolve their mockable builds — this lets any component that
+ * transitively imports Reanimated (most of the app, via Bloom's
+ * dialog/bottom-sheet) render in tests.
+ *
+ * Worklets itself is replaced by its own shipped mock: Gesture Handler 3 asks it
+ * for the UI runtime holder at import time, which the non-native build answers
+ * by throwing (asynchronously, so it crashes the Jest worker, not a test).
  */
+jest.mock('react-native-worklets', () => require('react-native-worklets/lib/module/mock'));
+
 jest.mock('react-native-reanimated', () => ({
   ...require('react-native-reanimated/mock'),
   // Reanimated's own mock ships this one commented out ("ADD ME IF NEEDED").
