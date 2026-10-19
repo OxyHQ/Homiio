@@ -7,7 +7,7 @@
  * signed-out viewer has no history: every surface reading this renders nothing.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { toast } from '@oxy.so/bloom/toast';
 import { useTranslation } from 'react-i18next';
 import type { Property } from '@homiio/shared-types';

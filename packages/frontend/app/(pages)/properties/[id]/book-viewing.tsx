@@ -58,7 +58,7 @@ import {
   type ViewingSlot,
 } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import ViewingService, { type ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
 import { toast } from '@oxy.so/bloom/toast';

@@ -38,7 +38,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
@@ -402,7 +402,7 @@ const ReservationsTable: React.FC<ReservationsTableProps> = ({
 export default function HostReservationsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 

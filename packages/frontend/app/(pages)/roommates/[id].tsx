@@ -18,7 +18,7 @@ import { Loading } from '@oxy.so/bloom/loading';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
-import { FollowButton, useFollow, useOxy } from '@oxy.so/services';
+import { FollowButton, useFollow, useOxy } from '@oxy.so/services/ui/client';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';

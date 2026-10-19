@@ -43,7 +43,7 @@ import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
 import {
   EvictionCaseStatus,
@@ -92,7 +92,7 @@ const SORTS: readonly EvictionBoardSort[] = ['soonest', 'distance', 'recently_up
 export default function EvictionsBoardScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const { isAuthenticated } = useOxy();
+  const { isAuthenticated, openAccountDialog } = useOxy();
   const { colors } = useTheme();
 
   // The APP-WIDE scope (#353), not a board-local one. Home and this board read
@@ -188,7 +188,7 @@ export default function EvictionsBoardScreen() {
       return;
     }
     router.push('/evictions/new');
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, openAccountDialog]);
 
   const publishButton = (
     <Button

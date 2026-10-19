@@ -25,7 +25,7 @@ import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { H1, H2, Text as BloomText } from '@oxy.so/bloom/typography';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
 import { SettingsRowIcon } from '@/components/profile/SettingsRowIcon';

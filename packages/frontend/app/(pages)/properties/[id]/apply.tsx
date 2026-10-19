@@ -49,7 +49,7 @@ import type {
   ApplicationDocumentUpload,
   ApplicationReferenceInput,
 } from '@/services/applicationService';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { ApiError } from '@/utils/api';
 
@@ -180,7 +180,7 @@ export default function ApplyToRentScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { id, moveIn } = useLocalSearchParams<{ id: string; moveIn?: string }>();
-  const { isAuthenticated } = useOxy();
+  const { isAuthenticated, openAccountDialog } = useOxy();
   const propertyId = Array.isArray(id) ? id[0] : id;
   const { property } = useProperty(propertyId ?? '');
 

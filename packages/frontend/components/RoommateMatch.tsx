@@ -24,7 +24,7 @@ import { Textarea } from '@oxy.so/bloom/textarea';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
-import { FollowButton } from '@oxy.so/services';
+import { FollowButton } from '@oxy.so/services/ui/client';
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
 import type { RoommateProfile } from '@/hooks/useRoommate';

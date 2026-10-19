@@ -32,7 +32,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { AppShellPanel } from '@oxy.so/bloom/app-shell';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 

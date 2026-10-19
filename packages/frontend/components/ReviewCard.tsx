@@ -33,7 +33,7 @@ import {
 import { Rating } from '@oxy.so/bloom/rating';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import type { User } from '@oxy.so/core';
 
 import {

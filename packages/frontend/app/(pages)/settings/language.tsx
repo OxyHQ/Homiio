@@ -12,7 +12,7 @@
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { getNativeLanguageName } from '@oxy.so/core';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { RiGlobalLine } from '@oxy.so/bloom/icons';

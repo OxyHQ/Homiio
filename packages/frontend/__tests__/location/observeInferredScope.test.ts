@@ -20,7 +20,7 @@ let mockAuthenticated = false;
 const mockAuthListeners = new Set<() => void>();
 
 // The session is the one source outside the cache and the store.
-jest.mock('@oxy.so/services', () => ({
+jest.mock('@oxy.so/services/ui/client', () => ({
   useAuthStore: {
     getState: () => ({ isAuthenticated: mockAuthenticated }),
     subscribe: (listener: () => void) => {

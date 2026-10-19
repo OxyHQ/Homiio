@@ -29,7 +29,7 @@ import {
   type Notification,
   type NotificationListResponse,
 } from '@/services/notificationService';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { logger } from '@/utils/logger';
 import { getData, storeData } from '@/utils/storage';
 

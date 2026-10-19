@@ -31,7 +31,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { H1 } from '@oxy.so/bloom/typography';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';

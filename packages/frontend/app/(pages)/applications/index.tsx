@@ -26,7 +26,7 @@ import {
 } from '@oxy.so/bloom/segmented-control';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { type TenantApplication, TenantApplicationStatus } from '@homiio/shared-types';
 
 import { ApplicationCard } from '@/components/ApplicationCard';
@@ -110,7 +110,7 @@ export default function MyApplicationsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const theme = useTheme();
-  const { isAuthenticated } = useOxy();
+  const { isAuthenticated, openAccountDialog } = useOxy();
   const applicationsQuery = useMyApplications();
   const [filter, setFilter] = useState<Filter>('all');
 

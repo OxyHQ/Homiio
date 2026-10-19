@@ -21,7 +21,7 @@ import {
   SegmentedControlItem,
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { type Reservation, ReservationStatus } from '@homiio/shared-types';
 
 import { ReservationCard } from '@/components/ReservationCard';
@@ -86,7 +86,7 @@ const bucketReservations = (items: Reservation[]): Buckets => {
 export default function StaysScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
   const reservationsQuery = useReservationsQuery({ limit: 50 }, { enabled: isAuthed });
   const [filter, setFilter] = useState<Filter>('all');

@@ -2,7 +2,7 @@ import type React from 'react';
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import savedPropertyFolderService, {
   type SavedPropertyFolder,
   type SavedPropertyFoldersResponse,

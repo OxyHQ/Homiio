@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { RiCalendarLine, RiGlobalLine } from '@oxy.so/bloom/icons';
 import { HostCard } from '@oxy.so/bloom/listing-details';
-import { FollowButton, useOxy } from '@oxy.so/services';
+import { FollowButton, useOxy } from '@oxy.so/services/ui/client';
 import { deviceTimeZone, formatDate, type Profile, type Property } from '@homiio/shared-types';
 
 import { Section, SECTION_GUTTER } from '@/components/property/Section';

@@ -35,7 +35,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { getAccountDisplayName, getAccountFallbackHandle } from '@oxy.so/core';
-import { openAccountDialog, useAuth, useOxy } from '@oxy.so/services';
+import { useAuth, useOxy } from '@oxy.so/services/ui/client';
 
 import { AliaAvatarIcon } from '@alia.onl/sdk/avatar';
 import { LogoIcon } from '@/assets/logo';
@@ -124,7 +124,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   const { canAccessRoommates } = useProfile();
   const { isHost } = useHostStatus();
   const { user, isAuthenticated, isAuthResolved, signIn } = useAuth();
-  const { oxyServices } = useOxy();
+  const { oxyServices, openAccountDialog } = useOxy();
   const { ask } = useAskAgent();
 
   const { folders } = useSavedPropertiesContext();
@@ -326,7 +326,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
         },
       ],
     };
-  }, [isAuthenticated, user, oxyServices, t, handleProfile, handleSettings]);
+  }, [isAuthenticated, user, oxyServices, t, handleProfile, handleSettings, openAccountDialog]);
 
   const selected = React.useMemo(() => {
     const exact = items.find((item) => item.href === pathname);

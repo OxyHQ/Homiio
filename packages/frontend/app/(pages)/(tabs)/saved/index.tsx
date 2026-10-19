@@ -19,14 +19,14 @@ import {
 } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
 import { SavedPageBody } from '@/components/saved/SavedPageBody';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function SavedScreen() {
   const { t } = useTranslation();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
   return (

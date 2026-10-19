@@ -32,7 +32,7 @@ import { TextField, TextFieldIcon, TextFieldInput } from '@oxy.so/bloom/text-fie
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
-import { openAccountDialog, useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
 import { ListingReportReason, PropertyType } from '@homiio/shared-types';
 import { useProperty } from '@/hooks';
@@ -82,7 +82,7 @@ export default function ReportListingScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { isAuthenticated, user } = useOxy();
+  const { isAuthenticated, user, openAccountDialog } = useOxy();
 
   const propertyId = Array.isArray(id) ? id[0] : id;
   const { property } = useProperty(propertyId ?? '');

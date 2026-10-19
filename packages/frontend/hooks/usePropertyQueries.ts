@@ -5,7 +5,7 @@ import type { PropertyAreaInsights, PropertyNearbyServices } from '@homiio/share
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { RECENTLY_VIEWED_KEY } from './useRecentlyViewed';
 
 /** Area-scale lookups (price insights, nearby services) are comparatively

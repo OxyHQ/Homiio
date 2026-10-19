@@ -27,7 +27,7 @@ import { RadioGroup, type RadioOption } from '@oxy.so/bloom/radio';
 import { TextField, TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { toast } from '@oxy.so/bloom/toast';
-import { openAccountDialog, useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import {
   MAINTENANCE_CATEGORIES,
   MAINTENANCE_DESCRIPTION_MAX,
@@ -49,7 +49,7 @@ export default function ReportRepairScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const { lease } = useLocalSearchParams<{ lease?: string }>();
-  const { isAuthenticated } = useOxy();
+  const { isAuthenticated, openAccountDialog } = useOxy();
   const report = useReportRepair();
 
   const [category, setCategory] = useState<MaintenanceCategory>('plumbing');

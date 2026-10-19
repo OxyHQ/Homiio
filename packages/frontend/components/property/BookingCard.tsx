@@ -28,7 +28,7 @@ import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { openAccountDialog, useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
 import { BookingCard as BloomBookingCard } from '@oxy.so/bloom/booking';
 import { LinkButton } from '@oxy.so/bloom/button';
@@ -95,7 +95,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
   const router = useRouter();
   const formatting = useFormatting();
   const { mode: rentalMode, browseMode } = useRentalMode();
-  const { isAuthenticated } = useOxy();
+  const { isAuthenticated, openAccountDialog } = useOxy();
 
   const bookingMode = resolveBookingMode(property, rentalMode, browseMode);
   const ownStay = useStayBooking(property, { enabled: !stay && bookingMode === 'vacation' });

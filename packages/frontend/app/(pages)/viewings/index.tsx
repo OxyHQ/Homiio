@@ -25,7 +25,7 @@ import { Card } from '@oxy.so/bloom/card';
 import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -181,7 +181,7 @@ const ViewingCard: React.FC<ViewingCardProps> = ({ viewing, onCancel, onModify, 
 export default function ViewingsPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
   const queryClient = useQueryClient();
   const isAuthed = Boolean(oxyServices && activeSessionId);
 

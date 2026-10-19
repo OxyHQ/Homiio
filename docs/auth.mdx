@@ -44,13 +44,15 @@ export const OXY_BASE_URL =
 
 ## Consuming `useOxy()`
 
-The components and contexts that need identity import the hook directly:
+The components and contexts that need identity import the hook directly, from the lean `@oxy.so/services/ui/client` entry:
 
 ```tsx
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
-const { oxyServices, activeSessionId, isAuthenticated, user } = useOxy();
+const { oxyServices, activeSessionId, isAuthenticated, user, openAccountDialog } = useOxy();
 ```
+
+Never import the root `@oxy.so/services` barrel: it registers every account screen at import, which put all of them in the web entry chunk. `OxyProvider` loads them in their own chunk instead. `bun run check:bundle-imports` refuses the root import. A sign-in prompt calls `useOxy().openAccountDialog()`.
 
 - `isAuthenticated` toggles when the user signs in or signs out.
 - `activeSessionId` changes when the user picks a different account via the Oxy account switcher (Homiio supports multi-account out of the box because of this).

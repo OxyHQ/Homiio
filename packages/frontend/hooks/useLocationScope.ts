@@ -59,7 +59,7 @@ import { type QueryClient, type QueryKey, useQuery, useQueryClient } from '@tans
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { useShallow } from 'zustand/react/shallow';
-import { useAuthStore } from '@oxy.so/services';
+import { useAuthStore } from '@oxy.so/services/ui/client';
 import {
   KEY_COORD_DECIMALS,
   type ApproximateLocation,
