@@ -6,21 +6,22 @@
  * lines the loaded grid will — nothing shifts when results arrive.
  */
 import type React from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { ListingCard, ListingCardGrid } from '@oxy.so/bloom/listing-card';
 
 interface PropertyResultsGridSkeletonProps {
   count?: number;
-  style?: StyleProp<ViewStyle>;
+  /** The page gutter, as classes. */
+  className?: string;
 }
 
 const NO_PHOTOS: readonly string[] = [];
 
 export const PropertyResultsGridSkeleton: React.FC<PropertyResultsGridSkeletonProps> = ({
   count = 6,
-  style,
+  className,
 }) => (
-  <View style={style}>
+  <View className={className}>
     <ListingCardGrid>
       {Array.from({ length: count }, (_, index) => (
         <ListingCard key={index} loading photos={NO_PHOTOS} title="" />

@@ -248,7 +248,7 @@ export default function MyPropertiesScreen() {
 
   const body = (() => {
     if (isLoading && properties.length === 0) {
-      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} className="px-4 pb-4" />;
     }
     if (error) {
       return (
@@ -276,7 +276,7 @@ export default function MyPropertiesScreen() {
       <PropertyResultsGrid
         properties={properties}
         onPropertyPress={handlePropertyPress}
-        style={styles.gridPadding}
+        className="px-4 pb-4"
         renderFooter={renderFooter}
       />
     );
@@ -312,10 +312,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: spacing.lg,
     paddingBottom: spacing['4xl'],
-  },
-  gridPadding: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
   },
   ownerActionsColumn: {
     gap: spacing.sm,

@@ -128,7 +128,7 @@ export default function PropertyTypeScreen() {
 
   const body = (() => {
     if (isLoading && properties.length === 0) {
-      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} className="px-4 pb-4" />;
     }
     if (isError) {
       return (
@@ -155,7 +155,7 @@ export default function PropertyTypeScreen() {
       <PropertyResultsGrid
         properties={properties}
         onPropertyPress={handlePropertyPress}
-        style={styles.gridPadding}
+        className="px-4 pb-4"
       />
     );
   })();
@@ -189,7 +189,7 @@ export default function PropertyTypeScreen() {
         </ScrollView>
         {body}
         {isFetchingNextPage ? (
-          <PropertyResultsGridSkeleton count={2} style={styles.gridPadding} />
+          <PropertyResultsGridSkeleton count={2} className="px-4 pb-4" />
         ) : null}
       </ScreenScrollView>
       <SearchFiltersDialog
@@ -217,9 +217,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-  },
-  gridPadding: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
   },
 });

@@ -16,9 +16,8 @@
  * outlined — plus an optional per-card footer (owner actions, saved notes).
  */
 import type React from 'react';
-import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, View } from 'react-native';
 import { ListingCardGrid } from '@oxy.so/bloom/listing-card';
-import { useTheme } from '@oxy.so/bloom/theme';
 
 import { PropertyCard } from '@/components/PropertyCard';
 import type { Property } from '@homiio/shared-types';
@@ -38,8 +37,8 @@ interface PropertyResultsGridProps {
   onPropertyHoverIn?: (id: string) => void;
   /** Web-only — fired when the pointer leaves a card (un-highlights the chip). */
   onPropertyHoverOut?: () => void;
-  /** Container style (the page gutter). */
-  style?: StyleProp<ViewStyle>;
+  /** The page gutter, as classes. */
+  className?: string;
   /**
    * Optional per-card footer, rendered under each card. Owner-facing lists (My
    * properties) attach edit/delete actions here without forking the card.
@@ -53,22 +52,23 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
   highlightedPropertyId,
   onPropertyHoverIn,
   onPropertyHoverOut,
-  style,
+  className,
   renderFooter,
 }) => {
-  const { colors } = useTheme();
   if (properties.length === 0) return null;
 
   return (
-    <View style={style}>
+    <View className={className}>
       <ListingCardGrid>
         {properties.map((property) => (
           <View
             key={property.id}
-            style={
+            // An outline, not a border: it draws outside the box, so the chosen
+            // card neither shifts nor shrinks while its marker is selected.
+            className={
               property.id === highlightedPropertyId
-                ? [styles.highlighted, { outlineColor: colors.primary }]
-                : null
+                ? 'rounded-[20px] outline-solid outline-2 outline-offset-4 outline-primary'
+                : undefined
             }
             onPointerEnter={
               IS_WEB && onPropertyHoverIn ? () => onPropertyHoverIn(property.id) : undefined
@@ -86,14 +86,3 @@ export const PropertyResultsGrid: React.FC<PropertyResultsGridProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  // An outline, not a border: it draws outside the box, so the chosen card
-  // neither shifts nor shrinks while its marker is selected.
-  highlighted: {
-    borderRadius: 20,
-    outlineWidth: 2,
-    outlineStyle: 'solid',
-    outlineOffset: 4,
-  },
-});

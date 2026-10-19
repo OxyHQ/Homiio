@@ -7,7 +7,6 @@
  * map and not the list beside it.
  */
 import { useCallback, type Ref } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   DefaultMapMarker,
@@ -33,7 +32,6 @@ export interface ResultsMapProps {
   camera?: MapCameraTarget;
   onCameraChanged: (change: MapCameraChange) => void;
   onMarkerPress: (marker: MapMarkerData) => void;
-  style?: StyleProp<ViewStyle>;
 }
 
 export function ResultsMap({
@@ -44,7 +42,6 @@ export function ResultsMap({
   camera,
   onCameraChanged,
   onMarkerPress,
-  style,
 }: ResultsMapProps) {
   const { t } = useTranslation();
   const hoveredId = useExploreViewStore((s) => s.hoveredResultId);
@@ -69,7 +66,8 @@ export function ResultsMap({
   return (
     <MapView
       ref={ref}
-      style={style}
+      // The map fills the box its parent gives it.
+      style={FILL}
       initialViewState={initialViewState}
       camera={camera}
       onCameraChanged={onCameraChanged}
@@ -84,3 +82,5 @@ export function ResultsMap({
     </MapView>
   );
 }
+
+const FILL = { flex: 1 } as const;

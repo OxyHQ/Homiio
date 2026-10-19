@@ -20,7 +20,7 @@
  */
 import type React from 'react';
 import { useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AppShellPanel, AppShellPanels, useAppShellPanel } from '@oxy.so/bloom/app-shell';
@@ -54,7 +54,6 @@ import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
-import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
 import { OfferingType } from '@homiio/shared-types';
 import type { GeoBounds, LocationSelection, Property, PropertyType } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
@@ -103,6 +102,17 @@ const LIST_WIDTH = 900;
 const LIST_MIN_WIDTH = 520;
 const LIST_MAX_WIDTH = 1200;
 const MAP_MIN_WIDTH = 380;
+
+/** The gutter the results grid and its heading share, as every grid screen. */
+const GRID_GUTTER = 'px-4 pb-4';
+/** Room after the last row, before the bottom bar's own clearance. */
+const LIST_END = 40;
+/**
+ * The composer takes the row; on a wide panel it stops at a readable bar width
+ * and sits centred with the save button beside it. A style, because the
+ * composer is a component that takes `style`, not `className`.
+ */
+const COMPOSER = { flexGrow: 1, flexShrink: 1, minWidth: 0, maxWidth: 850 } as const;
 
 interface SearchResultsViewProps {
   /** The active search query (source of truth for the data + map + summary). */
@@ -522,10 +532,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   // --- shared sub-renders ---
   const saveLabel = isSearchSaved ? t('search.actions.saved') : t('search.actions.save');
   const topBar = (
-    <View className="border-border bg-card" style={styles.topBar}>
+    // `z-10`: the composer's panels open downward over the results list, which
+    // RN-Web would otherwise paint above them (it comes later, at the same z).
+    <View className="z-10 border-b border-border bg-card">
       {/* With the mode tabs above the bar (wide), the row aligns on the bar (the
           bottom of the composer) rather than on the tabs-plus-bar column. */}
-      <View className="items-center sm:items-end" style={styles.topBarContent}>
+      {/* `z-[2]`: above the category row, which RN-Web gives the same z-index
+          and paints later — the composer's open panel would sit under it. */}
+      <View className="z-[2] flex-row items-center justify-center gap-2 px-4 pb-2 pt-3 sm:items-end">
         <HomeSearch
           query={query}
           openStep={openStep}
@@ -533,7 +547,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           onSubmit={onSubmitSearch}
           modeTabs="tabs"
           onModeChange={handleModeChange}
-          style={styles.composer}
+          style={COMPOSER}
         />
         {/* A sibling of the composer, never inside it: its own named control. */}
         {/* `sm:mb-[11px]` centres the 44-tall save button on the 66-tall bar. */}
@@ -554,14 +568,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           appearance="outline"
         />
       </View>
-      <View style={styles.categoryRow}>
+      <View className="px-4 pb-1">
         <PropertyTypeCategoryBar
           offering={query.offering}
           selected={query.propertyTypes}
           onChange={handleTypesChange}
           fadeColor={colors.card}
           trailing={
-            <View style={styles.trailing}>
+            <View className="flex-row items-center gap-2">
               <FilterTriggerButton
                 count={activeFilterCount}
                 onPress={handleFiltersPress}
@@ -606,7 +620,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   // which `LIST_MIN_WIDTH` always leaves it.
   const listBody = () => {
     if (isLoading && properties.length === 0) {
-      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} className={GRID_GUTTER} />;
     }
     if (isError) {
       return (
@@ -645,7 +659,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         highlightedPropertyId={highlightedId}
         onPropertyHoverIn={handleCardHoverIn}
         onPropertyHoverOut={handleCardHoverOut}
-        style={styles.gridPadding}
+        className={GRID_GUTTER}
       />
     );
   };
@@ -658,9 +672,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       // `usePropertySearch` call, so they cannot drift — the ids are how a
       // browser-level check, or a person with the inspector open, can see that.
       nativeID={`search-list-${queryId}`}
-      style={styles.listScroll}
-      // The bounded panel leaves the bottom bar's clearance to this list.
-      contentContainerStyle={{ paddingBottom: spacing['4xl'] + bottomEdge }}
+      className="flex-1"
+      // The bounded panel leaves the bottom bar's clearance to this list: the
+      // bar's measured height, published by Bloom, on top of the list's own end.
+      contentContainerStyle={{ paddingBottom: LIST_END + bottomEdge }}
       onScroll={listEnd.onScroll}
       onLayout={listEnd.onLayout}
       onContentSizeChange={listEnd.onContentSizeChange}
@@ -671,11 +686,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           under a screen reader: committing a new area replaces the heading and
           the count in place, with no navigation and nothing focused, so
           without it the change is silent. RN-Web maps it to `aria-live`. */}
-      <View
-        style={styles.resultsHeader}
-        accessibilityLiveRegion="polite"
-        accessibilityRole="header"
-      >
+      <View className="px-4 pb-3 pt-4" accessibilityLiveRegion="polite" accessibilityRole="header">
         <BloomText className="text-xl font-bold text-foreground">{resultsHeading}</BloomText>
         {unmappableCount > 0 ? (
           <BloomText className="mt-1 text-[13px] text-muted-foreground">
@@ -685,33 +696,31 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       </View>
       {listBody()}
       {isFetchingNextPage ? (
-        <PropertyResultsGridSkeleton count={NEXT_PAGE_SKELETON_COUNT} style={styles.gridPadding} />
+        <PropertyResultsGridSkeleton count={NEXT_PAGE_SKELETON_COUNT} className={GRID_GUTTER} />
       ) : null}
     </ScrollView>
   );
 
   const mapPanel = (
-    <View style={styles.mapPanel} nativeID={`search-map-${queryId}`}>
-      <ResultsMap
-        ref={attachMap}
-        style={styles.mapFill}
-        markers={markers}
-        selectedId={highlightedId}
-        initialViewState={camera ? undefined : HOMIIO_OPENING_VIEW}
-        camera={camera}
-        onCameraChanged={handleRegionChange}
-        onMarkerPress={handleMarkerPress}
-      />
+    <View className="relative flex-1" nativeID={`search-map-${queryId}`}>
+      <View className="absolute inset-0">
+        <ResultsMap
+          ref={attachMap}
+          markers={markers}
+          selectedId={highlightedId}
+          initialViewState={camera ? undefined : HOMIIO_OPENING_VIEW}
+          camera={camera}
+          onCameraChanged={handleRegionChange}
+          onMarkerPress={handleMarkerPress}
+        />
+      </View>
       {pendingViewport ? (
-        // `pointerEvents: 'none'` on the strip and `'auto'` on each control is
-        // the sanctioned split: `box-none` in a STYLE is silently dropped by
-        // RN-Web, leaving a transparent full-width overlay that swallows every
-        // drag and hover on the map beneath it.
-        <View style={styles.searchAreaWrap}>
-          <View
-            className="bg-card"
-            style={[styles.searchAreaButton, cardShadow.md, styles.interactive]}
-          >
+        // `pointer-events-none` on the strip and `-auto` on each control is the
+        // sanctioned split: `box-none` in a STYLE is silently dropped by RN-Web,
+        // leaving a transparent full-width overlay that swallows every drag and
+        // hover on the map beneath it.
+        <View className="pointer-events-none absolute inset-x-0 top-4 items-center gap-2">
+          <View className="pointer-events-auto overflow-hidden rounded-full bg-card shadow-m">
             <Button
               onPress={handleSearchThisArea}
               size="sm"
@@ -726,8 +735,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             </Button>
           </View>
           <View
-            className="bg-card"
-            style={[styles.pendingNotice, cardShadow.md, styles.interactive]}
+            className="pointer-events-auto max-w-[420px] flex-row items-center gap-2 rounded-full bg-card px-3 py-2 shadow-m"
             accessibilityLiveRegion="polite"
           >
             <BloomText className="shrink text-[13px] text-foreground">
@@ -754,7 +762,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       {selectedProperty ? (
         // Narrow: the popover floats over the full-screen map, level with the
         // MapFab toggle; wide: a centred card of reading width.
-        <View className="sm:max-w-[420px] sm:self-center" style={styles.popoverWrap}>
+        <View className="absolute inset-x-0 bottom-6 sm:max-w-[420px] sm:self-center">
           <MapMarkerPopover
             property={selectedProperty}
             onPress={() => onPropertyPress(selectedProperty)}
@@ -820,102 +828,3 @@ function PaneToggle({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  topBar: Platform.select<ViewStyle>({
-    web: {
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      borderBottomWidth: hairline.width,
-    } as unknown as ViewStyle,
-    default: {
-      borderBottomWidth: hairline.width,
-    },
-  }) as ViewStyle,
-  topBarContent: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    // Above the category row: RN-Web gives every View `z-index: 0`, so the
-    // composer's open panel would otherwise paint under the later sibling.
-    zIndex: 2,
-  },
-  // The composer takes the row; on a wide screen it stops at a readable bar
-  // width and sits centred with the save button beside it.
-  composer: {
-    flex: 1,
-    minWidth: 0,
-    maxWidth: 850,
-  },
-  categoryRow: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xs,
-  },
-  trailing: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  listScroll: Platform.select<ViewStyle>({
-    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
-    default: { flex: 1 },
-  }) as ViewStyle,
-  // Airbnb-2026 results header: the gutter matches the grid below it and the
-  // rest of the property-grid screens (`spacing.lg`), with comfortable top
-  // breathing room and a tighter gap down to the first card.
-  resultsHeader: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  // Grid gutter aligned to the header gutter and every other property-grid
-  // screen (`spacing.lg`) for a clean, consistent left edge across the app.
-  gridPadding: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-  mapPanel: {
-    flex: 1,
-    position: 'relative',
-  },
-  mapFill: {
-    ...StyleSheet.absoluteFill,
-  },
-  searchAreaWrap: {
-    position: 'absolute',
-    top: spacing.lg,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    gap: spacing.sm,
-    // Valid CSS, unlike `box-none`. The children below re-enable themselves.
-    pointerEvents: 'none',
-  },
-  searchAreaButton: {
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-  },
-  /** A child `auto` inside a parent `none` IS hittable — that is the split. */
-  interactive: {
-    pointerEvents: 'auto',
-  },
-  pendingNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    maxWidth: 420,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-  },
-  popoverWrap: {
-    position: 'absolute',
-    bottom: spacing['2xl'],
-    left: 0,
-    right: 0,
-  },
-});
