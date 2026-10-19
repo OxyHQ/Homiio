@@ -21,7 +21,7 @@ import { Dialog } from '@oxy.so/bloom/dialog';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { toast } from '@oxy.so/bloom/toast';
 import type { GuestCounts } from '@oxy.so/bloom/stay-search';
-import { openAccountDialog, useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { formatMoney, type Property } from '@homiio/shared-types';
 
 import {
@@ -86,7 +86,7 @@ export function useStayBooking(
   const { t } = useTranslation();
   const formatting = useFormatting();
   const router = useRouter();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
 
   const shortTerm = property?.shortTermRent;
   const nightlyRate = shortTerm?.nightlyRate ?? 0;
@@ -179,6 +179,7 @@ export function useStayBooking(
     router,
     openDates,
     t,
+    openAccountDialog,
   ]);
 
   const price = nightlyRate > 0 ? formatMoney(nightlyRate, currency, formatting.locale) : '';

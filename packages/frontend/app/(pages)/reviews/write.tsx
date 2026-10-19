@@ -28,7 +28,7 @@ import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { WizardFooter, WizardProgress, type WizardStep } from '@oxy.so/bloom/wizard';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
 import type { GeoCoordinate } from '@goway.to/maps';
 import type { GeocodedAddress } from '@homiio/shared-types';

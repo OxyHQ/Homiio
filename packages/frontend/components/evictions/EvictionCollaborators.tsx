@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Linking, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';

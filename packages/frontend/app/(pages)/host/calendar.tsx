@@ -85,7 +85,7 @@ import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Z_INDEX } from '@oxy.so/bloom/styles';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
@@ -220,7 +220,7 @@ export default function HostCalendarScreen() {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
   const propertiesQuery = useUserProperties();
   const propertyList = propertiesQuery.data?.properties;

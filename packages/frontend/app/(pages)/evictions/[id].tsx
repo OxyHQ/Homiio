@@ -58,7 +58,7 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { EvictionReportCard, EvictionTimeline, type EvictionEvent } from '@oxy.so/bloom/eviction';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
 import { PlaceMap } from '@/components/map/PlaceMap';
 import { IconButton } from '@/components/ui/IconButton';
@@ -112,7 +112,7 @@ export default function EvictionDetailScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const bottomSheet = useContext(BottomSheetContext);
-  const { isAuthenticated, user } = useOxy();
+  const { isAuthenticated, user, openAccountDialog } = useOxy();
 
   const { data: eviction, isLoading, isError, error, refetch } = useEvictionDetail(caseId);
 
@@ -182,7 +182,7 @@ export default function EvictionDetailScreen() {
     bottomSheet.openBottomSheet(
       <EvictionReportSheet caseId={caseId} onClose={() => bottomSheet.closeBottomSheet()} />,
     );
-  }, [isAuthenticated, bottomSheet, caseId]);
+  }, [isAuthenticated, bottomSheet, caseId, openAccountDialog]);
 
   const handleFollow = useCallback(() => {
     if (!isAuthenticated) {
@@ -190,7 +190,7 @@ export default function EvictionDetailScreen() {
       return;
     }
     toggleFollow.mutate();
-  }, [isAuthenticated, toggleFollow]);
+  }, [isAuthenticated, toggleFollow, openAccountDialog]);
 
   const handleRSVP = useCallback(() => {
     if (!isAuthenticated) {
@@ -198,7 +198,7 @@ export default function EvictionDetailScreen() {
       return;
     }
     toggleAttend.mutate();
-  }, [isAuthenticated, toggleAttend]);
+  }, [isAuthenticated, toggleAttend, openAccountDialog]);
 
   const handleEdit = useCallback(() => {
     router.push(`/evictions/new?edit=${caseId}`);

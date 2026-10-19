@@ -25,7 +25,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { ButtonGroup, ButtonGroupItem } from '@oxy.so/bloom/button-group';
 import { PageHeader } from '@oxy.so/bloom/page-header';
@@ -128,7 +128,7 @@ export default function PropertyDetailPage() {
   const formatting = useFormatting();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
   const { mode: rentalMode, browseMode } = useRentalMode();
   const propertyIdParam = typeof id === 'string' ? id : '';
 
@@ -308,7 +308,16 @@ export default function PropertyDetailPage() {
     } else {
       router.push(`/properties/${targetId}/apply`);
     }
-  }, [apiProperty, oxyServices, activeSessionId, t, router, rentalMode, property?.id]);
+  }, [
+    apiProperty,
+    oxyServices,
+    activeSessionId,
+    t,
+    router,
+    rentalMode,
+    property?.id,
+    openAccountDialog,
+  ]);
 
   /**
    * Call the advertiser — only ever a contact the advertiser published on the
@@ -403,7 +412,7 @@ export default function PropertyDetailPage() {
       return;
     }
     setExchangeSheetVisible(true);
-  }, [oxyServices, activeSessionId]);
+  }, [oxyServices, activeSessionId, openAccountDialog]);
 
   // Photos cover-first with captions; the grid and the fullscreen gallery read
   // the SAME list, so a tapped tile opens that photo.

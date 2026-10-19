@@ -16,7 +16,7 @@
 
 import { useCallback } from 'react';
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
 import { guestPointsService, type GuestPointsLedger } from '@/services/guestPointsService';
 

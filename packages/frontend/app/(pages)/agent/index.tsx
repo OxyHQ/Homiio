@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import { openAccountDialog, useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
 import { AgentHero } from '@/components/agent/AgentHero';
 import { AgentHowItWorks } from '@/components/agent/AgentHowItWorks';
@@ -38,7 +38,7 @@ import { toast } from '@oxy.so/bloom/toast';
 export default function AgentScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { isAuthenticated } = useOxy();
+  const { isAuthenticated, openAccountDialog } = useOxy();
 
   const meQuery = usePartnerMe();
   const joinMutation = useJoinPartner();
@@ -91,7 +91,7 @@ export default function AgentScreen() {
         toast.error(t('agent.referral.shareFailed'));
       }
     }
-  }, [isAuthenticated, isPartner, link, joinMutation, t]);
+  }, [isAuthenticated, isPartner, link, joinMutation, t, openAccountDialog]);
 
   return (
     <Screen

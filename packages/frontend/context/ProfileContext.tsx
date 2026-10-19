@@ -1,7 +1,7 @@
 import type React from 'react';
 import { createContext, useContext, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { useProfileStore } from '@/store/profileStore';
 import type { Profile } from '@/services/profileService';
 import { logger } from '@/utils/logger';

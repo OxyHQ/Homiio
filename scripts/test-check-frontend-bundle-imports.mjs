@@ -23,6 +23,8 @@ writeFileSync(
   [
     "import { RiHomeLine } from '@oxy.so/bloom/icons';",
     "import { Button } from '@oxy.so/bloom/button';",
+    "import { useOxy } from '@oxy.so/services/ui/client';",
+    "jest.mock('@oxy.so/services/ui/client', () => ({}));",
     // English is the bundled fallback and stays importable.
     "import enUS from '@/locales/en.json';",
     "jest.mock('@oxy.so/bloom/toast', () => ({}));",
@@ -49,6 +51,8 @@ const mutations = [
   ['BloomExport.ts', "export { Button } from '@oxy.so/bloom';\n"],
   ['BloomRequire.js', "const bloom = require('@oxy.so/bloom');\n"],
   ['BloomMock.tsx', "jest.mock('@oxy.so/bloom', () => ({}));\n"],
+  ['ServicesFrom.tsx', "import { useOxy } from '@oxy.so/services';\n"],
+  ['ServicesMock.tsx', "jest.mock('@oxy.so/services', () => ({}));\n"],
   ['LocaleAlias.tsx', "import esES from '@/locales/es.json';\n"],
   ['LocaleRelative.tsx', "import fr from '../locales/fr-FR.json';\n"],
   ['LocaleRequire.ts', "const it = require('@/locales/it.json');\n"],

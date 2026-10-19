@@ -5,7 +5,7 @@ import { EvictionCollaborators } from '@/components/evictions/EvictionCollaborat
 import { evictionService } from '@/services/evictionService';
 import { confirm } from '@oxy.so/bloom/surfaces';
 
-jest.mock('@oxy.so/services', () => ({
+jest.mock('@oxy.so/services/ui/client', () => ({
   useOxy: () => ({
     oxyServices: {
       users: {

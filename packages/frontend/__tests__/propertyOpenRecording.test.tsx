@@ -27,7 +27,7 @@ jest.mock('@/utils/api', () => ({
   ApiError: class ApiError extends Error {},
 }));
 
-jest.mock('@oxy.so/services', () => ({
+jest.mock('@oxy.so/services/ui/client', () => ({
   useOxy: () => ({ oxyServices: null, activeSessionId: null }),
 }));
 

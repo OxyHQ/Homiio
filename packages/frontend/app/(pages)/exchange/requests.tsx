@@ -24,7 +24,7 @@ import {
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
 import { confirm } from '@oxy.so/bloom/surfaces';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { type ExchangeRequest, ExchangeRequestStatus } from '@homiio/shared-types';
 
 import { ExchangeRequestCard } from '@/components/exchange/ExchangeRequestCard';
@@ -118,7 +118,7 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
 export default function ExchangeRequestsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
   const [role, setRole] = useState<RoleView>('guest');

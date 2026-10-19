@@ -30,7 +30,7 @@ import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { AskAgentProvider } from '@/context/AskAgentProvider';
 import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
-import { OxyProvider, useOxy } from '@oxy.so/services';
+import { OxyProvider, useOxy } from '@oxy.so/services/ui/client';
 import { BloomProvider } from '@oxy.so/bloom/provider';
 import { useNavigationTheme, useTheme, webLocalStorage } from '@oxy.so/bloom/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';

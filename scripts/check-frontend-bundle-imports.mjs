@@ -12,6 +12,11 @@
  *   Bloom family into the graph, including ones with optional peers, where an
  *   unmet peer is a build failure rather than dead weight. Import
  *   `@oxy.so/bloom/<family>`.
+ * - `@oxy.so/services` root barrel: it registers every account screen at
+ *   import, so one import anywhere puts all of them (and the Bloom parts they
+ *   draw) in the web entry chunk. Import `@oxy.so/services/ui/client`, the lean
+ *   entry; `OxyProvider` loads the screens on its own. In a component, the
+ *   account dialog opens through `useOxy().openAccountDialog`.
  *
  * The check is line-based on import/require/mock specifiers. Comment lines are
  * skipped, so a doc comment that quotes the forbidden form does not trip it.
@@ -58,6 +63,11 @@ const BARRELS = [
     pattern: rootSpecifier('@oxy.so/bloom'),
     message:
       "Import Bloom through its family subpath (@oxy.so/bloom/<family>); the root '@oxy.so/bloom' barrel bundles every family.",
+  },
+  {
+    pattern: rootSpecifier('@oxy.so/services'),
+    message:
+      "Import Oxy services through '@oxy.so/services/ui/client'; the root '@oxy.so/services' barrel registers every account screen in the startup bundle.",
   },
   {
     // Any non-English locale file, by alias or relative path. Web fetches the
@@ -116,5 +126,5 @@ BARRELS.forEach(({ message }, barrel) => {
 if (failed) process.exit(1);
 
 console.log(
-  'Frontend bundle imports: no @expo/vector-icons, lucide-react-native, @oxy.so/bloom root-barrel or bundled non-English locale imports.',
+  'Frontend bundle imports: no @expo/vector-icons, lucide-react-native, @oxy.so/bloom or @oxy.so/services root-barrel, or bundled non-English locale imports.',
 );

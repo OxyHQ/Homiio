@@ -30,7 +30,7 @@
     "@aws-sdk/client-s3": "^3.1148.0",
     "@aws-sdk/s3-request-presigner": "^3.1148.0",
     "@crowdsource.you/contracts": "1.1.0",
-    "@crowdsource.you/core": "3.0.2",
+    "@crowdsource.you/core": "3.0.3",
     "@homiio/listing-providers": "workspace:*",
     "@homiio/shared-types": "workspace:*",
     "@oxy.so/contracts": "5.0.0",

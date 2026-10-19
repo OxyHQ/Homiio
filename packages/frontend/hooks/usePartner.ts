@@ -17,7 +17,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import type { Commission, PartnerMeResponse, Property, PropertyStatus } from '@homiio/shared-types';
 
 import { partnerApi } from '@/services/partnerApi';

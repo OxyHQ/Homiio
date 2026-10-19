@@ -40,7 +40,7 @@ import {
   RiLockLine,
   RiLoginBoxLine,
 } from '@oxy.so/bloom/icons';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import {
   type Profile,
   type TenantApplication,
@@ -355,7 +355,7 @@ export default function LandlordApplicationsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const theme = useTheme();
-  const { isAuthenticated } = useOxy();
+  const { isAuthenticated, openAccountDialog } = useOxy();
   const { isHost, isLoading: hostLoading } = useHostStatus();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');

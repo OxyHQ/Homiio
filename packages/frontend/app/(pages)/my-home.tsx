@@ -57,7 +57,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { LeaseSummaryCard } from '@oxy.so/bloom/tenancy';
 import { useTheme } from '@oxy.so/bloom/theme';
-import { openAccountDialog, useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { LeaseStatus, type Lease } from '@homiio/shared-types';
 
 import { UpcomingBookingsSection } from '@/components/bookings/UpcomingBookingsSection';
@@ -96,7 +96,7 @@ export default function MyHomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
-  const { user, oxyServices, activeSessionId } = useOxy();
+  const { user, oxyServices, activeSessionId, openAccountDialog } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
   const leasesQuery = useUserLeases(ACTIVE_FILTER);

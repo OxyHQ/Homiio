@@ -18,7 +18,7 @@ import { Textarea } from '@oxy.so/bloom/textarea';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 import {
   ExchangeMode,
   guestPointsForWindow,
@@ -85,7 +85,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
   const { t } = useTranslation();
   const router = useRouter();
   const theme = useTheme();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
   const listingMode = property.exchange?.mode ?? ExchangeMode.BOTH;
   const allowsBoth = listingMode === ExchangeMode.BOTH;
 
@@ -232,6 +232,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
     onClose,
     router,
     t,
+    openAccountDialog,
   ]);
 
   const title =

@@ -11,7 +11,7 @@ import { Linking, StyleSheet, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useOxy } from '@oxy.so/services';
+import { useOxy } from '@oxy.so/services/ui/client';
 
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
