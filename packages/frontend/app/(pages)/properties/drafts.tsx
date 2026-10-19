@@ -240,7 +240,7 @@ export default function PropertyDraftsScreen() {
 
   const body = (() => {
     if (isLoading && drafts.length === 0) {
-      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} className="p-4" />;
     }
     if (drafts.length === 0) {
       return (
@@ -300,11 +300,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-  },
-  gridPadding: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
   },
   draftsList: {
     gap: spacing.lg,

@@ -57,14 +57,7 @@
  */
 import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-  type LayoutChangeEvent,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { ScrollView, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -98,7 +91,6 @@ import { useLocationScope } from '@/hooks/useLocationScope';
 import { useSearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
 import { useFormatting } from '@/utils/format';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
-import { spacing } from '@/constants/styles';
 
 import { DatesStep } from './steps/DatesStep';
 import { GuestsStep, type GuestsValue } from './steps/GuestsStep';
@@ -185,8 +177,21 @@ const SEGMENT_FLEX: Record<SearchStep, number> = {
  */
 const LAST_SEGMENT_BUTTON_FLEX = 0.9;
 
-/** Below this measured width the segmented bar truncates its labels; show the compact pill instead. */
-const WIDE_BAR_MIN_WIDTH = 640;
+/**
+ * The sheet that holds every step: a bottom sheet on a phone, a centred dialog
+ * on a wide screen — where it opens only when something outside the bar asked
+ * for a step ("Edit search"), since the bar opens its own panels.
+ */
+const SHEET_PLACEMENT = { base: 'bottom', md: 'center' } as const;
+/** Room under the sheet's buttons, before the device's home-indicator inset. */
+const SHEET_FOOTER_END = 12;
+
+/** Style props of Bloom components that take `style`, not `className`. */
+const FULL_WIDTH = { width: '100%' } as const;
+const TEXT_TABS = { alignSelf: 'center' } as const;
+// The pill stretches to its container; past a phone's width that is a very
+// long pill, so it stops at a readable width and centres.
+const SEGMENTED_TABS = { width: '100%', maxWidth: 520, alignSelf: 'center' } as const;
 
 /** Wide panel widths per segment content. */
 const WHERE_PANEL_WIDTH = 440;
@@ -264,16 +269,12 @@ export function HomeSearch({
 }: HomeSearchProps): React.ReactElement {
   const { t } = useTranslation();
   const { locale } = useFormatting();
-  // The bar's segments need real room, and the page column can be narrow on a
-  // wide screen (the AppShell sidebar plus the right-hand aside leave ~500px at
-  // 1024-1279). Decide from the space THIS component actually gets; until it has
-  // been measured, render the compact (mobile-first) trigger.
-  const [containerWidth, setContainerWidth] = useState(0);
-  const handleContainerLayout = useCallback((event: LayoutChangeEvent) => {
-    const next = Math.round(event.nativeEvent.layout.width);
-    setContainerWidth((prev) => (prev === next ? prev : next));
-  }, []);
-  const isWide = containerWidth >= WIDE_BAR_MIN_WIDTH;
+  // Which surface holds the open step: the bar's own panel when the bar opened
+  // it, else the sheet (the compact pill, or anything outside asking for a
+  // step). Which of bar and pill is on screen is a container query on THIS
+  // component's width (the bar's segments need 640), so nothing here measures.
+  const [fromBar, setFromBar] = useState(false);
+  if (openStep === null && fromBar) setFromBar(false);
   const insets = useSafeAreaInsets();
   const addRecentSearch = useRecentSearchesStore((s) => s.addSearch);
   const apply = onApply ?? onSubmit;
@@ -312,11 +313,11 @@ export function HomeSearch({
   const nextStepAfter = useCallback(
     (step: SearchStep): SearchStep | null => {
       // The bar walks its own segments; the sheet walks every step.
-      const order = isWide ? segmentSteps : steps;
+      const order = fromBar ? segmentSteps : steps;
       const index = order.indexOf(step);
       return index >= 0 && index < order.length - 1 ? order[index + 1] : null;
     },
-    [isWide, segmentSteps, steps],
+    [fromBar, segmentSteps, steps],
   );
 
   // --- where ---
@@ -661,105 +662,100 @@ export function HomeSearch({
 
   const pageMode = browseModeFromOffering(query.offering);
 
-  // --- wide ---
-  if (isWide) {
-    const activeSegment = openStep !== null && segmentSteps.includes(openStep) ? openStep : null;
-    const segments: HomeSearchSegment<SearchStep>[] = segmentSteps.map((step, index) => ({
-      key: step,
-      label: t(STEP_LABEL_KEYS[step]),
-      value: stepValue(step) ?? undefined,
-      placeholder: step === 'where' ? wherePlaceholder : t(STEP_EMPTY_KEYS[step]),
-      flex: SEGMENT_FLEX[step] + (index === segmentSteps.length - 1 ? LAST_SEGMENT_BUTTON_FLEX : 0),
-    }));
+  // --- wide: the segmented bar, its panels anchored under it ---
+  const activeSegment =
+    fromBar && openStep !== null && segmentSteps.includes(openStep) ? openStep : null;
+  const segments: HomeSearchSegment<SearchStep>[] = segmentSteps.map((step, index) => ({
+    key: step,
+    label: t(STEP_LABEL_KEYS[step]),
+    value: stepValue(step) ?? undefined,
+    placeholder: step === 'where' ? wherePlaceholder : t(STEP_EMPTY_KEYS[step]),
+    flex: SEGMENT_FLEX[step] + (index === segmentSteps.length - 1 ? LAST_SEGMENT_BUTTON_FLEX : 0),
+  }));
 
-    const handleSegment = (segment: SearchStep | null) => {
-      if (segment !== null) {
-        onOpenStepChange(segment);
-        return;
-      }
-      onOpenStepChange(null);
-      const next = committed(draft);
-      if (next && JSON.stringify(draft) !== queryKey) apply(next);
-    };
-
-    let panel: React.ReactNode = null;
-    if (activeSegment) {
-      const label = t(STEP_LABEL_KEYS[activeSegment]);
-      const content = stepContent(activeSegment, true);
-      switch (activeSegment) {
-        case 'where':
-          panel = (
-            <StaySearchPanel width={WHERE_PANEL_WIDTH} padding={16} accessibilityLabel={label}>
-              {content}
-            </StaySearchPanel>
-          );
-          break;
-        case 'dates':
-          panel = (
-            <StaySearchPanel padding={24} accessibilityLabel={label}>
-              {content}
-            </StaySearchPanel>
-          );
-          break;
-        case 'guests':
-          panel = (
-            <StaySearchPanel width={GUESTS_PANEL_WIDTH} padding={8} accessibilityLabel={label}>
-              <View style={styles.guestsInset}>{content}</View>
-            </StaySearchPanel>
-          );
-          break;
-        case 'price':
-          panel = (
-            <StaySearchPanel width={PRICE_PANEL_WIDTH} padding={24} accessibilityLabel={label}>
-              {content}
-            </StaySearchPanel>
-          );
-          break;
-        case 'type':
-          panel = (
-            <StaySearchPanel width={TYPE_PANEL_WIDTH} padding={20} accessibilityLabel={label}>
-              {content}
-            </StaySearchPanel>
-          );
-          break;
-      }
+  const handleSegment = (segment: SearchStep | null) => {
+    if (segment !== null) {
+      setFromBar(true);
+      onOpenStepChange(segment);
+      return;
     }
+    onOpenStepChange(null);
+    const next = committed(draft);
+    if (next && JSON.stringify(draft) !== queryKey) apply(next);
+  };
 
-    const bar = (
-      <HomeSearchBar<SearchStep>
-        segments={segments}
-        activeSegment={activeSegment}
-        onActiveSegmentChange={handleSegment}
-        onSearch={handleSubmit}
-        searchLabel={t('search.actions.search')}
-        query={whereText}
-        onQueryChange={whereSearch.onChangeText}
-        panel={panel}
-        style={styles.fill}
-      />
-    );
-
-    if (!modeTabs) {
-      return (
-        <View onLayout={handleContainerLayout} style={style}>
-          {bar}
-        </View>
-      );
+  let panel: React.ReactNode = null;
+  if (activeSegment) {
+    const label = t(STEP_LABEL_KEYS[activeSegment]);
+    const content = stepContent(activeSegment, true);
+    switch (activeSegment) {
+      case 'where':
+        panel = (
+          <StaySearchPanel width={WHERE_PANEL_WIDTH} padding={16} accessibilityLabel={label}>
+            {content}
+          </StaySearchPanel>
+        );
+        break;
+      case 'dates':
+        panel = (
+          <StaySearchPanel padding={24} accessibilityLabel={label}>
+            {content}
+          </StaySearchPanel>
+        );
+        break;
+      case 'guests':
+        panel = (
+          <StaySearchPanel width={GUESTS_PANEL_WIDTH} padding={8} accessibilityLabel={label}>
+            <View className="px-4">{content}</View>
+          </StaySearchPanel>
+        );
+        break;
+      case 'price':
+        panel = (
+          <StaySearchPanel width={PRICE_PANEL_WIDTH} padding={24} accessibilityLabel={label}>
+            {content}
+          </StaySearchPanel>
+        );
+        break;
+      case 'type':
+        panel = (
+          <StaySearchPanel width={TYPE_PANEL_WIDTH} padding={20} accessibilityLabel={label}>
+            {content}
+          </StaySearchPanel>
+        );
+        break;
     }
-    return (
-      <View onLayout={handleContainerLayout} style={[styles.withTabs, style]}>
-        {renderModeTabs(
-          pageMode,
-          handlePageMode,
-          modeTabs,
-          modeTabs === 'segmented' ? styles.segmentedTabs : styles.textTabs,
-        )}
-        {bar}
-      </View>
-    );
   }
 
-  // --- narrow ---
+  const bar = (
+    <HomeSearchBar<SearchStep>
+      segments={segments}
+      activeSegment={activeSegment}
+      onActiveSegmentChange={handleSegment}
+      onSearch={handleSubmit}
+      searchLabel={t('search.actions.search')}
+      query={whereText}
+      onQueryChange={whereSearch.onChangeText}
+      panel={panel}
+      style={FULL_WIDTH}
+    />
+  );
+
+  const wide = modeTabs ? (
+    <View className="gap-3">
+      {renderModeTabs(
+        pageMode,
+        handlePageMode,
+        modeTabs,
+        modeTabs === 'segmented' ? SEGMENTED_TABS : TEXT_TABS,
+      )}
+      {bar}
+    </View>
+  ) : (
+    bar
+  );
+
+  // --- narrow: the compact pill and the sheet ---
   const handleCloseSheet = () => {
     onOpenStepChange(null);
     reset();
@@ -777,19 +773,20 @@ export function HomeSearch({
 
   return (
     <>
-      {modeTabs === 'segmented' ? (
-        <View onLayout={handleContainerLayout} style={[styles.withTabs, style]}>
-          {renderModeTabs(pageMode, handlePageMode, 'segmented')}
-          {compact}
-        </View>
-      ) : (
-        <View onLayout={handleContainerLayout} style={style}>
-          {compact}
-        </View>
-      )}
+      <View className="@container" style={style}>
+        <View className="hidden @min-[640px]:flex">{wide}</View>
+        {modeTabs === 'segmented' ? (
+          <View className="gap-3 @min-[640px]:hidden">
+            {renderModeTabs(pageMode, handlePageMode, 'segmented')}
+            {compact}
+          </View>
+        ) : (
+          <View className="@min-[640px]:hidden">{compact}</View>
+        )}
+      </View>
       <Dialog
-        placement="bottom"
-        open={openStep !== null}
+        placement={SHEET_PLACEMENT}
+        open={openStep !== null && !fromBar}
         onClose={handleCloseSheet}
         label={t('search.panel.title')}
         contentPadding={0}
@@ -798,17 +795,16 @@ export function HomeSearch({
       >
         {/* 88% of the window: fixed, so the sheet never jumps between steps. */}
         <View className="h-[88vh]">
-          <View style={styles.sheetHeader}>
-            <View style={styles.sheetTitleRow}>
+          <View className="gap-3 px-4 pb-3 pt-2">
+            <View className="flex-row items-center justify-between">
               <H3>{t('search.panel.title')}</H3>
               <CloseButton onPress={handleCloseSheet} accessibilityLabel={t('common.close')} />
             </View>
             {renderModeTabs(browseModeFromOffering(draft.offering), handleBrowseMode, 'segmented')}
           </View>
           <ScrollView
-            className="bg-surface"
-            style={styles.sheetScroll}
-            contentContainerStyle={styles.sheetScrollContent}
+            className="flex-1 bg-surface"
+            contentContainerClassName="gap-3 p-3"
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -830,8 +826,9 @@ export function HomeSearch({
             ))}
           </ScrollView>
           <View
-            className="border-border"
-            style={[styles.sheetFooter, { paddingBottom: spacing.md + insets.bottom }]}
+            className="flex-row items-center justify-between border-t border-border px-4 pt-3"
+            // The home indicator's inset is the device's, read at run time.
+            style={{ paddingBottom: SHEET_FOOTER_END + insets.bottom }}
           >
             <LinkButton onPress={handleClear} accessibilityLabel={t('search.actions.clearAll')}>
               {t('search.actions.clearAll')}
@@ -852,52 +849,3 @@ export function HomeSearch({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  withTabs: {
-    gap: spacing.md,
-  },
-  fill: {
-    width: '100%',
-  },
-  textTabs: {
-    alignSelf: 'center',
-  },
-  // The pill stretches to its container; past a phone's width that is a very
-  // long pill, so it stops at a readable width and centres.
-  segmentedTabs: {
-    width: '100%',
-    maxWidth: 520,
-    alignSelf: 'center',
-  },
-  guestsInset: {
-    paddingHorizontal: spacing.lg,
-  },
-  sheetHeader: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    gap: spacing.md,
-  },
-  sheetTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sheetScroll: {
-    flex: 1,
-  },
-  sheetScrollContent: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    gap: spacing.md,
-  },
-  sheetFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-});

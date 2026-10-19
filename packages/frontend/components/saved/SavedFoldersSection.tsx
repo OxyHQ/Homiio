@@ -17,7 +17,7 @@
  */
 import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
-import { Text as RNText, View, type LayoutChangeEvent } from 'react-native';
+import { Text as RNText, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -64,9 +64,6 @@ function folderGlyph(emoji: string): React.FC<{ width?: number; height?: number 
   return Glyph;
 }
 
-/** Two tiles a row on a phone, three on a tablet, four from a desktop column. */
-const folderColumns = (width: number): number => (width < 640 ? 2 : width < 950 ? 3 : 4);
-
 interface SavedFoldersSectionProps {
   folders: readonly SavedPropertyFolder[];
   savedProperties: readonly SavedProperty[];
@@ -80,7 +77,6 @@ export function SavedFoldersSection({
 }: SavedFoldersSectionProps) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const [width, setWidth] = useState(0);
   const [creating, setCreating] = useState(false);
 
   const coversByFolder = useMemo(() => {
@@ -96,16 +92,10 @@ export function SavedFoldersSection({
     return covers;
   }, [savedProperties]);
 
-  const onLayout = useCallback(
-    (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width),
-    [],
-  );
-  const columns = folderColumns(width);
-
   let body: React.ReactNode;
   if (loading && folders.length === 0) {
     body = (
-      <ListingCardGrid columns={columns} columnGap={16} rowGap={24}>
+      <ListingCardGrid density="compact">
         {[0, 1].map((key) => (
           <Skeleton.Box key={key} width="100%" height={180} borderRadius={16} />
         ))}
@@ -119,7 +109,7 @@ export function SavedFoldersSection({
     );
   } else {
     body = (
-      <ListingCardGrid columns={columns} columnGap={16} rowGap={24}>
+      <ListingCardGrid density="compact">
         {folders.map((folder) => {
           const Glyph = folder.icon ? folderGlyph(folder.icon) : undefined;
           return (
@@ -158,7 +148,7 @@ export function SavedFoldersSection({
       }
       testID="saved-folders"
     >
-      <View onLayout={onLayout}>{body}</View>
+      {body}
       <CreateFolderDialog open={creating} onClose={() => setCreating(false)} />
     </SavedSection>
   );
@@ -222,7 +212,7 @@ function CreateFolderDialog({ open, onClose }: { open: boolean; onClose: () => v
         },
       ]}
     >
-      <View style={{ gap: 16, paddingBottom: 8 }}>
+      <View className="gap-4 pb-2">
         <TextFieldInput
           label={t('saved.folder.folderNamePlaceholder')}
           value={name}

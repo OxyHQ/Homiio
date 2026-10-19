@@ -99,6 +99,12 @@ Width-dependent styling is `sm:` / `md:` / `lg:` / `xl:` classes (Bloom's
 `hidden md:flex`. No `useWindowDimensions`, `react-responsive` or media-query
 hooks.
 
+When something depends on the room IT has rather than the window's (a results
+grid beside the map, the search composer in a narrow panel), use container
+queries: `@container` on the box, `@min-[640px]:flex` on what it holds. The
+browser resolves them on web and react-native-css on native. Never measure a
+box with `onLayout` to pick a layout.
+
 ### Section stacking (NativeWind gap)
 
 Use NativeWind `gap-6 md:gap-8` on the section container, **not** per-section
