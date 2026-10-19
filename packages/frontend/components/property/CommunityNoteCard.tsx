@@ -10,12 +10,7 @@
  */
 import type React from 'react';
 import { useState } from 'react';
-import {
-  StyleSheet,
-  View,
-  type TextLayoutEventData,
-  type NativeSyntheticEvent,
-} from 'react-native';
+import { StyleSheet, View, type TextLayoutEvent } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
@@ -68,7 +63,7 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
     note.consItems?.length ? note.consItems : note.negativeComment ? [note.negativeComment] : []
   ).slice(0, MAX_PROS_CONS);
 
-  const handleTextLayout = (event: NativeSyntheticEvent<TextLayoutEventData>) => {
+  const handleTextLayout = (event: TextLayoutEvent) => {
     if (!expanded && event.nativeEvent.lines.length > BODY_CLAMP_LINES) {
       setIsTruncatable(true);
     }

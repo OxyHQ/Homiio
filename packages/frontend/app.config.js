@@ -112,7 +112,9 @@ module.exports = (config) => {
         },
       },
       plugins: [
-        'expo-router',
+        // SDK 58 turns async (lazy) routes on for web by default; Homiio keeps the
+        // one-bundle web shape its size budget and cold-start check are measured on.
+        ['expo-router', { asyncRoutes: { web: false } }],
         // Native OS splash (Oxy family "Instagram, from Meta" pattern): Homiio's
         // own logo (white on transparent) centered on the dark brand background,
         // with the shared Oxy symbol pinned to the bottom. `oxySplashScreenPlugin`

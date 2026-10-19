@@ -29,10 +29,10 @@
  * `ScreenScrollView`'s `onEndReached`.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { Image } from 'expo-image';
+import { Image, type ImageProps } from 'expo-image';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
@@ -66,7 +66,7 @@ import { selectionToBoardScope } from '@/components/evictions/evictionScope';
 import { formatEvictionShortDate } from '@/components/evictions/evictionUtils';
 import { spacing } from '@/constants/styles';
 
-const EMPTY_ILLUSTRATION: ImageSourcePropType = require('@/assets/illustrations/empty-evictions.png');
+const EMPTY_ILLUSTRATION: ImageProps['source'] = require('@/assets/illustrations/empty-evictions.png');
 
 /** Board filters — one paginated server status per chip (no all-status feed). */
 const STATUS_FILTERS: { status: EvictionCaseStatus; i18nKey: string }[] = [

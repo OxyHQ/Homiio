@@ -22,10 +22,10 @@
  */
 import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { Image } from 'expo-image';
+import { Image, type ImageProps } from 'expo-image';
 import type * as Notifications from 'expo-notifications';
 
 import {
@@ -74,7 +74,7 @@ type InboxFilter = 'all' | 'unread';
  * Bundled illustration for the empty inbox. Resolved once at module load so
  * the `<Image>` source identity is stable across renders.
  */
-const EMPTY_INBOX_ILLUSTRATION: ImageSourcePropType = require('@/assets/illustrations/empty-inbox.png');
+const EMPTY_INBOX_ILLUSTRATION: ImageProps['source'] = require('@/assets/illustrations/empty-inbox.png');
 
 /**
  * Safely reads the scheduled date from an Expo notification trigger. Only

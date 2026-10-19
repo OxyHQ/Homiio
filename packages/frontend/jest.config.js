@@ -1,5 +1,5 @@
 /**
- * Jest configuration for the Homiio frontend (Expo 56 / React Native 0.85 /
+ * Jest configuration for the Homiio frontend (Expo 58 / React Native 0.88 /
  * React 19). This is the single source of truth — there is intentionally no
  * `"jest"` key in package.json.
  *
@@ -22,10 +22,16 @@
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-expo',
-  // Strip the `.native` extension when resolving react-native-worklets so its
-  // mockable (non-native) build loads — required for the Reanimated 4 Jest mock
-  // wired up in jest.setup.js. Shipped by react-native-worklets for this purpose.
-  resolver: 'react-native-worklets/jest/resolver.js',
+  // Strip the `.native` extension so react-native-worklets and Reanimated's own
+  // module-load initialisers resolve their mockable (non-native) builds —
+  // required for the Reanimated 4 Jest mock wired up in jest.setup.js. Reanimated
+  // 4.7 ships this resolver (it wraps react-native-worklets' own); the worklets
+  // one alone loads Reanimated's native initialiser, which runs a worklet at
+  // import time and throws under Jest.
+  resolver: 'react-native-reanimated/jest/resolver.js',
+  // Gesture Handler's own Jest mocks: v3 calls its native module at import time
+  // (installing UI-runtime bindings), and without the mock that module is absent.
+  setupFiles: ['react-native-gesture-handler/jestSetup.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   // Mirror jest-expo's default ignore list, then allow-list the extra ESM/raw
   // packages we import so Babel transforms them instead of choking on `import`.
