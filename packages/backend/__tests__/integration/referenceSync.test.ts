@@ -13,6 +13,7 @@ import { replacePropertyImages } from '../../db/properties/propertyWrites';
 import { insertOxyImage } from '../../services/files/publicImages';
 import { syncFileReferences } from '../../services/files/referenceSync';
 import { reconcileFileReferenceType } from '../../services/files/referenceReconcile';
+import { referenceInventory } from '../../services/files/referenceUsage';
 import { setOxyFilesForTests } from '../../services/files/oxyFilesClient';
 import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
 import {
@@ -197,5 +198,45 @@ describe('reconcileFileReferenceType', () => {
       setOxyFilesForTests(fakeOxyFiles.api());
     }
     expect(await pending()).toBe(1);
+  });
+});
+
+describe('referenceInventory', () => {
+  async function inventory(pageSize?: number) {
+    const items = [];
+    for await (const item of referenceInventory(getDb(), 'property', pageSize)) items.push(item);
+    return items;
+  }
+
+  it('pages by listing and lists every pair once, in (listing, file) order, at any page size', async () => {
+    const expected: Array<{ fileId: string; entityId: string }> = [];
+    for (let n = 0; n < 5; n += 1) {
+      const propertyId = await listing();
+      const photos = [await photo('property', propertyId), await photo('property', propertyId)];
+      // The same file shown twice on one listing is one use.
+      const again = await insertOxyImage('property', propertyId, {
+        fileId: photos[0].fileId,
+        owner: 'application',
+        format: 'jpeg',
+        bytes: 1,
+        sha256: 'a'.repeat(64),
+      });
+      await replacePropertyImages(propertyId, [
+        ...photos.map(({ imageId }) => ({ imageId })),
+        { imageId: again.id },
+      ]);
+      for (const { fileId } of photos) expected.push({ fileId, entityId: propertyId });
+    }
+    // A listing showing nothing has no pair, but still takes a place in a page.
+    await listing();
+    const order = (a: { fileId: string; entityId: string }, b: typeof a) =>
+      a.entityId === b.entityId ? (a.fileId < b.fileId ? -1 : 1) : a.entityId < b.entityId ? -1 : 1;
+    expected.sort(order);
+
+    expect(await inventory()).toEqual(expected);
+    // Page boundaries never split, repeat or drop a listing's pairs.
+    for (const pageSize of [1, 2, 3, 5, 6]) {
+      expect(await inventory(pageSize)).toEqual(expected);
+    }
   });
 });
