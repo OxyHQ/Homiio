@@ -137,6 +137,12 @@ detectors and portal-specific selectors.
 - Dedup job ids are the sha256 of `(provider, sourceId)`. Never pass raw values
   containing colons as custom ids.
 - BullMQ connections need `maxRetriesPerRequest: null`.
+- Every listing Worker and Queue has an `error` listener
+  (`services/ingestion/redisErrorBackoff.ts`). Without one, BullMQ prints each
+  error's full stack with `console.error`, and its fetch loop retries a refused
+  script with no delay: on 2026-10-20 a full `noeviction` queue node made the
+  worker write ~30 million log lines an hour. A Worker that sees an error now
+  pauses for 1 s, doubling to at most 5 minutes, and logs one line a minute.
 
 ### Ingest pipeline (no portal CDN hotlinks, ever)
 
