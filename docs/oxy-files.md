@@ -51,7 +51,11 @@ expiry sweep, through the CASCADE), a cover replaced or cleared.
   visible (`attempts`, `last_error`).
 - **Nightly reconciliation** (`referenceReconcile.ts`, 04:10 UTC, one task per
   type) sends Oxy the full inventory per entity type from one snapshot, then
-  re-marks the pairs the drain settled during it.
+  re-marks the pairs the drain settled during it. The inventory pages by ENTITY
+  on the source table's own index (`referenceUsage.referenceInventory`), so a
+  page reads only its own rows: paging the joined pairs re-joined every photo
+  per page, and the first production dry run (2026-10-20) ran two hours as the
+  shared database's heaviest statement without finishing `property`.
   `scripts/reconcileFileReferences.ts` runs the same thing on demand — a dry
   run by default (Oxy answers what it would add, remove and refuse, and
   changes nothing), `--apply` to commit, `--type=` for one entity type.

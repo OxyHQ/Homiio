@@ -85,32 +85,71 @@ export async function isReferenceInUse(
   return rows[0]?.used === true;
 }
 
-/** Page size of {@link referenceInventory}: one reconciliation page. */
+/**
+ * The indexed column each type's entity ids live in, as `entity_id`, with the
+ * rows that can hold a pair. Every one leads an index (`property_images`'s
+ * `property_order` index, a primary key, the documents' entity indexes), so
+ * the next page of entity ids is an index walk.
+ */
+function entityKeysOf(entityType: FileReferenceEntityType): { from: SQL; key: SQL } {
+  switch (entityType) {
+    case 'property':
+      return { from: sql`property_images`, key: sql`property_id` };
+    case 'city':
+      return { from: sql`cities`, key: sql`id` };
+    case 'region':
+      return { from: sql`regions`, key: sql`id` };
+    case 'eviction_case':
+      return { from: sql`eviction_cases`, key: sql`id` };
+    case 'lease':
+      return { from: sql`lease_documents`, key: sql`lease_id` };
+    case 'tenant_application':
+      return { from: sql`tenant_application_documents`, key: sql`application_id` };
+    case 'maintenance_request':
+      return { from: sql`maintenance_request_attachments`, key: sql`request_id` };
+  }
+}
+
+/** Entities per page of {@link referenceInventory}. */
 const INVENTORY_PAGE = 1000;
 
 /**
- * Every pair of one type, streamed in keyset order — the inventory a
+ * Every pair of one type, streamed in `(entity, file)` order — the inventory a
  * reconciliation sends. Distinct: a listing showing one file twice is one use.
+ *
+ * Paged by ENTITY, on the source table's own index: the next
+ * {@link INVENTORY_PAGE} entity ids after the cursor, then the pairs of
+ * exactly that id range. A page touches its own rows and nothing else. Paging
+ * the pairs themselves — `(entity_id, oxy_file_id) > cursor` over the join —
+ * cannot use an index, so every page re-joined and re-sorted every photo
+ * (~2M rows): the 2026-10-20 dry run ran two hours without finishing
+ * `property` and was the heaviest statement on the shared database.
  */
 export async function* referenceInventory(
   db: DatabaseOrTransaction,
   entityType: FileReferenceEntityType,
+  pageSize = INVENTORY_PAGE,
 ): AsyncGenerator<{ fileId: string; entityId: string }> {
-  let after: { entityId: string; fileId: string } | null = null;
+  const { from, key } = entityKeysOf(entityType);
+  let after: string | null = null;
   for (;;) {
-    const cursor: SQL = after
-      ? sql`where (p.entity_id, p.oxy_file_id) > (${after.entityId}, ${after.fileId})`
-      : sql``;
+    const keys: { entity_id: string }[] = await db.execute<{ entity_id: string }>(sql`
+      select distinct ${key} as entity_id
+      from ${from}
+      where ${key} is not null ${after === null ? sql`` : sql`and ${key} > ${after}`}
+      order by 1
+      limit ${pageSize}
+    `);
+    if (keys.length === 0) return;
+    const last: string = keys[keys.length - 1].entity_id;
     const page = await db.execute<{ entity_id: string; oxy_file_id: string }>(sql`
       select distinct p.entity_id, p.oxy_file_id
       from (${pairsOf(entityType)}) p
-      ${cursor}
+      where p.entity_id <= ${last} ${after === null ? sql`` : sql`and p.entity_id > ${after}`}
       order by p.entity_id, p.oxy_file_id
-      limit ${INVENTORY_PAGE}
     `);
     for (const row of page) yield { fileId: row.oxy_file_id, entityId: row.entity_id };
-    if (page.length < INVENTORY_PAGE) return;
-    const last = page[page.length - 1];
-    after = { entityId: last.entity_id, fileId: last.oxy_file_id };
+    if (keys.length < pageSize) return;
+    after = last;
   }
 }
