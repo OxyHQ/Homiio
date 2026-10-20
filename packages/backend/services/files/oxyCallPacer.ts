@@ -80,8 +80,12 @@ export class OxyCallPacer {
     this.transientRetries = options.transientRetries ?? TRANSIENT_BACKOFF_MS.length;
   }
 
-  /** Wait for this call's slot. Slots are handed out in call order. */
-  private async slot(): Promise<void> {
+  /**
+   * Wait for the next slot. Slots are handed out in call order. Public for a
+   * caller whose metered call is made by someone else — the SDK's
+   * reconciliation sends its own pages (`referenceReconcile.ts`).
+   */
+  async slot(): Promise<void> {
     const now = this.now();
     const start = Math.max(now, this.nextSlot);
     this.nextSlot = start + this.intervalMs;

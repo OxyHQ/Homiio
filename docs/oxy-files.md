@@ -55,7 +55,10 @@ expiry sweep, through the CASCADE), a cover replaced or cleared.
   on the source table's own index (`referenceUsage.referenceInventory`), so a
   page reads only its own rows: paging the joined pairs re-joined every photo
   per page, and the first production dry run (2026-10-20) ran two hours as the
-  shared database's heaviest statement without finishing `property`.
+  shared database's heaviest statement without finishing `property`. It is
+  handed to the SDK at most 200 pages of 1,000 a minute (Oxy allows 240 per
+  application, and a 429 mid-upload ends the session): ~10 minutes for
+  `property`.
   `scripts/reconcileFileReferences.ts` runs the same thing on demand — a dry
   run by default (Oxy answers what it would add, remove and refuse, and
   changes nothing), `--apply` to commit, `--type=` for one entity type.

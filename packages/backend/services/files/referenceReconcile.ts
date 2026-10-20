@@ -17,6 +17,14 @@
  * snapshot is marked pending again and the drain makes Oxy agree with the
  * present (`file_reference_changes.settled_at`, kept for exactly this).
  *
+ * ## Paced to Oxy's reconciliation budget
+ *
+ * The SDK sends the inventory as pages of {@link OXY_RECONCILE_PAGE_ITEMS}, and
+ * Oxy accepts {@link OXY_RECONCILE_PAGES_PER_MINUTE_LIMIT} of them a minute per
+ * application. A 429 there ends the whole session, so the inventory is handed
+ * over no faster than {@link RECONCILE_PAGES_PER_MINUTE} pages a minute — ~10
+ * minutes for `property`'s ~2M pairs.
+ *
  * Run before Oxy's sweep is switched to `enforce`: an application file Homiio
  * uses but never referenced reads as unused, and would be trashed 24 hours
  * after enforcement starts.
@@ -28,8 +36,33 @@ import { sql } from 'drizzle-orm';
 import { getDb } from '../../db/postgres';
 import { FILE_REFERENCE_ENTITY_TYPES } from '../../db/schema/oxyFiles';
 import { logger } from '../../middlewares/logging';
+import { OxyCallPacer } from './oxyCallPacer';
 import { oxyFiles } from './oxyFilesClient';
 import { type FileReferenceEntityType, referenceInventory } from './referenceUsage';
+
+/** Items per page the SDK sends (`@oxy.so/core`'s `SERVICE_RECONCILE_PAGE_SIZE`). */
+export const OXY_RECONCILE_PAGE_ITEMS = 1000;
+/** Oxy's per-application budget for reconciliation pages (`appReferenceReconcileLimiter`). */
+export const OXY_RECONCILE_PAGES_PER_MINUTE_LIMIT = 240;
+/** What Homiio spends of it: a margin for the commit and status calls. */
+export const RECONCILE_PAGES_PER_MINUTE = 200;
+
+/**
+ * The inventory, handed over one SDK page at a time no faster than `pacer`
+ * allows: every {@link OXY_RECONCILE_PAGE_ITEMS} items wait for a slot.
+ */
+export async function* pacedInventory<T>(
+  items: AsyncIterable<T>,
+  pacer: Pick<OxyCallPacer, 'slot'>,
+  pageItems = OXY_RECONCILE_PAGE_ITEMS,
+): AsyncGenerator<T> {
+  let count = 0;
+  for await (const item of items) {
+    if (count % pageItems === 0) await pacer.slot();
+    count += 1;
+    yield item;
+  }
+}
 
 export interface ReconcileReport {
   entityType: FileReferenceEntityType;
@@ -60,7 +93,10 @@ export async function reconcileFileReferenceType(
       snapshotAt = new Date(lock.now);
       result = await oxyFiles().references.reconcile(
         entityType,
-        referenceInventory(tx, entityType),
+        pacedInventory(
+          referenceInventory(tx, entityType),
+          new OxyCallPacer({ perMinute: RECONCILE_PAGES_PER_MINUTE }),
+        ),
         { dryRun: options.dryRun === true },
       );
     },
