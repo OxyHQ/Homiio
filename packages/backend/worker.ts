@@ -65,6 +65,10 @@ import {
   type DiscoverJobData,
   type FetchJobData,
 } from './services/ingestion/queues';
+import {
+  backOffWorkerOnRedisErrors,
+  summariseQueueErrors,
+} from './services/ingestion/redisErrorBackoff';
 
 const logger = new Logger('ListingWorker');
 
@@ -705,6 +709,14 @@ async function startBullMq(): Promise<() => Promise<void>> {
     { connection, prefix, concurrency: FETCH_CONCURRENCY },
   );
 
+  // A Redis that refuses commands (a full `noeviction` node) must not turn
+  // BullMQ's fetch loop into a tight retry printing a stack per attempt —
+  // see services/ingestion/redisErrorBackoff.
+  const stopBackoffs = [discoverWorker, fetchWorker].map((worker) =>
+    backOffWorkerOnRedisErrors(worker, { logger }),
+  );
+  for (const queue of [discoverQueue, fetchQueue]) summariseQueueErrors(queue, { logger });
+
   for (const worker of [discoverWorker, fetchWorker]) {
     worker.on('failed', (job, error) => {
       // `error.message` ALONE IS NOT ENOUGH, and that is the whole reason the
@@ -788,6 +800,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
   }
 
   return async () => {
+    for (const stop of stopBackoffs) stop();
     await Promise.all([discoverWorker.close(), fetchWorker.close()]);
     await Promise.all([discoverQueue.close(), fetchQueue.close()]);
   };
