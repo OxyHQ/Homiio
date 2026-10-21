@@ -36,7 +36,7 @@ import {
 import { legacyImageUrl } from '../../services/files/legacyImages';
 import { legacyObjectStore } from '../../services/files/legacyObjectStore';
 import { OxyCallPacer } from '../../services/files/oxyCallPacer';
-import { flushLegacyReads } from '../../services/files/legacyReadCounter';
+import { flushLegacyReads, LEGACY_MEDIA_READ_PAIRS } from '../../services/files/legacyReadCounter';
 import { storageRetirementStatus } from '../../services/files/storageStatus';
 import { setOxyFilesForTests } from '../../services/files/oxyFilesClient';
 import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
@@ -173,8 +173,7 @@ describe('the legacy door', () => {
     expect(Buffer.from(res.body as Buffer).equals(bytes)).toBe(true);
 
     await flushLegacyReads();
-    const reads = await getDb().select().from(legacyMediaReads);
-    expect(reads).toEqual([
+    expect(await readRows()).toEqual([
       expect.objectContaining({ surface: 'public_image', outcome: 'served', reads: 1 }),
     ]);
   });
@@ -216,8 +215,20 @@ describe('the legacy door', () => {
     await flushLegacyReads();
     await request(door()).get('/images/file/property/not-there-original.jpeg');
     await flushLegacyReads();
-    const reads = await getDb().select().from(legacyMediaReads);
-    expect(reads).toEqual([expect.objectContaining({ outcome: 'missing', reads: 2 })]);
+    expect(await readRows()).toEqual([expect.objectContaining({ outcome: 'missing', reads: 2 })]);
+  });
+
+  it('writes a zero row for every surface and outcome of the day, with nothing read', async () => {
+    const now = new Date('2026-10-21T12:00:00Z');
+    await flushLegacyReads(now);
+    await flushLegacyReads(now);
+    const rows = await getDb().select().from(legacyMediaReads);
+    expect(rows).toHaveLength(LEGACY_MEDIA_READ_PAIRS.length);
+    for (const [surface, outcome] of LEGACY_MEDIA_READ_PAIRS) {
+      expect(rows).toContainEqual(
+        expect.objectContaining({ day: '2026-10-21', surface, outcome, reads: 0 }),
+      );
+    }
   });
 });
 
@@ -514,16 +525,14 @@ describe('storageRetirementStatus', () => {
 
     const [candidate] = await findLegacyImages(null, 10);
     await migrateLegacyImage(candidate);
-    // Counting began 20 days ago with redirects only.
+    // Counted every day of the soak, with redirects only.
+    await countedDays(14);
     await getDb()
-      .insert(legacyMediaReads)
-      .values({
-        day: sql`current_date - 20` as unknown as string,
-        surface: 'public_image',
-        outcome: 'redirected',
-        reads: 5,
-      });
+      .update(legacyMediaReads)
+      .set({ reads: 5 })
+      .where(eq(legacyMediaReads.outcome, 'redirected'));
     let status = await storageRetirementStatus(14);
+    expect(status.daysCounted).toBe(14);
     expect(status.publicImagesRetirable).toBe(true);
 
     // One byte served from the bucket inside the soak closes it again.
@@ -538,4 +547,60 @@ describe('storageRetirementStatus', () => {
     status = await storageRetirementStatus(14);
     expect(status.publicImagesRetirable).toBe(false);
   });
+
+  it('never reads a day nothing counted as a quiet one', async () => {
+    // Zero reads everywhere, and counting began long ago — but one soak day
+    // has no rows at all (no counter ran), and the gate stays shut.
+    await countedDays(20, { skip: 5 });
+    let status = await storageRetirementStatus(14);
+    expect(status.recentReads.every((row) => row.reads === 0)).toBe(true);
+    expect(status.daysCounted).toBe(13);
+    expect(status.publicImagesRetirable).toBe(false);
+
+    // A day holding only some of its pairs is not counted either.
+    await getDb()
+      .insert(legacyMediaReads)
+      .values({
+        day: sql`(now() at time zone 'utc')::date - 5` as unknown as string,
+        surface: 'public_image',
+        outcome: 'served',
+        reads: 0,
+      });
+    status = await storageRetirementStatus(14);
+    expect(status.daysCounted).toBe(13);
+    expect(status.publicImagesRetirable).toBe(false);
+
+    // Today does not count towards the soak: it is not a whole day yet.
+    await getDb().delete(legacyMediaReads);
+    await countedDays(13);
+    await flushLegacyReads();
+    status = await storageRetirementStatus(14);
+    expect(status.daysCounted).toBe(13);
+    expect(status.publicImagesRetirable).toBe(false);
+  });
 });
+
+/** The rows that counted a read (the counter also writes zeros). */
+async function readRows() {
+  return (await getDb().select().from(legacyMediaReads)).filter((row) => row.reads > 0);
+}
+
+/**
+ * Zero rows for every pair of the `days` whole UTC days before today, as a
+ * counter running all day writes them — except `skip` days ago.
+ */
+async function countedDays(days: number, options: { skip?: number } = {}): Promise<void> {
+  const rows = [];
+  for (let back = 1; back <= days; back += 1) {
+    if (back === options.skip) continue;
+    for (const [surface, outcome] of LEGACY_MEDIA_READ_PAIRS) {
+      rows.push({
+        day: sql`(now() at time zone 'utc')::date - ${back}::int` as unknown as string,
+        surface,
+        outcome,
+        reads: 0,
+      });
+    }
+  }
+  await getDb().insert(legacyMediaReads).values(rows);
+}

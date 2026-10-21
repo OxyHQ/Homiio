@@ -198,8 +198,12 @@ the scripts run as one-off ECS tasks of the API image.
 
 `scripts/oxyFilesStatus.ts` exits 0 only when **the public half may go**: no
 shown photo left in the bucket, zero `public_image`/`served` reads for 14 days,
-and the counter itself at least 14 days old (so an absence of rows cannot pass
-for an absence of reads). Then, in one change:
+and each of the 14 whole UTC days before today COUNTED — a row for every
+(surface, outcome) pair (`daysCounted` = 14). Every API task writes those rows
+every minute from boot, zeros included (`legacyReadCounter.ts`), so a day
+without them is a day nothing was counting and never passes for a quiet one.
+The counter wrote zeros from 2026-10-21; before that it wrote only on a read,
+so no earlier day counts. Then, in one change:
 
 - `legacyImages.resolveLegacyImage` answers redirects and 404s only (drop the
   bucket read), and `migrateImagesToOxy.ts` is deleted;
