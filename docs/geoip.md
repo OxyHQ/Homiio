@@ -81,24 +81,25 @@ file in `services/geoip/` starts reading a forwarding header, `req.query` or
 `req.body` — so "accept `?ip=` so support can reproduce a user's result" is a
 red test rather than a reasonable-sounding commit.
 
-`server.ts` sets `trust proxy: 1` — one trusted hop, the ALB — and Express
-walks the forwarding chain from the right. That was the whole chain while
-`api.homiio.com` was an ALB host rule pointing straight at the ECS task
-(`oxy-infra/terraform-uswest2/app-services.tf`). The API is moving behind
-Cloudflare's proxy, which puts a second hop in front of the ALB:
+`server.ts` sets `trust proxy` to `oxyTrustProxy` (`@oxy.so/core/server`): it
+trusts the socket peer only when it is private (the ALB) and the hop before it
+only when it is a published Cloudflare edge address, nothing further out. So
+`req.ip` is the person whether `api.homiio.com` is DNS-only or proxied by
+Cloudflare in front of the ALB, and Express walks the forwarding chain from the
+right:
 
-| The client sends | Chain | Arrives as | `req.ip` |
+| The client sends | Chain | Arrives as (socket: ALB) | `req.ip` |
 |---|---|---|---|
-| nothing | ALB only | `XFF: <client>` | `<client>` |
-| `XFF: 8.8.8.8` | ALB only | `XFF: 8.8.8.8, <client>` | `<client>` — the forgery is to the LEFT |
-| `XFF: 8.8.8.8` | Cloudflare → ALB | `XFF: 8.8.8.8, <client>, <edge>` | `<edge>` — never the forgery, but not the person either |
+| nothing | ALB | `XFF: <client>` | `<client>` |
+| `XFF: 8.8.8.8` | ALB | `XFF: 8.8.8.8, <client>` | `<client>` — the forgery is to the LEFT |
+| nothing | Cloudflare → ALB | `XFF: <client>, <edge>` | `<client>` |
+| `XFF: 8.8.8.8` | Cloudflare → ALB | `XFF: 8.8.8.8, <client>, <edge>` | `<client>` |
 
-Behind Cloudflare, `req.ip` is the Cloudflare edge that relayed the request, so
-a lookup locates the edge rather than the person. Which hops to trust is being
-replaced in the Oxy SDK; until then the setting stays, and nothing in Homiio
-reads `X-Forwarded-For` or `CF-Connecting-IP` itself. Raising `trust proxy` to a
-number that exceeds the real chain would make `req.ip` a value a *client*
-supplied, so the number is pinned by a test.
+A fixed hop count cannot do this: `1` reports the Cloudflare edge as the client
+on a proxied hostname (GeoIP would locate the edge, every anonymous rate limit
+would share its bucket), and `2` would believe a forged entry on a DNS-only one.
+`__tests__/unit/geoipTrustBoundary.test.ts` pins the setting and checks all
+four shapes through a real Express app.
 
 Private, loopback, link-local, CGNAT (`100.64/10`) and other reserved ranges are
 refused before the lookup: a server-side render or a health probe must not be

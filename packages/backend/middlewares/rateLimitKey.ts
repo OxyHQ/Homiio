@@ -6,7 +6,7 @@
  * postures, and the weaker one would be the one nobody reviewed.
  *
  * Authenticated requests key on the user id, which avoids the shared-IP
- * collision behind the ALB where many users leave from one egress address.
+ * collision where many users leave from one egress address.
  *
  * Anonymous requests key on a salted, non-reversible HMAC of the NORMALIZED
  * client IP — the raw IP is never held at rest in the rate-limit store, which
@@ -31,7 +31,9 @@ export function rateLimitKeyFor(req: Request, namespace: string): string {
   if (userId) {
     return `${namespace}:user:${userId}`;
   }
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  // `req.ip` under `oxyTrustProxy` (`server.ts`): the person, not the ALB or
+  // a Cloudflare edge, and never a forged X-Forwarded-For entry.
+  const ip = req.ip || 'unknown';
   const normalized = ipKeyGenerator(ip);
   const salt = process.env.IP_HASH_SALT || '';
   return crypto
