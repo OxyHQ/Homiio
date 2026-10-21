@@ -292,6 +292,12 @@ jobs:
       - name: Verify every migration declares a deploy phase
         run: bun .github/scripts/check-migration-phases.mjs packages/backend/drizzle
 
+      # Every migration keeps its locks short: one RDS serves every Oxy app, so a
+      # migration that holds ACCESS EXCLUSIVE on a hot table while it backfills
+      # stalls this service (oxy 2026-10-16). Rules: @oxy.so/db's lock gate.
+      - name: Verify migrations keep their locks short
+        run: bun run --cwd packages/backend check:migration-locks
+
       - name: Test backend
         run: >-
           bun run --cwd packages/backend test --

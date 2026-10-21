@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "ts-node --transpile-only db/migrate.ts --phase=all",
+    "check:migration-locks": "oxy-db-check-migration-locks --migrations=drizzle --after=36 --hot-tables=properties,property_images,profiles,addresses,cities,saved_items,notifications,leases",
     "seed:geo": "ts-node --transpile-only scripts/seedGeo.ts",
     "seed:properties": "ts-node --transpile-only scripts/seedProperties.ts",
     "test": "cd ../listing-providers && bun run build && cd ../backend && NODE_OPTIONS='--max-old-space-size=6144' jest",
