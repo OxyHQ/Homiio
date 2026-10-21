@@ -79,7 +79,7 @@ FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble@sha256:5b8f294aff
 RUN mkdir /browsers \
     && cp -a /ms-playwright/chromium-* /ms-playwright/chromium_headless_shell-* /ms-playwright/ffmpeg-* /browsers/
 
-FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS builder
+FROM node:22.23-bookworm-slim@sha256:3ed98443660ff48413b5af19ecefce3b9d50845a901a43420d47cc63a9fddbe9 AS builder
 ARG BUN_VERSION
 
 # No compiler toolchain: this stage installs with --ignore-scripts and only runs
@@ -173,7 +173,7 @@ RUN cp -r packages/backend/locales packages/backend/dist/locales
 # each runtime loads. Same lockfile, flags and filter as the builder, minus
 # devDependencies, so `dist` was compiled against the versions that ship. The
 # API and the worker take the same `node_modules`; the worker adds Playwright.
-FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS production-deps
+FROM node:22.23-bookworm-slim@sha256:3ed98443660ff48413b5af19ecefce3b9d50845a901a43420d47cc63a9fddbe9 AS production-deps
 ARG BUN_VERSION
 
 # The compiler toolchain, for msgpackr-extract only (below). It stays in this
@@ -234,7 +234,7 @@ RUN bun install --cwd /opt/worker-runtime --frozen-lockfile --production --ignor
 
 # ── Worker runtime base (Debian + Node, bun copied in below) ──────
 # See the header for why the worker keeps this base rather than `oven/bun`.
-FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS runtime-common
+FROM node:22.23-bookworm-slim@sha256:3ed98443660ff48413b5af19ecefce3b9d50845a901a43420d47cc63a9fddbe9 AS runtime-common
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates tini \
