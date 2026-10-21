@@ -24,6 +24,7 @@ import {
   OxyServer,
   createOptionalOxyAuth,
   createOxyAuthMiddleware,
+  oxyTrustProxy,
   type OxyAuthRefusal,
 } from '@oxy.so/core/server';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
@@ -141,13 +142,16 @@ async function initializeDatabase() {
 let activityReady = false;
 const activity = startPlatformActivity(() => activityReady);
 const app = express();
-if (activity) app.use(activity.observeHttp);
 
-// One trusted proxy hop, the AWS ALB. Behind Cloudflare's proxy that makes
-// req.ip the Cloudflare edge, not the client; the trusted-hop setting is being
-// replaced in the Oxy SDK. Never parse X-Forwarded-For here instead
-// (`services/geoip/clientIp.ts`).
-app.set('trust proxy', 1);
+// Which forwarding hops to believe, before anything reads `req.ip`: the socket
+// peer only when it is private (the ALB), the hop before it only when it is a
+// published Cloudflare edge, nothing further out. So `req.ip` is the person
+// whether `api.homiio.com` is DNS-only (`client → ALB`) or proxied
+// (`client → Cloudflare → ALB`), and a forged X-Forwarded-For is never
+// believed. Every limiter key (`middlewares/rateLimitKey.ts`) and the GeoIP
+// lookup (`services/geoip/clientIp.ts`) read `req.ip` and nothing else.
+app.set('trust proxy', oxyTrustProxy);
+if (activity) app.use(activity.observeHttp);
 
 /**
  * The capability catalogue's two MCP lanes — `/_oxy/mcp` (Alia, capability

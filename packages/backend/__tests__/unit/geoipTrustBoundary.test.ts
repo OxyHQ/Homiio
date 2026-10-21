@@ -21,6 +21,12 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
+import express from 'express';
+import request from 'supertest';
+import { oxyTrustProxy } from '@oxy.so/core/server';
+
+import { clientAddressOf } from '../../services/geoip/clientIp';
+
 const GEOIP_DIR = path.join(__dirname, '../../services/geoip');
 
 function geoipSources(): { file: string; source: string }[] {
@@ -107,18 +113,48 @@ describe('the GeoIP path never reads a client-supplied address', () => {
   });
 });
 
-describe('the deployed topology matches the trust setting', () => {
-  it('trusts exactly one proxy hop', () => {
-    // `api.homiio.com` is an ALB host rule straight onto the task, with no CDN
-    // in front (oxy-infra: app-services.tf's `host_headers`, and cdn.tf, which
-    // fronts only the media bucket). One hop is therefore the correct setting,
-    // and `req.ip` is the right-most address the ALB itself appended — so a
-    // forged header, which lands to the LEFT of it, cannot win.
-    //
-    // Pinned here because raising this number is how the defence silently
-    // breaks: `trust proxy: 2` behind a one-hop ingress makes `req.ip` the last
-    // entry a CLIENT supplied.
+describe('the trust setting finds the person behind either chain', () => {
+  it('is oxyTrustProxy, not a hop count', () => {
+    // A fixed count is wrong on one of the two chains `api.homiio.com` can
+    // have: `1` reports the Cloudflare edge as the client once the hostname is
+    // proxied, `2` believes a forged entry while it is DNS-only.
     const server = readFileSync(path.join(__dirname, '../../server.ts'), 'utf8');
-    expect(server).toContain("app.set('trust proxy', 1)");
+    expect(server).toContain("app.set('trust proxy', oxyTrustProxy)");
+    expect(server).not.toMatch(/app\.set\('trust proxy',\s*\d/);
+  });
+
+  // supertest connects from loopback, which stands in for the ALB: a private
+  // socket peer. The X-Forwarded-For values are what the ALB would hand on.
+  const app = express();
+  app.set('trust proxy', oxyTrustProxy);
+  app.get('/whoami', (req, res) => {
+    res.json({ ip: req.ip, lookup: clientAddressOf(req) });
+  });
+
+  const CLIENT = '203.0.113.7';
+  const CLOUDFLARE_EDGE = '172.70.1.2';
+
+  it.each([
+    ['DNS-only: the ALB appends the client', CLIENT],
+    ['DNS-only, with a forged entry to the left', `8.8.8.8, ${CLIENT}`],
+    ['proxied: Cloudflare appends the client, the ALB the edge', `${CLIENT}, ${CLOUDFLARE_EDGE}`],
+    ['proxied, with a forged entry to the left', `8.8.8.8, ${CLIENT}, ${CLOUDFLARE_EDGE}`],
+    [
+      'proxied, with a forged Cloudflare address to the left',
+      `${CLOUDFLARE_EDGE}, ${CLIENT}, ${CLOUDFLARE_EDGE}`,
+    ],
+  ])('%s → req.ip and the GeoIP lookup are the client', async (_shape, forwarded) => {
+    const res = await request(app).get('/whoami').set('X-Forwarded-For', forwarded);
+    expect(res.body).toEqual({
+      ip: CLIENT,
+      lookup: { kind: 'public', address: CLIENT, family: 'ipv4' },
+    });
+  });
+
+  it('never reports a Cloudflare edge as the person', async () => {
+    const res = await request(app)
+      .get('/whoami')
+      .set('X-Forwarded-For', `${CLIENT}, ${CLOUDFLARE_EDGE}`);
+    expect(res.body.ip).not.toBe(CLOUDFLARE_EDGE);
   });
 });
