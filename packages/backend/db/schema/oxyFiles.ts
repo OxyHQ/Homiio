@@ -194,7 +194,9 @@ export const LEGACY_MEDIA_OUTCOMES = ['redirected', 'served', 'missing'] as cons
  * an absence of rows must not read as an absence of reads — so the counter is
  * a durable table with a row per (day, surface, outcome), not a log line that
  * a missing log group would turn into silence. Counts are buffered per process
- * and flushed every minute (`services/files/legacyReadCounter.ts`).
+ * and flushed every minute from boot, a row for every pair even at zero
+ * (`services/files/legacyReadCounter.ts`), so a day without its rows is a day
+ * nothing counted.
  *
  * No expiry: one row per day per pair is a few thousand rows a year, and the
  * history is the evidence the retirement is decided on.

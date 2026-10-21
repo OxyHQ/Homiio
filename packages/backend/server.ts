@@ -34,7 +34,7 @@ import { createCrowdSourceWebhookRoutes } from './routes/crowdSourceWebhook';
 import { moderationOutboxDispatcher } from './services/moderation/ModerationOutboxDispatcher';
 import { createOxyFilesWebhookRoutes } from './routes/oxyFilesWebhook';
 import { fileReferenceSyncLoop } from './services/files/referenceSync';
-import { flushLegacyReads } from './services/files/legacyReadCounter';
+import { startLegacyReadCounter, stopLegacyReadCounter } from './services/files/legacyReadCounter';
 import { getErrorMessage } from './utils/errors';
 import { createCapabilityLanes, mountCapabilityLanes } from './capabilities/mount';
 
@@ -413,6 +413,12 @@ async function startServer() {
          * (`services/files/referenceSync.ts`).
          */
         fileReferenceSyncLoop.start();
+        /**
+         * Write the bucket's read counts every minute from boot, ZEROS
+         * included, so the retirement gate can tell a day nothing was served
+         * from a day nothing was counting (`services/files/legacyReadCounter.ts`).
+         */
+        startLegacyReadCounter();
       }
     });
 
@@ -434,7 +440,7 @@ async function startServer() {
         new Promise<void>((resolve) => server.close(() => resolve())),
         moderationOutboxDispatcher.stop(),
         fileReferenceSyncLoop.stop(),
-        flushLegacyReads(),
+        stopLegacyReadCounter(),
       ]);
       await activity?.stop();
       clearTimeout(timeout);
