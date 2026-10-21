@@ -9,8 +9,8 @@
  * rows CASCADE — but `images.entity_id` cannot carry a foreign key (it is
  * polymorphic), so nothing ever removed the `images` row behind them. The
  * census found 948 such rows from listing expiry alone, each still holding
- * four objects in the bucket. Nothing in Homiio counted them, so nothing
- * would ever have stopped them.
+ * four objects in the (since retired) bucket. Nothing in Homiio counted them,
+ * so nothing would ever have stopped them.
  *
  * Now a row nothing shows is deleted 24 hours after it was written (the grace
  * covers an ingest that stores photos minutes before it attaches them, and a
@@ -21,8 +21,7 @@
  * already withdrawn from Oxy when the row stopped being shown (the triggers of
  * migration `0037_oxy_files`), so Oxy trashes a Homiio-owned file 24 hours
  * later and deletes it 30 days after that, and a person's own upload becomes
- * "not in use" in their file manager — theirs to keep or delete. A legacy row's
- * objects go with the bucket when it is retired (`docs/oxy-files.md`).
+ * "not in use" in their file manager — theirs to keep or delete.
  *
  * "Shown" is the same set of pointers `services/files/referenceUsage.ts`
  * registers; a new pointer to `images` must be added to both.
@@ -45,33 +44,28 @@ const UNSHOWN = sql`
 
 export interface UnusedImageCount {
   entityType: string;
-  /** `oxy` when the row names an Oxy file, `legacy` when only bucket keys. */
-  storage: 'oxy' | 'legacy';
   rows: number;
 }
 
-/** How many unused rows there are, by entity type and storage — the preview. */
+/** How many unused rows there are, by entity type — the preview. */
 export async function countUnusedImages(
   db: DatabaseOrTransaction,
   graceHours = UNUSED_IMAGE_GRACE_HOURS,
 ): Promise<UnusedImageCount[]> {
   const rows = await db.execute<{
     entity_type: string;
-    storage: 'oxy' | 'legacy';
     rows: string;
   }>(sql`
     select i.entity_type,
-           case when i.oxy_file_id is null then 'legacy' else 'oxy' end as storage,
            count(*)::text as rows
     from images i
     where i.created_at < now() - make_interval(hours => ${graceHours})
       and ${UNSHOWN}
-    group by 1, 2
-    order by 1, 2
+    group by 1
+    order by 1
   `);
   return rows.map((row) => ({
     entityType: row.entity_type,
-    storage: row.storage,
     rows: Number(row.rows),
   }));
 }

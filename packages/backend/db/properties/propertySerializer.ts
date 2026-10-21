@@ -45,7 +45,6 @@
 import type { InferSelectModel } from 'drizzle-orm';
 import { coarserListingAddressPrecision, type ListingAddressPrecision } from '@homiio/shared-types';
 
-import { resolveStoredImageUrl } from '../../services/files/legacyImages';
 import { publicColumns } from '../schema/protectedColumns';
 import {
   properties,
@@ -129,29 +128,20 @@ function blockIfAny(record: Record<string, unknown>): Record<string, unknown> | 
 
 /**
  * One `property_images` row in the historical `Property.images[]` read shape.
- *
- * Every URL goes through `resolveStoredImageUrl`, which rewrites a legacy
- * direct-S3 URL to the current delivery host. It runs over every response
- * because the URLs are STORED,
- * so rows written before the delivery host changed still carry the old one, and
- * dropping the rewrite here would serve dead image links for those rows with
- * nothing to indicate why.
+ * The URLs are stored as they are served and pass through unchanged.
  */
 function serializeImage(row: PropertyImageRow): Record<string, unknown> {
-  const resolve = (url: string | null): string | null =>
-    url === null ? null : resolveStoredImageUrl(url);
-
   const urls = blockIfAny({
-    original: resolve(row.urlsOriginal),
-    small: resolve(row.urlsSmall),
-    medium: resolve(row.urlsMedium),
-    large: resolve(row.urlsLarge),
+    original: row.urlsOriginal,
+    small: row.urlsSmall,
+    medium: row.urlsMedium,
+    large: row.urlsLarge,
   });
 
   return withoutAbsent({
     id: row.id,
     imageId: row.imageId,
-    url: resolve(row.url),
+    url: row.url,
     caption: row.caption,
     isPrimary: row.isPrimary,
     order: row.order,

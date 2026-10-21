@@ -298,10 +298,9 @@ async function replaceOne(
   const keepIds = new Set(newRefs.map((newRef) => newRef.imageId));
   const allImages = await findImagesForEntity('property', candidate.id);
   const stale = allImages.filter((image) => !keepIds.has(image.id));
-  // Rows only. The bytes are not this script's to delete any more: a legacy
-  // row's objects go with the bucket's retirement, and an Oxy file stops being
-  // used the moment no listing shows it (the reference triggers), after which
-  // Oxy collects a Homiio-owned file on its own (ADR 0043 D5).
+  // Rows only. The bytes are not this script's to delete: an Oxy file stops
+  // being used the moment no listing shows it (the reference triggers), after
+  // which Oxy collects a Homiio-owned file on its own (ADR 0043 D5).
   const deletedBlobs = 0;
   if (stale.length > 0) {
     await deleteImagesByIds(stale.map((image) => image.id));

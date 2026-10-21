@@ -3,12 +3,11 @@
  *
  * A row is Homiio's record of ONE photo it shows, and since ADR 0043 (Oxy
  * Files) the bytes live in Oxy: `oxy_file_id` names the file and the four
- * `urls_*` are its Oxy CDN renditions (`services/files/imageUrls.ts`). A row
- * written before the move names four objects in Homiio's own bucket instead
- * (`keys_*`), and keeps them after `scripts/migrateImagesToOxy.ts` copies it,
- * because those keys are what an old URL still asks the legacy route for
- * (`services/files/legacyImages.ts` redirects it). `docs/oxy-files.md` is the
- * whole model.
+ * `urls_*` are its Oxy CDN renditions (`services/files/imageUrls.ts`). Every
+ * row names an Oxy file; Homiio's own bucket was retired on 2026-10-21. A row
+ * copied from the bucket keeps `keys_original`, because that key is what an
+ * old URL still asks the legacy route for (`services/files/legacyImages.ts`
+ * redirects it). `docs/oxy-files.md` is the whole model.
  *
  * See `CONVENTIONS.md` for the rules every decision below follows.
  */
@@ -73,22 +72,23 @@ export const images = pgTable(
      */
     entityId: text().notNull(),
 
-    // ── the four processed variants, flattened ──
-    //
-    // The wire carries two objects (`keys` and `urls`) with the same four fixed
-    // fields each. The variant set is CLOSED and known
-    // at schema time, so eight named columns are the honest shape: a child table
-    // would model a cardinality that does not exist, and `jsonb` would make
-    // `urls.medium` — the single most-read value in the product — unindexable
-    // and untyped. The names keep the wire path (`keys.medium` →
-    // `keys_medium`), which is what lets a serializer map them mechanically.
-    //
-    // The keys are NULL on a row born in Oxy: it has no object in Homiio's
-    // bucket. `images_storage_check` requires one of the two homes.
+    /**
+     * The retired bucket's key of the photo's original, on a row copied from
+     * it; NULL on a row born in Oxy. Only the legacy route reads it, to
+     * redirect an old URL to the Oxy rendition. (The other three keys were
+     * dropped with the bucket: an old URL of any variant is resolved through
+     * its original's key.)
+     */
     keysOriginal: text(),
-    keysSmall: text(),
-    keysMedium: text(),
-    keysLarge: text(),
+
+    // ── the four renditions, flattened ──
+    //
+    // The variant set is CLOSED and known at schema time, so four named columns
+    // are the honest shape: a child table would model a cardinality that does
+    // not exist, and `jsonb` would make `urls.medium` — the single most-read
+    // value in the product — unindexable and untyped. The names keep the wire
+    // path (`urls.medium` → `urls_medium`), which is what lets a serializer map
+    // them mechanically.
     urlsOriginal: text().notNull(),
     urlsSmall: text().notNull(),
     urlsMedium: text().notNull(),
@@ -111,9 +111,12 @@ export const images = pgTable(
 
     // ── Oxy Files (ADR 0043) ──
 
-    /** The Oxy file holding the bytes. NULL only on a row not yet migrated. */
+    /**
+     * The Oxy file holding the bytes. Never NULL: `images_storage_check`, not
+     * the column type, is what guarantees it for these four columns.
+     */
     oxyFileId: text(),
-    /** Who owns that file; set exactly when `oxy_file_id` is. */
+    /** Who owns that file. */
     oxyFileOwner: text({ enum: OXY_FILE_OWNERS }),
     /**
      * The file's status and visibility as Oxy's file events last reported them
@@ -173,21 +176,14 @@ export const images = pgTable(
       sql`${table.oxyFileVisibility} in (${sql.raw(inList(OXY_FILE_VISIBILITIES))})`,
     ),
     /**
-     * Every row has its bytes SOMEWHERE: an Oxy file (with its owner, status
-     * and visibility — the four are one fact), or all four legacy keys. A
-     * migrated row has both, which is allowed.
+     * Every row's bytes are an Oxy file, with its owner, status and visibility
+     * — the four are one fact. Until the bucket was retired (2026-10-21) four
+     * legacy keys were the alternative; there is none now.
      */
     check(
       'images_storage_check',
-      sql`(
-        ${table.oxyFileId} is not null and ${table.oxyFileOwner} is not null
-          and ${table.oxyFileStatus} is not null and ${table.oxyFileVisibility} is not null
-      ) or (
-        ${table.oxyFileId} is null and ${table.oxyFileOwner} is null
-          and ${table.oxyFileStatus} is null and ${table.oxyFileVisibility} is null
-          and ${table.keysOriginal} is not null and ${table.keysSmall} is not null
-          and ${table.keysMedium} is not null and ${table.keysLarge} is not null
-      )`,
+      sql`${table.oxyFileId} is not null and ${table.oxyFileOwner} is not null
+          and ${table.oxyFileStatus} is not null and ${table.oxyFileVisibility} is not null`,
     ),
     /** A credit names at least its source and its licence, or is absent. */
     check(
@@ -205,9 +201,10 @@ export const images = pgTable(
      */
     index('images_oxy_file_id_idx').on(table.oxyFileId),
     /**
-     * The legacy route's redirect: an old `/api/images/file/<key>` URL of a
-     * MIGRATED row resolves to its Oxy file by the original key. Partial,
-     * because an unmigrated row is served from the bucket and never looked up.
+     * The legacy route's redirect: an old `/api/images/file/<key>` URL resolves
+     * to its Oxy file by the original key. (Partial on `oxy_file_id`, which
+     * every row now has, from when an unmigrated row was served from the
+     * bucket; kept rather than rebuilt over two million rows.)
      */
     index('images_migrated_keys_original_idx')
       .on(table.keysOriginal)

@@ -42,9 +42,8 @@
  *
  * **Photos are declared, not attached — and cannot be attached today.** The
  * contract's `AssetRef` needs a bare Oxy file id AND a SHA-256 digest. Homiio
- * listing photos live in Homiio's own S3, served from `${publicUrl}/api/images/
- * file/...`; there is no Oxy file id anywhere in the pipeline, and neither
- * `images` nor `property_images` stores a digest of any kind. A URL on Homiio's
+ * listing photos are Oxy files now (`images.oxy_file_id`, ADR 0043), but
+ * neither `images` nor `property_images` stores a digest of any kind. A URL on Homiio's
  * own host is not an acceptable substitute: a reviewer's browser fetching it
  * would tell Homiio which of its listings are under review, which attacks the
  * blind-jury property the whole design rests on. Inventing a digest is worse

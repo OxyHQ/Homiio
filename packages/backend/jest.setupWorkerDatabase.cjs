@@ -36,11 +36,3 @@ if (!Number.isFinite(workerId) || index < 0 || index >= urls.length) {
 }
 
 process.env.DATABASE_URL = urls[index];
-
-/**
- * Object storage for the suite: the in-process store
- * (`services/files/legacyObjectStore.ts`), selected explicitly. The local-disk
- * store this replaced was a second storage production never had; a test of
- * the private-document door now exercises the store contract instead.
- */
-process.env.HOMIIO_OBJECT_STORE = 'memory';

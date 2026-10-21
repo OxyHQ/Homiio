@@ -264,11 +264,12 @@ export const maintenanceRequestEvents = pgTable(
  *
  * ## The row points at a private object, and cannot point anywhere else
  *
- * `storage_key` is a bucket key under `private/maintenance/…`, written by the
- * server from the request id and a fresh uuid — never a URL, and never anything
- * a client supplied. The difference from `tenant_application_documents`, which
- * stores a URL, is deliberate: that column is a legacy shape being read
- * defensively, and this one starts from what the delivery route actually needs.
+ * `storage_key` is `oxy:<fileId>` — a private file in the uploader's own Oxy
+ * account (ADR 0043 stage 4c) — written by the server, never a URL, and never
+ * anything a client supplied. The difference from
+ * `tenant_application_documents`, which stores a URL (an applicant may list a
+ * link of their own), is deliberate: this one holds only what the delivery
+ * route actually needs.
  *
  * There is no `url`. A row that carried one would invite somebody to render it,
  * and the whole point is that these bytes have no address anybody can open.
@@ -298,9 +299,9 @@ export const maintenanceRequestAttachments = pgTable(
     /** Which side they were on when they did, resolved from the lease then. */
     role: text({ enum: MAINTENANCE_ROLES }).notNull(),
     /**
-     * Where the photo is: `oxy:<fileId>` — a private file in the uploader's own
-     * Oxy account (ADR 0043 stage 4c) — or, for one stored before that, a
-     * bucket key under a private prefix. Server-generated, never a URL. `services/files/privateDocuments.ts` reads both.
+     * Where the photo is: `oxy:<fileId>`, a private file in the uploader's own
+     * Oxy account (ADR 0043 stage 4c). Server-generated, never a URL;
+     * `services/files/privateDocuments.ts` reads it.
      */
     storageKey: text().notNull(),
     /** The re-encoded type, which is what the delivery route answers with. */
@@ -325,16 +326,17 @@ export const maintenanceRequestAttachments = pgTable(
       sql`${table.role} in (${sql.raw(inList(MAINTENANCE_ROLES))})`,
     ),
     /**
-     * The prefix, in the DATABASE.
+     * The ref's shape, in the DATABASE.
      *
-     * The delivery route refuses a key that is not private, so a row with a
-     * public key would simply 404 — a photo that silently never opens. Refusing
-     * the INSERT says so at the moment somebody writes the wrong prefix instead
-     * of at the moment a tenant taps a thumbnail.
+     * The delivery route reads only an Oxy file, so any other value would
+     * simply 404 — a photo that silently never opens. Refusing the INSERT says
+     * so at the moment somebody writes the wrong ref instead of at the moment a
+     * tenant taps a thumbnail. (Bucket keys under `private/` were allowed until
+     * the bucket was retired on 2026-10-21, when no row held one.)
      */
     check(
       'maintenance_request_attachments_private_key_check',
-      sql`${table.storageKey} like 'private/%' or ${table.storageKey} ~ '^oxy:[A-Za-z0-9_-]{1,128}$'`,
+      sql`${table.storageKey} ~ '^oxy:[A-Za-z0-9_-]{1,128}$'`,
     ),
     check('maintenance_request_attachments_bytes_check', sql`${table.bytes} > 0`),
   ],

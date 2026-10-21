@@ -52,7 +52,6 @@ import { AppError } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
 import {
   privateDocumentRefFromRowUrl,
-  privateDocumentRowUrl,
   readPrivateDocument,
   storePrivateUpload,
 } from '../services/files/privateDocuments';
@@ -637,7 +636,7 @@ export async function listLeaseDocuments(oxyUserId: string, leaseId: string) {
 
 /**
  * Attach a tenancy document as a party. Authorize, then store, then record: a
- * stranger's upload never reaches the bucket, and the row is written last. A
+ * stranger's upload never reaches storage, and the row is written last. A
  * PDF is stored verbatim, an image re-encoded (dropping EXIF).
  */
 export async function uploadLeaseDocument(
@@ -672,7 +671,7 @@ export async function uploadLeaseDocument(
       name,
       // `oxy:<fileId>`, the uploader's private Oxy file; nothing serves it
       // publicly.
-      url: privateDocumentRowUrl(stored.ref),
+      url: stored.ref,
       type: documentType,
       // Server-resolved, never from input.
       uploadedByOxyUserId: oxyUserId,
@@ -713,7 +712,7 @@ export async function readLeaseDocument(oxyUserId: string, leaseId: string, docu
   if (!document) throw new AppError('Document not found', 404, 'NOT_FOUND');
 
   // The party check above is the authorization; this only fetches the bytes
-  // (from the uploader's Oxy account, or the bucket for an unmigrated one).
+  // from the uploader's Oxy account.
   const ref = privateDocumentRefFromRowUrl(document.url);
   const file = ref ? await readPrivateDocument(ref) : null;
   if (!file) throw new AppError('Document not found', 404, 'NOT_FOUND');

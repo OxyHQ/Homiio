@@ -94,7 +94,8 @@ measurements: **`docs/postgres.md`**.
   first — `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` exists because a deadline can be
   a STAMP (`eviction_cases.archived_at`) whose row must survive it.
 
-- **Photos live in Oxy Files (ADR 0043), never in Homiio's bucket** —
+- **Every photo and document is an Oxy file (ADR 0043); Homiio stores no bytes
+  and has no bucket (retired 2026-10-21)** —
   `docs/oxy-files.md`. A person's upload is THEIR file (`uploadUserMedia`);
   scraped photos and covers are the Homiio APPLICATION's (`importAppFile[s]`).
   A new column pointing at `images` must join the trigger set of migration
@@ -103,8 +104,8 @@ measurements: **`docs/postgres.md`**.
   shown, or the sweep deletes one. Private documents (private files in the
   uploader's account, `oxy:<fileId>` on the row; migration
   `0038_oxy_private_documents`) go through `services/files/privateDocuments.ts`
-  only, and a client may never name one. Nothing writes to the bucket: an Oxy
-  refusal FAILS the upload — never a fallback to a store being retired.
+  only, and a client may never name one. An Oxy refusal FAILS the upload —
+  never a fallback to another store.
 
 ## Ownership and auth (CRITICAL)
 

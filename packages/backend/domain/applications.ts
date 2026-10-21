@@ -56,7 +56,6 @@ import { AppError } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
 import {
   privateDocumentRefFromRowUrl,
-  privateDocumentRowUrl,
   readPrivateDocument,
   storePrivateUpload,
 } from '../services/files/privateDocuments';
@@ -279,10 +278,9 @@ function parseDocumentsFromBody(raw: unknown): ParsedDocument[] {
     }
     // A listed document is a LINK the applicant supplies, never one of the
     // documents Homiio stores: those arrive as uploads. A row naming a stored
-    // document (`oxy:<fileId>`, or a private bucket key in delivery-route
-    // shape) would make the document route read somebody else's file through
-    // Homiio's own access to it, behind a party check that only proves the
-    // caller is this application's applicant.
+    // document (`oxy:<fileId>`) would make the document route read somebody
+    // else's file through Homiio's own access to it, behind a party check that
+    // only proves the caller is this application's applicant.
     if (typeof doc.url !== 'string' || privateDocumentRefFromRowUrl(doc.url) !== null) {
       throw new AppError(
         `documents[${index}] must be uploaded, not named by a stored document's address`,
@@ -370,7 +368,7 @@ async function uploadDocumentFiles(
     );
     uploaded.push({
       type: types[i],
-      url: privateDocumentRowUrl(stored.ref),
+      url: stored.ref,
       filename: file.originalname,
     });
   }
@@ -627,7 +625,7 @@ export async function readApplicationDocument(
   if (!document) throw new AppError('Document not found', 404, 'NOT_FOUND');
 
   // The party check above is the authorization; this only fetches the bytes
-  // (from the uploader's Oxy account, or the bucket for an unmigrated one).
+  // from the uploader's Oxy account.
   const ref = privateDocumentRefFromRowUrl(document.url);
   const file = ref ? await readPrivateDocument(ref) : null;
   if (!file) throw new AppError('Document not found', 404, 'NOT_FOUND');

@@ -1,15 +1,14 @@
 /**
  * The image repository — the one place an `images` row is written or removed.
  *
- * Reached from `services/files/publicImages.insertOxyImage` (every photo since
- * the move to Oxy Files), the publish path of `db/properties/propertyWrites`,
- * and the migration and orphan scripts.
+ * Reached from `services/files/publicImages.insertOxyImage`, the publish path
+ * of `db/properties/propertyWrites`, and the orphan sweep.
  *
- * ## The variants are written together or not at all
+ * ## Every row is an Oxy file
  *
- * `urls_*` are all `NOT NULL`, and `images_storage_check` makes the bytes'
- * home one fact: an Oxy file with its owner, status and visibility, or all
- * four legacy `keys_*`. A half-described image cannot be stored.
+ * `urls_*` are all `NOT NULL`, and `images_storage_check` requires the Oxy
+ * file with its owner, status and visibility. There is no other home for the
+ * bytes: Homiio's own bucket was retired on 2026-10-21 (`docs/oxy-files.md`).
  *
  * ## `entity_id` carries no foreign key, permanently
  *
@@ -31,19 +30,11 @@ import type { ImageAttribution, ImageEntityType } from '@homiio/shared-types';
 
 export type ImageRow = typeof images.$inferSelect;
 
-/**
- * One photo, plus where the caller wants it.
- *
- * Exactly one home for the bytes: `oxyFile` (every photo written since the move
- * to Oxy Files) or `keys` (a legacy bucket object — only the publish of a
- * photo uploaded before the deploy still produces one). `images_storage_check`
- * refuses a row with neither.
- */
+/** One photo — the Oxy file that holds its bytes — plus where the caller wants it. */
 export interface ImageInsert {
   entityType: ImageEntityType;
   entityId: string;
-  oxyFile?: { id: string; owner: 'application' | 'account' };
-  keys?: { original: string; small: string; medium: string; large: string };
+  oxyFile: { id: string; owner: 'application' | 'account' };
   urls: { original: string; small: string; medium: string; large: string };
   /** Pixel dimensions, when known. */
   width?: number;
@@ -81,14 +72,10 @@ export async function insertImage(
   const values: typeof images.$inferInsert = {
     entityType: input.entityType,
     entityId: input.entityId,
-    keysOriginal: input.keys?.original ?? null,
-    keysSmall: input.keys?.small ?? null,
-    keysMedium: input.keys?.medium ?? null,
-    keysLarge: input.keys?.large ?? null,
-    oxyFileId: input.oxyFile?.id ?? null,
-    oxyFileOwner: input.oxyFile?.owner ?? null,
-    oxyFileStatus: input.oxyFile ? 'active' : null,
-    oxyFileVisibility: input.oxyFile ? 'public' : null,
+    oxyFileId: input.oxyFile.id,
+    oxyFileOwner: input.oxyFile.owner,
+    oxyFileStatus: 'active',
+    oxyFileVisibility: 'public',
     attributionSourceUrl: input.attribution?.sourceUrl ?? null,
     attributionLicense: input.attribution?.license ?? null,
     attributionLicenseUrl: input.attribution?.licenseUrl ?? null,
@@ -129,37 +116,6 @@ export async function findImagesByIds(
     .select()
     .from(images)
     .where(inArray(images.id, [...ids]));
-}
-
-/**
- * An entity's images indexed by their ORIGINAL variant key.
- *
- * The original key is a server-minted `<folder>/<uuid>-original.<ext>`, so it
- * identifies one processed upload exactly. That is what makes re-saving a
- * listing idempotent: a photo uploaded during an edit session and saved twice
- * matches the row the first save minted instead of minting a second one for the
- * same bytes.
- */
-export async function findEntityImagesByOriginalKey(
-  entityType: ImageEntityType,
-  entityId: string,
-  originalKeys: readonly string[],
-  db: DatabaseOrTransaction = getDb(),
-): Promise<Map<string, ImageRow>> {
-  if (originalKeys.length === 0) return new Map();
-  const rows = await db
-    .select()
-    .from(images)
-    .where(
-      and(
-        eq(images.entityType, entityType),
-        eq(images.entityId, entityId),
-        inArray(images.keysOriginal, [...originalKeys]),
-      ),
-    );
-  const found = new Map<string, ImageRow>();
-  for (const row of rows) if (row.keysOriginal) found.set(row.keysOriginal, row);
-  return found;
 }
 
 /**

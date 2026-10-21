@@ -1,10 +1,10 @@
 # Photos and documents: Oxy Files
 
 > The platform model is Oxy's ADR 0043 ("Who owns a file, who uses it, and
-> when it goes away"). This page says how Homiio applies it, how the move off
-> Homiio's own bucket runs, and what has to be true before the bucket goes.
+> when it goes away"). This page says how Homiio applies it, and records how
+> Homiio's own bucket was retired (2026-10-21).
 
-Homiio stores no public photo bytes of its own any more. Every photo it shows
+Homiio stores no bytes of its own. Every photo it shows
 is a file in **Oxy Files**, and Homiio keeps only its record of showing it (an
 `images` row naming `oxy_file_id`) and the four rendition URLs Oxy serves.
 Private tenancy documents are PRIVATE files in their uploader's own Oxy
@@ -115,18 +115,19 @@ stage 4c, OxyHQ/oxy#1774).
   Homiio may read the file. When the person revokes Homiio's access in their
   file manager, or the file is trashed, deleted or taken down, Oxy leaves it
   out and the route answers 404. A re-upload of bytes whose access was revoked
-  is stored in the bucket instead (the revocation survives the re-upload).
+  answers 409 `DOCUMENT_ACCESS_REVOKED` (the revocation survives the
+  re-upload, and is honoured).
 - **Referenced**: the document row is the use. Migration
   `0038_oxy_private_documents` marks the pair on every insert, update and
   delete (cascades included); the drain registers it and the nightly
   reconciliation covers the three types (`referenceUsage.ts`).
 - **A client never names one.** A listed application document is a link the
-  applicant supplies; one naming a stored document (`oxy:…` or a private
-  bucket URL) is refused with 400 `INVALID_DOCUMENTS`, because the document
-  route reads through Homiio's own access.
+  applicant supplies; one naming a stored document (`oxy:…`) is refused with
+  400 `INVALID_DOCUMENTS`, because the document route reads through Homiio's
+  own access.
 
-**Where a new one goes.** Every new document goes to Oxy, and nowhere else —
-nothing writes to Homiio's bucket any more. When Oxy will not hold it, the
+**Where a new one goes.** Every new document goes to Oxy, and nowhere else.
+When Oxy will not hold it, the
 upload fails and says why (`privateDocuments.ts`): a transient failure (Oxy
 unreachable, a 5xx, a damaged transfer) is retried twice and a short rate limit
 waited out once, then answers 503; the person's own case answers what they can
@@ -136,34 +137,17 @@ large, a type Oxy will not hold), 451 `DOCUMENT_BLOCKED`, or 409
 and that decision is honoured rather than routed around); a refusal of
 Homiio's own credential or an answer that is not the private file sent is
 logged as an error and answers 503/502. No row is written for a failed upload.
-Reading follows the row: an `oxy:` row reads from Oxy, a bucket row (stored
-before the move) from the bucket (counted in `legacy_media_reads`,
-`private_document`).
-
-**Moving the existing ones.** `scripts/migratePrivateDocumentsToOxy.ts`
-(preview by default; `--apply`, `--limit`, `--concurrency`, `--report`). Each
-object is read, hashed (a lease document must still match its
-`content_sha256`), uploaded privately to its owner (the uploader; the
-applicant for an application document), READ BACK through Homiio's consent
-and hashed again, and only then is the row switched — compare-and-set, so a
-row that changed meanwhile is left for the next run. The first
-`read_back_refused` stops the run with exit 2: that is an Oxy without stage
-4c (or without `files:linked:read`), and every row stays on the bucket, where
-it still reads; at most `--concurrency` files were stored in owners' accounts,
-which Oxy shows them as "not in use". A row naming nothing Homiio stores (an
-applicant's own link) is `not_stored_here` and never moves. The bucket object
-is kept until the bucket goes.
+A row's ref is `oxy:<fileId>` and nothing else; a row naming anything else
+reads as absent (404).
 
 ## Rollout
 
-In this order. Nothing here runs against production from a developer machine;
-the scripts run as one-off ECS tasks of the API image.
+As it ran, in this order. Nothing here runs against production from a
+developer machine; the scripts run as one-off ECS tasks of the API image.
 
 1. **Oxy:** the API deploy carrying ADR 0043 stages 1–4b, and `@oxy.so/contracts`
    4.24.0, `@oxy.so/core` 4.21.0 and `@oxy.so/services` 11.12.0 published.
-   Stage 4c (OxyHQ/oxy#1774) is needed only for private documents, and only
-   once the switch is on: deploying this before 4c is live changes nothing for
-   them (switch off, every document in the bucket).
+   Stage 4c (OxyHQ/oxy#1774) for private documents.
 2. **The grant, once no Homiio mints a Sindi token.** Since #677 Sindi is an
    Alia agent and Homiio mints no Sindi service token, so nothing checks
    Homiio's token for an EXACT scope set any more: Oxy checks every Homiio call
@@ -183,57 +167,51 @@ the scripts run as one-off ECS tasks of the API image.
 4. **Migrations `0037_oxy_files` and `0038_oxy_private_documents`** (both
    `pre`) are applied by the deploy.
 5. **Orphans:** `scripts/cleanOrphanImages.ts` (preview), then `--apply`.
-6. **Copy:** `scripts/migrateImagesToOxy.ts` (preview), then `--apply
-   --report=…` until the preview reports nothing left. A Homiio-owned photo
-   is IMPORTED, 50 to a request: Oxy fetches it from the legacy door
-   (`PUBLIC_API_URL` + `/api/images/file/<key>`), Homiio compares the SHA-256
-   Oxy stored with the bucket object's, and the listing's use is registered in
-   the same request. Oxy meters an application's uploads and imports together
-   at 30 requests a minute — about two million photos is a day of batch
-   imports, and would be seven weeks of uploads — and the live listing ingest
-   spends from the same budget, so `--per-minute` (default 20) leaves it a
-   third, and a 429 is waited out and the same request sent again
-   (`services/files/oxyCallPacer.ts`); it is never a row's outcome. A run
-   killed or redeployed under resumes where it stopped. Oxy's fetches are
-   counted as legacy-door `served` reads, so the soak (step 7) starts when the
-   copy ends. Read the
-   `missing_object` lines (a shown photo whose object is gone — broken today)
-   and re-run with `--detach-missing`. Legacy city covers are re-sourced with
-   credit, or cleared if Commons answers with nothing creditable; one whose
-   re-sourcing failed (Commons or Oxy did not answer) is `cover_failed` and
-   kept for the next run. A region cover is cleared.
-   The report carries row ids, outcomes and SHA-256s, never keys or URLs.
-7. **Soak.** The legacy door keeps every old URL working: a migrated photo's
-   old URL answers 301 to its Oxy rendition, an unmigrated one is still served
-   from the bucket. `scripts/oxyFilesStatus.ts` prints the gate daily.
-8. **Private documents** (needs Oxy stage 4c, OxyHQ/oxy#1774, and
-   `files:linked:read`): run `scripts/migratePrivateDocumentsToOxy.ts --apply
-   --limit=5` and read the report — `migrated` lines mean read-back works;
-   exit 2 (`read_back_refused`) means it does not, and nothing moved. Then run
-   it without `--limit` until the preview shows nothing `onBucket`. New
-   documents already go to Oxy ([Where a new one goes](#private-documents)).
-9. **References:** `scripts/reconcileFileReferences.ts` (dry run), read it,
+6. **Copy, soak and private documents — done.** Every shown photo was copied
+   into Oxy Files and every private document moved into its owner's account;
+   the CLIs that did it were deleted with the bucket
+   ([The bucket, retired](#the-bucket-retired-2026-10-21)).
+7. **References:** `scripts/reconcileFileReferences.ts` (dry run), read it,
    then `--apply`. Run it before Oxy's unused-file sweep is enforced for
    Homiio: an application file Homiio shows but never referenced reads as
    unused there.
 
-## Retiring the bucket
+## The bucket, retired (2026-10-21)
 
-`scripts/oxyFilesStatus.ts` exits 0 only when **the public half may go**: no
-shown photo left in the bucket, zero `public_image`/`served` reads for 14 days,
-and each of the 14 whole UTC days before today COUNTED — a row for every
-(surface, outcome) pair (`daysCounted` = 14). Every API task writes those rows
-every minute from boot, zeros included (`legacyReadCounter.ts`), so a day
-without them is a day nothing was counting and never passes for a quiet one.
-The counter wrote zeros from 2026-10-21; before that it wrote only on a read,
-so no earlier day counts. Then, in one change:
+Homiio's own S3 bucket (`oxy-homiio-media-usw2-…`) held every photo and
+private document before ADR 0043. The copy into Oxy Files ran to completion
+(`migrateImagesToOxy` for the photos, `migratePrivateDocumentsToOxy` for the
+documents), and on 2026-10-21 production measured, read-only:
 
-- `legacyImages.resolveLegacyImage` answers redirects and 404s only (drop the
-  bucket read), and `migrateImagesToOxy.ts` is deleted;
-- a `post` migration drops `images.keys_*` except `keys_original` (the
-  redirect's lookup key) and `images_storage_check` requires `oxy_file_id`.
+- `images`: 2,188,197 rows, every one naming an Oxy file; no `urls_*` value
+  pointing at the legacy door or at S3, and none in `property_images.url`;
+- `lease_documents`, `tenant_application_documents`,
+  `maintenance_request_attachments`: no row naming a bucket object; no bucket
+  or legacy-door URL in `eviction_cases.cover_image_url`, `reviews.images`,
+  `lease_inspection_findings.photos` or `property_documents.url`;
+- `legacy_media_reads`: the last `public_image`/`served` read was the copy's
+  own (2026-10-19, ~03:00 UTC), and the API's request logs show no
+  `/api/images/file/` request since 2026-10-19, 04:00 UTC.
 
-The bucket itself — and `AWS_S3_BUCKET`, the task role's S3 policy and the
-bucket in oxy-infra — goes only when `bucketRetirable` is also true: no
-private document row names a bucket object any more (step 8) and the
-`private_document` surface served nothing from the bucket for the soak.
+The owner waived the rest of the planned 14-day soak, and one change retired
+the bucket from the code:
+
+- the legacy door (`legacyImages.resolveLegacyImage`) answers redirects and
+  404s only — an old `/api/images/file/<key>` URL still answers 301 to its Oxy
+  rendition, or 404; nothing is read from the bucket;
+- a private document is `oxy:<fileId>` or nothing (`privateDocuments.ts`);
+- a listing photo is published by `imageId` or by its Oxy file; bucket keys are
+  a 400 (`photoIntake.ts`);
+- the object-store adapter, the two copy CLIs, the retirement gate
+  (`oxyFilesStatus`), the `s3` config block, `AWS_S3_BUCKET` and the AWS SDK
+  went; the deploy removes `AWS_S3_BUCKET` and `PUBLIC_API_URL` from the
+  running task definitions;
+- migration `0039_retire_legacy_bucket` (`post`) dropped `images.keys_small`,
+  `keys_medium` and `keys_large`, made `images_storage_check` require the Oxy
+  file, and narrowed `maintenance_request_attachments_private_key_check` to
+  `oxy:` refs. `keys_original` stays: it is the door's redirect lookup.
+
+`legacy_media_reads` still counts the door's `public_image` `redirected` and
+`missing` answers, zeros included (`legacyReadCounter.ts`). When the redirects
+stop, the door itself can go. The bucket, the task role's S3 policy and the
+bucket in oxy-infra are retired outside this repository.

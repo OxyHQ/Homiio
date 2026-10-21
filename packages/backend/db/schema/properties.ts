@@ -20,7 +20,7 @@
  * primary feed; a child table would put a join in front of it.
  *
  * Column names keep the wire path (`longTermRent.monthlyAmount` →
- * `long_term_rent_monthly_amount`), the same rule `images.keys_medium` follows,
+ * `long_term_rent_monthly_amount`), the same rule `images.urls_medium` follows,
  * because it is what lets a serializer map a DTO to its columns mechanically
  * rather than through a hand-written table of exceptions.
  *

@@ -40,11 +40,11 @@ import { eq } from 'drizzle-orm';
 import applicationController from '../../controllers/applicationController';
 import imageController from '../../controllers/imageController';
 import { getDb } from '../../db/postgres';
-import { tenantApplicationDocuments, tenantApplications } from '../../db/schema';
+import { uuidv7 } from '@oxy.so/db';
+
+import { images, tenantApplicationDocuments, tenantApplications } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
-import { seedLegacyObject } from '../helpers/legacyBucket';
-import { legacyImageUrl } from '../../services/files/legacyImages';
-import config from '../../config';
+import { storePrivateFile } from '../../services/files/privateDocuments';
 import { objectIdHex, resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 const APPLICANT = 'oxy-applicant';
@@ -78,16 +78,24 @@ function publicImages(): Express {
   return app;
 }
 
-/** Write bytes into the store under a key and return the URL a row holds. */
-async function storeDocument(key: string, bytes: Buffer): Promise<string> {
-  await seedLegacyObject(key, bytes, 'application/octet-stream');
-  return legacyImageUrl(key);
+/** Store bytes as the applicant's private Oxy file and return the ref a row holds. */
+async function storeDocument(bytes: Buffer): Promise<string> {
+  const stored = await storePrivateFile(
+    { ownerOxyUserId: APPLICANT, kind: 'tenant_application' },
+    bytes,
+    'image/jpeg',
+    '.jpeg',
+  );
+  return stored.ref;
 }
 
 interface Fixture {
   applicationId: string;
   documentId: string;
+  /** The key the document's OLD public URL named, before #518. */
   key: string;
+  /** What the row holds: `oxy:<fileId>`. */
+  url: string;
   bytes: Buffer;
 }
 
@@ -119,7 +127,7 @@ async function seedApplicationWithDocument(): Promise<Fixture> {
   // extension allowlist, so a photographed payslip is the shape that leaked.
   const bytes = Buffer.from(`payslip-${applicationId}`);
   const key = `applications/documents/${applicationId}-original.jpeg`;
-  const url = await storeDocument(key, bytes);
+  const url = await storeDocument(bytes);
 
   const documentId = objectIdHex();
   await db.insert(tenantApplicationDocuments).values({
@@ -130,7 +138,7 @@ async function seedApplicationWithDocument(): Promise<Fixture> {
     filename: 'payslip.jpeg',
   });
 
-  return { applicationId, documentId, key, bytes };
+  return { applicationId, documentId, key, url, bytes };
 }
 
 /**
@@ -174,17 +182,32 @@ describe('the public image route does not serve tenancy evidence', () => {
     }
   });
 
-  it('still serves an ordinary listing photo', async () => {
+  it('still redirects an ordinary listing photo to Oxy', async () => {
     // The floor: a gate that refused everything would pass every case above
-    // while breaking every listing on the site.
-    const key = 'property/public-photo-original.jpeg';
-    const bytes = Buffer.from('a listing photo');
-    await storeDocument(key, bytes);
+    // while breaking every old listing photo URL on the web.
+    const uuid = uuidv7();
+    await getDb()
+      .insert(images)
+      .values({
+        entityType: 'property',
+        entityId: 'application-floor-listing',
+        keysOriginal: `property/${uuid}-original.jpeg`,
+        oxyFileId: `floor-${uuid}`,
+        oxyFileOwner: 'application',
+        oxyFileStatus: 'active',
+        oxyFileVisibility: 'public',
+        urlsOriginal: 'u',
+        urlsSmall: 'u',
+        urlsMedium: 'u',
+        urlsLarge: 'u',
+        format: 'jpeg',
+        bytes: 1,
+      });
 
-    const res = await request(publicImages()).get(`/images/file/${key}`);
+    const res = await request(publicImages()).get(`/images/file/property/${uuid}-original.jpeg`);
 
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(bytes);
+    expect(res.status).toBe(301);
+    expect(res.headers.location).toContain(`floor-${uuid}`);
   });
 });
 
@@ -254,7 +277,7 @@ describe('the authorized route serves them, to two people', () => {
     );
 
     // A row is data. A parser that fell through to "treat the whole string as a
-    // key" would let one name any object in the bucket.
+    // ref" would let one name any file Homiio can read.
     expect(res.status).toBe(404);
   });
 });
@@ -273,6 +296,6 @@ describe('the wire shape no longer hands out a storage link', () => {
     // The storage URL is GONE from the payload, under any name. A landlord who
     // saved an old response still holds one; a landlord reading today does not.
     expect(JSON.stringify(res.body)).not.toContain('/api/images/file/');
-    expect(JSON.stringify(res.body)).not.toContain(config.s3.bucketName || '__no_bucket__');
+    expect(JSON.stringify(res.body)).not.toContain(fixture.url);
   });
 });

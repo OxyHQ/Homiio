@@ -82,8 +82,8 @@ export function toMaintenanceCommentDTO(row: MaintenanceCommentRow): Maintenance
 /**
  * An attachment, as a path rather than a link.
  *
- * `storage_key` never leaves the server. It names an object in a private
- * bucket, and a client that held one could do nothing with it — but a key in a
+ * `storage_key` never leaves the server. It names a private Oxy file, and a
+ * client that held one could do nothing with it — but a key in a
  * payload is a key in a log, a screenshot and a bug report, and the reason this
  * domain has a private path at all is that those are exactly the places a
  * tenancy's evidence should not turn up.

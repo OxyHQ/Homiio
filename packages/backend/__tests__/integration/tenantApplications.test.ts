@@ -506,23 +506,22 @@ describe('documents', () => {
     expect(bad.status).toBe(400);
   });
 
-  it.each([
-    ['an Oxy file Homiio stored for somebody else', 'oxy:file000001'],
-    [
-      'a private bucket document',
-      'https://api.homiio.com/api/images/file/private/applications/a/b.pdf',
-    ],
-  ])('refuses a listed document that names %s', async (_label, url) => {
+  it('refuses a listed document that names an Oxy file Homiio stored for somebody else', async () => {
     const propertyId = await seedRentalProperty();
 
     const res = await request(buildApp('oxy-applicant'))
       .post('/applications')
       .send(
-        applicationBody(propertyId, { documents: [{ type: 'income', url, filename: 'x.pdf' }] }),
+        applicationBody(propertyId, {
+          documents: [{ type: 'income', url: 'oxy:file000001', filename: 'x.pdf' }],
+        }),
       );
 
     // The document route reads a stored document through HOMIIO's access to
     // it; naming one here would hand an applicant somebody else's payslip.
+    // (A URL at the retired bucket's old address names nothing Homiio can
+    // read any more: it is only the applicant's own link, and the document
+    // route answers 404 for it — `privateDocuments.readPrivateDocument`.)
     expect(res.status).toBe(400);
     expect(res.body.error?.code ?? res.body.code).toBe('INVALID_DOCUMENTS');
     expect(await getDb().select().from(tenantApplicationDocuments)).toHaveLength(0);

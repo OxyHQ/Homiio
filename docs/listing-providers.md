@@ -616,6 +616,13 @@ empty feed.
 
 ## Throughput: the ingest was 120 sequential round trips per listing
 
+> **Superseded by ADR 0043.** Oxy now fetches a listing's photos itself, in one
+> `importAppFiles` request per listing (`docs/oxy-files.md`;
+> `__tests__/integration/externalMediaIngest.test.ts` pins order and the
+> one-bad-photo case). The bounded-parallel helper below (`utils/concurrency.ts`)
+> was removed with Homiio's bucket on 2026-10-21. Kept as the record of the
+> measurement.
+
 Measured in production on 2026-09-20, from the worker's own log timestamps:
 
 ```

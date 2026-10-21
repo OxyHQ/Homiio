@@ -11,7 +11,7 @@
  */
 
 import { and, eq, inArray } from 'drizzle-orm';
-import { uuidv7 } from '@oxy.so/db';
+import { CHECK_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxy.so/db';
 
 import { getDb } from '../../db/postgres';
 import {
@@ -108,17 +108,14 @@ describe('property_images', () => {
     expect((await marks(['file-cascade'])).has(`property:${propertyId}:file-cascade`)).toBe(true);
   });
 
-  it('does not mark a legacy photo (no Oxy file, nothing to register)', async () => {
+  it('refuses a photo row with no Oxy file (the bucket is retired; there is no other home)', async () => {
     const propertyId = await listing();
-    const [legacy] = await getDb()
+    const error = await getDb()
       .insert(images)
       .values({
         entityType: 'property',
         entityId: propertyId,
         keysOriginal: 'p/o.jpeg',
-        keysSmall: 'p/s.webp',
-        keysMedium: 'p/m.webp',
-        keysLarge: 'p/l.webp',
         urlsOriginal: 'u',
         urlsSmall: 'u',
         urlsMedium: 'u',
@@ -126,8 +123,13 @@ describe('property_images', () => {
         format: 'jpeg',
         bytes: 1,
       })
-      .returning();
-    await getDb().insert(propertyImages).values({ propertyId, imageId: legacy.id });
+      .then(
+        () => undefined,
+        (rejected: unknown) => rejected,
+      );
+
+    expect(sqlStateOf(error)).toBe(CHECK_VIOLATION);
+    expect(constraintNameOf(error)).toBe('images_storage_check');
 
     const all = await getDb().select().from(fileReferenceChanges);
     expect(all).toEqual([]);
@@ -190,14 +192,11 @@ describe('covers', () => {
 });
 
 describe('images', () => {
-  it('marks every use of a row, under both files, when its Oxy file changes (the migration)', async () => {
+  it('marks every use of a row when its Oxy file changes', async () => {
     const propertyId = await listing();
-    const legacyCover = await seedCityImage(chain.cityId);
-    await getDb()
-      .update(cities)
-      .set({ coverImageId: legacyCover })
-      .where(eq(cities.id, chain.cityId));
-    await getDb().insert(propertyImages).values({ propertyId, imageId: legacyCover });
+    const cover = await seedCityImage(chain.cityId);
+    await getDb().update(cities).set({ coverImageId: cover }).where(eq(cities.id, chain.cityId));
+    await getDb().insert(propertyImages).values({ propertyId, imageId: cover });
 
     await getDb()
       .update(images)
@@ -207,7 +206,7 @@ describe('images', () => {
         oxyFileStatus: 'active',
         oxyFileVisibility: 'public',
       })
-      .where(eq(images.id, legacyCover));
+      .where(eq(images.id, cover));
 
     const found = await marks(['migrated-file']);
     expect(found.has(`city:${chain.cityId}:migrated-file`)).toBe(true);

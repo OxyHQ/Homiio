@@ -236,8 +236,9 @@ export type AddAttachmentOutcome =
  * The role is stored, like a comment's, so a later change of tenancy does not
  * relabel who photographed what.
  *
- * The object is written BEFORE this runs, which means a refused row leaves an
- * unreferenced object in the bucket. That is the safe side of the trade: the
+ * The file is stored BEFORE this runs, which means a refused row leaves an
+ * unreferenced file in the uploader's Oxy account (shown to them as "not in
+ * use"). That is the safe side of the trade: the
  * alternative is a row pointing at bytes that were never stored, which is a
  * photo that silently never opens. The caller checks authorization first, so
  * this is the narrow race and not the common path.

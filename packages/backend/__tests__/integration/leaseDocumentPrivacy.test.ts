@@ -44,14 +44,14 @@ import { eq } from 'drizzle-orm';
 import leaseController from '../../controllers/leaseController';
 import imageController from '../../controllers/imageController';
 import { getDb } from '../../db/postgres';
-import { leaseCoTenants, leaseDocuments, leases } from '../../db/schema';
+import { images, leaseCoTenants, leaseDocuments, leases } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
-import { type MemoryObjectStore, legacyObjectStore } from '../../services/files/legacyObjectStore';
-import { seedLegacyObject } from '../helpers/legacyBucket';
-import { legacyImageUrl } from '../../services/files/legacyImages';
-import config from '../../config';
 import { createHash } from 'node:crypto';
-import { setPrivateDocumentSleepForTests } from '../../services/files/privateDocuments';
+import { uuidv7 } from '@oxy.so/db';
+import {
+  setPrivateDocumentSleepForTests,
+  storePrivateFile,
+} from '../../services/files/privateDocuments';
 import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
@@ -102,22 +102,30 @@ function publicImages(): Express {
   return app;
 }
 
-/** Write bytes into the store under a key and return the URL a row holds. */
-async function storeDocument(key: string, bytes: Buffer): Promise<string> {
-  await seedLegacyObject(key, bytes, 'application/octet-stream');
-  return legacyImageUrl(key);
+/** Store bytes as the landlord's private Oxy file and return the ref a row holds. */
+async function storeDocument(leaseId: string, bytes: Buffer): Promise<string> {
+  const stored = await storePrivateFile(
+    { ownerOxyUserId: LANDLORD, kind: 'lease', entityId: leaseId },
+    bytes,
+    'image/jpeg',
+    '.jpeg',
+  );
+  return stored.ref;
 }
 
 interface Fixture {
   leaseId: string;
   documentId: string;
+  /** The key the document's OLD public URL named, before #518. */
   key: string;
+  /** What the row holds: `oxy:<fileId>`. */
+  url: string;
   bytes: Buffer;
 }
 
 let counter = 0;
 
-/** A lease with a co-tenant, plus one document stored the OLD way. */
+/** A lease with a co-tenant, plus one document in the landlord's Oxy account. */
 async function seedLeaseWithDocument(): Promise<Fixture> {
   const { propertyId } = await seedListingWithGeo({
     countryCode: `L${counter}`,
@@ -146,7 +154,7 @@ async function seedLeaseWithDocument(): Promise<Fixture> {
   // buffer, so a scanned contract arrived as a photograph of one.
   const bytes = Buffer.from(`tenancy-agreement-${leaseId}`);
   const key = `leases/documents/${leaseId}-original.jpeg`;
-  const url = await storeDocument(key, bytes);
+  const url = await storeDocument(leaseId, bytes);
 
   const [row] = await getDb()
     .insert(leaseDocuments)
@@ -160,7 +168,7 @@ async function seedLeaseWithDocument(): Promise<Fixture> {
     })
     .returning();
 
-  return { leaseId, documentId: row.id, key, bytes };
+  return { leaseId, documentId: row.id, key, url, bytes };
 }
 
 /**
@@ -170,6 +178,9 @@ async function seedLeaseWithDocument(): Promise<Fixture> {
 async function reset(): Promise<void> {
   await getDb().delete(leases);
   await resetGeoTables();
+  // Every fixture stores its document in (fake) Oxy, so a failure a test
+  // arranged must not outlive it.
+  fakeOxyFiles.reset();
 }
 
 beforeEach(reset);
@@ -203,17 +214,32 @@ describe('the public image route does not serve a tenancy contract', () => {
     }
   });
 
-  it('still serves an ordinary listing photo', async () => {
+  it('still redirects an ordinary listing photo to Oxy', async () => {
     // The floor: a gate that refused everything would pass every case above
-    // while breaking every listing on the site.
-    const key = 'property/lease-floor-photo-original.jpeg';
-    const bytes = Buffer.from('a listing photo');
-    await storeDocument(key, bytes);
+    // while breaking every old listing photo URL on the web.
+    const uuid = uuidv7();
+    await getDb()
+      .insert(images)
+      .values({
+        entityType: 'property',
+        entityId: 'lease-floor-listing',
+        keysOriginal: `property/${uuid}-original.jpeg`,
+        oxyFileId: `floor-${uuid}`,
+        oxyFileOwner: 'application',
+        oxyFileStatus: 'active',
+        oxyFileVisibility: 'public',
+        urlsOriginal: 'u',
+        urlsSmall: 'u',
+        urlsMedium: 'u',
+        urlsLarge: 'u',
+        format: 'jpeg',
+        bytes: 1,
+      });
 
-    const res = await request(publicImages()).get(`/images/file/${key}`);
+    const res = await request(publicImages()).get(`/images/file/property/${uuid}-original.jpeg`);
 
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(bytes);
+    expect(res.status).toBe(301);
+    expect(res.headers.location).toContain(`floor-${uuid}`);
   });
 });
 
@@ -278,7 +304,7 @@ describe('the authorized route serves them, to the parties', () => {
     );
 
     // A row is data. A parser that fell through to "treat the whole string as a
-    // key" would let one name any object in the bucket.
+    // ref" would let one name any file Homiio can read.
     expect(res.status).toBe(404);
   });
 
@@ -311,7 +337,7 @@ describe('the wire shape no longer hands out a storage link', () => {
     // The storage URL is GONE from the payload, under any name. A tenant who
     // saved an old response still holds one; a tenant reading today does not.
     expect(JSON.stringify(res.body)).not.toContain('/api/images/file/');
-    expect(JSON.stringify(res.body)).not.toContain(config.s3.bucketName || '__no_bucket__');
+    expect(JSON.stringify(res.body)).not.toContain(fixture.url);
   });
 });
 
@@ -348,12 +374,10 @@ describe('a lease document can be a PDF, and the client no longer names where it
   });
 
   it('fails the upload when Oxy cannot store it, and writes nothing anywhere', async () => {
-    // Oxy is down. There is no bucket path any more: a document Oxy cannot
-    // hold is an upload that failed, said so, and left no row and no object.
-    fakeOxyFiles.largeUploadError = oxyError(503, 'UNAVAILABLE');
+    // Oxy is down. There is no other store: a document Oxy cannot hold is an
+    // upload that failed, said so, and left no row.
     const leaseId = await seedLease();
-    const bucket = legacyObjectStore() as MemoryObjectStore;
-    const before = bucket.objects.size;
+    fakeOxyFiles.largeUploadError = oxyError(503, 'UNAVAILABLE');
 
     const res = await request(authed(LANDLORD))
       .post(`/leases/${leaseId}/documents`)
@@ -368,13 +392,11 @@ describe('a lease document can be a PDF, and the client no longer names where it
     expect(
       await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, leaseId)),
     ).toHaveLength(0);
-    expect(bucket.objects.size).toBe(before);
   });
 
   it('keeps a key under the private prefix out of the public route', async () => {
     const leaseId = await seedLease();
     const key = `private/leases/${leaseId}/0192f4a2-aaaa-7bbb-8ccc-1234567890ab.pdf`;
-    await seedLegacyObject(key, Buffer.from('%PDF-1.7 policy'), 'application/pdf');
 
     const res = await request(publicImages()).get(`/images/file/${key}`);
     // Objects stored before the move are private by their KEY, so they never
@@ -398,8 +420,9 @@ describe('a lease document can be a PDF, and the client no longer names where it
     ).toHaveLength(0);
   });
 
-  it('never lets a stranger put an object in the bucket', async () => {
+  it('never lets a stranger store a document', async () => {
     const leaseId = await seedLease();
+    const uploadsBefore = fakeOxyFiles.callsOf('uploadUserMediaLarge').length;
 
     const res = await request(authed(STRANGER))
       .post(`/leases/${leaseId}/documents`)
@@ -413,6 +436,7 @@ describe('a lease document can be a PDF, and the client no longer names where it
     expect(
       await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, leaseId)),
     ).toHaveLength(0);
+    expect(fakeOxyFiles.callsOf('uploadUserMediaLarge')).toHaveLength(uploadsBefore);
   });
 });
 
@@ -459,15 +483,20 @@ describe('in the uploader’s Oxy account (stage 4c)', () => {
     expect(JSON.stringify(created.body)).not.toContain('cloud.oxy.test');
   });
 
-  it('keeps reading a document stored in the bucket before the switch', async () => {
+  it('answers 404 for a row that still names a bucket object: the bucket is retired', async () => {
     const fixture = await seedLeaseWithDocument();
+    await getDb()
+      .update(leaseDocuments)
+      .set({ url: `https://api.homiio.com/api/images/file/${fixture.key}` })
+      .where(eq(leaseDocuments.id, fixture.documentId));
+    const readsBefore = fakeOxyFiles.callsOf('linkedDownloadUrls').length;
 
     const res = await request(authed(TENANT)).get(
       `/leases/${fixture.leaseId}/documents/${fixture.documentId}`,
     );
 
-    expect(res.status).toBe(200);
-    expect(Buffer.from(res.body.data.base64, 'base64')).toEqual(fixture.bytes);
-    expect(fakeOxyFiles.callsOf('linkedDownloadUrls')).toHaveLength(0);
+    expect(res.status).toBe(404);
+    // Nothing is asked for it: not Oxy, and there is no bucket left.
+    expect(fakeOxyFiles.callsOf('linkedDownloadUrls')).toHaveLength(readsBefore);
   });
 });

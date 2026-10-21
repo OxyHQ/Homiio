@@ -26,12 +26,12 @@
  *
  * ## Oxy or nothing
  *
- * Every new document goes to Oxy, and ONLY to Oxy. There is no second store
- * to fall back to: Homiio's bucket is being retired, and a document written
- * there when Oxy refused it would be a document Oxy never knew about — outside
- * the person's file manager, outside their revocation (a person who revoked
- * Homiio on these exact bytes would have had them stored anyway), and one
- * more object keeping the bucket alive. So a refusal is the upload's answer:
+ * Every document is in Oxy, and ONLY in Oxy. There is no second store to fall
+ * back to — Homiio's own bucket was retired on 2026-10-21 — and a document
+ * written anywhere else when Oxy refused it would be one Oxy never knew about:
+ * outside the person's file manager and outside their revocation (a person who
+ * revoked Homiio on these exact bytes would have had them stored anyway). So a
+ * refusal is the upload's answer:
  *
  * - **Transient** — Oxy unreachable, a 5xx, bytes that arrived damaged — is
  *   retried here a couple of times, and a short rate limit is waited out once;
@@ -44,27 +44,18 @@
  *   the private file that was sent — is logged as an error and answers 503/502:
  *   nothing the person can fix, never a row.
  *
- * Rows written before the move that still name a bucket object keep reading
- * from the bucket (every read counted in `legacy_media_reads`, surface
- * `private_document`) until `scripts/migratePrivateDocumentsToOxy.ts` moves
- * them; production held none on 2026-10-21.
+ * A ref is `oxy:<fileId>` and nothing else. When the bucket was retired no
+ * document row named a bucket object; a row naming anything else reads as
+ * absent (404).
  */
 
 import { createHash } from 'node:crypto';
 
 import sharp from 'sharp';
 
-import config from '../../config';
 import { AppError } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
-import {
-  SERVABLE_DOCUMENT_CONTENT_TYPES,
-  validatePrivateDocumentKey,
-} from '../../utils/imageStoreKey';
-import { storedDocumentKey } from '../../utils/storedDocumentKey';
-import { legacyImageUrl } from './legacyImages';
-import { legacyObjectStore } from './legacyObjectStore';
-import { countLegacyRead } from './legacyReadCounter';
+import { SERVABLE_DOCUMENT_CONTENT_TYPES } from '../../utils/imageStoreKey';
 import { retryAfterMs } from './oxyCallPacer';
 import { downloadLinked, oxyErrorCode, oxyErrorStatus, oxyFiles } from './oxyFilesClient';
 
@@ -89,12 +80,12 @@ const OXY_REF_PREFIX = 'oxy:';
 const OXY_FILE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 /** The ref of a document stored in Oxy Files. */
-export function oxyDocumentRef(fileId: string): string {
+function oxyDocumentRef(fileId: string): string {
   if (!OXY_FILE_ID.test(fileId)) throw new Error('Not an Oxy file id');
   return `${OXY_REF_PREFIX}${fileId}`;
 }
 
-/** The Oxy file a ref names, or null for a bucket key (or anything else). */
+/** The Oxy file a ref names, or null for anything else. */
 export function oxyFileIdOfRef(ref: string): string | null {
   if (!ref.startsWith(OXY_REF_PREFIX)) return null;
   const id = ref.slice(OXY_REF_PREFIX.length);
@@ -102,21 +93,13 @@ export function oxyFileIdOfRef(ref: string): string | null {
 }
 
 /**
- * What a document row's `url` column holds for a stored ref: the ref itself
- * for an Oxy file, the delivery-route URL `storedDocumentKey` parses for a
- * bucket key. Nothing serves either publicly; the wire shape never carries it.
+ * The ref a document row's `url` names — the `oxy:<fileId>` itself — or null
+ * when it names nothing Homiio stores (an applicant's own link). The row holds
+ * the ref as it is; nothing serves it publicly and the wire shape never
+ * carries it.
  */
-export function privateDocumentRowUrl(ref: string): string {
-  return oxyFileIdOfRef(ref) ? ref : legacyImageUrl(ref);
-}
-
-/** The ref a row's `url` names, or null when it names nothing Homiio stores. */
 export function privateDocumentRefFromRowUrl(url: string): string | null {
-  if (oxyFileIdOfRef(url)) return url;
-  return storedDocumentKey(url, {
-    bucketName: config.s3.bucketName,
-    endpoint: config.s3.endpoint,
-  });
+  return oxyFileIdOfRef(url) ? url : null;
 }
 
 /** What a stored private document is, as its row records it. */
@@ -266,7 +249,7 @@ async function persist(
  * An answer that is not exactly what was sent — a file that is not `private`,
  * or whose digest differs — is refused: it may not become a document row.
  */
-export async function storeInOxy(
+async function storeInOxy(
   owner: PrivateDocumentOwner,
   bytes: Buffer,
   sha256: string,
@@ -407,7 +390,7 @@ export async function storePrivateUpload(
   return storePrivateImage(owner, file.buffer);
 }
 
-/** The types a private document may be handed out as, from either store. */
+/** The types a private document may be handed out as. */
 const SERVABLE_TYPES = new Set(Object.values(SERVABLE_DOCUMENT_CONTENT_TYPES));
 
 /**
@@ -417,23 +400,13 @@ const SERVABLE_TYPES = new Set(Object.values(SERVABLE_DOCUMENT_CONTENT_TYPES));
  * Every caller must have resolved the document from a row the viewer is
  * entitled to, and say so at its own call site; a caller that passes a ref
  * straight off a request has reproduced the defect the private door exists to
- * fix. `validatePrivateDocumentKey` refuses anything outside the private
- * prefixes, so even such a caller cannot reach a public photo through here.
+ * fix. A ref that is not `oxy:<fileId>` names nothing and answers null.
  */
 export async function readPrivateDocument(
   ref: string,
 ): Promise<{ buffer: Buffer; contentType: string } | null> {
   const fileId = oxyFileIdOfRef(ref);
-  if (fileId) return readFromOxy(fileId);
-  if (ref.startsWith(OXY_REF_PREFIX)) return null;
-  const validation = validatePrivateDocumentKey(ref);
-  if (!validation.ok) return null;
-  const found = await legacyObjectStore().get(validation.key);
-  countLegacyRead('private_document', found ? 'served' : 'missing');
-  if (!found) return null;
-  // The extension-derived type: the store's own label is whatever the writer
-  // said, and the allowlist is what decides what this door may hand out.
-  return { buffer: found.buffer, contentType: validation.contentType };
+  return fileId ? readFromOxy(fileId) : null;
 }
 
 /**

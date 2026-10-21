@@ -203,8 +203,9 @@ describe('publishing a listing with photos', () => {
     expect(persisted.images.map((image) => image.isPrimary)).toEqual([true, false]);
   });
 
-  // A photo uploaded before the move to Oxy Files and published after it still
-  // carries bucket keys; those go through the legacy door's own gate.
+  // A photo uploaded before the move to Oxy Files carried bucket keys. The
+  // bucket is retired: such a photo names nothing a listing can show, and is
+  // refused like any other photo without an imageId or an Oxy file.
   function legacyPhoto() {
     const uuid = '0192f4a2-aaaa-7bbb-8ccc-1234567890ab';
     return {
@@ -219,29 +220,19 @@ describe('publishing a listing with photos', () => {
     };
   }
 
-  it("accepts a legacy photo's validated keys and derives its URLs", async () => {
+  it('refuses a photo named only by bucket keys, and writes no row', async () => {
+    const before = await getDb().select({ id: images.id }).from(images);
     const res = await publish([legacyPhoto()]);
-    expect(res.status).toBe(201);
-    const persisted = await findPropertyById(res.body.data.id);
-    assertFound(persisted, 'persisted');
-    expect(persisted.images[0].urlsMedium).toBe(
-      'https://api.homiio.test/api/images/file/property/0192f4a2-aaaa-7bbb-8ccc-1234567890ab-medium.webp',
-    );
-  });
-
-  it('refuses a storage key that climbs out of the store', async () => {
-    const photo = legacyPhoto();
-    photo.keys.medium = '../../../etc/passwd.webp';
-    const res = await publish([photo]);
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_PROPERTY_IMAGE');
+    expect(await getDb().select({ id: images.id }).from(images)).toHaveLength(before.length);
   });
 
   it('refuses a key under the private documents prefix', async () => {
     const photo = legacyPhoto();
-    // A tenant's payslip lives here. The publish path must not be able to
+    // A tenant's payslip lived here. The publish path must not be able to
     // republish one as a listing photo.
-    photo.keys.large = 'applications/documents/some-uuid-original.jpeg';
+    photo.keys.original = 'applications/documents/some-uuid-original.jpeg';
     const res = await publish([photo]);
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_PROPERTY_IMAGE');
