@@ -177,11 +177,10 @@ module.exports = (config) => {
             ios: {
               deploymentTarget: '16.4',
             },
-            android: {
-              compileSdkVersion: 36,
-              targetSdkVersion: 36,
-              buildToolsVersion: '36.0.0',
-            },
+            // No Android compileSdk / targetSdk / build tools: the Expo SDK
+            // template sets them (SDK 58: 37 / 36 / 37.0.0). SDK 58's Expo
+            // modules require compileSdk 37; a pinned 36 fails the release
+            // build in :expo:checkReleaseAarMetadata.
           },
         ],
         // MapLibre Native for `@goway.to/maps` (not in Expo Go: a dev or store build).
