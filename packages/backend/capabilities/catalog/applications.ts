@@ -40,6 +40,21 @@ export const APPLICATION_DOCUMENT_MIME_TYPES = [
   'image/gif',
 ];
 
+/** One application document, as a tool sends it. Shared by submit and add. */
+const documentInput = objectInput(
+  {
+    type: enumInput(TENANT_APPLICATION_DOCUMENT_TYPE_VALUES),
+    filename: textInput(255),
+    mimeType: enumInput(APPLICATION_DOCUMENT_MIME_TYPES),
+    contentBase64: {
+      type: 'string',
+      minLength: 1,
+      description: 'The file bytes, base64.',
+    },
+  },
+  ['type', 'filename', 'mimeType', 'contentBase64'],
+);
+
 const decisionInput = objectInput({ applicationId: idInput, notes: optionalTextInput(4000) }, [
   'applicationId',
 ]);
@@ -94,23 +109,33 @@ export const APPLICATION_TOOLS: readonly CatalogTool[] = [
         documents: {
           type: 'array',
           maxItems: 10,
-          description: 'Up to 10 files of at most 10 MB each.',
-          items: objectInput(
-            {
-              type: enumInput(TENANT_APPLICATION_DOCUMENT_TYPE_VALUES),
-              filename: textInput(255),
-              mimeType: enumInput(APPLICATION_DOCUMENT_MIME_TYPES),
-              contentBase64: {
-                type: 'string',
-                minLength: 1,
-                description: 'The file bytes, base64.',
-              },
-            },
-            ['type', 'filename', 'mimeType', 'contentBase64'],
-          ),
+          description:
+            'Up to 10 files of at most 10 MB each. One call, base64 included, carries at most 10 MB in all; send the rest with addApplicationDocuments.',
+          items: documentInput,
         },
       },
       ['propertyId', 'moveInDate', 'leaseTermMonths', 'monthlyIncome', 'employmentStatus'],
+    ),
+  }),
+  actTool({
+    name: 'addApplicationDocuments',
+    description:
+      'Attach more documents (ID, income proof, references) to an application the person sent, while it is still submitted or under review — the ones that did not fit in submitApplication, or ones the landlord asked for later. Stored privately, like an upload from the app. Only its applicant may add them, and an application holds at most 10 documents in all.',
+    capability: 'housing.applications.submit',
+    capabilityPackage: 'communicate',
+    input: objectInput(
+      {
+        applicationId: idInput,
+        documents: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 10,
+          description:
+            'Files of at most 10 MB each; one call, base64 included, carries at most 10 MB in all.',
+          items: documentInput,
+        },
+      },
+      ['applicationId', 'documents'],
     ),
   }),
   actTool({

@@ -31,6 +31,7 @@
  */
 
 import type { Request, Response } from 'express';
+import { IMAGE_UPLOAD_MAX_FILE_BYTES } from '@homiio/shared-types';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import { AppError, logUnexpectedError } from '../middlewares/errorHandler';
 import { fileIdFromOxyKey, OXY_KEY_PREFIX, oxyImageUrls } from '../services/files/imageUrls';
@@ -49,8 +50,8 @@ type UploadedFile = {
 /** Image MIME types the upload endpoints accept. */
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 
-/** Maximum accepted upload size (bytes). Mirrors the multer route limit. */
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB
+/** Maximum accepted upload size (bytes). The multer route limit, and the app's. */
+const MAX_UPLOAD_BYTES = IMAGE_UPLOAD_MAX_FILE_BYTES;
 
 /** Validate a single file's MIME type + size; returns an error message or null. */
 function validateFile(file: {

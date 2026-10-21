@@ -16,6 +16,7 @@ import routes from './routes';
 import { logger, requestLogger } from './middlewares/logging';
 import { notFound, errorHandler } from './middlewares/errorHandler';
 import { rateLimitKeyFor } from './middlewares/rateLimitKey';
+import { rejectOversizedRequest } from './middlewares/uploadBudget';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
 import { publicApiBodyErrorHandler } from './routes/publicApi';
@@ -142,7 +143,10 @@ const activity = startPlatformActivity(() => activityReady);
 const app = express();
 if (activity) app.use(activity.observeHttp);
 
-// Behind AWS ALB — trust the first proxy hop so req.ip reflects the client IP
+// One trusted proxy hop, the AWS ALB. Behind Cloudflare's proxy that makes
+// req.ip the Cloudflare edge, not the client; the trusted-hop setting is being
+// replaced in the Oxy SDK. Never parse X-Forwarded-For here instead
+// (`services/geoip/clientIp.ts`).
 app.set('trust proxy', 1);
 
 /**
@@ -219,6 +223,12 @@ const corsOptions: CorsOptions = {
 app.use('/api/v1/cases', publicCaseCors);
 // Middleware
 app.use(cors(corsOptions));
+
+// No request over the shared per-request budget, on any route: refused from
+// its declared length, after CORS so a browser can read the answer and before
+// anything buffers a byte (`middlewares/uploadBudget.ts`). The MCP lanes above
+// carry their own, smaller cap.
+app.use(rejectOversizedRequest);
 
 // Resolve the user BEFORE rate limiting so the limiter keys per authenticated
 // user (high budget) rather than per shared egress IP behind the ALB. Strict

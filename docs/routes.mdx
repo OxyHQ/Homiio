@@ -285,6 +285,7 @@ only upload path Homiio has. See `docs/housing-parity.md`.
 |---|---|
 | `GET` | `/api/applications`, `/api/applications/:id` |
 | `POST` | `/api/applications` |
+| `POST` | `/api/applications/:id/documents` — the applicant attaches more documents while it is pending (the ones that did not fit the submission's request) |
 | `PATCH` | `/api/applications/:id` |
 | `POST` | `/api/applications/:id/create-lease` |
 | `GET` | `/api/applications/:id/documents/:documentId` — the bytes, to the applicant and the landlord only |
@@ -361,7 +362,7 @@ handshake.
 | `/api/evictions` | `POST /`, `PUT|DELETE /:id`, `POST /:id/attend|follow|comments|updates|report`, `GET /:id/team`, `POST /:id/collaborators`, `DELETE /:id/collaborators/:oxyUserId`, `POST /:id/hold/clear`, `POST /:id/vouch/:oxyUserId`, `POST /:id/supporters/:oxyUserId/revoke`, `GET|POST /:id/location/grants`, `POST /:id/location/grants/:oxyUserId/revoke`, `GET /:id/location/exact`, `GET /:id/location/audit`, `DELETE /:id/comments/:commentId`, `GET /me/list`, `GET /me/attending`, `GET /me/following` |
 | `/api/partners` | `POST /join`, `GET /me`, `GET /me/earnings`, `GET /me/referrals` |
 | `/api/analytics` | `GET /`, `GET /stats` |
-| `/api/images` | `POST /upload`, `POST /upload-multiple` (into the uploader's own Oxy account), `DELETE /:imageKey` (deletes nothing; kept for app builds in use) |
+| `/api/images` | `POST /upload`, `POST /upload-multiple` (into the uploader's own Oxy account; one request carries at most `UPLOAD_REQUEST_MAX_BYTES`, so the app sends a set in batches), `DELETE /:imageKey` (deletes nothing; kept for app builds in use) |
 | `/api/billing` | Checkout, customer portal, subscription lifecycle — see [Payments](./payments) |
 | `/api/telegram` | Notification and bot management |
 | `/api/scraper` | **Admin only** (`requireAdmin`): `GET /health`, `GET /sources`, `POST /run`, `POST /cleanup` |

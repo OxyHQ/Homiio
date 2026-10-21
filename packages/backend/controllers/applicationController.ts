@@ -13,6 +13,7 @@
 import type { Request, Response, NextFunction } from 'express';
 
 import {
+  addApplicationDocuments,
   changeApplicationStatus,
   createLeaseFromApplication,
   getApplication,
@@ -65,6 +66,33 @@ class ApplicationController {
         throw new AppError('Cannot apply to external listings', 400, 'EXTERNAL_PROPERTY');
       }
       res.status(201).json(successResponse(outcome.application, 'Application submitted'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/applications/:id/documents
+   *
+   * Multipart, the submission's document fields only:
+   *   documentTypes     JSON-encoded array (matches `documents[]` files)
+   *   documents         files[]  (multer field name)
+   *
+   * The applicant's own application, while it is pending; answers the whole
+   * application, as the submission does.
+   */
+  async addApplicationDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const oxyUserId = requireSessionOxyUserId(req);
+      const { id } = req.params as { id: string };
+      const files: UploadedApplicationFile[] = Array.isArray(req.files)
+        ? (req.files as UploadedApplicationFile[])
+        : [];
+      const application = await addApplicationDocuments(oxyUserId, id, {
+        documentTypes: req.body?.documentTypes,
+        files,
+      });
+      res.status(201).json(successResponse(application, 'Documents added'));
     } catch (error) {
       next(error);
     }

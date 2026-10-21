@@ -2,6 +2,7 @@ import type { RouteCoverage } from './types';
 
 export const APPLICATION_ROUTE_COVERAGE: RouteCoverage = {
   'POST /api/applications': 'submitApplication',
+  'POST /api/applications/:id/documents': 'addApplicationDocuments',
   'GET /api/applications': 'listMyApplications',
   'POST /api/applications/:id/documents/:documentId/verification': 'verifyApplicationDocument',
   'GET /api/applications/:id/documents/:documentId': {

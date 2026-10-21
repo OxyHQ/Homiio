@@ -8,6 +8,7 @@
  */
 
 import {
+  addApplicationDocuments,
   changeApplicationStatus,
   createLeaseFromApplication,
   documentFileFromBase64,
@@ -73,6 +74,16 @@ export const APPLICATION_HANDLERS: HomiioToolHandlers = {
     });
     if (outcome.kind === 'external_listing') return { ...outcome.outcome };
     return dataBody(outcome.application);
+  },
+
+  addApplicationDocuments: async (input, { accountId }) => {
+    const documents = (Array.isArray(input.documents) ? input.documents : []) as DocumentInput[];
+    return dataBody(
+      await addApplicationDocuments(accountId, requiredString(input, 'applicationId'), {
+        documentTypes: documents.map((document) => document.type),
+        files: documents.map(documentFileFromBase64),
+      }),
+    );
   },
 
   withdrawApplication: decide(TenantApplicationStatus.WITHDRAWN),

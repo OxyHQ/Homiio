@@ -15,7 +15,11 @@
  *                     submitted -> withdrawn (applicant)
  */
 
-import { PAYMENT_CURRENCIES } from '@homiio/shared-types';
+import {
+  APPLICATION_DOCUMENT_MAX_BYTES,
+  APPLICATION_DOCUMENT_MAX_COUNT,
+  PAYMENT_CURRENCIES,
+} from '@homiio/shared-types';
 import {
   TenantApplicationStatus,
   OfferingType,
@@ -27,6 +31,7 @@ import {
 import { getDb } from '../db/postgres';
 import {
   ACTIVE_APPLICATION_STATUSES,
+  appendApplicationDocuments,
   createApplication,
   decideApplication,
   findActiveApplicationForApplicant,
@@ -73,10 +78,13 @@ export const ALLOWED_DOCUMENT_MIME_TYPES: ReadonlySet<string> = new Set([
   'image/gif',
 ]);
 
-/** 10 MB per document. */
-export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
-/** At most 10 documents per application. */
-export const MAX_DOCUMENT_COUNT = 10;
+/** 10 MB per document — the number the app checks too (`shared-types`). */
+export const MAX_DOCUMENT_BYTES = APPLICATION_DOCUMENT_MAX_BYTES;
+/**
+ * At most 10 documents per application, across every request that carries
+ * them: the submission and any {@link addApplicationDocuments} after it.
+ */
+export const MAX_DOCUMENT_COUNT = APPLICATION_DOCUMENT_MAX_COUNT;
 
 /** The file shape multer produces and the upload below consumes. */
 export interface UploadedApplicationFile {
@@ -481,6 +489,79 @@ export async function submitApplication(
   });
 
   return { kind: 'submitted', application: serializeApplication(hydrated) };
+}
+
+export interface AddApplicationDocumentsInput {
+  /** One type per entry of `files`, as the multipart `documentTypes[]` field. */
+  documentTypes?: unknown;
+  /** Uploaded files, from multer or from {@link documentFileFromBase64}. */
+  files?: readonly UploadedApplicationFile[];
+}
+
+/**
+ * Attach documents to the person's OWN application while it is still
+ * submitted or under review.
+ *
+ * This is how a submission whose documents do not fit one request
+ * (`UPLOAD_REQUEST_MAX_BYTES`) arrives whole: the app sends what fits with
+ * {@link submitApplication} and the rest here. The application's total stays
+ * within {@link MAX_DOCUMENT_COUNT}. Stored exactly as a submission's
+ * documents are — private files in the applicant's own Oxy account.
+ *
+ * Only the applicant: anybody else, and a missing id, get the same 404. The
+ * state and count are read before any byte is stored, so a refused request
+ * leaves nothing behind, and checked again under the row lock in the write.
+ */
+export async function addApplicationDocuments(
+  oxyUserId: string,
+  applicationId: string,
+  input: AddApplicationDocumentsInput,
+): Promise<Record<string, unknown>> {
+  const files = input.files ?? [];
+  if (files.length === 0) {
+    throw new AppError('No documents provided', 400, 'INVALID_DOCUMENTS');
+  }
+  if (files.length > MAX_DOCUMENT_COUNT) {
+    throw new AppError('Too many files', 400, 'TOO_MANY_FILES');
+  }
+  const types = parseDocumentTypes(input.documentTypes, files.length);
+
+  const db = getDb();
+  const existing = await findApplicationById(db, applicationId);
+  if (!existing || existing.application.applicantOxyUserId !== oxyUserId) {
+    throw new AppError('Application not found', 404, 'NOT_FOUND');
+  }
+  const refusal = (reason: 'not_found' | 'not_active' | 'too_many'): AppError => {
+    if (reason === 'not_found') return new AppError('Application not found', 404, 'NOT_FOUND');
+    if (reason === 'not_active') {
+      return new AppError('Application is no longer pending review', 400, 'INVALID_STATE');
+    }
+    return new AppError('Too many files', 400, 'TOO_MANY_FILES');
+  };
+  if (!ACTIVE_APPLICATION_STATUSES.includes(existing.application.status)) {
+    throw refusal('not_active');
+  }
+  if (existing.documents.length + files.length > MAX_DOCUMENT_COUNT) {
+    throw refusal('too_many');
+  }
+
+  const uploaded = await uploadDocumentFiles(files, types, oxyUserId);
+  const outcome = await db.transaction((tx) =>
+    appendApplicationDocuments(tx, {
+      applicationId,
+      applicantOxyUserId: oxyUserId,
+      maxDocuments: MAX_DOCUMENT_COUNT,
+      documents: uploaded,
+    }),
+  );
+  if (!outcome.ok) throw refusal(outcome.reason);
+
+  logger.info('Tenant application documents added', {
+    applicationId,
+    applicantOxyUserId: oxyUserId,
+    added: uploaded.length,
+  });
+  return serializeApplication(outcome.application);
 }
 
 export interface ListApplicationsInput {

@@ -18,8 +18,8 @@ const catalog = HOMIIO_CAPABILITY_CATALOG;
  * copy the new pair here.
  */
 const PINNED = {
-  version: '1.0.0',
-  digest: '21e15e4404fe54004273436c22fe6ac6cfaf6771025ad77ce9ecd264c1e1e32e',
+  version: '1.1.0',
+  digest: '41d6b666e46b765cf8dd1391650cd980d0c9d4b470e4bc8b312d6f7b7a8f2ae1',
 };
 
 describe('HOMIIO_CAPABILITY_CATALOG', () => {

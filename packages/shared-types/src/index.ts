@@ -133,6 +133,10 @@ export * from './sindiAction';
 // actually be evaluated" have one answer on both sides of the wire.
 export * from './watch';
 
+// The upload size contract: the per-request byte budget the API enforces and
+// the batch planner the app splits a set of files with, so both read one number.
+export * from './upload';
+
 // International formatting — money, units, dates, percentages. Pure, shared by
 // frontend and backend so a price is never assembled by concatenation.
 export * from './format/money';

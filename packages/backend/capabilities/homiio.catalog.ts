@@ -39,7 +39,7 @@ export const HOMIIO_SINDI_FILES_FEATURE = 'sindi.files';
 export const HOMIIO_CAPABILITY_CATALOG: AppCapabilityCatalog = {
   schemaVersion: '1',
   appId: 'homiio',
-  version: '1.0.0',
+  version: '1.1.0',
   audience: 'oxy-homiio-api',
   internalBaseUrl: 'https://api.homiio.com',
   internalTransport: 'mcp',

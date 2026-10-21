@@ -11,26 +11,33 @@
  * temptation to reach for the header directly is strong precisely because the
  * correct expression looks like it is doing nothing.
  *
- * Express already does the work, given the topology. `server.ts` sets
- * `trust proxy: 1`, which is exactly right for `api.homiio.com`: the host rule
- * in `oxy-infra/terraform-uswest2/app-services.tf` points the shared ALB
- * listener straight at the ECS task, and `cdn.tf`'s CloudFront distribution
- * fronts only the media bucket — there is no CDN hop in front of the API. So
- * the chain is exactly `client → ALB → task`, one trusted hop.
+ * Express already does the work, given the topology it is told about.
+ * `server.ts` sets `trust proxy: 1` — one trusted hop, the ALB. That was the
+ * whole chain while `api.homiio.com` pointed straight at the shared ALB
+ * (`client → ALB → task`), but the API is moving behind Cloudflare's proxy, and
+ * then the chain is `client → Cloudflare → ALB → task`: TWO proxies.
  *
  * With one trusted hop, `proxy-addr` walks `[socket.remoteAddress, ...XFF
  * reversed]` and returns the first address it does not trust:
  *
- * | The client sends | ALB forwards | `req.ip` |
- * |---|---|---|
- * | nothing | `XFF: <client>` | `<client>` |
- * | `XFF: 8.8.8.8` | `XFF: 8.8.8.8, <client>` | `<client>` — the forgery is to the LEFT |
- * | `XFF: a, b, c` | `XFF: a, b, c, <client>` | `<client>` |
+ * | The client sends | Chain | Arrives as | `req.ip` |
+ * |---|---|---|---|
+ * | nothing | ALB only | `XFF: <client>` | `<client>` |
+ * | `XFF: 8.8.8.8` | ALB only | `XFF: 8.8.8.8, <client>` | `<client>` — the forgery is to the LEFT |
+ * | `XFF: 8.8.8.8` | Cloudflare → ALB | `XFF: 8.8.8.8, <client>, <edge>` | `<edge>` — still never the forgery |
  *
- * The forged entries are always to the left of the address the ALB appended, and
- * `req.ip` is read from the right. That is the whole defence, and it is a
- * property of reading `req.ip` rather than of any check in this file — which is
- * why the file's job is to REFUSE the alternatives rather than to sanitise them.
+ * The forged entries are always to the left of the addresses the proxies
+ * appended, and `req.ip` is read from the right. That is the whole defence, and
+ * it is a property of reading `req.ip` rather than of any check in this file —
+ * which is why the file's job is to REFUSE the alternatives rather than to
+ * sanitise them.
+ *
+ * Behind Cloudflare, `trust proxy: 1` makes `req.ip` the Cloudflare EDGE that
+ * relayed the request: still unforgeable, but the edge's location rather than
+ * the person's. Which hops to trust is being replaced in the Oxy SDK, not here.
+ * Do not "fix" it in this file by reading `X-Forwarded-For` or
+ * `CF-Connecting-IP` yourself: a header is only as trustworthy as the proxy
+ * that is proven to have written it, and this file cannot prove that.
  *
  * ## What this file does add
  *
