@@ -172,8 +172,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       checkOut,
     } = req.query;
 
-    const pageNumber = Math.max(1, parseInt(String(page)) || 1);
-    const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
+    const pageNumber = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10));
 
     // The clauses this feed shares with the two proximity feeds — visibility,
     // type, the numeric ranges, the boolean flags, the enum filters,

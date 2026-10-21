@@ -175,20 +175,15 @@ class RoommateService {
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
   ): Promise<{ enabled: boolean; message: string }> {
-    try {
-      const response = await api.patch<ToggleMatchingResponse>(`${this.baseUrl}/toggle`, {
-        enabled,
-      });
-      const data = response.data;
-      // Fallback if backend doesn't include enabled for some reason
-      return {
-        enabled: typeof data.enabled === 'boolean' ? data.enabled : enabled,
-        message:
-          data.message ?? `Roommate matching ${enabled ? 'enabled' : 'disabled'} successfully`,
-      };
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.patch<ToggleMatchingResponse>(`${this.baseUrl}/toggle`, {
+      enabled,
+    });
+    const data = response.data;
+    // Fallback if backend doesn't include enabled for some reason
+    return {
+      enabled: typeof data.enabled === 'boolean' ? data.enabled : enabled,
+      message: data.message ?? `Roommate matching ${enabled ? 'enabled' : 'disabled'} successfully`,
+    };
   }
 
   // Send roommate request
@@ -198,11 +193,7 @@ class RoommateService {
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
   ): Promise<void> {
-    try {
-      await api.post(`${this.baseUrl}/${encodeURIComponent(oxyUserId)}/request`, { message });
-    } catch (error) {
-      throw error;
-    }
+    await api.post(`${this.baseUrl}/${encodeURIComponent(oxyUserId)}/request`, { message });
   }
 
   // Get roommate requests (sent and received)
@@ -230,11 +221,7 @@ class RoommateService {
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
   ): Promise<void> {
-    try {
-      await api.post(`${this.baseUrl}/requests/${requestId}/decline`, { responseMessage });
-    } catch (error) {
-      throw error;
-    }
+    await api.post(`${this.baseUrl}/requests/${requestId}/decline`, { responseMessage });
   }
 
   // Accept roommate request
@@ -244,11 +231,7 @@ class RoommateService {
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
   ): Promise<void> {
-    try {
-      await api.post(`${this.baseUrl}/requests/${requestId}/accept`, { responseMessage });
-    } catch (error) {
-      throw error;
-    }
+    await api.post(`${this.baseUrl}/requests/${requestId}/accept`, { responseMessage });
   }
 
   // Get roommate relationships for the current profile
@@ -268,11 +251,7 @@ class RoommateService {
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
   ): Promise<void> {
-    try {
-      await api.delete(`${this.baseUrl}/relationships/${relationshipId}`);
-    } catch (error) {
-      throw error;
-    }
+    await api.delete(`${this.baseUrl}/relationships/${relationshipId}`);
   }
 
   // Check if a profile has roommate matching enabled

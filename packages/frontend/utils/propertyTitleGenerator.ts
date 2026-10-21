@@ -111,7 +111,6 @@ export function generatePropertyTitle(
       return generateShortPropertyTitle(propertyData);
     case 'large':
       return generateLargePropertyTitle(propertyData);
-    case 'default':
     default:
       return generateShortPropertyTitle(propertyData);
   }

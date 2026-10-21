@@ -129,7 +129,6 @@ function occupancyError(conflict: OccupancyConflict, role: 'requested' | 'offere
       return new AppError(`${subject} conflict with a booked stay`, 409, code);
     case 'exchange':
       return new AppError(`${subject} conflict with a confirmed exchange`, 409, code);
-    case 'window':
     default:
       return new AppError(`${subject} are blocked by the host calendar`, 409, code);
   }

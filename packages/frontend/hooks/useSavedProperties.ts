@@ -67,17 +67,12 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
         console.warn('useSavedProperties: Cannot toggle saved - missing property ID');
         return;
       }
+      const currentlySaved = isSaved(propertyId);
 
-      try {
-        const currentlySaved = isSaved(propertyId);
-
-        if (currentlySaved) {
-          await unsavePropertyFromContext(propertyId);
-        } else {
-          await savePropertyToFolder(propertyId, null, propertyData);
-        }
-      } catch (error: any) {
-        throw error;
+      if (currentlySaved) {
+        await unsavePropertyFromContext(propertyId);
+      } else {
+        await savePropertyToFolder(propertyId, null, propertyData);
       }
     },
     [isSaved, unsavePropertyFromContext, savePropertyToFolder],
@@ -93,12 +88,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
       if (isSaved(propertyId)) {
         return; // Already saved
       }
-
-      try {
-        await savePropertyToFolder(propertyId, null, propertyData);
-      } catch (error: any) {
-        throw error;
-      }
+      await savePropertyToFolder(propertyId, null, propertyData);
     },
     [isSaved, savePropertyToFolder],
   );
@@ -113,12 +103,7 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
       if (!isSaved(propertyId)) {
         return; // Not saved
       }
-
-      try {
-        await unsavePropertyFromContext(propertyId);
-      } catch (error: any) {
-        throw error;
-      }
+      await unsavePropertyFromContext(propertyId);
     },
     [isSaved, unsavePropertyFromContext],
   );

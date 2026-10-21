@@ -408,32 +408,20 @@ class PropertyService {
   // (place NAMES + coordinates the backend resolves into the relational geo
   // chain), not a serialized Property.
   async createProperty(data: CreatePropertyData): Promise<Property> {
-    try {
-      const response = await api.post(this.baseUrl, data);
-      return response.data.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post(this.baseUrl, data);
+    return response.data.data;
   }
 
   // Update property. Accepts a partial update DTO (same AddressInput-based
   // `address` resolution as create).
   async updateProperty(propertyId: string, data: UpdatePropertyData): Promise<Property> {
-    try {
-      const response = await api.put(`${this.baseUrl}/${propertyId}`, data);
-      return response.data.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.put(`${this.baseUrl}/${propertyId}`, data);
+    return response.data.data;
   }
 
   // Delete property
   async deleteProperty(propertyId: string): Promise<void> {
-    try {
-      await api.delete(`${this.baseUrl}/${propertyId}`);
-    } catch (error) {
-      throw error;
-    }
+    await api.delete(`${this.baseUrl}/${propertyId}`);
   }
 
   /**

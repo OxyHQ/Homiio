@@ -84,7 +84,6 @@ const sortNotes = (notes: ReviewDTO[], sort: SortKey): ReviewDTO[] => {
       return copy.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     case 'helpful':
       return copy.sort((a, b) => (b.helpfulCount ?? 0) - (a.helpfulCount ?? 0));
-    case 'recent':
     default:
       return copy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }

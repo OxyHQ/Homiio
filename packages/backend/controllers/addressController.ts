@@ -598,7 +598,7 @@ export const getNearbyAddresses = async (req: Request, res: Response) => {
 
     const latitude = parseFloat(lat as string);
     const longitude = parseFloat(lng as string);
-    const radiusInMeters = parseInt(radius as string);
+    const radiusInMeters = parseInt(radius as string, 10);
 
     if (isNaN(latitude) || isNaN(longitude)) {
       return badRequest(res, { message: 'Invalid coordinates' });

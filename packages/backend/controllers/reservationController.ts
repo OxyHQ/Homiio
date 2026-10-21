@@ -142,7 +142,6 @@ function occupancyError(conflict: OccupancyConflict): AppError {
         409,
         'DATE_CONFLICT',
       );
-    case 'window':
     default:
       return new AppError(
         'Selected dates are blocked by the host calendar',
@@ -355,8 +354,8 @@ class ReservationController {
       if (!oxyUserId)
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
-      const pageNumber = Math.max(1, parseInt(String(page)) || 1);
-      const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
+      const pageNumber = Math.max(1, parseInt(String(page), 10) || 1);
+      const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10));
       const skip = (pageNumber - 1) * limitNumber;
 
       const asHostView = String(asHost) === 'true';

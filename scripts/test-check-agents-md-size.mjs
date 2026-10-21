@@ -159,15 +159,13 @@ console.log('check-agents-md-size self-test\n');
   );
 }
 
-{
-  // A one-digit "#1" in a heading is far likelier to be a step number or an
-  // anchor than an issue, so the rule requires two digits. Pin that boundary,
-  // or a later tightening breaks headings nobody meant to forbid.
-  report(
-    "a one-digit '#1' in a heading does not fire; '#57' does",
-    issueHeadings('## Step #1\n').length === 0 && issueHeadings('## Offers (#57)\n').length === 1,
-  );
-}
+// A one-digit "#1" in a heading is far likelier to be a step number or an
+// anchor than an issue, so the rule requires two digits. Pin that boundary,
+// or a later tightening breaks headings nobody meant to forbid.
+report(
+  "a one-digit '#1' in a heading does not fire; '#57' does",
+  issueHeadings('## Step #1\n').length === 0 && issueHeadings('## Offers (#57)\n').length === 1,
+);
 
 // --- the real repository ----------------------------------------------------
 

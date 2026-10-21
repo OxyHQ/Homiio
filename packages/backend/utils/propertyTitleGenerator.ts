@@ -113,8 +113,6 @@ function generatePropertyTitle(
   switch (format) {
     case 'large':
       return generateLargePropertyTitle(propertyData);
-    case 'short':
-    case 'default':
     default:
       return generateShortPropertyTitle(propertyData);
   }

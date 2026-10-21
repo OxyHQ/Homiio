@@ -409,8 +409,8 @@ class ApplicationController {
       const { page = 1, limit = 10, status, asLandlord } = req.query;
       const oxyUserId = requireSessionOxyUserId(req);
 
-      const pageNumber = Math.max(1, parseInt(String(page)) || 1);
-      const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
+      const pageNumber = Math.max(1, parseInt(String(page), 10) || 1);
+      const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10));
       const skip = (pageNumber - 1) * limitNumber;
 
       const asLandlordView = String(asLandlord) === 'true';

@@ -313,7 +313,6 @@ export default function WriteReviewPage() {
         return <StepPriceDates data={data} update={update} />;
       case 6:
         return <StepTexts data={data} update={update} />;
-      case 7:
       default:
         return <StepPhotosRecommend data={data} update={update} />;
     }
