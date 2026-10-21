@@ -34,7 +34,7 @@ import {
   migrateLegacyImages,
 } from '../../services/files/imageMigration';
 import { legacyImageUrl } from '../../services/files/legacyImages';
-import { legacyObjectStore } from '../../services/files/legacyObjectStore';
+import { seedLegacyObject } from '../helpers/legacyBucket';
 import { OxyCallPacer } from '../../services/files/oxyCallPacer';
 import { flushLegacyReads, LEGACY_MEDIA_READ_PAIRS } from '../../services/files/legacyReadCounter';
 import { storageRetirementStatus } from '../../services/files/storageStatus';
@@ -73,7 +73,7 @@ async function legacyRow(
   };
   const bytes = Buffer.from(`legacy-original-${uuid}`);
   if (!options.missing) {
-    await legacyObjectStore().putPrivate(keys.keysOriginal, bytes, 'image/jpeg');
+    await seedLegacyObject(keys.keysOriginal, bytes, 'image/jpeg');
     // What Oxy fetches from the legacy door: the bucket's bytes.
     fakeOxyFiles.servedSources.set(legacyImageUrl(keys.keysOriginal), bytes);
   }

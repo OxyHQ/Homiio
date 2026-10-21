@@ -24,23 +24,38 @@
  * is called (the party checks in `domain/*`): Oxy's consent says Homiio may
  * read the file, never which of Homiio's users may.
  *
- * ## The bucket path
+ * ## Oxy or nothing
  *
- * Every new document goes to Oxy. A refusal, an outage or an answer that is
- * not private stores it in Homiio's bucket under `private/` instead, as
- * before, so an upload never fails because of Oxy. A
- * bucket document keeps reading from the bucket (every read counted in
- * `legacy_media_reads`, surface `private_document`) until
- * `scripts/migratePrivateDocumentsToOxy.ts` moves it — which is how the
- * bucket's private half empties (`storageStatus.ts`).
+ * Every new document goes to Oxy, and ONLY to Oxy. There is no second store
+ * to fall back to: Homiio's bucket is being retired, and a document written
+ * there when Oxy refused it would be a document Oxy never knew about — outside
+ * the person's file manager, outside their revocation (a person who revoked
+ * Homiio on these exact bytes would have had them stored anyway), and one
+ * more object keeping the bucket alive. So a refusal is the upload's answer:
+ *
+ * - **Transient** — Oxy unreachable, a 5xx, bytes that arrived damaged — is
+ *   retried here a couple of times, and a short rate limit is waited out once;
+ *   what is still failing answers 503 so the person can try again.
+ * - **The person's** — their Oxy storage is full (413), the file is too large
+ *   or a type Oxy will not hold (413/415), the bytes are blocked (451), or they
+ *   removed Homiio's access to this very file (409) — answers that status with
+ *   a message saying what to do.
+ * - **Homiio's** — a credential Oxy refuses (401/403), or an answer that is not
+ *   the private file that was sent — is logged as an error and answers 503/502:
+ *   nothing the person can fix, never a row.
+ *
+ * Rows written before the move that still name a bucket object keep reading
+ * from the bucket (every read counted in `legacy_media_reads`, surface
+ * `private_document`) until `scripts/migratePrivateDocumentsToOxy.ts` moves
+ * them; production held none on 2026-10-21.
  */
 
 import { createHash } from 'node:crypto';
 
 import sharp from 'sharp';
-import { v4 as uuidv4 } from 'uuid';
 
 import config from '../../config';
+import { AppError } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import {
   SERVABLE_DOCUMENT_CONTENT_TYPES,
@@ -50,6 +65,7 @@ import { storedDocumentKey } from '../../utils/storedDocumentKey';
 import { legacyImageUrl } from './legacyImages';
 import { legacyObjectStore } from './legacyObjectStore';
 import { countLegacyRead } from './legacyReadCounter';
+import { retryAfterMs } from './oxyCallPacer';
 import { downloadLinked, oxyErrorCode, oxyErrorStatus, oxyFiles } from './oxyFilesClient';
 
 /** Whose document it is, and what uses it. */
@@ -125,37 +141,113 @@ const PRIVATE_IMAGE_MAX_EDGE = 1600;
 /** Decode what can be decoded; portals and phones emit benign libpng warnings. */
 const SHARP_DECODE_OPTIONS = { failOn: 'none' } as const;
 
-/** The folder under `private/` a kind is stored in. */
-const FOLDER_FOR: Readonly<Record<PrivateDocumentOwner['kind'], string>> = {
-  lease: 'leases',
-  tenant_application: 'applications',
-  maintenance_request: 'maintenance',
-};
-
 function digest(bytes: Buffer): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-/** An id safe to be one path segment: what Homiio's ids look like, nothing else. */
-const SAFE_SEGMENT = /^[A-Za-z0-9_-]{1,64}$/;
+/** How long a request waits for Oxy to verify a document it just received. */
+const OXY_VERIFY_TIMEOUT_MS = 60_000;
 
-function keyFor(owner: PrivateDocumentOwner, extension: string): string {
-  const folder = FOLDER_FOR[owner.kind];
-  // The entity id reaches here from a route parameter the caller already
-  // resolved to a real row, so it is one of Homiio's ids — but a key is a
-  // path, and a segment that is not plainly an id is dropped rather than
-  // trusted (the bug `POST /api/images/upload`'s client-chosen folder was).
-  const scope =
-    owner.entityId && SAFE_SEGMENT.test(owner.entityId) ? `${folder}/${owner.entityId}` : folder;
-  // Server-built from the kind, the entity id and a fresh uuid — never from a
-  // filename, which is attacker-controlled — and always under `private/`, the
-  // prefix the public route refuses and the private door requires.
-  return `private/${scope}/${uuidv4()}${extension}`;
+/** Waits before each retry of a transient failure — the person is waiting too. */
+const TRANSIENT_RETRY_DELAYS_MS = [250, 1_000];
+
+/** The longest rate-limit wait one upload request sits through (once). */
+const MAX_RATE_LIMIT_WAIT_MS = 2_000;
+
+let sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** Tests only: replace the retry waits (`null` restores real time). */
+export function setPrivateDocumentSleepForTests(
+  next: ((ms: number) => Promise<void>) | null,
+): void {
+  sleep = next ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 }
 
 /**
- * Where the processed bytes go: the uploader's Oxy account when Oxy takes them
- * as a private file, the bucket otherwise.
+ * Codes Oxy ends a large upload with (`LargeUploadFailedError`: a code, no
+ * HTTP status) that another attempt would only repeat. Every other failure
+ * without a status — a damaged transfer, a verification Oxy could not finish,
+ * a socket reset — may pass.
+ */
+const TERMINAL_FAILURE_CODES = new Set([
+  'STORAGE_QUOTA_EXCEEDED',
+  'PAYLOAD_TOO_LARGE',
+  'CONTENT_BLOCKED',
+  'UNSUPPORTED_MEDIA_TYPE',
+  'INVALID_SVG',
+  'OWNER_GONE',
+  // The SDK already waited a full minute for Oxy's verification.
+  'VERIFY_TIMEOUT',
+]);
+
+function isTransient(error: unknown): boolean {
+  const status = oxyErrorStatus(error);
+  if (status === undefined) {
+    const code = oxyErrorCode(error);
+    return code === undefined || !TERMINAL_FAILURE_CODES.has(code);
+  }
+  return status >= 500 || status === 422;
+}
+
+/**
+ * The answer an upload Oxy did not take gets: what the person can do about it
+ * when it is theirs to fix, "try again" when it is a passing failure, and a
+ * logged error when it is Homiio's.
+ */
+function refusal(owner: PrivateDocumentOwner, error: unknown): AppError {
+  const status = oxyErrorStatus(error);
+  const code = oxyErrorCode(error);
+  const context = { kind: owner.kind, status, code };
+  if (code === 'STORAGE_QUOTA_EXCEEDED') {
+    logger.warn('Oxy refused a private document: the owner’s storage is full', context);
+    return new AppError(
+      'Your Oxy storage is full. Free up space in your Oxy account, then upload the document again.',
+      413,
+      'STORAGE_QUOTA_EXCEEDED',
+    );
+  }
+  if (code === 'PAYLOAD_TOO_LARGE' || status === 413) {
+    logger.warn('Oxy refused a private document as too large', context);
+    return new AppError('This document is too large to store.', 413, 'DOCUMENT_TOO_LARGE');
+  }
+  if (code === 'CONTENT_BLOCKED' || status === 451) {
+    logger.warn('Oxy refused a private document: its bytes are blocked', context);
+    return new AppError(
+      'This file cannot be stored: it matches content that has been taken down.',
+      451,
+      'DOCUMENT_BLOCKED',
+    );
+  }
+  if (code === 'UNSUPPORTED_MEDIA_TYPE' || code === 'INVALID_SVG' || status === 415) {
+    logger.warn('Oxy refused a private document’s type', context);
+    return new AppError('This type of file cannot be stored.', 415, 'UNSUPPORTED_DOCUMENT_TYPE');
+  }
+  if (status === 429) {
+    logger.warn('Oxy rate-limited a private document upload', context);
+    return new AppError(
+      'Document storage is busy right now. Please try again in a minute.',
+      503,
+      'DOCUMENT_STORAGE_BUSY',
+    );
+  }
+  if (isTransient(error) || code === 'VERIFY_TIMEOUT') {
+    logger.warn('Oxy could not store a private document', context);
+  } else {
+    // A 401/403/404/410 or any other answer the person cannot change: Homiio's
+    // credential, its scopes, or an owner Oxy does not know. Somebody must look.
+    logger.error('Oxy refused a private document upload', context);
+  }
+  return new AppError(
+    'Document storage is unavailable right now. Please try again shortly.',
+    503,
+    'DOCUMENT_STORAGE_UNAVAILABLE',
+  );
+}
+
+/**
+ * Store the bytes as a PRIVATE file in the owner's Oxy account and answer its
+ * ref — or throw the {@link AppError} the upload answers with (see the module
+ * header). Never stores anything anywhere else.
  */
 async function persist(
   owner: PrivateDocumentOwner,
@@ -164,24 +256,15 @@ async function persist(
   contentType: string,
   extension: string,
 ): Promise<string> {
-  const fileId = await storeInOxy(owner, bytes, sha256, contentType, extension);
-  if (fileId) return oxyDocumentRef(fileId);
-  const key = keyFor(owner, extension);
-  await legacyObjectStore().putPrivate(key, bytes, contentType);
-  return key;
+  return oxyDocumentRef(await storeInOxy(owner, bytes, sha256, contentType, extension));
 }
-
-/** How long a request waits for Oxy to verify a document it just received. */
-const OXY_VERIFY_TIMEOUT_MS = 60_000;
 
 /**
  * Store the bytes as a PRIVATE file in the owner's Oxy account and answer its
- * id — or null when Oxy did not, so the caller falls back to the bucket.
+ * id, retrying what may pass; anything else throws the upload's answer.
  *
- * Null for a refusal or an outage (logged with the status and code, never the
- * bytes or a URL) and for an answer that is not exactly what was sent: a file
- * that is not `private`, or whose digest differs. Neither should happen on an
- * Oxy that accepted the request, and neither may become a document row.
+ * An answer that is not exactly what was sent — a file that is not `private`,
+ * or whose digest differs — is refused: it may not become a document row.
  */
 export async function storeInOxy(
   owner: PrivateDocumentOwner,
@@ -189,48 +272,68 @@ export async function storeInOxy(
   sha256: string,
   contentType: string,
   extension: string,
-): Promise<string | null> {
-  try {
-    const { file, deduplicated } = await oxyFiles().uploadUserMediaLarge(
-      owner.ownerOxyUserId,
-      new Uint8Array(bytes),
-      {
+): Promise<string> {
+  let transientFailures = 0;
+  let rateLimited = false;
+  for (;;) {
+    let answer: Awaited<ReturnType<ReturnType<typeof oxyFiles>['uploadUserMediaLarge']>>;
+    try {
+      answer = await oxyFiles().uploadUserMediaLarge(owner.ownerOxyUserId, new Uint8Array(bytes), {
         mime: contentType,
         visibility: 'private',
         filename: `${owner.kind}${extension}`,
         sha256,
         verifyTimeoutMs: OXY_VERIFY_TIMEOUT_MS,
-      },
-    );
+      });
+    } catch (error) {
+      if (oxyErrorStatus(error) === 429 && !rateLimited) {
+        const wait = retryAfterMs(error);
+        if (wait <= MAX_RATE_LIMIT_WAIT_MS) {
+          rateLimited = true;
+          await sleep(wait);
+          continue;
+        }
+      }
+      if (isTransient(error) && transientFailures < TRANSIENT_RETRY_DELAYS_MS.length) {
+        await sleep(TRANSIENT_RETRY_DELAYS_MS[transientFailures]);
+        transientFailures += 1;
+        continue;
+      }
+      throw refusal(owner, error);
+    }
+
+    const { file, deduplicated } = answer;
     if (file.visibility !== 'private' || file.sha256 !== sha256 || !OXY_FILE_ID.test(file.id)) {
-      logger.error('Oxy stored a private document as something else; using the bucket', {
+      logger.error('Oxy stored a private document as something else; refusing it', {
         kind: owner.kind,
         fileId: file.id,
         visibility: file.visibility,
         digestMatches: file.sha256 === sha256,
       });
-      return null;
+      throw new AppError(
+        'Document storage answered with a different file. The document was not saved; please try again.',
+        502,
+        'DOCUMENT_STORAGE_MISMATCH',
+      );
     }
     // Bytes the person already held answer their existing file — and a
-    // revocation of Homiio on that file survives the re-upload (stage 4c), so
-    // a deduplicated answer is only usable if Homiio can still read it.
+    // revocation of Homiio on that file survives the re-upload (stage 4c). That
+    // revocation is the person's decision about THESE bytes, so it is honoured:
+    // the upload says so instead of storing the bytes somewhere Oxy cannot see.
     if (deduplicated) {
       const readable = await oxyFiles().linkedDownloadUrls([file.id]);
       if (!readable.some((entry) => entry.id === file.id)) {
-        logger.warn('A private document matched a file Homiio may not read; using the bucket', {
+        logger.warn('A private document matched a file its owner revoked Homiio on', {
           kind: owner.kind,
         });
-        return null;
+        throw new AppError(
+          'You removed Homiio’s access to this exact file in your Oxy account. Restore Homiio’s access to it there, or upload a different file.',
+          409,
+          'DOCUMENT_ACCESS_REVOKED',
+        );
       }
     }
     return file.id;
-  } catch (error) {
-    logger.warn('Oxy did not store a private document; using the bucket', {
-      kind: owner.kind,
-      status: oxyErrorStatus(error),
-      code: oxyErrorCode(error),
-    });
-    return null;
   }
 }
 

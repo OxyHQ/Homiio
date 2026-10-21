@@ -670,8 +670,8 @@ export async function uploadLeaseDocument(
   const created = await getDb().transaction(async (tx) => {
     const document = await addLeaseDocument(tx, leaseId, {
       name,
-      // `oxy:<fileId>` (the uploader's private Oxy file) or, from the bucket
-      // fallback, a delivery-route URL; nothing SERVES either publicly.
+      // `oxy:<fileId>`, the uploader's private Oxy file; nothing serves it
+      // publicly.
       url: privateDocumentRowUrl(stored.ref),
       type: documentType,
       // Server-resolved, never from input.

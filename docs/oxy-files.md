@@ -125,11 +125,19 @@ stage 4c, OxyHQ/oxy#1774).
   bucket URL) is refused with 400 `INVALID_DOCUMENTS`, because the document
   route reads through Homiio's own access.
 
-**Where a new one goes.** Every new document goes to Oxy. When Oxy refuses,
-is down, answers a file that is not private, or answers a file Homiio may not
-read, the document is stored in Homiio's bucket under `private/` instead, so an
-upload never fails because of Oxy. Reading follows the row: an `oxy:` row reads
-from Oxy, a bucket row from the bucket (counted in `legacy_media_reads`,
+**Where a new one goes.** Every new document goes to Oxy, and nowhere else —
+nothing writes to Homiio's bucket any more. When Oxy will not hold it, the
+upload fails and says why (`privateDocuments.ts`): a transient failure (Oxy
+unreachable, a 5xx, a damaged transfer) is retried twice and a short rate limit
+waited out once, then answers 503; the person's own case answers what they can
+act on — 413 `STORAGE_QUOTA_EXCEEDED` (their Oxy storage is full), 413/415 (too
+large, a type Oxy will not hold), 451 `DOCUMENT_BLOCKED`, or 409
+`DOCUMENT_ACCESS_REVOKED` (they removed Homiio's access to these exact bytes,
+and that decision is honoured rather than routed around); a refusal of
+Homiio's own credential or an answer that is not the private file sent is
+logged as an error and answers 503/502. No row is written for a failed upload.
+Reading follows the row: an `oxy:` row reads from Oxy, a bucket row (stored
+before the move) from the bucket (counted in `legacy_media_reads`,
 `private_document`).
 
 **Moving the existing ones.** `scripts/migratePrivateDocumentsToOxy.ts`

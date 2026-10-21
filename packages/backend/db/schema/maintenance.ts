@@ -299,9 +299,8 @@ export const maintenanceRequestAttachments = pgTable(
     role: text({ enum: MAINTENANCE_ROLES }).notNull(),
     /**
      * Where the photo is: `oxy:<fileId>` — a private file in the uploader's own
-     * Oxy account (ADR 0043 stage 4c) — or, for one stored before that or by
-     * the bucket fallback, a bucket key under a private prefix. Server-
-     * generated, never a URL. `services/files/privateDocuments.ts` reads both.
+     * Oxy account (ADR 0043 stage 4c) — or, for one stored before that, a
+     * bucket key under a private prefix. Server-generated, never a URL. `services/files/privateDocuments.ts` reads both.
      */
     storageKey: text().notNull(),
     /** The re-encoded type, which is what the delivery route answers with. */

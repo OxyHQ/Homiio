@@ -78,6 +78,8 @@ export class FakeOxyFiles {
   referencesError: Error | null = null;
   /** When set, every large upload throws this (an outage, a refusal). */
   largeUploadError: Error | null = null;
+  /** Thrown by the next large uploads, one per call, before {@link largeUploadError}. */
+  readonly largeUploadErrors: Error[] = [];
   /** When set, a large upload answers this visibility whatever was asked (a pre-4c API). */
   largeUploadVisibilityOverride: FakeFile['visibility'] | null = null;
   /** When true, `linkedDownloadUrls` omits every person's file (Oxy before stage 4c). */
@@ -101,6 +103,7 @@ export class FakeOxyFiles {
     this.calls.length = 0;
     this.referencesError = null;
     this.largeUploadError = null;
+    this.largeUploadErrors.length = 0;
     this.largeUploadVisibilityOverride = null;
     this.consentReadUnavailable = false;
     this.grants.clear();
@@ -274,6 +277,8 @@ export class FakeOxyFiles {
         options: { mime: string; visibility?: FakeFile['visibility']; sha256?: string },
       ) => {
         this.calls.push({ method: 'uploadUserMediaLarge', args: [ownerUserId, options] });
+        const queued = this.largeUploadErrors.shift();
+        if (queued) throw queued;
         if (this.largeUploadError) throw this.largeUploadError;
         if (this.refusedUsers.has(ownerUserId)) throw oxyError(403, 'FORBIDDEN');
         if (typeof source === 'string' || source instanceof Blob) {
