@@ -83,6 +83,7 @@ import { HomeSearch } from '@/components/search/HomeSearch';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
 import { CtaBanner } from '@/components/CtaBanner';
 import { exploreHref } from '@/utils/searchUrl';
+import { HOME_MOCK } from '@/dev/homeMock'; // DEV-MOCK
 
 const HERO_PHOTO = require('@/assets/images/hero.jpg');
 
@@ -117,14 +118,16 @@ export default function HomePage() {
   const heroPhoto = getCityImageSource(selectedCity ?? undefined, 'large') ?? HERO_PHOTO;
   const { locale } = useFormatting();
   const home = useHomeSections(scope.selection, browseOffering, { enabled: scope.canQuery });
-  const { properties: recentlyViewedProperties } = useRecentlyViewed();
+  const { properties: recentlyViewedReal } = useRecentlyViewed();
   const { savedProperties } = useSavedPropertiesContext();
-  const { sections } = home;
-  const savedHomes = savedProperties as Property[] | undefined;
+  const mock = useMemo(() => HOME_MOCK?.(browseOffering), [browseOffering]); // DEV-MOCK
+  const sections = mock?.sections ?? home.sections; // DEV-MOCK
+  const recentlyViewedProperties = mock?.recentlyViewed ?? recentlyViewedReal; // DEV-MOCK
+  const savedHomes = mock?.saved ?? (savedProperties as Property[] | undefined); // DEV-MOCK
 
   // ONE exclusive answer, so "we could not load this" can never be rendered as
   // "there is nothing here" — see `homeSurfaceState`.
-  const surface = homeSurfaceState({
+  const surface = mock ? 'sections' : homeSurfaceState({ // DEV-MOCK
     discovery: scope.discovery,
     canQuery: scope.canQuery,
     isLoading: home.isLoading,
