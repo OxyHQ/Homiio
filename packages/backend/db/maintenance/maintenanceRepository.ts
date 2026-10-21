@@ -236,11 +236,16 @@ export type AddAttachmentOutcome =
  * The role is stored, like a comment's, so a later change of tenancy does not
  * relabel who photographed what.
  *
- * The object is written BEFORE this runs, which means a refused row leaves an
- * unreferenced object in the bucket. That is the safe side of the trade: the
- * alternative is a row pointing at bytes that were never stored, which is a
- * photo that silently never opens. The caller checks authorization first, so
- * this is the narrow race and not the common path.
+ * The photo is stored BEFORE this runs, which means a refused row leaves an
+ * unused file in the uploader's Oxy account (Oxy shows it to them as not in
+ * use). That is the safe side of the trade: the alternative is a row pointing
+ * at bytes that were never stored, which is a photo that silently never opens.
+ * The caller checks authorization first, so this is the narrow race and not
+ * the common path.
+ *
+ * Attaching the same photo to the same request again answers the attachment
+ * already there: Oxy answers the same bytes from the same person with the file
+ * they hold, and `(request_id, storage_key)` is unique.
  */
 export async function addMaintenanceAttachment(
   db: DatabaseOrTransaction,
@@ -266,9 +271,27 @@ export async function addMaintenanceAttachment(
       contentType: input.contentType,
       bytes: input.bytes,
     })
+    .onConflictDoNothing({
+      target: [maintenanceRequestAttachments.requestId, maintenanceRequestAttachments.storageKey],
+    })
     .returning();
+  if (attachment) return { ok: true, attachment };
 
-  return { ok: true, attachment };
+  // The same photo again: Oxy answered the person's file this request already
+  // shows, so the attachment is the one that is there — not a second row, and
+  // not a unique violation answered as a 500.
+  const [existing] = await db
+    .select()
+    .from(maintenanceRequestAttachments)
+    .where(
+      and(
+        eq(maintenanceRequestAttachments.requestId, input.requestId),
+        eq(maintenanceRequestAttachments.storageKey, input.storageKey),
+      ),
+    )
+    .limit(1);
+  if (!existing) throw new Error('A conflicting maintenance attachment could not be read back');
+  return { ok: true, attachment: existing };
 }
 
 /**

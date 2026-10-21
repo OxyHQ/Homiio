@@ -316,11 +316,16 @@ export const maintenanceRequestAttachments = pgTable(
       table.createdAt,
     ),
     /**
-     * One row per object. A retried upload that wrote the same key twice would
-     * otherwise leave two rows pointing at one file, and deleting one of them
-     * would break the other.
+     * One row per photo PER REQUEST. Oxy answers the same bytes from the same
+     * person with the file they already hold, so `storage_key` alone is not
+     * unique once photos are Oxy files: the same photo of a crack may belong to
+     * two repairs. Within one request, attaching it again is the attachment
+     * that is already there (`addMaintenanceAttachment`).
      */
-    uniqueIndex('maintenance_request_attachments_storage_key').on(table.storageKey),
+    uniqueIndex('maintenance_request_attachments_request_storage_key').on(
+      table.requestId,
+      table.storageKey,
+    ),
     check(
       'maintenance_request_attachments_role_check',
       sql`${table.role} in (${sql.raw(inList(MAINTENANCE_ROLES))})`,
