@@ -1,17 +1,18 @@
 /**
  * Homiio's OWN bucket — the storage Homiio is leaving (ADR 0043 stage 4).
  *
- * Since the move to Oxy Files nothing PUBLIC is written here. Three things
- * still touch it, and each has a named end:
+ * Since the move to Oxy Files NOTHING is written here: no photo, and no
+ * private document either (`privateDocuments.ts` stores in Oxy or refuses the
+ * upload). Three things still read it, and each has a named end:
  *
  * 1. **Reads of photos not yet migrated**, through the legacy route
  *    (`legacyImages.ts`), counted in `legacy_media_reads`. Ends when
  *    `scripts/migrateImagesToOxy.ts` has copied every used row and the counter
  *    has read zero `served` for the soak (`docs/oxy-files.md`).
- * 2. **Private documents** — lease documents, application documents,
- *    maintenance photos — through `privateDocuments.ts`: those stored before
- *    the move, and new ones Oxy refuses (an outage, a refusal). Ends when `scripts/migratePrivateDocumentsToOxy.ts` has
- *    moved every row into its owner's Oxy account (ADR 0043 stage 4c).
+ * 2. **Private documents stored before the move** — lease documents,
+ *    application documents, maintenance photos — read through
+ *    `privateDocuments.ts`. Ends when `scripts/migratePrivateDocumentsToOxy.ts`
+ *    has moved every row into its owner's Oxy account (ADR 0043 stage 4c).
  * 3. **The migration scripts**, reading each object once to copy it.
  *
  * ## There is no local-disk fallback any more
@@ -19,19 +20,13 @@
  * Without object storage this used to write variants under
  * `.local-image-store/` and serve them back from the same route — a second,
  * silent storage that production never had and every test exercised. A
- * deployment without the bucket now gets {@link ObjectStoreUnavailableError}
- * from a private-document upload (answered 503) and a 404 from a legacy read,
- * and the test suite installs {@link MemoryObjectStore} explicitly
+ * deployment without the bucket gets a 404 from a legacy read, and the test
+ * suite installs {@link MemoryObjectStore} explicitly
  * (`jest.setupWorkerDatabase.cjs` sets `HOMIIO_OBJECT_STORE=memory`), so what
  * a test proves is the contract of a store, not the behaviour of a directory.
  */
 
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  PutObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 import config from '../../config';
 import { describeErrorForLog } from '../../middlewares/errorHandler';
@@ -43,13 +38,11 @@ export interface StoredObject {
   contentType: string;
 }
 
-/** The three things anything still does with the bucket. */
+/** What anything still does with the bucket: read it, and remove from it. No writes. */
 export interface LegacyObjectStore {
   /** Whether a bucket is configured at all. */
   readonly configured: boolean;
   get(key: string): Promise<StoredObject | null>;
-  /** Private writes only — see the module header. */
-  putPrivate(key: string, body: Buffer, contentType: string): Promise<void>;
   delete(key: string): Promise<void>;
 }
 
@@ -118,19 +111,6 @@ export class S3LegacyObjectStore implements LegacyObjectStore {
     }
   }
 
-  async putPrivate(key: string, body: Buffer, contentType: string): Promise<void> {
-    // `private, no-store`: a tenancy's evidence must not sit in a proxy cache.
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: body,
-        ContentType: contentType,
-        CacheControl: 'private, no-store',
-      }),
-    );
-  }
-
   async delete(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
@@ -146,7 +126,12 @@ export class MemoryObjectStore implements LegacyObjectStore {
     return found ? { buffer: Buffer.from(found.buffer), contentType: found.contentType } : null;
   }
 
-  async putPrivate(key: string, body: Buffer, contentType: string): Promise<void> {
+  /**
+   * Put an object where a test needs one — what the bucket already holds
+   * from before the move. Not part of {@link LegacyObjectStore}: production
+   * code has no way to write to the bucket.
+   */
+  async put(key: string, body: Buffer, contentType: string): Promise<void> {
     this.objects.set(key, { buffer: Buffer.from(body), contentType });
   }
 
@@ -155,16 +140,12 @@ export class MemoryObjectStore implements LegacyObjectStore {
   }
 }
 
-/** No bucket: every read is missing and every write refuses. */
+/** No bucket: every read is missing and every removal refuses. */
 class UnconfiguredObjectStore implements LegacyObjectStore {
   readonly configured = false;
 
   async get(): Promise<StoredObject | null> {
     return null;
-  }
-
-  async putPrivate(): Promise<void> {
-    throw new ObjectStoreUnavailableError();
   }
 
   async delete(): Promise<void> {

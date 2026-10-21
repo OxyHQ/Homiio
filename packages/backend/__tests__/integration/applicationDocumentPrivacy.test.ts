@@ -42,7 +42,7 @@ import imageController from '../../controllers/imageController';
 import { getDb } from '../../db/postgres';
 import { tenantApplicationDocuments, tenantApplications } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
-import { legacyObjectStore } from '../../services/files/legacyObjectStore';
+import { seedLegacyObject } from '../helpers/legacyBucket';
 import { legacyImageUrl } from '../../services/files/legacyImages';
 import config from '../../config';
 import { objectIdHex, resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
@@ -80,7 +80,7 @@ function publicImages(): Express {
 
 /** Write bytes into the store under a key and return the URL a row holds. */
 async function storeDocument(key: string, bytes: Buffer): Promise<string> {
-  await legacyObjectStore().putPrivate(key, bytes, 'application/octet-stream');
+  await seedLegacyObject(key, bytes, 'application/octet-stream');
   return legacyImageUrl(key);
 }
 

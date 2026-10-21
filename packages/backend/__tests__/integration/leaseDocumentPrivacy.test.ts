@@ -46,12 +46,24 @@ import imageController from '../../controllers/imageController';
 import { getDb } from '../../db/postgres';
 import { leaseCoTenants, leaseDocuments, leases } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
-import { legacyObjectStore } from '../../services/files/legacyObjectStore';
+import { type MemoryObjectStore, legacyObjectStore } from '../../services/files/legacyObjectStore';
+import { seedLegacyObject } from '../helpers/legacyBucket';
 import { legacyImageUrl } from '../../services/files/legacyImages';
 import config from '../../config';
 import { createHash } from 'node:crypto';
+import { setPrivateDocumentSleepForTests } from '../../services/files/privateDocuments';
 import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
+
+// A retry of a transient Oxy failure waits for nothing here: the waits are the
+// module's, not the test's.
+beforeAll(() => {
+  setPrivateDocumentSleepForTests(() => Promise.resolve());
+});
+
+afterAll(() => {
+  setPrivateDocumentSleepForTests(null);
+});
 
 const LANDLORD = 'oxy-landlord';
 const TENANT = 'oxy-tenant';
@@ -92,7 +104,7 @@ function publicImages(): Express {
 
 /** Write bytes into the store under a key and return the URL a row holds. */
 async function storeDocument(key: string, bytes: Buffer): Promise<string> {
-  await legacyObjectStore().putPrivate(key, bytes, 'application/octet-stream');
+  await seedLegacyObject(key, bytes, 'application/octet-stream');
   return legacyImageUrl(key);
 }
 
@@ -335,13 +347,15 @@ describe('a lease document can be a PDF, and the client no longer names where it
     expect(fetched.body.data.filename).toBe('Signed agreement.pdf');
   });
 
-  it('stores it under a private key the public route refuses', async () => {
-    // Oxy is down, so the document falls back to the bucket — the path whose
-    // keys must never be reachable through the public image route.
+  it('fails the upload when Oxy cannot store it, and writes nothing anywhere', async () => {
+    // Oxy is down. There is no bucket path any more: a document Oxy cannot
+    // hold is an upload that failed, said so, and left no row and no object.
     fakeOxyFiles.largeUploadError = oxyError(503, 'UNAVAILABLE');
     const leaseId = await seedLease();
+    const bucket = legacyObjectStore() as MemoryObjectStore;
+    const before = bucket.objects.size;
 
-    await request(authed(LANDLORD))
+    const res = await request(authed(LANDLORD))
       .post(`/leases/${leaseId}/documents`)
       .field('name', 'Insurance')
       .attach('document', Buffer.from('%PDF-1.7 policy'), {
@@ -349,16 +363,22 @@ describe('a lease document can be a PDF, and the client no longer names where it
         contentType: 'application/pdf',
       });
 
-    const [row] = await getDb()
-      .select()
-      .from(leaseDocuments)
-      .where(eq(leaseDocuments.leaseId, leaseId));
-    expect(row.url).toContain(`/api/images/file/private/leases/${leaseId}/`);
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe('DOCUMENT_STORAGE_UNAVAILABLE');
+    expect(
+      await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, leaseId)),
+    ).toHaveLength(0);
+    expect(bucket.objects.size).toBe(before);
+  });
 
-    const key = row.url.slice(row.url.indexOf('/api/images/file/') + '/api/images/file/'.length);
+  it('keeps a key under the private prefix out of the public route', async () => {
+    const leaseId = await seedLease();
+    const key = `private/leases/${leaseId}/0192f4a2-aaaa-7bbb-8ccc-1234567890ab.pdf`;
+    await seedLegacyObject(key, Buffer.from('%PDF-1.7 policy'), 'application/pdf');
+
     const res = await request(publicImages()).get(`/images/file/${key}`);
-    // The new objects are private by their KEY, so they never depend on the
-    // `leases/documents/` entry that covers the ones already stored.
+    // Objects stored before the move are private by their KEY, so they never
+    // depend on the `leases/documents/` entry that covers the older ones.
     expect(res.status).toBe(400);
   });
 

@@ -346,13 +346,15 @@ function parseDocumentTypes(raw: unknown, count: number): ApplicationDocumentTyp
  *
  * Through the one private-document adapter (`services/files/privateDocuments`):
  * a PDF byte for byte, a photo re-encoded (EXIF and its GPS tag dropped), both
- * a private file in the applicant's own Oxy account (or, with the switch off
- * or Oxy refusing, under the bucket's `private/`). This used to run every file
+ * a private file in the applicant's own Oxy account — or the submission fails
+ * with the adapter's answer when Oxy will not hold one. (A file stored before
+ * the refusal stays in the applicant's account, which shows it as not in use.)
+ * This used to run every file
  * through the PUBLIC image pipeline — which made a PDF payslip throw inside
  * Sharp (500 on every PDF the route's own allowlist accepts) and stored a
  * photographed identity document as four public-cache renditions. The row
- * keeps the adapter's row value (`oxy:<fileId>`, or a delivery-route URL);
- * the wire shape never carries it, and nothing serves it publicly.
+ * keeps the adapter's row value (`oxy:<fileId>`); the wire shape never carries
+ * it, and nothing serves it publicly.
  */
 async function uploadDocumentFiles(
   files: readonly UploadedApplicationFile[],

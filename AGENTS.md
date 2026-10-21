@@ -103,7 +103,8 @@ measurements: **`docs/postgres.md`**.
   shown, or the sweep deletes one. Private documents (private files in the
   uploader's account, `oxy:<fileId>` on the row; migration
   `0038_oxy_private_documents`) go through `services/files/privateDocuments.ts`
-  only, and a client may never name one.
+  only, and a client may never name one. Nothing writes to the bucket: an Oxy
+  refusal FAILS the upload — never a fallback to a store being retired.
 
 ## Ownership and auth (CRITICAL)
 

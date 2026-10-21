@@ -33,6 +33,7 @@ import {
 import { errorHandler } from '../../middlewares/errorHandler';
 import { legacyImageUrl } from '../../services/files/legacyImages';
 import { legacyObjectStore } from '../../services/files/legacyObjectStore';
+import { seedLegacyObject } from '../helpers/legacyBucket';
 import {
   countLegacyPrivateDocuments,
   findLegacyPrivateDocuments,
@@ -94,7 +95,7 @@ async function legacyLeaseDocument(options: { sha256?: string } = {}) {
     .returning({ id: leases.id });
   const bytes = Buffer.from(`%PDF-1.7 agreement ${lease.id}`);
   const key = `private/leases/${lease.id}/${objectIdHex()}.pdf`;
-  await legacyObjectStore().putPrivate(key, bytes, 'application/pdf');
+  await seedLegacyObject(key, bytes, 'application/pdf');
   const [row] = await getDb()
     .insert(leaseDocuments)
     .values({
@@ -130,7 +131,7 @@ async function legacyApplication() {
     });
   const bytes = Buffer.from(`payslip ${applicationId}`);
   const key = `private/applications/${applicationId}/${objectIdHex()}.webp`;
-  await legacyObjectStore().putPrivate(key, bytes, 'image/webp');
+  await seedLegacyObject(key, bytes, 'image/webp');
   const uploaded = objectIdHex();
   const linked = objectIdHex();
   await getDb()
