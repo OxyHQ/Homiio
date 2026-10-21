@@ -23,6 +23,11 @@
  * `reference_contacts[]` and `documents[]` are child tables of the application. An
  * application that committed without its references is one a landlord judges on
  * incomplete information, so they are not a follow-up write.
+ *
+ * Documents may ALSO be attached afterwards, by the applicant only, while the
+ * application is active ({@link appendApplicationDocuments}): one request may
+ * carry at most `UPLOAD_REQUEST_MAX_BYTES`, so ten 10 MB documents cannot all
+ * travel with the submission.
  */
 
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
@@ -268,6 +273,62 @@ export async function createApplication(
 
   const [hydrated] = await hydrate(db, [row]);
   return hydrated;
+}
+
+export type AppendDocumentsOutcome =
+  | { readonly ok: true; readonly application: HydratedApplication }
+  | { readonly ok: false; readonly reason: 'not_found' | 'not_active' | 'too_many' };
+
+/**
+ * Attach more documents to an application, as its APPLICANT, while it is still
+ * active — the rest of a submission whose documents did not fit one request.
+ *
+ * The applicant is in the WHERE, so a landlord, a stranger and a missing id
+ * are one `not_found` by construction. The row is locked `FOR UPDATE` before the
+ * count, so two concurrent appends cannot both pass the `maxDocuments` check,
+ * and a landlord's decision committed first is seen here as `not_active`.
+ * Must run in a transaction for the lock to mean anything.
+ */
+export async function appendApplicationDocuments(
+  db: DatabaseOrTransaction,
+  input: {
+    readonly applicationId: string;
+    readonly applicantOxyUserId: string;
+    readonly maxDocuments: number;
+    readonly documents: CreateApplicationInput['documents'];
+  },
+): Promise<AppendDocumentsOutcome> {
+  const [row] = await db
+    .select()
+    .from(tenantApplications)
+    .where(
+      and(
+        eq(tenantApplications.id, input.applicationId),
+        eq(tenantApplications.applicantOxyUserId, input.applicantOxyUserId),
+      ),
+    )
+    .for('update')
+    .limit(1);
+  if (!row) return { ok: false, reason: 'not_found' };
+  if (!ACTIVE_APPLICATION_STATUSES.includes(row.status as TenantApplicationStatusValue)) {
+    return { ok: false, reason: 'not_active' };
+  }
+
+  const [counted] = await db
+    .select({ value: sql<number>`count(*)::int` })
+    .from(tenantApplicationDocuments)
+    .where(eq(tenantApplicationDocuments.applicationId, row.id));
+  if (counted.value + input.documents.length > input.maxDocuments) {
+    return { ok: false, reason: 'too_many' };
+  }
+
+  if (input.documents.length > 0) {
+    await db
+      .insert(tenantApplicationDocuments)
+      .values(input.documents.map((document) => ({ ...document, applicationId: row.id })));
+  }
+  const [hydrated] = await hydrate(db, [row]);
+  return { ok: true, application: hydrated };
 }
 
 export interface ListApplicationsFilter {

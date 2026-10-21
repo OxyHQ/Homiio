@@ -81,20 +81,24 @@ file in `services/geoip/` starts reading a forwarding header, `req.query` or
 `req.body` — so "accept `?ip=` so support can reproduce a user's result" is a
 red test rather than a reasonable-sounding commit.
 
-The topology makes `req.ip` the right answer. `api.homiio.com` is an ALB host
-rule pointing straight at the ECS task
-(`oxy-infra/terraform-uswest2/app-services.tf`), and the CloudFront distribution
-in `cdn.tf` fronts only the media bucket — **there is no CDN hop in front of the
-API**. One trusted hop, so `server.ts` sets `trust proxy: 1`, and Express walks
-the forwarding chain from the right:
+`server.ts` sets `trust proxy: 1` — one trusted hop, the ALB — and Express
+walks the forwarding chain from the right. That was the whole chain while
+`api.homiio.com` was an ALB host rule pointing straight at the ECS task
+(`oxy-infra/terraform-uswest2/app-services.tf`). The API is moving behind
+Cloudflare's proxy, which puts a second hop in front of the ALB:
 
-| The client sends | ALB forwards | `req.ip` |
-|---|---|---|
-| nothing | `XFF: <client>` | `<client>` |
-| `XFF: 8.8.8.8` | `XFF: 8.8.8.8, <client>` | `<client>` — the forgery is to the LEFT |
+| The client sends | Chain | Arrives as | `req.ip` |
+|---|---|---|---|
+| nothing | ALB only | `XFF: <client>` | `<client>` |
+| `XFF: 8.8.8.8` | ALB only | `XFF: 8.8.8.8, <client>` | `<client>` — the forgery is to the LEFT |
+| `XFF: 8.8.8.8` | Cloudflare → ALB | `XFF: 8.8.8.8, <client>, <edge>` | `<edge>` — never the forgery, but not the person either |
 
-Raising `trust proxy` above `1` behind a one-hop ingress would make `req.ip` the
-last value a *client* supplied, so the number is pinned by a test.
+Behind Cloudflare, `req.ip` is the Cloudflare edge that relayed the request, so
+a lookup locates the edge rather than the person. Which hops to trust is being
+replaced in the Oxy SDK; until then the setting stays, and nothing in Homiio
+reads `X-Forwarded-For` or `CF-Connecting-IP` itself. Raising `trust proxy` to a
+number that exceeds the real chain would make `req.ip` a value a *client*
+supplied, so the number is pinned by a test.
 
 Private, loopback, link-local, CGNAT (`100.64/10`) and other reserved ranges are
 refused before the lookup: a server-side render or a health probe must not be

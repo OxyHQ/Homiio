@@ -5,20 +5,23 @@
  * applicant flow (apply, view my applications, withdraw) and the landlord
  * inbox (review submissions, approve / reject).
  *
- * Every request — including the multipart document upload — goes through the
+ * Every request — including the multipart document uploads — goes through the
  * shared `api` helper, which is backed by the Oxy-linked backend client. The
  * linked client keeps the bearer token in lockstep with the session, delegates
  * preflight/401 refresh to the session owner, and detects `FormData` bodies to
  * let the browser/native runtime set the multipart boundary header itself.
  */
 import { Platform } from 'react-native';
-import type {
-  EmploymentStatus,
-  ReferenceRelationship,
-  TenantApplication,
-  TenantApplicationDocumentType,
+import {
+  APPLICATION_DOCUMENT_MAX_BYTES,
+  APPLICATION_DOCUMENT_MAX_COUNT,
+  planUploadBatches,
   TenantApplicationStatus,
-  DocumentVerificationStatus,
+  type DocumentVerificationStatus,
+  type EmploymentStatus,
+  type ReferenceRelationship,
+  type TenantApplication,
+  type TenantApplicationDocumentType,
 } from '@homiio/shared-types';
 
 import { api, ApiError, type ApiResponse } from '@/utils/api';
@@ -39,6 +42,8 @@ export type ApplicationDocumentUpload = {
   mimeType?: string;
   /** Optional File handle (web only). Preferred over fetching the URI. */
   file?: File;
+  /** The file's size, when the picker reports one; plans the requests. */
+  sizeBytes?: number;
 };
 
 export type CreateApplicationInput = {
@@ -98,6 +103,26 @@ async function appendFileToFormData(
   } as unknown as Blob);
 }
 
+const DOCUMENT_BATCH_LIMITS = {
+  maxFileBytes: APPLICATION_DOCUMENT_MAX_BYTES,
+  maxFilesPerRequest: APPLICATION_DOCUMENT_MAX_COUNT,
+};
+
+/** The size a document is planned at: the picker's, or the File's on web. */
+function documentSize(doc: ApplicationDocumentUpload): number | undefined {
+  return doc.sizeBytes ?? doc.file?.size;
+}
+
+async function appendDocuments(
+  formData: FormData,
+  documents: readonly ApplicationDocumentUpload[],
+): Promise<void> {
+  formData.append('documentTypes', JSON.stringify(documents.map((d) => d.type)));
+  for (const doc of documents) {
+    await appendFileToFormData(formData, 'documents', doc);
+  }
+}
+
 export const applicationService = {
   /**
    * The landlord's judgement of one attached document (#518 §7.4).
@@ -119,11 +144,45 @@ export const applicationService = {
   },
 
   /**
-   * Submit a long-term tenant application. Documents are uploaded inline as
-   * a single multipart request — the backend persists each file to S3 and
-   * returns the populated application document.
+   * Submit a long-term tenant application with its documents, stored by the
+   * backend as private files in the applicant's own Oxy account.
+   *
+   * One request may carry at most `UPLOAD_REQUEST_MAX_BYTES`
+   * (`shared-types`), so the documents are planned into batches: the first
+   * travels with the submission and each further one is attached to the new
+   * application (`POST /:id/documents`). Nearly every submission is a single
+   * request. If a further batch fails, the application is withdrawn before the
+   * error is rethrown, so the person sees what they always saw — a failed
+   * submission they can send again — rather than an application missing
+   * documents they picked.
    */
   async create(input: CreateApplicationInput): Promise<TenantApplication> {
+    const [first = [], ...rest] = planUploadBatches(
+      input.documents ?? [],
+      documentSize,
+      DOCUMENT_BATCH_LIMITS,
+    );
+    let application = await applicationService.submit(input, first);
+    for (const batch of rest) {
+      try {
+        application = await applicationService.addDocuments(String(application.id), batch);
+      } catch (error) {
+        await applicationService
+          .update(String(application.id), {
+            status: TenantApplicationStatus.WITHDRAWN,
+          })
+          .catch(() => undefined);
+        throw error;
+      }
+    }
+    return application;
+  },
+
+  /** The submission request itself, with the documents that fit it. */
+  async submit(
+    input: CreateApplicationInput,
+    documents: readonly ApplicationDocumentUpload[],
+  ): Promise<TenantApplication> {
     const formData = new FormData();
     formData.append('propertyId', input.propertyId);
     formData.append('moveInDate', input.moveInDate);
@@ -133,13 +192,7 @@ export const applicationService = {
     formData.append('referenceContacts', JSON.stringify(input.referenceContacts));
     if (input.notes) formData.append('notes', input.notes);
 
-    const documents = input.documents ?? [];
-    if (documents.length > 0) {
-      formData.append('documentTypes', JSON.stringify(documents.map((d) => d.type)));
-      for (const doc of documents) {
-        await appendFileToFormData(formData, 'documents', doc);
-      }
-    }
+    if (documents.length > 0) await appendDocuments(formData, documents);
 
     const response = await api.post<ApiResponse<TenantApplication>>(API_BASE_PATH, formData);
     const created = response.data?.data;
@@ -147,6 +200,24 @@ export const applicationService = {
       throw new ApiError('Empty application response', 500, response.data);
     }
     return created;
+  },
+
+  /** Attach more documents to the person's own pending application. */
+  async addDocuments(
+    applicationId: string,
+    documents: readonly ApplicationDocumentUpload[],
+  ): Promise<TenantApplication> {
+    const formData = new FormData();
+    await appendDocuments(formData, documents);
+    const response = await api.post<ApiResponse<TenantApplication>>(
+      `${API_BASE_PATH}/${applicationId}/documents`,
+      formData,
+    );
+    const updated = response.data?.data;
+    if (!updated) {
+      throw new ApiError('Empty application response', 500, response.data);
+    }
+    return updated;
   },
 
   async list(

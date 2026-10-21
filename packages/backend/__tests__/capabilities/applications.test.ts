@@ -274,6 +274,53 @@ describe('submitApplication', () => {
   });
 });
 
+describe('addApplicationDocuments', () => {
+  const doc = (type: string) => ({
+    type,
+    filename: `${type}.pdf`,
+    mimeType: 'application/pdf',
+    contentBase64: Buffer.from(`%PDF-1.4 ${type}`).toString('base64'),
+  });
+
+  it("attaches documents to the person's own pending application, privately", async () => {
+    const id = await submit(await seedRental());
+    const result = await callTool('addApplicationDocuments', APPLICANT, {
+      applicationId: id,
+      documents: [doc('id'), doc('income')],
+    });
+    expect(result.isError).toBe(false);
+    const data = result.structuredContent.data as { id: string; documents: { type: string }[] };
+    expect(data.id).toBe(id);
+    expect(data.documents.map((document) => document.type).sort()).toEqual(['id', 'income']);
+    const rows = await getDb()
+      .select()
+      .from(tenantApplicationDocuments)
+      .where(eq(tenantApplicationDocuments.applicationId, id));
+    for (const row of rows) {
+      expect(fakeOxyFiles.files.get(row.url.slice(4))).toMatchObject({
+        ownerUserId: APPLICANT,
+        visibility: 'private',
+      });
+    }
+  });
+
+  it('is refused to the landlord and a stranger as not found', async () => {
+    const id = await submit(await seedRental());
+    for (const who of [LANDLORD, STRANGER]) {
+      const result = await callTool('addApplicationDocuments', who, {
+        applicationId: id,
+        documents: [doc('other')],
+      });
+      expect(result.error).toMatchObject({ status: 404 });
+    }
+    const rows = await getDb()
+      .select()
+      .from(tenantApplicationDocuments)
+      .where(eq(tenantApplicationDocuments.applicationId, id));
+    expect(rows).toHaveLength(0);
+  });
+});
+
 describe('reading applications', () => {
   it('lists mine as applicant and, with asLandlord, the ones sent to me', async () => {
     const id = await submit(await seedRental());

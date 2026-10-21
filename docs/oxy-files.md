@@ -26,6 +26,21 @@ A person's file is theirs: when Homiio stops using it, Oxy shows it to them as
 "not in use" and never deletes it. A Homiio-owned file nobody uses is trashed by
 Oxy after 24 hours and deleted 30 days later (ADR 0043 D5).
 
+### How big one upload request may be
+
+No request to the API carries more than `UPLOAD_REQUEST_MAX_BYTES` (64 MB,
+`shared-types/src/upload.ts`): the API sits behind a proxy that refuses bodies
+over 100 MB, and `upload-multiple` and an application's submission each accept
+ten 10 MB files. `server.ts` refuses a larger declared `Content-Length` with a
+413 JSON body before reading it, and the multi-file routes refuse files that
+total more after multer (`middlewares/uploadBudget.ts`). The app splits a set
+with `planUploadBatches` — the photo picker sends one request per batch, and an
+application sends what fits with the submission and attaches the rest through
+`POST /api/applications/:id/documents`; if that fails it withdraws the
+application, so no landlord is left reviewing one missing documents the person
+picked, and the person can send it again. The per-file and per-set limits did
+not change.
+
 Every URL Homiio hands out is a rendition, never the bare file
 (`services/files/imageUrls.ts`): `small` → `w320`, `medium` → `w640`, `large` →
 `w1280`, `original` → `w2048`. Oxy serves a file's own bytes unmodified, and an

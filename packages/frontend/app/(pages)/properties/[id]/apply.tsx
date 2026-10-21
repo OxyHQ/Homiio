@@ -4,8 +4,10 @@
  * Default entry point from a property detail in long-term rent mode
  * (Idealista/Fotocasa style). The applicant supplies move-in intent,
  * income/employment, reference contacts and optional supporting documents
- * (ID, payslips, prior-landlord references); a single multipart POST to
- * `/api/applications` uploads the files and creates the application.
+ * (ID, payslips, prior-landlord references). `applicationService.create`
+ * uploads the files and creates the application — in one multipart POST to
+ * `/api/applications`, or, when the documents are more than one request may
+ * carry, the rest attached to it right after.
  */
 import type React from 'react';
 import { useMemo, useState } from 'react';
@@ -38,6 +40,8 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
 
 import {
+  APPLICATION_DOCUMENT_MAX_BYTES,
+  APPLICATION_DOCUMENT_MAX_COUNT,
   EmploymentStatus,
   ReferenceRelationship,
   TenantApplicationDocumentType,
@@ -53,8 +57,8 @@ import { useOxy } from '@oxy.so/services/ui/client';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { ApiError } from '@/utils/api';
 
-const MAX_DOCUMENTS = 10;
-const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_DOCUMENTS = APPLICATION_DOCUMENT_MAX_COUNT;
+const MAX_DOCUMENT_BYTES = APPLICATION_DOCUMENT_MAX_BYTES;
 const MIN_LEASE_MONTHS = 1;
 const MAX_LEASE_MONTHS = 60;
 const LEASE_PRESET_MONTHS: number[] = [3, 6, 12, 18, 24];
@@ -95,7 +99,6 @@ type ReferenceFormState = ApplicationReferenceInput & { phoneCountry: string };
 
 type DocumentDraft = ApplicationDocumentUpload & {
   id: string;
-  sizeBytes?: number;
 };
 
 function makeBlankReference(): ReferenceFormState {
@@ -362,6 +365,7 @@ export default function ApplyToRentScreen() {
         uri: doc.uri,
         mimeType: doc.mimeType,
         file: doc.file,
+        sizeBytes: doc.sizeBytes,
       }));
       const created = await createMutation.mutateAsync({
         propertyId,

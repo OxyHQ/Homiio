@@ -6,7 +6,9 @@
  *
  * The data is unchanged: `images` are `UploadedImage`s from
  * `imageUploadService`, and a photo only joins them once the upload API has
- * returned it. The cover is the image flagged `isPrimary`: the grid draws it
+ * returned it. A set picked together is sent in as many requests as the
+ * per-request byte budget needs (`planUploadBatches`, `shared-types`), and each
+ * request's photos join the list as it lands. The cover is the image flagged `isPrimary`: the grid draws it
  * first, and a reorder makes the new first photo the primary one. Nothing is
  * rewritten until the host reorders or removes, so an untouched list is saved
  * exactly as it was loaded.
@@ -27,6 +29,11 @@ import { SortablePhotoGrid, type SortablePhoto } from '@oxy.so/bloom/sortable-me
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
+import {
+  IMAGE_UPLOAD_MAX_FILE_BYTES,
+  IMAGE_UPLOAD_MAX_FILES_PER_REQUEST,
+  planUploadBatches,
+} from '@homiio/shared-types';
 import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 import { coverFirst } from '@/utils/propertyPhotos';
@@ -49,7 +56,14 @@ interface PendingPhoto {
   id: string;
   uri: string;
   status: 'uploading' | 'error';
+  /** The picked file's size, when the picker reports one; plans the requests. */
+  sizeBytes?: number;
 }
+
+const UPLOAD_LIMITS = {
+  maxFileBytes: IMAGE_UPLOAD_MAX_FILE_BYTES,
+  maxFilesPerRequest: IMAGE_UPLOAD_MAX_FILES_PER_REQUEST,
+};
 
 const IS_NATIVE = Platform.OS !== 'web';
 let pendingCounter = 0;
@@ -99,13 +113,10 @@ export function ImageUpload({
     [t],
   );
 
-  const upload = useCallback(
-    async (batch: PendingPhoto[]) => {
+  /** One request: these photos land together or fail together. */
+  const uploadRequest = useCallback(
+    async (batch: PendingPhoto[]): Promise<boolean> => {
       const ids = new Set(batch.map((photo) => photo.id));
-      setPending((list) => [
-        ...list.filter((photo) => !ids.has(photo.id)),
-        ...batch.map((photo) => ({ ...photo, status: 'uploading' as const })),
-      ]);
       try {
         const response = await imageUploadService.uploadMultipleImages(
           batch.map((photo) => photo.uri),
@@ -129,15 +140,37 @@ export function ImageUpload({
             isPrimary: current.length === 0 && index === 0,
           })),
         ]);
+        return true;
       } catch (error) {
         logger.error('Error uploading images', error);
         setPending((list) =>
           list.map((photo) => (ids.has(photo.id) ? { ...photo, status: 'error' as const } : photo)),
         );
-        toast.error(t('imageUpload.uploadFailed'));
+        return false;
       }
     },
-    [folder, onImagesChange, t],
+    [folder, onImagesChange],
+  );
+
+  /**
+   * Every picked photo, in as many requests as the byte budget needs, one
+   * after another. A request that fails marks only its own photos for retry;
+   * the rest still go, and the person hears about it once.
+   */
+  const upload = useCallback(
+    async (batch: PendingPhoto[]) => {
+      const ids = new Set(batch.map((photo) => photo.id));
+      setPending((list) => [
+        ...list.filter((photo) => !ids.has(photo.id)),
+        ...batch.map((photo) => ({ ...photo, status: 'uploading' as const })),
+      ]);
+      let failed = false;
+      for (const request of planUploadBatches(batch, (photo) => photo.sizeBytes, UPLOAD_LIMITS)) {
+        if (!(await uploadRequest(request))) failed = true;
+      }
+      if (failed) toast.error(t('imageUpload.uploadFailed'));
+    },
+    [uploadRequest, t],
   );
 
   const requestPermissions = async () => {
@@ -163,6 +196,7 @@ export function ImageUpload({
       id: `pending-${(pendingCounter += 1)}`,
       uri: asset.uri,
       status: 'uploading' as const,
+      sizeBytes: asset.fileSize ?? asset.file?.size,
     }));
     if (batch.length > 0) void upload(batch);
   };
