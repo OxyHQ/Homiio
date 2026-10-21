@@ -213,12 +213,6 @@
         "globals": "^17.7.0",
         "typescript": "^6.0.3",
       },
-      "peerDependencies": {
-        "playwright": ">=1.40.0",
-      },
-      "optionalPeers": [
-        "playwright",
-      ],
     },
     "packages/shared-types": {
       "name": "@homiio/shared-types",
