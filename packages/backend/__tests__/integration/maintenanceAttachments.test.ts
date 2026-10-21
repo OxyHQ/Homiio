@@ -11,14 +11,13 @@
  * nothing would fail. So a case uploads an image carrying a GPS tag and asserts
  * the stored object no longer has one.
  *
- * **The door.** These are the first rows written under the private prefix, so
- * a case fetches the stored key through the PUBLIC image route and asserts it
- * is refused. A private path that quietly served over the public one would pass
- * every authorization test in this file.
+ * **The door.** A case asks the PUBLIC image route for a key under the old
+ * private prefix and asserts it is refused. A private path that quietly served
+ * over the public one would pass every authorization test in this file.
  *
  * Every authorization refusal re-reads the table, because a handler that 404s
  * and writes anyway satisfies any assertion made on its response alone — and
- * here it also has to leave the BUCKET alone, which is asserted separately.
+ * here it also has to leave Oxy alone, which is asserted separately.
  */
 
 import express, { type Express } from 'express';
@@ -27,6 +26,7 @@ import request from 'supertest';
 import sharp from 'sharp';
 import { eq } from 'drizzle-orm';
 import { LeaseStatus, PropertyStatus } from '@homiio/shared-types';
+import { CHECK_VIOLATION, constraintNameOf, sqlStateOf } from '@oxy.so/db';
 
 import * as maintenanceController from '../../controllers/maintenanceController';
 import imageController from '../../controllers/imageController';
@@ -40,10 +40,8 @@ import {
 } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { type MemoryObjectStore, legacyObjectStore } from '../../services/files/legacyObjectStore';
 import { setPrivateDocumentSleepForTests } from '../../services/files/privateDocuments';
 import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
-import { seedLegacyObject } from '../helpers/legacyBucket';
 import { objectIdHex, resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 // A retry of a transient Oxy failure waits for nothing here: the waits are the
@@ -191,7 +189,6 @@ beforeEach(async () => {
   await getDb().delete(maintenanceRequests);
   await resetGeoTables();
   fakeOxyFiles.reset();
-  (legacyObjectStore() as MemoryObjectStore).objects.clear();
 });
 
 /** The bytes Oxy holds for a row's `oxy:<fileId>`. */
@@ -200,12 +197,6 @@ function storedBytes(storageKey: string): Buffer {
   if (!file) throw new Error('the attachment was not stored');
   return file.bytes as Buffer;
 }
-
-/** Everything under the bucket's private maintenance prefix. */
-const bucketKeys = () =>
-  [...(legacyObjectStore() as MemoryObjectStore).objects.keys()].filter((key) =>
-    key.startsWith('private/maintenance/'),
-  );
 
 describe('attaching a photo', () => {
   it('stores it in Oxy and answers a path, never a link', async () => {
@@ -281,7 +272,6 @@ describe('attaching a photo', () => {
     // And nothing was stored — authorization runs before any byte leaves
     // Homiio, so a stranger's upload never reaches storage of any kind.
     expect(fakeOxyFiles.callsOf('uploadUserMediaLarge')).toHaveLength(0);
-    expect(bucketKeys()).toEqual([]);
   });
 
   it('refuses past the per-request ceiling', async () => {
@@ -361,12 +351,11 @@ describe('the public image route cannot reach them', () => {
   it('refuses a key under the private prefix, as stored before the move', async () => {
     const { requestId } = await seedRequest();
     const key = `private/maintenance/${requestId}/0192f4a2-aaaa-7bbb-8ccc-1234567890ab.webp`;
-    await seedLegacyObject(key, Buffer.from('a photo of the damp'), 'image/webp');
 
     const res = await request(publicImages()).get(`/images/file/${key}`);
 
-    // A path that quietly served the bucket's private objects over the public
-    // route would pass every authorization case above.
+    // A path that quietly answered for private keys over the public route
+    // would pass every authorization case above.
     expect(res.status).toBe(400);
   });
 });
@@ -377,9 +366,8 @@ describe('the public image route cannot reach them', () => {
  * consent — and every refusal of Oxy's still leaves a working photo.
  */
 describe("in the uploader's Oxy account (stage 4c)", () => {
-  it('stores a private file the uploader owns, re-encoded, and nothing in the bucket', async () => {
+  it('stores a private file the uploader owns, re-encoded', async () => {
     const { requestId } = await seedRequest();
-    const before = bucketKeys().length;
 
     const res = await attach(requestId, TENANT);
 
@@ -388,9 +376,8 @@ describe("in the uploader's Oxy account (stage 4c)", () => {
     expect(row.storageKey).toMatch(/^oxy:[A-Za-z0-9_-]+$/);
     const file = fakeOxyFiles.files.get(row.storageKey.slice(4));
     expect(file).toMatchObject({ ownerUserId: TENANT, visibility: 'private', mime: 'image/webp' });
-    // The GPS went before the bytes left Homiio, exactly as on the bucket path.
+    // The GPS went before the bytes left Homiio.
     expect((await sharp(file?.bytes as Buffer).metadata()).exif).toBeUndefined();
-    expect(bucketKeys()).toHaveLength(before);
     // The row is the use: its trigger marked the pair for the drain.
     const marks = await getDb()
       .select()
@@ -438,7 +425,6 @@ describe("in the uploader's Oxy account (stage 4c)", () => {
     expect(again.status).toBe(409);
     expect(again.body.error.code).toBe('DOCUMENT_ACCESS_REVOKED');
     expect(await rowsOf(requestId)).toHaveLength(1);
-    expect(bucketKeys()).toEqual([]);
   });
 
   it('answers 404 once the owner revokes Homiio, and nothing else', async () => {
@@ -518,7 +504,6 @@ describe("in the uploader's Oxy account (stage 4c)", () => {
       expect(res.status).toBe(status);
       expect(res.body.error.code).toBe(code);
       expect(await rowsOf(requestId)).toHaveLength(0);
-      expect(bucketKeys()).toEqual([]);
     },
   );
 
@@ -535,7 +520,6 @@ describe("in the uploader's Oxy account (stage 4c)", () => {
     const [row] = await rowsOf(requestId);
     expect(row.storageKey).toMatch(/^oxy:/);
     expect(fakeOxyFiles.callsOf('uploadUserMediaLarge')).toHaveLength(3);
-    expect(bucketKeys()).toEqual([]);
   });
 
   it('waits out a short rate limit once', async () => {
@@ -562,5 +546,26 @@ describe("in the uploader's Oxy account (stage 4c)", () => {
         bytes: 1,
       }),
     ).rejects.toThrow();
+  });
+
+  it('refuses a bucket key, in the database: the bucket is retired', async () => {
+    const { requestId } = await seedRequest();
+    const error = await getDb()
+      .insert(maintenanceRequestAttachments)
+      .values({
+        requestId,
+        uploadedByOxyUserId: TENANT,
+        role: 'tenant',
+        storageKey: `private/maintenance/${requestId}/0192f4a2-aaaa-7bbb-8ccc-1234567890ab.webp`,
+        contentType: 'image/webp',
+        bytes: 1,
+      })
+      .then(
+        () => undefined,
+        (rejected: unknown) => rejected,
+      );
+
+    expect(sqlStateOf(error)).toBe(CHECK_VIOLATION);
+    expect(constraintNameOf(error)).toBe('maintenance_request_attachments_private_key_check');
   });
 });

@@ -1,239 +1,76 @@
-# Image Upload Service
+# Image uploads
 
-This service provides image upload functionality using the AWS SDK for S3. Production stores images in the Homiio media bucket (`oxy-homiio-media-usw2-237343248947`, region `us-west-2`) provisioned by `~/Oxy/oxy-infra`. It includes automatic image optimization, multiple variants, and quality reduction to minimize file sizes.
+A person's photo upload is stored as **their own public file in Oxy Files**
+(ADR 0043). Homiio stores no bytes of its own: its S3 bucket was retired on
+2026-10-21. The whole model — who owns each photo, references, file events,
+private documents — is in [`docs/oxy-files.md`](../../../docs/oxy-files.md);
+the code is `controllers/imageController.ts` and `services/files/publicImages.ts`.
 
-## Features
+## Endpoints
 
-- **Multiple Image Variants**: Automatically generates small, medium, large, and original variants
-- **Quality Optimization**: Reduces file sizes while maintaining visual quality
-- **Format Conversion**: Converts images to WebP for better compression (except original)
-- **S3 Integration**: Uses AWS SDK for S3 (native AWS in production)
-- **Error Handling**: Comprehensive error handling and validation
-- **Batch Upload**: Support for uploading multiple images at once
+### `POST /api/images/upload` (authenticated)
 
-## Configuration
+`multipart/form-data` with one `image` file. JPEG, PNG, WebP or GIF, at most
+10 MB. The photo is re-encoded with Sharp (EXIF and its GPS tag dropped) and
+uploaded to the signed-in person's Oxy account. No `images` row is written yet:
+the row is minted when the photo is published on a listing or a case, after Oxy
+confirms the file is the publisher's own.
 
-Add the following environment variables to your `.env` file:
-
-```env
-# AWS S3 (production — set by ECS via oxy-infra)
-AWS_REGION=us-west-2
-AWS_ACCESS_KEY_ID=your_access_key_id
-AWS_SECRET_ACCESS_KEY=your_secret_access_key
-AWS_S3_BUCKET=oxy-homiio-media-usw2-237343248947
-# Omit AWS_ENDPOINT_URL for native AWS S3. Only set for local S3-compatible mocks.
-```
-
-## API Endpoints
-
-### Upload Single Image
-```
-POST /api/images/upload
-Content-Type: multipart/form-data
-
-Body:
-- image: File (required)
-- folder: String (optional, default: 'general')
-```
-
-**Response:**
 ```json
 {
   "success": true,
   "message": "Image uploaded successfully",
   "data": {
-    "imageId": "uuid",
+    "imageId": "<fileId>",
+    "fileId": "<fileId>",
     "urls": {
-      "small": "https://<bucket>.s3.us-west-2.amazonaws.com/.../small.webp",
-      "medium": "https://<bucket>.s3.us-west-2.amazonaws.com/.../medium.webp",
-      "large": "https://<bucket>.s3.us-west-2.amazonaws.com/.../large.webp",
-      "original": "https://<bucket>.s3.us-west-2.amazonaws.com/.../original.jpeg"
+      "small": "<Oxy rendition, w320>",
+      "medium": "<Oxy rendition, w640>",
+      "large": "<Oxy rendition, w1280>",
+      "original": "<Oxy rendition, w2048>"
     },
-    "metadata": {
-      "originalSize": 1024000,
-      "originalFormat": "jpeg",
-      "uploadedAt": "2024-01-01T00:00:00.000Z"
-    },
+    "metadata": { "originalSize": 1024000, "originalFormat": "jpeg", "uploadedAt": "…" },
     "keys": {
-      "original": "general/uuid-original.jpeg",
-      "variants": {
-        "small": "general/uuid-small.webp",
-        "medium": "general/uuid-medium.webp",
-        "large": "general/uuid-large.webp"
-      }
+      "original": "oxy:<fileId>",
+      "variants": { "original": "oxy:<fileId>", "small": "oxy:<fileId>", "medium": "oxy:<fileId>", "large": "oxy:<fileId>" }
     }
   }
 }
 ```
 
-### Upload Multiple Images
-```
-POST /api/images/upload-multiple
-Content-Type: multipart/form-data
+`keys` keeps the shape app builds released before the move read; it carries
+`oxy:<fileId>`, so a build that publishes `keys` publishes the right file.
 
-Body:
-- images: File[] (required, max 10 files)
-- folder: String (optional, default: 'general')
-```
+### `POST /api/images/upload-multiple` (authenticated)
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Successfully uploaded 3 images",
-  "data": {
-    "uploadedCount": 3,
-    "images": [
-      {
-        "originalName": "image1.jpg",
-        "imageId": "uuid1",
-        "urls": { ... },
-        "metadata": { ... },
-        "keys": { ... }
-      }
-    ]
-  }
-}
-```
+`multipart/form-data` with up to ten `images`. Every file is validated before
+any is stored; the answer is `{ uploadedCount, images: [{ originalName, …the
+single-upload data }] }`. A request may not carry more than
+`UPLOAD_REQUEST_MAX_BYTES`, so the app splits a large set with
+`planUploadBatches` (`docs/oxy-files.md`).
 
-### Delete Single Image
-```
-DELETE /api/images/:imageKey
-```
+### `DELETE /api/images/:imageKey` (authenticated)
 
-### Delete Multiple Image Variants
-```
-DELETE /api/images/variants
-Content-Type: application/json
+Deletes nothing and answers 200: an app build already in people's hands calls
+it when a photo is removed from the picker, and the photo is the person's own
+file in Oxy, to keep or delete there.
 
-Body:
-{
-  "imageKeys": ["key1", "key2", "key3"]
-}
-```
+### `GET /api/images/file/*` (public) — the legacy door
 
-### Get Image Info
-```
-GET /api/images/info/:imageKey
-```
+Old photo URLs from before the move keep working: a 301 to the photo's Oxy
+rendition, or a 404 (`services/files/legacyImages.ts`). Nothing is served from
+Homiio itself.
 
-## Image Variants
+## Publishing a photo
 
-The service automatically generates the following variants:
+A listing's `images[]` names each photo by `imageId` (an existing row) or by its
+Oxy file — `fileId`, or `keys.original = "oxy:<fileId>"` from an older app
+build. Anything else is a 400 `INVALID_PROPERTY_IMAGE`
+(`controllers/property/photoIntake.ts`).
 
-| Variant | Dimensions | Quality | Format | Use Case |
-|---------|------------|---------|--------|----------|
-| small | 300x300 | 80% | WebP | Thumbnails, previews |
-| medium | 600x600 | 85% | WebP | Gallery views |
-| large | 1200x1200 | 90% | WebP | Detailed views |
-| original | Original | 95% | JPEG | Full resolution |
+## Refusals
 
-## File Validation
-
-- **Supported Formats**: JPEG, JPG, PNG, WebP, GIF
-- **Maximum File Size**: 10MB per file
-- **Maximum Files**: 10 files per batch upload
-
-## Error Handling
-
-The service includes comprehensive error handling for:
-
-- Invalid file types
-- File size limits
-- Upload failures
-- S3 connection issues
-- Image processing errors
-
-## Usage Examples
-
-### Frontend Integration (JavaScript)
-
-```javascript
-// Single image upload
-const formData = new FormData();
-formData.append('image', file);
-formData.append('folder', 'properties');
-
-const response = await fetch('/api/images/upload', {
-  method: 'POST',
-  body: formData,
-  headers: {
-    'Authorization': `Bearer ${token}`
-  }
-});
-
-const result = await response.json();
-console.log(result.data.urls.small); // Small variant URL
-```
-
-### Frontend Integration (React)
-
-```jsx
-import { useState } from 'react';
-
-const ImageUpload = () => {
-  const [uploading, setUploading] = useState(false);
-  const [uploadedImages, setUploadedImages] = useState([]);
-
-  const handleUpload = async (files) => {
-    setUploading(true);
-    
-    const formData = new FormData();
-    Array.from(files).forEach(file => {
-      formData.append('images', file);
-    });
-    formData.append('folder', 'properties');
-
-    try {
-      const response = await fetch('/api/images/upload-multiple', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setUploadedImages(result.data.images);
-      }
-    } catch (error) {
-      console.error('Upload failed:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div>
-      <input
-        type="file"
-        multiple
-        accept="image/*"
-        onChange={(e) => handleUpload(e.target.files)}
-        disabled={uploading}
-      />
-      {uploading && <p>Uploading...</p>}
-      {uploadedImages.map((image, index) => (
-        <img key={index} src={image.urls.small} alt="Uploaded" />
-      ))}
-    </div>
-  );
-};
-```
-
-## Security Considerations
-
-- All endpoints require authentication
-- File type validation prevents malicious uploads
-- File size limits prevent abuse
-- Images are stored with public-read ACL for CDN access
-- Cache headers are set for optimal performance
-
-## Performance Optimization
-
-- Images are processed in memory for faster uploads
-- WebP format provides better compression
-- Multiple variants allow responsive image loading
-- Cache headers improve loading performance
-- Parallel processing for multiple image uploads
+- 400 — no file, a type that is not an image, or Oxy refused the type;
+- 413 — the file is over 10 MB, or the person's Oxy storage is full;
+- 451 — the bytes were taken down after a legal claim;
+- 502 — Oxy could not store it for a reason that is Homiio's to look at.

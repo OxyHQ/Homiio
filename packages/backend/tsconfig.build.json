@@ -16,16 +16,13 @@
   },
   "exclude": ["dist", "__tests__", "scripts"],
   // Reviewed migration CLIs must ship in the ECS images (they run as one-off tasks);
-  // other operational scripts stay excluded. The Oxy Files ones are the move off
-  // Homiio's bucket (docs/oxy-files.md § Rollout); a CLI the runbook names that is
+  // other operational scripts stay excluded. The Oxy Files ones are the CLIs
+  // docs/oxy-files.md tells an operator to run; a CLI the runbook names that is
   // missing here exists only in the repo, and its one-off task dies with
   // "Module not found" (`buildShipsRunbookScripts.test.ts`).
   "files": [
     "scripts/backfillCentralOrganizations.ts",
-    "scripts/migrateImagesToOxy.ts",
-    "scripts/migratePrivateDocumentsToOxy.ts",
     "scripts/cleanOrphanImages.ts",
-    "scripts/oxyFilesStatus.ts",
     "scripts/reconcileFileReferences.ts"
   ],
   // `extends` does NOT inherit `references`, and without them tsc stops

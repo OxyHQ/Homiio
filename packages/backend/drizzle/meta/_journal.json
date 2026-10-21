@@ -274,6 +274,13 @@
       "when": 1792213061406,
       "tag": "0038_oxy_private_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792590647417,
+      "tag": "0039_retire_legacy_bucket",
+      "breakpoints": true
     }
   ]
 }

@@ -174,32 +174,37 @@ export const oxyFileEvents = pgTable(
   ],
 );
 
-/** Which legacy door a read came through. */
+/**
+ * Which legacy door a read came through. `private_document` was the bucket
+ * read of a document stored before the move; nothing counts it since the
+ * bucket was retired (2026-10-21), and the value stays so its history does.
+ */
 export const LEGACY_MEDIA_SURFACES = ['public_image', 'private_document'] as const;
 
 /**
  * What the legacy door did:
- * - `redirected` — an old URL of a migrated photo, sent to its Oxy file;
- * - `served` — bytes read from Homiio's own bucket;
+ * - `redirected` — an old photo URL, sent to its Oxy file;
+ * - `served` — bytes read from Homiio's own bucket (until it was retired);
  * - `missing` — nothing there.
  */
 export const LEGACY_MEDIA_OUTCOMES = ['redirected', 'served', 'missing'] as const;
 
 /**
- * `legacy_media_reads` — how often anything still reads Homiio's own bucket,
- * per day.
+ * `legacy_media_reads` — how often an old `/api/images/file/` URL is still
+ * asked for, per day.
  *
- * This is the GATE for retiring the bucket (`docs/oxy-files.md` § Retiring the
- * bucket): the bucket goes only after `served` has been zero for the soak, and
- * an absence of rows must not read as an absence of reads — so the counter is
- * a durable table with a row per (day, surface, outcome), not a log line that
- * a missing log group would turn into silence. Counts are buffered per process
- * and flushed every minute from boot, a row for every pair even at zero
- * (`services/files/legacyReadCounter.ts`), so a day without its rows is a day
- * nothing counted.
+ * It was the GATE for retiring Homiio's bucket: zero `served` for the soak.
+ * The bucket is retired (`docs/oxy-files.md`), and the table now says when
+ * the legacy door itself can go — when the `public_image` redirects stop. An
+ * absence of rows must not read as an absence of reads, so the counter is a
+ * durable table with a row per (day, surface, outcome), not a log line that a
+ * missing log group would turn into silence. Counts are buffered per process
+ * and flushed every minute from boot, a row for every counted pair even at
+ * zero (`services/files/legacyReadCounter.ts`), so a day without its rows is a
+ * day nothing counted.
  *
  * No expiry: one row per day per pair is a few thousand rows a year, and the
- * history is the evidence the retirement is decided on.
+ * history is the evidence.
  */
 export const legacyMediaReads = pgTable(
   'legacy_media_reads',

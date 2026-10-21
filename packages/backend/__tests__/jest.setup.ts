@@ -12,11 +12,6 @@
 import { setLinkedDownloadForTests, setOxyFilesForTests } from '../services/files/oxyFilesSeam';
 import { fakeOxyFiles } from './helpers/fakeOxyFiles';
 
-// Give config a real https public URL so self-hosted image URLs
-// (`${publicUrl}/api/images/file/...`) are accepted by the Property image-URL
-// validator during tests (a bare localhost host can trip `validator.isURL`).
-process.env.PUBLIC_API_URL = process.env.PUBLIC_API_URL || 'https://api.homiio.test';
-
 /**
  * The CrowdSource webhook route refuses to mount without a secret — an
  * unconfigured deployment 404s there, which is indistinguishable from not having
@@ -70,10 +65,9 @@ beforeAll(async () => {
   // **Imported HERE, not at the top of the file.** `db/postgres` imports
   // `config`, and `config` reads `process.env` ONCE at module load — so a
   // top-level import would evaluate it BEFORE the assignments above and freeze
-  // an environment without `PUBLIC_API_URL` or the CrowdSource secrets. The
-  // symptom is not a Postgres failure at all: the webhook route decides it is
-  // unconfigured and 404s, and the image-URL validator rejects every ingested
-  // listing. Measured — a top-level import turned 8 unrelated suites red.
+  // an environment without the CrowdSource secrets. The symptom is not a
+  // Postgres failure at all: the webhook route decides it is unconfigured and
+  // 404s. Measured — a top-level import turned 8 unrelated suites red.
   // biome-ignore lint/style/noCommonJs: lazy require so config reads process.env after the assignments above
   const { connectPostgres } = require('../db/postgres') as typeof import('../db/postgres');
   await connectPostgres();

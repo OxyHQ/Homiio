@@ -162,7 +162,7 @@ cache rather than from a component.
 | Shared DB helpers | `@oxy.so/db` — migrator, `geography` column, expiry sweep, unique-violation helpers |
 | Identity | `@oxy.so/core/server` — `createOxyAuthMiddleware` gates the authenticated router |
 | Billing | `stripe` — Checkout, webhooks, customer portal |
-| Image pipeline | `sharp` + `@aws-sdk/client-s3` |
+| Image pipeline | `sharp` (re-encoding, EXIF stripped) + Oxy Files ([Oxy Files](./oxy-files)) |
 | Capability catalogue | `capabilities/*` — the tools Alia (Sindi, and Alia herself) and MCP clients call with Oxy capability tickets; the backend never calls Alia and runs no inference ([Sindi](./sindi)) |
 | Queues | `bullmq` over Valkey (`REDIS_URL`); absent, ingestion falls back to inline |
 | Moderation | `@crowdsource.you/*` — community report intake, decisions, enforcement |

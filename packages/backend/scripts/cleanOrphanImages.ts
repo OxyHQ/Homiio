@@ -8,14 +8,12 @@
  *   bun run packages/backend/scripts/cleanOrphanImages.ts --apply    # delete
  *   ... --apply --max=5000 --grace-hours=24
  *
- * PREVIEW (the default) counts the rows by entity type and by where their
- * bytes are (a legacy bucket object, or an Oxy file) and deletes nothing.
+ * PREVIEW (the default) counts the rows by entity type and deletes nothing.
  * `--apply` walks the table once in id windows (`deleteUnusedImages`),
  * re-checking "shown by nothing" in the DELETE itself, and prints the ids it
- * removed. The bytes are not deleted
- * here: a legacy row's objects go with the bucket's retirement, and an Oxy
- * file stopped being used when its last listing went (Oxy collects a
- * Homiio-owned one; a person's stays theirs).
+ * removed. The bytes are not deleted here: an Oxy file stopped being used when
+ * its last listing went (Oxy collects a Homiio-owned one; a person's stays
+ * theirs).
  */
 
 import path from 'path';
@@ -47,7 +45,7 @@ async function main(): Promise<void> {
   const total = counts.reduce((sum, row) => sum + row.rows, 0);
   console.log(`[orphan-images] unshown for ${GRACE_HOURS}h+: ${total}`);
   for (const row of counts) {
-    console.log(`  ${row.entityType.padEnd(14)} ${row.storage.padEnd(7)} ${row.rows}`);
+    console.log(`  ${row.entityType.padEnd(14)} ${row.rows}`);
   }
   if (!APPLY) {
     console.log('[orphan-images] PREVIEW only — nothing deleted. Re-run with --apply.');

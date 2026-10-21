@@ -295,9 +295,9 @@ export async function commentOnMaintenanceRequest(
  * Attach a photo of what is broken.
  *
  * Order: authorize, then store, then record. The participation check runs
- * BEFORE any object is written, so a stranger's upload never reaches the
- * bucket; the row is written last, which leaves an unreferenced object rather
- * than a row pointing at bytes that were never stored.
+ * BEFORE anything is stored, so a stranger's upload never reaches Oxy; the
+ * row is written last, which leaves an unreferenced file rather than a row
+ * pointing at bytes that were never stored.
  */
 export async function attachMaintenancePhoto(
   oxyUserId: string,

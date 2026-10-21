@@ -58,7 +58,7 @@ tables across 21 schema files.
 |---|---|---|
 | Who a person is | Oxy (`@oxy.so/core`, `@oxy.so/services`) | No user table, no passwords, no local auth. The linked client owns token refresh; never add a manual `Authorization` header |
 | Subscription and payment state | Stripe | Homiio caches entitlements in `billing`; Stripe's webhook is what moves them |
-| Image bytes | S3 (`AWS_S3_BUCKET`), or the local store in development | `images` holds metadata and keys, not bytes |
+| Photo and document bytes | Oxy Files (ADR 0043) | `images` holds the Oxy file id and its rendition URLs, a document row `oxy:<fileId>`; Homiio stores no bytes ([Oxy Files](./oxy-files)) |
 | Infrastructure, secrets, task definitions | `oxy-infra` (`terraform-uswest2`) | A secret added to a task definition must be added to `deploy-aws.yml`'s explicit sync allowlist in the same change, or it is never synced |
 | Community moderation decisions | `@crowdsource.you/core` | Homiio records outcomes and enforces them; it does not adjudicate |
 | Points of interest | OpenStreetMap / Overpass | Cached in `place_pois` with a deadline; a miss is re-fetched |

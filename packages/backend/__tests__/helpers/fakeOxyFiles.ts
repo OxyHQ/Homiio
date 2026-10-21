@@ -68,8 +68,6 @@ export class FakeOxyFiles {
   readonly refusedUsers = new Set<string>();
   /** Source URLs whose import fails with this status. */
   readonly failingSources = new Map<string, number>();
-  /** What a source URL serves when it is not the deterministic default (the legacy door). */
-  readonly servedSources = new Map<string, Buffer>();
   /** Thrown by the next batch-import requests, one per request (a 429, an outage). */
   readonly batchImportErrors: Error[] = [];
   /** Every call, for assertions. */
@@ -98,7 +96,6 @@ export class FakeOxyFiles {
     this.sources.clear();
     this.refusedUsers.clear();
     this.failingSources.clear();
-    this.servedSources.clear();
     this.batchImportErrors.length = 0;
     this.calls.length = 0;
     this.referencesError = null;
@@ -186,7 +183,7 @@ export class FakeOxyFiles {
 
   /** The bytes a source URL serves: deterministic, so dedupe is observable. */
   sourceBytes(url: string): Buffer {
-    return this.servedSources.get(url) ?? Buffer.from(`image-bytes:${url}`);
+    return Buffer.from(`image-bytes:${url}`);
   }
 
   private importOne(

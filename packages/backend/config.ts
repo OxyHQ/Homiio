@@ -133,16 +133,6 @@ export interface Config {
     user?: string;
     password?: string;
   };
-  s3: {
-    /** Custom S3-compatible endpoint. Empty = native AWS S3. */
-    endpoint: string;
-    region: string;
-    accessKeyId: string;
-    secretAccessKey: string;
-    bucketName: string;
-  };
-  /** Public, externally-reachable base URL of this backend (no trailing slash). */
-  publicUrl: string;
   rateLimit: {
     windowMs: number;
     max: number;
@@ -402,29 +392,6 @@ const config: Config = {
     user: process.env.EMAIL_USER,
     password: process.env.EMAIL_PASSWORD,
   },
-
-  // Object storage — native AWS S3 in production (oxy-infra media bucket).
-  // Set AWS_ENDPOINT_URL only for S3-compatible mocks / local MinIO; leave
-  // unset for real AWS so the SDK uses the regional endpoint.
-  s3: {
-    endpoint: (process.env.AWS_ENDPOINT_URL || '').trim(),
-    region: process.env.AWS_REGION || 'us-west-2',
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    bucketName: process.env.AWS_S3_BUCKET || 'homiio-images',
-  },
-
-  // Public, externally-reachable base URL of THIS backend. Used to build
-  // absolute URLs the client can fetch directly — the legacy photo door
-  // `/api/images/file/*` (`services/files/legacyImages.ts`) and the delivery
-  // URL a private document row carries. Sourced from `PUBLIC_API_URL`, falling back
-  // to the local dev server. (For an Android emulator pointing at the host's
-  // 10.0.2.2 alias, set `PUBLIC_API_URL=http://10.0.2.2:<port>`.)
-  publicUrl:
-    process.env.PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'production'
-      ? 'https://api.homiio.com'
-      : `http://localhost:${process.env.PORT || '4130'}`),
 
   // Rate Limiting. The global API limiter (server.ts) keys per authenticated
   // user with realistic media-app budgets (see AUTHENTICATED_RATE_LIMIT_MAX /

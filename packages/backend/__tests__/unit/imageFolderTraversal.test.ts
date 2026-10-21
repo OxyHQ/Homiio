@@ -9,17 +9,13 @@
  * Oxy account and Homiio builds no key for it at all
  * (`__tests__/integration/imageUpload.test.ts` asserts `folder` is ignored),
  * and a private document goes to the uploader's Oxy account too — or nowhere:
- * there is no bucket path left to build a key for
+ * Homiio's bucket is retired, so there is no path left to build a key for
  * (`services/files/privateDocuments.ts`). This file pins the second: whatever
  * an entity id looks like, nothing of it reaches storage, and an Oxy that will
- * not store the document fails the upload instead of writing to the bucket.
+ * not store the document fails the upload.
  */
 
 import { AppError } from '../../middlewares/errorHandler';
-import {
-  MemoryObjectStore,
-  setLegacyObjectStoreForTests,
-} from '../../services/files/legacyObjectStore';
 import { setOxyFilesForTests } from '../../services/files/oxyFilesSeam';
 import {
   setPrivateDocumentSleepForTests,
@@ -27,25 +23,20 @@ import {
 } from '../../services/files/privateDocuments';
 import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
 
-const bucket = new MemoryObjectStore();
-
 // Installed here rather than relied on from the jest setup, so the file runs
 // the same under Bun's runner (`test:bun`), which has no setup files.
 beforeAll(() => {
-  setLegacyObjectStoreForTests(bucket);
   setOxyFilesForTests(fakeOxyFiles.api());
   setPrivateDocumentSleepForTests(() => Promise.resolve());
 });
 
 afterAll(() => {
-  setLegacyObjectStoreForTests(null);
   setOxyFilesForTests(null);
   setPrivateDocumentSleepForTests(null);
 });
 
 beforeEach(() => {
   fakeOxyFiles.reset();
-  bucket.objects.clear();
 });
 
 const PDF = Buffer.from('%PDF-1.4\n%fake\n');
@@ -77,7 +68,6 @@ describe('private documents', () => {
         visibility: 'private',
       });
     }
-    expect(bucket.objects.size).toBe(0);
   });
 
   it('record the digest of what was stored', async () => {
@@ -91,7 +81,7 @@ describe('private documents', () => {
     expect(fakeOxyFiles.files.get(stored.ref.slice(4))?.sha256).toBe(stored.sha256);
   });
 
-  it('are never written to the bucket when Oxy cannot store them', async () => {
+  it('fail the upload when Oxy cannot store them', async () => {
     fakeOxyFiles.largeUploadError = oxyError(503, 'UNAVAILABLE');
 
     const failure = await storePrivateFile(
@@ -103,6 +93,5 @@ describe('private documents', () => {
 
     expect(failure).toBeInstanceOf(AppError);
     expect(failure).toMatchObject({ statusCode: 503, code: 'DOCUMENT_STORAGE_UNAVAILABLE' });
-    expect(bucket.objects.size).toBe(0);
   });
 });

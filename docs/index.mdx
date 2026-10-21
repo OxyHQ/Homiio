@@ -33,7 +33,7 @@ Inside the repo:
 | Package | Role |
 |---------|------|
 | `frontend` (`@homiio/frontend`) | Expo Router app. NativeWind + Tailwind for styling, Zustand for local state, TanStack Query for server state, `@oxy.so/bloom` for primitives. |
-| `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL + PostGIS) API, plus a separate worker process. Stripe billing, photos and private tenancy documents in Oxy Files (unmigrated documents still read from S3), BullMQ ingestion, and the capability catalogue Alia and MCP clients call. |
+| `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL + PostGIS) API, plus a separate worker process. Stripe billing, photos and private tenancy documents in Oxy Files, BullMQ ingestion, and the capability catalogue Alia and MCP clients call. |
 | `listing-providers` (`@homiio/listing-providers`) | The provider plugin contract, the shared fetch runtime, and the portal plugins. Consumed by the worker. |
 | `shared-types` (`@homiio/shared-types`) | Pure TypeScript — the entity DTOs, the `format/` money/unit/date module, and the observability event schema. Built first via `postinstall`. |
 
@@ -46,7 +46,7 @@ Inside the repo:
    └──────────────────────┘                  └──────────────────────┘
        │            │                             ▲          │
        ▼            ▼                             │          ▼
- @oxy.so/services  @alia.onl/sdk ──▶ Alia ── capability   Stripe + S3
+ @oxy.so/services  @alia.onl/sdk ──▶ Alia ── capability   Stripe + Oxy Files
  (auth, account    (Sindi, Ask Alia;       tickets (MCP)  + Oxy API (identity)
   switcher)         person's session)                        │
                                                              ▼
@@ -97,12 +97,6 @@ STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
 # (oxy ADR 0026) and carries neither variable.
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
-
-# Image pipeline (production bucket from oxy-infra)
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=us-west-2
-AWS_S3_BUCKET=oxy-homiio-media-usw2-237343248947
 ```
 
 `packages/frontend/.env`:
@@ -234,7 +228,7 @@ The complete table — every path, its method, and whether it needs a session �
 - [Analytics](./analytics) — Owner insights, marketplace aggregates, privacy-safe observability.
 - [Auth](./auth) — Oxy integration on RN and the server, profile bootstrap, request flow.
 - [Deployment](./deployment) — AWS ECS + a Cloudflare Worker, environment, cron, the image pipeline.
-- [Oxy Files](./oxy-files) — who owns each photo and document, references, file events, and retiring Homiio's bucket.
+- [Oxy Files](./oxy-files) — who owns each photo and document, references, file events, and the record of retiring Homiio's bucket.
 - [Contributing](./contributing) — Repo layout, code conventions, the agent-first workflow.
 - [Dependency updates](./dependencies) — Reviewable Oxy updates and the read-only Doctor gate.
 - [ADRs](./adr/README) — The four decision records and what each one binds.

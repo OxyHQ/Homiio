@@ -17,7 +17,7 @@ Homiio is a Bun workspaces monorepo with three packages: `@homiio/frontend` (Exp
 - **Android development**: Android Studio with at least one configured AVD.
 - **Web only**: nothing extra — `bun run dev:frontend` then press `w`.
 
-Optional but recommended: Stripe CLI (for webhook forwarding in dev) and AWS credentials with S3 access (for the image pipeline). Sindi and Alia need nothing from the backend: the app talks to Alia through `@alia.onl/sdk` under the signed-in person's Oxy session, so they work against a local backend as they do in production.
+Optional but recommended: Stripe CLI (for webhook forwarding in dev). Photos and private documents are stored in Oxy Files, through the Oxy service identity below; there is no bucket to configure. Sindi and Alia need nothing from the backend: the app talks to Alia through `@alia.onl/sdk` under the signed-in person's Oxy session, so they work against a local backend as they do in production.
 
 ## Clone and install
 
@@ -55,12 +55,6 @@ STRIPE_CANCEL_URL=http://localhost:8130/profile/subscriptions
 # and carries neither variable.
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
-
-# AWS S3 — required for image uploads (production bucket from oxy-infra)
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=us-west-2
-AWS_S3_BUCKET=oxy-homiio-media-usw2-237343248947
 ```
 
 `packages/frontend/.env`:

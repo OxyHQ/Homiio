@@ -6,7 +6,7 @@ order: 10
 
 # Deployment
 
-The backend deploys to **AWS ECS Fargate** and the frontend web export deploys to a **Cloudflare Worker** with Static Assets. Both are driven by GitHub Actions on push to `main`. ECS task definitions, ALB routing, ECR, SSM secrets, and the S3 media bucket are owned by `~/Oxy/oxy-infra/terraform-uswest2/`.
+The backend deploys to **AWS ECS Fargate** and the frontend web export deploys to a **Cloudflare Worker** with Static Assets. Both are driven by GitHub Actions on push to `main`. ECS task definitions, ALB routing, ECR and SSM secrets are owned by `~/Oxy/oxy-infra/terraform-uswest2/`.
 
 ## Backend (AWS ECS Fargate)
 
@@ -142,15 +142,9 @@ STRIPE_PRICE_PLUS=price_...
 STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=https://homiio.com/profile/subscriptions?session_id={CHECKOUT_SESSION_ID}
 STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=us-west-2
-AWS_S3_BUCKET=oxy-homiio-media-usw2-237343248947
 ```
 
-Production uses native AWS S3 — omit `AWS_ENDPOINT_URL`. The bucket name and region are set in `~/Oxy/oxy-infra/terraform-uswest2/app-services.tf`.
-
-Photos no longer go to that bucket: they are files in Oxy Files (ADR 0043). The bucket holds only the private tenancy documents not yet moved into their owners' Oxy accounts (`scripts/migratePrivateDocumentsToOxy.ts`; new ones go to Oxy only — nothing writes to the bucket) and the photos not yet copied by `scripts/migrateImagesToOxy.ts`; [Oxy Files](./oxy-files) has the rollout, `OXY_FILES_WEBHOOK_SECRET`, and the gate for retiring the bucket. Without a bucket (local development, CI) a legacy read answers 404 — there is no local-disk store any more.
+Homiio stores no files of its own: photos and private tenancy documents are files in Oxy Files (ADR 0043), and its own S3 bucket was retired on 2026-10-21. [Oxy Files](./oxy-files) has the model, `OXY_FILES_WEBHOOK_SECRET`, and the record of the retirement. Old `/api/images/file/` photo URLs still answer: a 301 to the photo's Oxy rendition, or a 404.
 
 **The API carries no Oxy service credential of its own.** It proves what it is
 by attesting its ECS task role and gets a short-lived Oxy service token back

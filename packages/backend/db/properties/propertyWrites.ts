@@ -31,9 +31,9 @@
  *    is a pure module that already does, and it produces the 400 with the code
  *    the API contract names. Postgres's four coherence CHECKs are the backstop
  *    underneath, not a replacement for the message.
- *  - **It does not validate a photo's storage keys.**
+ *  - **It does not check a photo's Oxy file.**
  *    `controllers/property/photoIntake.ts` does, and it is the only thing that
- *    turns a key into a URL. This module DOES mint the canonical `images` row
+ *    turns a file id into URLs. This module DOES mint the canonical `images` row
  *    for a photo that has none — see {@link resolveImageRows} for why that
  *    happens at publish and not at upload — but only from a block that module
  *    already checked.
@@ -52,11 +52,7 @@ import {
   propertyImages,
 } from '../schema';
 import { syncHasImages } from '../hasImages';
-import {
-  findEntityImagesByOriginalKey,
-  findEntityImagesByOxyFileId,
-  insertImage,
-} from '../images/imageWrites';
+import { findEntityImagesByOxyFileId, insertImage } from '../images/imageWrites';
 import { findPropertyById } from './propertyReads';
 import type { HydratedProperty } from './propertySerializer';
 import type { DatabaseOrTransaction } from '../postgres';
@@ -72,19 +68,12 @@ export interface AvailabilityWindowInput {
 }
 
 /**
- * A processed upload that has no canonical `images` row yet — everything
- * {@link insertImage} needs to mint one, already validated and derived
- * server-side by `controllers/property/photoIntake`.
- */
-/**
  * A photo whose `images` row a write mints: an Oxy file the publisher was
- * verified to own (`controllers/property/photoIntake`), or — only for a photo
- * uploaded before the move to Oxy Files and published after it — four legacy
- * bucket keys. Exactly one of `oxyFile` / `keys`.
+ * verified to own, with the URLs derived from it server-side
+ * (`controllers/property/photoIntake`).
  */
 export interface NewPropertyImageUpload {
-  oxyFile?: { id: string; owner: 'application' | 'account' };
-  keys?: { original: string; small: string; medium: string; large: string };
+  oxyFile: { id: string; owner: 'application' | 'account' };
   urls: { original: string; small: string; medium: string; large: string };
   format: string;
   bytes: number;
@@ -403,11 +392,11 @@ function windowRows(
  * The alternative — persisting at upload against a placeholder entity and
  * re-pointing it at publish — would need a nullable `entity_id` (or a draft
  * entity kind), which is a schema change, and would leave a row per abandoned
- * upload with nothing that ever deletes it. The keys the upload returned are
+ * upload with nothing that ever deletes it. The file id the upload returned is
  * enough to mint the row later, so there is nothing to gain by minting it early.
  *
- * What arrives here is already validated: `photoIntake` checked every key with
- * `validateImageStoreKey` and derived the URLs server-side, so no
+ * What arrives here is already validated: `photoIntake` had Oxy confirm every
+ * file is the publisher's own and derived the URLs server-side, so no
  * client-supplied URL or path reaches a column.
  */
 async function resolveImageRows(
@@ -417,21 +406,14 @@ async function resolveImageRows(
 ): Promise<(typeof propertyImages.$inferInsert)[]> {
   // One query per home for the whole batch: a photo uploaded during an edit
   // session and saved twice must reuse the row the first save minted, not mint
-  // a second. The identity is the Oxy file id, or a legacy original key.
+  // a second. The identity is the Oxy file id.
   const pending = input.flatMap((image) => (!image.imageId && image.upload ? [image.upload] : []));
-  const byFile = await findEntityImagesByOxyFileId(
+  const reusable = await findEntityImagesByOxyFileId(
     'property',
     propertyId,
-    pending.flatMap((upload) => (upload.oxyFile ? [upload.oxyFile.id] : [])),
+    pending.map((upload) => upload.oxyFile.id),
     db,
   );
-  const byKey = await findEntityImagesByOriginalKey(
-    'property',
-    propertyId,
-    pending.flatMap((upload) => (upload.keys ? [upload.keys.original] : [])),
-    db,
-  );
-  const reusable = new Map<string, { id: string }>([...byFile, ...byKey]);
 
   // Rows minted by THIS call, so a payload naming the same upload twice does
   // not mint it twice — the batch query above cannot see them.
@@ -460,12 +442,7 @@ async function resolveImageRows(
           `Property ${propertyId} photo #${index} carries neither an imageId nor an upload`,
         );
       }
-      const key = upload.oxyFile?.id ?? upload.keys?.original;
-      if (key === undefined) {
-        throw new Error(
-          `Property ${propertyId} photo #${index} names neither an Oxy file nor keys`,
-        );
-      }
+      const key = upload.oxyFile.id;
       const existing = reusable.get(key)?.id ?? minted.get(key);
       if (existing !== undefined) {
         imageId = existing;
@@ -475,7 +452,6 @@ async function resolveImageRows(
             entityType: 'property',
             entityId: propertyId,
             oxyFile: upload.oxyFile,
-            keys: upload.keys,
             urls: upload.urls,
             width: upload.width,
             height: upload.height,
@@ -537,48 +513,6 @@ export async function replacePropertyImages(
       await tx.insert(propertyImages).values(await resolveImageRows(propertyId, input, tx));
     }
     await syncHasImages(tx, propertyId);
-  });
-}
-
-/**
- * Point every listing's denormalized copy of one image at new URLs — the
- * migration into Oxy Files moving a photo (`services/files/imageMigration`).
- * The photo rows themselves are unchanged, so `has_images` is too.
- */
-export async function repointPropertyImageUrls(
-  imageId: string,
-  urls: { original: string; small: string; medium: string; large: string },
-  db: DatabaseOrTransaction,
-): Promise<void> {
-  await db
-    .update(propertyImages)
-    .set({
-      url: urls.medium,
-      urlsOriginal: urls.original,
-      urlsSmall: urls.small,
-      urlsMedium: urls.medium,
-      urlsLarge: urls.large,
-    })
-    .where(eq(propertyImages.imageId, imageId));
-}
-
-/**
- * Take one image off every listing that shows it, re-deriving each listing's
- * `has_images` in the same transaction — for a photo whose bytes are gone and
- * can never be shown (`migrateImagesToOxy --detach-missing`).
- */
-export async function detachImageFromListings(
-  imageId: string,
-  db: DatabaseOrTransaction = getDb(),
-): Promise<void> {
-  await db.transaction(async (tx) => {
-    const detached = await tx
-      .delete(propertyImages)
-      .where(eq(propertyImages.imageId, imageId))
-      .returning({ propertyId: propertyImages.propertyId });
-    for (const propertyId of new Set(detached.map((row) => row.propertyId))) {
-      await syncHasImages(tx, propertyId);
-    }
   });
 }
 

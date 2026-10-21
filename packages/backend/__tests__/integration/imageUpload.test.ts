@@ -26,7 +26,6 @@ import { evictionCases, images } from '../../db/schema';
 import { findPropertyById } from '../../db/properties/propertyReads';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { type MemoryObjectStore, legacyObjectStore } from '../../services/files/legacyObjectStore';
 import { createAddress } from '../helpers/factories';
 import { setOxyFilesForTests } from '../../services/files/oxyFilesClient';
 import { fakeOxyFiles, oxyError } from '../helpers/fakeOxyFiles';
@@ -125,7 +124,6 @@ afterAll(async () => {
 
 describe('POST /api/images/upload', () => {
   it("stores the photo in the uploader's own Oxy account, EXIF stripped, and nothing in Homiio", async () => {
-    const before = (legacyObjectStore() as MemoryObjectStore).objects.size;
     const { fileId, body } = await uploadAs(HOST);
 
     const file = fakeOxyFiles.files.get(fileId);
@@ -134,8 +132,6 @@ describe('POST /api/images/upload', () => {
     expect(file.visibility).toBe('public');
     // Re-encoded: no EXIF block at all, so no GPS tag.
     expect((await sharp(file.bytes).metadata()).exif).toBeUndefined();
-    // Nothing written to Homiio's own store — and `folder` chose nothing.
-    expect((legacyObjectStore() as MemoryObjectStore).objects.size).toBe(before);
 
     // The answer every app build reads, plus the file id.
     expect(body.imageId).toBe(fileId);

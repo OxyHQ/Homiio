@@ -250,14 +250,6 @@ export class ImageController {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
           res.redirect(301, answer.location);
           return;
-        case 'bytes':
-          res.setHeader('Content-Type', answer.contentType);
-          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-          res.setHeader('X-Content-Type-Options', 'nosniff');
-          // Embeddable from the Homiio frontend origin (and RN web).
-          res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-          res.status(200).end(answer.buffer);
-          return;
       }
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to serve image');

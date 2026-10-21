@@ -414,9 +414,9 @@ async function startServer() {
          */
         fileReferenceSyncLoop.start();
         /**
-         * Write the bucket's read counts every minute from boot, ZEROS
-         * included, so the retirement gate can tell a day nothing was served
-         * from a day nothing was counting (`services/files/legacyReadCounter.ts`).
+         * Write the legacy photo door's counts every minute from boot, ZEROS
+         * included, so a day nothing came through the door can be told from a
+         * day nothing was counting (`services/files/legacyReadCounter.ts`).
          */
         startLegacyReadCounter();
       }

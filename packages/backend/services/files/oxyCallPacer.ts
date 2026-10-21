@@ -1,23 +1,22 @@
 /**
- * Pacing for the bulk moves into Oxy Files (`scripts/migrateImagesToOxy.ts`,
- * `scripts/migratePrivateDocumentsToOxy.ts`).
+ * Pacing for bulk calls to Oxy Files — today the nightly reference
+ * reconciliation (`referenceReconcile.ts`), which hands the SDK its pages
+ * through {@link OxyCallPacer.slot}; the private-document upload reads
+ * {@link retryAfterMs}. (The bulk moves out of Homiio's bucket that it was
+ * written for ran to completion and were deleted with the bucket.)
  *
- * Oxy meters every upload and import an application makes on ONE per-app
- * budget (30 requests a minute; a batch import of 50 files is one request).
- * The live listing ingest spends from the same budget, so a backfill that
- * fires as fast as it can does two kinds of damage: most of its own calls are
- * refused with 429 — and, before this, each refusal was recorded as a failed
- * row and skipped — and the ingest's imports are refused with them.
- *
- * So a backfill:
+ * Oxy meters an application's calls on per-app budgets shared with the live
+ * app — a listing ingest spends from the same upload budget — so a bulk caller
+ * that fires as fast as it can has most of its own calls refused with 429, and
+ * the live app's with them. So a paced caller:
  *
  * - starts at most `perMinute` metered calls a minute, evenly spaced, leaving
- *   the rest of the budget to the ingest;
+ *   the rest of the budget to everyone else;
  * - on a 429 waits what Oxy says (`Retry-After`, carried as
  *   `details.retryAfterSeconds`) and sends the SAME call again — a rate limit
- *   is never a row's outcome, and nothing is skipped or restarted;
+ *   is never an outcome, and nothing is skipped or restarted;
  * - retries a transport failure or a 5xx a few times before giving up on that
- *   call, so one bad minute does not fail a batch of fifty.
+ *   call.
  *
  * `sleep` and `now` are injectable so a test does not wait a minute.
  */
@@ -35,9 +34,6 @@ export interface OxyCallPacerOptions {
   /** Retries of a transport failure or a 5xx before the error is thrown. */
   transientRetries?: number;
 }
-
-/** Oxy's per-app upload/import budget per minute (`appFileUploadLimiter`). */
-export const OXY_APP_UPLOADS_PER_MINUTE = 30;
 
 const DEFAULT_RATE_LIMIT_WAIT_MS = 60_000;
 const MAX_RATE_LIMIT_WAIT_MS = 5 * 60_000;

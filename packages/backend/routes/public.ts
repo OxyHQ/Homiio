@@ -240,10 +240,10 @@ export default function () {
   router.get('/agencies/:slug/properties', asyncHandler(reviewController.getAgencyProperties));
 
   // The LEGACY photo door: an old `/api/images/file/<key>` URL redirects to the
-  // photo's Oxy file once it has been migrated, and is served from Homiio's
-  // bucket until then (`services/files/legacyImages.ts`). Public, because
-  // render-time photos load without a token. The wildcard captures the full
-  // key, e.g. GET /api/images/file/city/<uuid>-medium.webp.
+  // photo's Oxy file, or answers 404 — Homiio's bucket is retired
+  // (`services/files/legacyImages.ts`). Public, because render-time photos
+  // load without a token. The wildcard captures the full key, e.g.
+  // GET /api/images/file/city/<uuid>-medium.webp.
   router.get(
     '/images/file/*',
     asyncHandler(imageController.serveLegacyImage.bind(imageController)),

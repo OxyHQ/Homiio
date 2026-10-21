@@ -22,33 +22,19 @@
  * The id arrives as `fileId`, or — from an app build released before the move,
  * which only knows `keys` — as `keys.original = "oxy:<fileId>"`.
  *
- * ## Legacy keys, until the bucket retires
- *
- * A photo uploaded before the deploy and published after it carries bucket
- * keys. Each goes through `validateImageStoreKey` (the legacy door's own gate:
- * no traversal, no private prefix, images only) and its URLs are derived from
- * the validated key. `scripts/migrateImagesToOxy.ts` copies such rows like any
- * other, so they do not outlive the soak.
+ * Nothing else names a photo. A bucket key (the pre-Oxy upload shape) is a 400
+ * like any other unnamed photo: the bucket is retired and every `images` row
+ * carries an Oxy file.
  *
  * A photo that already HAS a row (every photo an edit loads back from the
  * server) is identified by `imageId` alone; its URLs are read from the row.
  */
 
-import type { ImageVariantName } from '@homiio/shared-types';
-
 import { findImagesByIds, type ImageRow } from '../../db/images/imageWrites';
-import type {
-  NewPropertyImageUpload,
-  PropertyImageInput,
-} from '../../db/properties/propertyWrites';
+import type { PropertyImageInput } from '../../db/properties/propertyWrites';
 import { fileIdFromOxyKey, oxyImageUrls } from '../../services/files/imageUrls';
-import { legacyImageUrl } from '../../services/files/legacyImages';
 import { requireOwnAccountImages, storedFromMetadata } from '../../services/files/publicImages';
-import { validateImageStoreKey } from '../../utils/imageStoreKey';
 import { AppError } from '../../middlewares/errorHandler';
-
-/** The four variants a processed upload always has; all or nothing. */
-const VARIANTS: readonly ImageVariantName[] = ['original', 'small', 'medium', 'large'];
 
 /** A 400 naming the photo that is wrong, rather than a 500 from the insert. */
 function reject(index: number, detail: string): never {
@@ -72,43 +58,6 @@ function count(value: unknown): number | undefined {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-/**
- * The stored format, read off the ORIGINAL key's extension rather than taken
- * from the body. `images.format` is `NOT NULL` and describes bytes the server
- * produced, so the server's own filename is the honest source: the upload
- * pipeline names the file `<uuid>-original.<format>`.
- */
-function formatOf(originalKey: string): string {
-  const extension = originalKey.slice(originalKey.lastIndexOf('.') + 1).toLowerCase();
-  return extension === 'jpg' ? 'jpeg' : extension;
-}
-
-/**
- * Read the four variant keys off a request entry and validate every one of
- * them. Accepts both shapes the upload endpoint has returned: the flat
- * `{ original, small, medium, large }` map, and the
- * `{ original, variants: { … } }` pair the single-upload response carries.
- */
-function variantKeys(entry: Record<string, unknown>, index: number): Record<string, string> {
-  const keys = asRecord(entry.keys);
-  if (!keys) reject(index, 'has no imageId and no upload keys to create one from');
-  const variants = asRecord(keys.variants) ?? keys;
-
-  const validated: Record<string, string> = {};
-  for (const variant of VARIANTS) {
-    const raw = text(
-      variant === 'original' ? (keys.original ?? variants.original) : variants[variant],
-    );
-    if (raw === undefined) reject(index, `is missing the ${variant} variant key`);
-    const check = validateImageStoreKey(raw);
-    // The rejection reason is echoed: these keys came from our own upload
-    // response, so a host seeing this has a real problem worth naming.
-    if (!check.ok) reject(index, `${variant} key rejected (${check.reason})`);
-    validated[variant] = check.key;
-  }
-  return validated;
-}
-
 /** The Oxy file a photo names, as `fileId` or as an `oxy:` key, or undefined. */
 function fileIdOf(entry: Record<string, unknown>): string | undefined {
   const direct = text(entry.fileId);
@@ -116,33 +65,6 @@ function fileIdOf(entry: Record<string, unknown>): string | undefined {
   const keys = asRecord(entry.keys);
   const original = text(keys?.original);
   return original === undefined ? undefined : (fileIdFromOxyKey(original) ?? undefined);
-}
-
-/** A legacy-keys photo: four validated bucket keys and the URLs derived from them. */
-function legacyUploadBlock(entry: Record<string, unknown>, index: number): NewPropertyImageUpload {
-  const keys = variantKeys(entry, index);
-  const metadata = asRecord(entry.metadata) ?? {};
-  const complete = {
-    original: keys.original,
-    small: keys.small,
-    medium: keys.medium,
-    large: keys.large,
-  };
-  return {
-    keys: complete,
-    urls: {
-      original: legacyImageUrl(complete.original),
-      small: legacyImageUrl(complete.small),
-      medium: legacyImageUrl(complete.medium),
-      large: legacyImageUrl(complete.large),
-    },
-    format: formatOf(complete.original),
-    // `images.bytes` is NOT NULL; 0 is this codebase's existing "not measured"
-    // (see `scripts/seedImages`), not an invented figure.
-    bytes: count(entry.bytes) ?? count(metadata.originalSize) ?? 0,
-    width: count(entry.width) ?? count(metadata.width),
-    height: count(entry.height) ?? count(metadata.height),
-  };
 }
 
 /** The denormalized copy `property_images` keeps, taken from the canonical row. */
@@ -242,6 +164,6 @@ export async function normalizePropertyPhotos(
         order,
       };
     }
-    return { upload: legacyUploadBlock(entry, index), caption, isPrimary, order };
+    return reject(index, 'names no image: send its imageId or the fileId of an uploaded photo');
   });
 }
