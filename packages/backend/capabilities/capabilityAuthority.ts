@@ -12,12 +12,11 @@ import {
 } from '@oxy.so/contracts';
 import { createLiveCapabilityTicketVerifier, createOxyJwksKeyResolver } from '@oxy.so/core/server';
 import { postOxyServiceJson, registerCapabilityCatalog } from '@oxy.so/mcp';
-import type { z } from 'zod';
 
 import config from '../config';
 import { oxyService, oxyServiceTransport } from '../services/oxy';
 
-type AuditResult = z.infer<typeof auditResultSchema>;
+type AuditResult = ReturnType<typeof auditResultSchema.parse>;
 type Introspection = Awaited<ReturnType<typeof oxyService.agency.introspectCapabilityTicket>>;
 
 /** Tickets are compact JWS; anything longer is not one of Oxy's. */

@@ -39,13 +39,13 @@ type LimitKeys = CatalogTool['limitKeys'];
 export interface ToolSpec {
   name: string;
   description: string;
-  /** The ONE capability (and OAuth scope) the tool requires. */
+  /** Operation capability used to narrow external OAuth grants. */
   capability: string;
   input: JsonSchema;
   limitKeys?: LimitKeys;
 }
 
-/** Packages a non-financial write may declare (all inside "Ver y actuar"). */
+/** Non-financial operation categories; these are not own app permission levels. */
 export type ActPackage = 'create' | 'publish' | 'communicate' | 'administer';
 
 const OBJECT_OUTPUT = { type: 'object', additionalProperties: true } as const;
