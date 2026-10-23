@@ -93,7 +93,7 @@ export const LEASE_HANDLERS: HomiioToolHandlers = {
   listLeaseDocuments: async (input, { accountId }) =>
     dataBody(await listLeaseDocuments(accountId, await leaseIdOf(input))),
 
-  uploadLeaseDocument: async (input, { accountId }) => {
+  uploadLeaseDocument: async (input, { accountId, fileRequester }) => {
     const leaseId = await leaseIdOf(input);
     const file = leaseDocumentFileFromBase64({
       filename: requiredString(input, 'filename'),
@@ -101,7 +101,12 @@ export const LEASE_HANDLERS: HomiioToolHandlers = {
       contentBase64: requiredString(input, 'contentBase64'),
     });
     return dataBody(
-      await uploadLeaseDocument(accountId, leaseId, { file, type: input.type, name: input.name }),
+      await uploadLeaseDocument(accountId, leaseId, {
+        file,
+        type: input.type,
+        name: input.name,
+        requester: fileRequester,
+      }),
     );
   },
 };

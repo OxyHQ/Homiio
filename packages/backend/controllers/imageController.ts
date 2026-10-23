@@ -128,6 +128,7 @@ export class ImageController {
         return;
       }
       const stored = await uploadAccountImage(oxyUserId, {
+        requester: req.accessToken ? { requesterToken: req.accessToken } : undefined,
         buffer: req.file.buffer,
         originalName: req.file.originalname,
       });
@@ -177,6 +178,7 @@ export class ImageController {
       const uploaded = [];
       for (const file of files) {
         const stored = await uploadAccountImage(oxyUserId, {
+          requester: req.accessToken ? { requesterToken: req.accessToken } : undefined,
           buffer: file.buffer,
           originalName: file.originalname,
         });

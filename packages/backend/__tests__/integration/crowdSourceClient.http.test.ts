@@ -1,3 +1,10 @@
+import { OxyServer } from '@oxy.so/core/server';
+let mockOxy: OxyServer;
+jest.mock('../../services/oxy', () => ({
+  get oxyService() {
+    return mockOxy;
+  },
+}));
 /**
  * The CrowdSource client must authenticate through the `@oxy.so/core` this
  * backend actually installs.
@@ -18,7 +25,7 @@ import {
   resetCrowdSourceClient,
 } from '../../services/moderation/crowdSourceClient';
 
-const SERVICE_TOKEN = 'fixture_oxy_service_token';
+const SERVICE_TOKEN = `e30.${Buffer.from(JSON.stringify({ type: 'service', authority: 'first_party', exp: Math.floor(Date.now() / 1000) + 300 })).toString('base64url')}.signature`;
 const APPLICATION_ID = 'app_0123456789abcdef0123456789abcdef';
 const requests: Array<{ method: string; path: string; authorization?: string }> = [];
 let server: http.Server;
@@ -35,7 +42,9 @@ beforeAll(async () => {
     });
     req.resume();
     res.setHeader('content-type', 'application/json');
-    if (req.url === '/auth/service-token') {
+    if (req.url === '/auth/service-token/workload/challenge') {
+      res.end(JSON.stringify({ nonce: 'fixture' }));
+    } else if (req.url === '/auth/service-token/workload') {
       res.end(JSON.stringify({ token: SERVICE_TOKEN, expiresIn: 3600 }));
     } else if (req.url === '/v1/applications/me') {
       res.end(JSON.stringify({ applicationId: APPLICATION_ID }));
@@ -60,8 +69,10 @@ beforeAll(async () => {
 
   for (const name of ENV) savedEnv[name] = process.env[name];
   process.env.OXY_API_URL = origin;
-  process.env.OXY_SERVICE_API_KEY = 'fixture_key';
-  process.env.OXY_SERVICE_API_SECRET = 'fixture_secret';
+  mockOxy = new OxyServer({
+    baseURL: origin,
+    workloadCredentials: async () => ({ AccessKeyId: 'fixture', SecretAccessKey: 'fixture' }),
+  });
   savedBaseUrl = config.crowdSource.baseUrl;
   config.crowdSource.baseUrl = origin;
   resetCrowdSourceClient();
@@ -69,6 +80,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   resetCrowdSourceClient();
+  mockOxy.dispose();
   config.crowdSource.baseUrl = savedBaseUrl;
   for (const name of ENV) {
     if (savedEnv[name] === undefined) Reflect.deleteProperty(process.env, name);
@@ -92,7 +104,7 @@ describe('CrowdSource client on the installed Oxy SDK', () => {
       }),
     ).resolves.toMatchObject({ reportId: 'rpt_fixture', caseId: 'case_fixture', merged: false });
 
-    expect(requests.some((request) => request.path === '/auth/service-token')).toBe(true);
+    expect(requests.some((request) => request.path === '/auth/service-token/workload')).toBe(true);
     const delivery = requests.find(
       (request) => request.method === 'POST' && request.path === '/v1/reports',
     );

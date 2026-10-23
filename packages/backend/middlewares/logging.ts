@@ -68,10 +68,32 @@ const logger = {
   },
 };
 
+/** Requester proofs are ephemeral credentials, including their transport headers. */
+export function redactRequesterProofs(value: unknown, seen = new WeakSet<object>()): unknown {
+  if (!value || typeof value !== 'object') return value;
+  if (seen.has(value)) return '[Circular]';
+  seen.add(value);
+  if (Array.isArray(value)) return value.map((item) => redactRequesterProofs(item, seen));
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => {
+      const name = key.toLowerCase().replace(/[^a-z]/g, '');
+      return [
+        key,
+        /token|authorization|cookie|capabilityticket|requestercontext|subjecttoken|password|secret/.test(
+          name,
+        )
+          ? '[REDACTED]'
+          : redactRequesterProofs(item, seen),
+      ];
+    }),
+  );
+}
+
 /**
  * Core logging function
  */
 const log = (level: string, message: string, meta: Record<string, unknown> = {}): void => {
+  meta = redactRequesterProofs(meta) as Record<string, unknown>;
   const timestamp = new Date().toISOString();
   const logEntry = {
     timestamp,

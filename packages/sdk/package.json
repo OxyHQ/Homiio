@@ -27,7 +27,11 @@
       "types": "./dist/*.d.ts",
       "default": "./dist/*.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    }
   },
   "files": [
     "dist"
@@ -42,5 +46,13 @@
   },
   "devDependencies": {
     "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@oxy.so/core": ">=7.0.0 <8"
+  },
+  "peerDependenciesMeta": {
+    "@oxy.so/core": {
+      "optional": true
+    }
   }
 }

@@ -1,3 +1,4 @@
+import { sessionFileRequester } from '../services/files/requester';
 /**
  * `GET|POST /api/maintenance` and its sub-resources — repair requests
  * (#518 §7.1, #519 §7.1).
@@ -76,6 +77,7 @@ export async function attachToRequest(
       requireSessionOxyUserId(req),
       String(req.params.id),
       file,
+      sessionFileRequester(req),
     );
     res.status(201).json(successResponse(attachment, 'Photo attached'));
   } catch (error) {

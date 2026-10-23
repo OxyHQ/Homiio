@@ -92,11 +92,8 @@ STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=https://homiio.com/success
 STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
 
-# Homiio's Oxy service identity (the capability catalogue, reviews, evictions).
-# The pair is LOCAL ONLY — a deployed Homiio attests its ECS task role instead
-# (oxy ADR 0026) and carries neither variable.
-OXY_SERVICE_API_KEY=oxy_dk_...
-OXY_SERVICE_API_SECRET=...
+# Own services use registered workload identity (Oxy ADR 0049).
+# No application credential pair or internal OAuth scopes.
 ```
 
 `packages/frontend/.env`:

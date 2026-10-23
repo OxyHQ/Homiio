@@ -40,6 +40,7 @@ function buildApp(oxyUserId: string): Express {
     const authed = req as unknown as { user: { id: string }; userId: string };
     authed.user = { id: oxyUserId };
     authed.userId = oxyUserId;
+    req.accessToken = `fixture-session-${oxyUserId}`;
     next();
   });
   app.post('/applications', (req, res, next) =>

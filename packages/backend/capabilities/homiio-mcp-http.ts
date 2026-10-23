@@ -19,7 +19,7 @@ import { createCatalogMcpHttpServiceWithInvocationPrincipal } from '@oxy.so/mcp'
 
 import config from '../config';
 import { logger } from '../middlewares/logging';
-import { oxyService } from '../services/oxy';
+import { oxyServiceTransport } from '../services/oxy';
 import { HOMIIO_CAPABILITY_CATALOG } from './homiio.catalog';
 import { HOMIIO_INVOCATION_HANDLERS } from './homiio.handlers';
 import { HOMIIO_MCP_MAX_BODY_BYTES } from './homiio-internal-mcp';
@@ -42,8 +42,7 @@ export function parseHomiioMcpAllowedOrigins(
 
 export interface HomiioMcpHttpServiceOptions {
   readonly authorizationServer?: string;
-  readonly fetch?: typeof fetch;
-  readonly getServiceToken?: () => Promise<string>;
+  readonly transport?: { fetch: typeof fetch };
 }
 
 export function createHomiioMcpHttpService(options: HomiioMcpHttpServiceOptions = {}) {
@@ -51,9 +50,7 @@ export function createHomiioMcpHttpService(options: HomiioMcpHttpServiceOptions 
     catalog: HOMIIO_CAPABILITY_CATALOG,
     handlers: HOMIIO_INVOCATION_HANDLERS,
     authorizationServer: options.authorizationServer ?? config.oxy.baseURL,
-    getServiceToken: options.getServiceToken ?? (() => oxyService.serviceToken()),
-    invalidateServiceToken: () => oxyService.invalidateServiceToken(),
-    ...(options.fetch ? { fetch: options.fetch } : {}),
+    transport: options.transport ?? oxyServiceTransport,
     allowedOrigins: parseHomiioMcpAllowedOrigins(),
     maxBodyBytes: HOMIIO_MCP_MAX_BODY_BYTES,
     authorize: async (_input, context) =>

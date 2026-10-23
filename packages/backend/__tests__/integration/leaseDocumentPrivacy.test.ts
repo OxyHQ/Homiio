@@ -80,6 +80,7 @@ function authed(oxyUserId: string): Express {
     const withUser = req as unknown as { user: { id: string }; userId: string };
     withUser.user = { id: oxyUserId };
     withUser.userId = oxyUserId;
+    req.accessToken = `fixture-session-${oxyUserId}`;
     next();
   });
   app.post('/leases', (req, res, next) => leaseController.createLease(req, res, next));
@@ -105,7 +106,12 @@ function publicImages(): Express {
 /** Store bytes as the landlord's private Oxy file and return the ref a row holds. */
 async function storeDocument(leaseId: string, bytes: Buffer): Promise<string> {
   const stored = await storePrivateFile(
-    { ownerOxyUserId: LANDLORD, kind: 'lease', entityId: leaseId },
+    {
+      requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+      ownerOxyUserId: LANDLORD,
+      kind: 'lease',
+      entityId: leaseId,
+    },
     bytes,
     'image/jpeg',
     '.jpeg',

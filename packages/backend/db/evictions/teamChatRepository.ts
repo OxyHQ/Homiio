@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { BeginTeamOperation, TeamOperation } from '@oxy.so/homiio-contracts';
-import { AlloTeamAccessClient } from '@oxy.so/allo-sdk';
+import { alloTeamForOxyService } from '@oxy.so/allo-sdk/server';
+import { oxyService } from '../../services/oxy';
 import { getDb, type DatabaseOrTransaction } from '../postgres';
 import {
   evictionTeamChats,
@@ -87,7 +88,7 @@ export async function beginTeamOperation(caseId: string, actor: string, input: B
     const members = await currentAccounts(caseId, actor, tx);
     let chat = await findTeamChat(caseId, tx);
     if (chat) {
-      const snapshot = await new AlloTeamAccessClient().snapshot(
+      const snapshot = await alloTeamForOxyService(oxyService).snapshot(
         openTeamReference(caseId, chat.referenceCiphertext),
       );
       if (snapshot) {
@@ -149,7 +150,7 @@ async function verifyFrozenOperation(
 ) {
   const chat = await findTeamChat(row.caseId, db);
   if (!chat) throw unavailable();
-  const snapshot = await new AlloTeamAccessClient().snapshot(
+  const snapshot = await alloTeamForOxyService(oxyService).snapshot(
     openTeamReference(row.caseId, chat.referenceCiphertext),
   );
   if (
@@ -234,7 +235,7 @@ export async function teamChatUrl(caseId: string, actor: string) {
       return `https://allo.you/homiio-team?caseId=${encodeURIComponent(caseId)}`;
     const chat = await findTeamChat(caseId, tx);
     if (!chat) throw unavailable();
-    const snapshot = await new AlloTeamAccessClient().snapshot(
+    const snapshot = await alloTeamForOxyService(oxyService).snapshot(
       openTeamReference(caseId, chat.referenceCiphertext),
     );
     if (

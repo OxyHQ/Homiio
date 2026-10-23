@@ -100,13 +100,13 @@ stage 4c, OxyHQ/oxy#1774).
 
 - **Stored** as a PRIVATE file in the uploader's own Oxy account —
   `uploadUserMediaLarge(owner, bytes, { visibility: 'private', sha256 })`
-  (`files:user-media:write`). A PDF goes verbatim, a photo re-encoded first
+  (with the original requester proof). A PDF goes verbatim, a photo re-encoded first
   (EXIF and GPS dropped). The row holds `oxy:<fileId>`
   (`lease_documents.url`, `tenant_application_documents.url`,
   `maintenance_request_attachments.storage_key`), and
   `lease_documents.content_sha256` is the digest Oxy verified. A private file
   never reaches `public/` or the CDN.
-- **Read back** with `linkedDownloadUrls([fileId])` (`files:linked:read`) —
+- **Read back** with `linkedDownloadUrls([fileId])` (under the existing resource entitlement) —
   allowed because Homiio stored the file FOR the person, which Oxy records as
   their consent. The short-lived URL is fetched on the server and never leaves
   it; the bytes must hash to what Oxy recorded. Who may read is still Homiio's
@@ -148,16 +148,13 @@ developer machine; the scripts run as one-off ECS tasks of the API image.
 1. **Oxy:** the API deploy carrying ADR 0043 stages 1–4b, and `@oxy.so/contracts`
    4.24.0, `@oxy.so/core` 4.21.0 and `@oxy.so/services` 11.12.0 published.
    Stage 4c (OxyHQ/oxy#1774) for private documents.
-2. **The grant, once no Homiio mints a Sindi token.** Since #677 Sindi is an
-   Alia agent and Homiio mints no Sindi service token, so nothing checks
-   Homiio's token for an EXACT scope set any more: Oxy checks every Homiio call
-   by inclusion. A Homiio from before #677 does — its Sindi canary refuses any
-   token wider than `inference:invoke` + `acting-as:offline`, and Sindi and the
-   backend attest as one workload. So once the running image is #677 or later
-   (this deploy), Oxy staff grant the Homiio application and its workload
-   binding `files:read`, `files:app:write`, `files:app:delete`,
-   `files:references:write`, `files:user-media:write` and — for private
-   documents — `files:linked:read`.
+2. **Workload and requester provenance (Oxy ADR 0049).** Homiio's registered
+   workload and environment identify the service; own calls need no application
+   scopes or grants. Personal uploads additionally carry the initiating shared
+   session or verified capability ticket. External MCP document tools preserve
+   their original live OAuth connection, active account and housing permissions;
+   the shared document facade permits only private uploads up to 10 MiB.
+   Resource references and revocable file-read entitlements remain in force.
 3. **The webhook secret.** Create `/oxy/homiio/OXY_FILES_WEBHOOK_SECRET`
    (SecureString, any placeholder) — the task definition names its ARN and a
    task does not start without it. Deploy. In the Oxy console (Homiio →
@@ -215,3 +212,13 @@ the bucket from the code:
 `missing` answers, zeros included (`legacyReadCounter.ts`). When the redirects
 stop, the door itself can go. The bucket, the task role's S3 policy and the
 bucket in oxy-infra are retired outside this repository.
+
+## Own authority migration release gate
+
+The prepared backend uses core's `withRequester` and the subsequent
+`withMcpDocumentRequester` addition, plus the Allo SDK server factory. Publish
+and pin those shared packages and deploy the matching Oxy document mediator
+before this Homiio image. The core 7.0 foundation alone does not yet export the
+new document facade; it belongs to the following shared SDK/API release.
+Local candidate tarballs are validation artifacts and must never be committed.
+The shared Oxy sign-in is unchanged for people; there is no app connection prompt.

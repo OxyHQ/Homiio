@@ -21,7 +21,6 @@ import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
 import { publicApiBodyErrorHandler } from './routes/publicApi';
 import {
-  OxyServer,
   createOptionalOxyAuth,
   createOxyAuthMiddleware,
   oxyTrustProxy,
@@ -42,7 +41,7 @@ interface RawBodyRequest extends Request {
   rawBody?: Buffer;
 }
 
-const oxy = new OxyServer({ baseURL: config.oxy.baseURL });
+import { oxyService as oxy } from './services/oxy';
 
 const healthService = new HealthService();
 

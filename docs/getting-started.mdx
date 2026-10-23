@@ -49,12 +49,8 @@ STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=http://localhost:8130/success
 STRIPE_CANCEL_URL=http://localhost:8130/profile/subscriptions
 
-# Homiio's Oxy service identity (the capability catalogue, reviews, evictions).
-# A product-to-Oxy credential, never an upstream provider key. The pair is
-# LOCAL ONLY: a deployed Homiio attests its ECS task role instead (oxy ADR 0026)
-# and carries neither variable.
-OXY_SERVICE_API_KEY=oxy_dk_...
-OXY_SERVICE_API_SECRET=...
+# Own calls use a registered workload and environment (Oxy ADR 0049).
+# Customer API keys do not provide Homiio's workload identity.
 ```
 
 `packages/frontend/.env`:
