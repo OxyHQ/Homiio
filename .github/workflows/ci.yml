@@ -470,11 +470,12 @@ jobs:
       - name: Public API contracts and SDK
         run: |
           bun run check:openapi
-          # What the release builds (each build's postbuild asserts every entry
-          # point is present), and the SDK's tests, which gate its release: a
-          # build that emits nothing fails here, not on npm.
-          bun run --filter @oxy.so/homiio-contracts build
-          bun run --filter @oxy.so/homiio-sdk build
+          # What the release builds, with every entry point present, and the
+          # SDK's tests, which gate its release: a build that emits nothing
+          # fails here, not on npm.
+          for package in contracts sdk; do
+            (cd "packages/$package" && bun run build && node ../../scripts/assert-package-dist.mjs)
+          done
           bun run --filter @oxy.so/homiio-sdk test
 
       # AGENTS.md is prepended to EVERY agent session, so its bytes are paid on

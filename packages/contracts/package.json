@@ -15,8 +15,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "postbuild": "node ../../scripts/assert-package-dist.mjs"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "zod": "^4.3.6"
