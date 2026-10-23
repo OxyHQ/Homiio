@@ -470,10 +470,13 @@ jobs:
       - name: Public API contracts and SDK
         run: |
           bun run check:openapi
-          # The release path itself (clean, build, every entry point present,
-          # tests): a build that emits nothing fails here, not on npm.
-          bun run --filter @oxy.so/homiio-contracts prepublishOnly
-          bun run --filter @oxy.so/homiio-sdk prepublishOnly
+          # What the release builds, with every entry point present, and the
+          # SDK's tests, which gate its release: a build that emits nothing
+          # fails here, not on npm.
+          for package in contracts sdk; do
+            (cd "packages/$package" && bun run build && node ../../scripts/assert-package-dist.mjs)
+          done
+          bun run --filter @oxy.so/homiio-sdk test
 
       # AGENTS.md is prepended to EVERY agent session, so its bytes are paid on
       # every task forever. It reached 52 KB here by accretion — a subsystem
