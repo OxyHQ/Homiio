@@ -8,16 +8,10 @@
  * application is the owner of every application file and the holder of every
  * reference — never a header or a body field.
  *
- * The scopes the Homiio application needs, granted by Oxy staff (they are
- * staff-only for a first-party application, ADR 0043 D11):
- *
- * - `files:app:write` — import and upload Homiio's own photos;
- * - `files:references:write` — register and remove Homiio's uses, reconcile;
- * - `files:user-media:write` — store a person's upload in THEIR account;
- * - `files:read` — `metadataByIds`, the ownership check on a published photo;
- * - `files:linked:read` — `linkedDownloadUrls`, reading back a person's private
- *   document Homiio stored for them (ADR 0043 stage 4c; their consent, which
- *   they can revoke in their file manager).
+ * Own operations use registered workload identity (Oxy ADR 0049). A personal
+ * upload also needs its initiating session or verified execution proof; ownerId
+ * alone is never authority. External document tools retain live OAuth grants.
+ * File references and per-file read entitlements remain resource constraints.
  *
  * Narrowed to a `Pick` (`oxyFilesSeam.ts`) so a test can hand in a fake with
  * exactly these methods, and so a new call into Oxy Files is a visible change

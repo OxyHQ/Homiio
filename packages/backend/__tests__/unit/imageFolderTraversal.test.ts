@@ -53,7 +53,12 @@ describe('private documents', () => {
       'x'.repeat(65),
     ]) {
       const stored = await storePrivateFile(
-        { ownerOxyUserId: 'user-1', kind: 'maintenance_request', entityId: hostile },
+        {
+          requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+          ownerOxyUserId: 'user-1',
+          kind: 'maintenance_request',
+          entityId: hostile,
+        },
         Buffer.concat([PDF, Buffer.from(hostile)]),
         'application/pdf',
         '.pdf',
@@ -72,7 +77,11 @@ describe('private documents', () => {
 
   it('record the digest of what was stored', async () => {
     const stored = await storePrivateFile(
-      { ownerOxyUserId: 'user-1', kind: 'tenant_application' },
+      {
+        requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+        ownerOxyUserId: 'user-1',
+        kind: 'tenant_application',
+      },
       PDF,
       'application/pdf',
       '.pdf',
@@ -85,7 +94,12 @@ describe('private documents', () => {
     fakeOxyFiles.largeUploadError = oxyError(503, 'UNAVAILABLE');
 
     const failure = await storePrivateFile(
-      { ownerOxyUserId: 'user-1', kind: 'lease', entityId: '0192f4a2-aaaa-7bbb-8ccc-1234567890ab' },
+      {
+        requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+        ownerOxyUserId: 'user-1',
+        kind: 'lease',
+        entityId: '0192f4a2-aaaa-7bbb-8ccc-1234567890ab',
+      },
       PDF,
       'application/pdf',
       '.pdf',

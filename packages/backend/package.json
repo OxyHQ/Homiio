@@ -64,7 +64,8 @@
     "@oxy.so/homiio-contracts": "workspace:*",
     "@oxy.so/allo-sdk": "0.2.1",
     "@oxy.so/allo-contracts": "0.2.0",
-    "@oxy.so/mcp": "1.3.1"
+    "@oxy.so/mcp": "1.3.1",
+    "@aws-sdk/credential-provider-node": "3.972.83"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

@@ -1,3 +1,4 @@
+import { sessionFileRequester } from '../services/files/requester';
 /**
  * Tenant Application Controller — the HTTP adapter over `domain/applications.ts`.
  *
@@ -61,6 +62,7 @@ class ApplicationController {
         documents: body.documents,
         documentTypes: body.documentTypes,
         files,
+        requester: sessionFileRequester(req),
       });
       if (outcome.kind === 'external_listing') {
         throw new AppError('Cannot apply to external listings', 400, 'EXTERNAL_PROPERTY');
@@ -91,6 +93,7 @@ class ApplicationController {
       const application = await addApplicationDocuments(oxyUserId, id, {
         documentTypes: req.body?.documentTypes,
         files,
+        requester: sessionFileRequester(req),
       });
       res.status(201).json(successResponse(application, 'Documents added'));
     } catch (error) {

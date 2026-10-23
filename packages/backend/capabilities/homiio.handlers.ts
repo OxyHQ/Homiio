@@ -1,3 +1,4 @@
+import type { DocumentRequester } from '../services/files/requester';
 /**
  * The catalogue's handlers, as both MCP lanes call them.
  *
@@ -48,6 +49,25 @@ function idempotencyKeyOf(context: InvocationContext): string | undefined {
   return key.length > 0 ? key : undefined;
 }
 
+function fileRequesterOf(
+  context: InvocationContext,
+  tool: CatalogTool,
+): DocumentRequester | undefined {
+  const header = context.request.requestInfo?.headers?.authorization;
+  const token =
+    typeof header === 'string' && header.startsWith('Bearer ') ? header.slice(7) : undefined;
+  if (!token) return undefined;
+  if (context.principal.kind === 'capability')
+    return { kind: 'own', proof: { capabilityTicket: token } };
+  if (
+    tool.name === 'uploadLeaseDocument' ||
+    tool.name === 'submitApplication' ||
+    tool.name === 'addApplicationDocuments'
+  )
+    return { kind: 'external', proof: { connectionToken: token, tool: tool.name } };
+  return undefined;
+}
+
 /** What `res.json` would have put on the wire for this value. */
 export function toWire(result: ToolResult): Record<string, unknown> {
   return JSON.parse(JSON.stringify(renameWireIds(result))) as Record<string, unknown>;
@@ -92,6 +112,7 @@ export function wrapHomiioToolHandler(
           await handler(input, {
             accountId,
             tool,
+            fileRequester: fileRequesterOf(context, tool),
             ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
           }),
         );

@@ -63,10 +63,6 @@ export interface Config {
   port: number | string;
   oxy: {
     baseURL: string;
-    /** ApplicationCredential.publicKey for Homiio's service identity. */
-    serviceApiKey?: string;
-    /** Cleartext service credential secret, supplied by the secret manager. */
-    serviceApiSecret?: string;
   };
   telegram: {
     botToken?: string;
@@ -312,8 +308,6 @@ const config: Config = {
   // Override with OXY_API_URL when genuinely running an Oxy API yourself.
   oxy: {
     baseURL: process.env.OXY_API_URL || 'https://api.oxy.so',
-    serviceApiKey: optionalEnvironmentValue(process.env.OXY_SERVICE_API_KEY),
-    serviceApiSecret: optionalEnvironmentValue(process.env.OXY_SERVICE_API_SECRET),
   },
 
   // Telegram Bot Configuration

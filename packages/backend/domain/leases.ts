@@ -1,3 +1,4 @@
+import type { DocumentRequester } from '../services/files/requester';
 /**
  * Leases — the tenancy contract after an approved application, as use cases.
  *
@@ -642,7 +643,12 @@ export async function listLeaseDocuments(oxyUserId: string, leaseId: string) {
 export async function uploadLeaseDocument(
   oxyUserId: string,
   leaseId: string,
-  input: { file?: UploadedLeaseDocumentFile; type?: unknown; name?: unknown },
+  input: {
+    file?: UploadedLeaseDocumentFile;
+    type?: unknown;
+    name?: unknown;
+    requester?: DocumentRequester;
+  },
 ) {
   const file = input.file;
   if (!file) throw new AppError('A document file is required', 400, 'VALIDATION_ERROR');
@@ -662,7 +668,7 @@ export async function uploadLeaseDocument(
   // The party's own private document (`services/files/privateDocuments`):
   // a PDF verbatim, a photo re-encoded. Stored only after the party check.
   const stored = await storePrivateUpload(
-    { ownerOxyUserId: oxyUserId, kind: 'lease', entityId: leaseId },
+    { ownerOxyUserId: oxyUserId, kind: 'lease', entityId: leaseId, requester: input.requester },
     file,
   );
 

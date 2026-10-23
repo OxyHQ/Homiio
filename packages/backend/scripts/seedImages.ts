@@ -18,7 +18,7 @@
  *
  * The seed needs an Oxy API and a Homiio service credential holding
  * `files:app:write` and `files:references:write` (`OXY_API_URL`,
- * `OXY_SERVICE_API_KEY`/`SECRET`). Without them the import fails and the seed
+ * a registered workload credential provider). Without workload identity the import fails and the seed
  * says so — there is no local storage to fall back to.
  */
 

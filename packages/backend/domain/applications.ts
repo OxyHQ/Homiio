@@ -1,3 +1,4 @@
+import type { DocumentRequester } from '../services/files/requester';
 /**
  * Tenant applications — the long-term rent application lifecycle, as use cases.
  *
@@ -358,12 +359,13 @@ async function uploadDocumentFiles(
   files: readonly UploadedApplicationFile[],
   types: readonly ApplicationDocumentType[],
   applicantOxyUserId: string,
+  requester?: DocumentRequester,
 ): Promise<ParsedDocument[]> {
   const uploaded: ParsedDocument[] = [];
   for (let i = 0; i < files.length; i += 1) {
     const file = files[i];
     const stored = await storePrivateUpload(
-      { ownerOxyUserId: applicantOxyUserId, kind: 'tenant_application' },
+      { ownerOxyUserId: applicantOxyUserId, kind: 'tenant_application', requester },
       file,
     );
     uploaded.push({
@@ -378,6 +380,7 @@ async function uploadDocumentFiles(
 // ── Use cases ──────────────────────────────────────────────────────────────
 
 export interface SubmitApplicationInput {
+  requester?: DocumentRequester;
   propertyId: unknown;
   moveInDate: unknown;
   leaseTermMonths: unknown;
@@ -456,7 +459,7 @@ export async function submitApplication(
   let uploadedDocs: ParsedDocument[] = [];
   if (files.length > 0) {
     const types = parseDocumentTypes(input.documentTypes, files.length);
-    uploadedDocs = await uploadDocumentFiles(files, types, oxyUserId);
+    uploadedDocs = await uploadDocumentFiles(files, types, oxyUserId, input.requester);
   }
 
   const allDocuments = [...parsedDocumentsFromBody, ...uploadedDocs];
@@ -492,6 +495,7 @@ export async function submitApplication(
 }
 
 export interface AddApplicationDocumentsInput {
+  requester?: DocumentRequester;
   /** One type per entry of `files`, as the multipart `documentTypes[]` field. */
   documentTypes?: unknown;
   /** Uploaded files, from multer or from {@link documentFileFromBase64}. */
@@ -545,7 +549,7 @@ export async function addApplicationDocuments(
     throw refusal('too_many');
   }
 
-  const uploaded = await uploadDocumentFiles(files, types, oxyUserId);
+  const uploaded = await uploadDocumentFiles(files, types, oxyUserId, input.requester);
   const outcome = await db.transaction((tx) =>
     appendApplicationDocuments(tx, {
       applicationId,

@@ -19,6 +19,7 @@
  */
 
 import { decisionFixture } from '@crowdsource.you/core/testing';
+import * as crowdSourceClient from '../../services/moderation/crowdSourceClient';
 import type { Decision } from '@crowdsource.you/contracts';
 import { count, eq, inArray } from 'drizzle-orm';
 import { uuidv7 } from '@oxy.so/db';
@@ -161,11 +162,13 @@ beforeEach(async () => {
 
 describe('delivery worker', () => {
   /**
-   * The integration is off in tests, so there is nowhere to deliver. That is a
-   * DELAY, not a loss: the error is retryable, the event stays pending, and the
-   * backlog delivers when the flag is switched on.
+   * Explicitly simulate an unavailable integration without relying on environment
+   * credentials. Delivery remains retryable and the durable row stays pending.
    */
   it('treats an unconfigured integration as retryable', async () => {
+    const unavailable = jest
+      .spyOn(crowdSourceClient, 'getCrowdSourceClient')
+      .mockReturnValue(undefined);
     const reportId = await storedReport(await listing());
 
     await expect(
@@ -175,6 +178,7 @@ describe('delivery worker', () => {
     expect(isRetryableDeliveryError(new CrowdSourceUnavailableError())).toBe(true);
     // Untouched: nothing failed, so nothing is marked failed.
     expect((await storedReportRow(reportId)).localStatus).toBe('queued');
+    unavailable.mockRestore();
   });
 
   it('refuses an event with no report id, permanently', async () => {

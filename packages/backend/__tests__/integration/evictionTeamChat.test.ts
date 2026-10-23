@@ -17,9 +17,17 @@ import {
   readTeamOperation,
 } from '../../db/evictions/teamChatRepository';
 import { errorHandler } from '../../middlewares/errorHandler';
-jest.mock('../../services/oxy', () => ({
-  oxyService: { users: { get: jest.fn(async (id: string) => ({ id })) } },
-}));
+jest.mock('../../services/oxy', () => {
+  const { OxyServer } = jest.requireActual('@oxy.so/core/server');
+  const oxyService = new OxyServer({
+    baseURL: 'https://fixture.oxy.test',
+    workloadCredentials: async () => ({ AccessKeyId: 'fixture', SecretAccessKey: 'fixture' }),
+  });
+  jest
+    .spyOn(oxyService.users, 'get')
+    .mockImplementation(async (id: unknown) => ({ id: String(id) }));
+  return { oxyService };
+});
 const originalFetch = globalThis.fetch;
 let snapshot: TeamSnapshot | null = null;
 let offline = false;
@@ -57,10 +65,22 @@ beforeEach(async () => {
   offline = false;
   await getDb().delete(evictionCases);
   globalThis.fetch = jest.fn(async (url, init) => {
-    expect(String(url)).toBe('https://api.allo.you/v1/team-access/snapshot');
-    expect(new Headers(init?.headers).get('x-allo-team-capability')).toHaveLength(43);
-    expect(new Headers(init?.headers).has('authorization')).toBe(false);
-    if (offline) throw new Error('Allo offline');
+    const req = new Request(url, init);
+    if (req.url === 'https://fixture.oxy.test/auth/service-token/workload/challenge')
+      return Response.json({ nonce: 'fixture' });
+    if (req.url === 'https://fixture.oxy.test/auth/service-token/workload') {
+      const body = await req.json();
+      expect(body.protocolVersion).toBe(2);
+      expect(body.audience).toBe('oxy-service:6a2f851751b784a86fd0e92b');
+      return Response.json({
+        token: `e30.${Buffer.from(JSON.stringify({ type: 'service', authority: 'first_party', exp: Math.floor(Date.now() / 1000) + 300 })).toString('base64url')}.signature`,
+        expiresIn: 300,
+      });
+    }
+    expect(req.url).toBe('https://api.allo.you/v1/team-access/snapshot');
+    expect(req.headers.get('x-allo-team-capability')).toHaveLength(43);
+    expect(req.headers.get('authorization')).toMatch(/^Bearer /);
+    if (offline) throw new TypeError('fetch failed: Allo offline');
     return Response.json(snapshot ?? { error: { code: 'not_found', message: 'Not found' } }, {
       status: snapshot ? 200 : 404,
     });
@@ -127,7 +147,10 @@ it('commits removal only after frozen matching Allo membership; failed and stale
   snapshot = remote(remove, ['owner', 'editor']);
   await expect(finalizeTeamOperation(remove.operation.id, 'owner')).rejects.toThrow();
   offline = true;
-  await expect(finalizeTeamOperation(remove.operation.id, 'owner')).rejects.toThrow();
+  await expect(finalizeTeamOperation(remove.operation.id, 'owner')).rejects.toMatchObject({
+    code: 'NETWORK_ERROR',
+    status: 0,
+  });
   expect((await getCaseTeam(id, 'editor'))?.canEdit).toBe(true);
   const [pending] = await getDb()
     .select()
