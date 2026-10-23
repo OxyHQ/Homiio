@@ -7,7 +7,7 @@
 // with the .tsbuildinfo beside the tsconfig (gitignored). After `rm -rf dist`
 // tsc read that buildinfo, decided nothing had changed and emitted NOTHING, and
 // `npm pack` shipped a tarball with no dist. The tsconfigs no longer keep build
-// state, and this check, run from each package's prepublishOnly after its build,
+// state, and this check, run as each package's postbuild,
 // makes an empty tarball impossible whatever the next trap is: every file
 // `main`, `types` and the non-wildcard `exports` name must exist.
 //

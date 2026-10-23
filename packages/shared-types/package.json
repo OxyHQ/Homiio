@@ -10,8 +10,7 @@
     "build": "bunx tsc",
     "dev": "bunx tsc --watch",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "test": "echo \"No tests specified\" && exit 0",
-    "prepublishOnly": "bun run build"
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
     "typescript",
