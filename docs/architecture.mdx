@@ -14,8 +14,11 @@ the build order is a dependency chain rather than a preference:
                       ↘  @homiio/frontend
 ```
 
-`shared-types` is built first by the root `postinstall`, because both of the
-others import it by package name and resolve it through its built `dist`. The
+`shared-types` is built first by the root `postinstall`, because the compiled
+backend imports it by package name and resolves it through its built `dist`.
+The frontend bundles its SOURCE: Metro reads the same `tsconfig.json` `paths`
+entry (`../shared-types/src`) that `tsc` and Jest use, so an Android or web
+bundle never depends on a `dist` being present or complete. The
 production Dockerfile builds the same three in the same order, then emits
 separate `api` and `worker` targets from those exact artifacts. Only the worker
 target contains Playwright/Chromium/X11.

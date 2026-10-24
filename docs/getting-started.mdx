@@ -27,7 +27,7 @@ cd Homiio
 bun install
 ```
 
-`bun install` resolves every workspace, then runs `bun run build:shared-types` as `postinstall`. Without that build the frontend and backend cannot resolve `@homiio/shared-types/dist`, so the postinstall step is load-bearing — do not skip it.
+`bun install` resolves every workspace, then runs `bun run build:shared-types` as `postinstall`. The compiled backend resolves `@homiio/shared-types` through that `dist`, so the postinstall step is load-bearing for it — do not skip it. The frontend never reads it: Metro, `tsc` and Jest all take the package from `packages/shared-types/src` through `tsconfig.json`'s `paths`.
 
 ## Configure environment
 
