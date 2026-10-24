@@ -12,15 +12,12 @@ const team = homiioTeamForOxyService(oxy);
 The factory uses Oxy's shared workload transport and the registered Homiio
 audience. It adds no API key, internal scopes or app consent. Team capabilities,
 membership and operation checks remain the resource authorization contract.
-The root SDK import does not load Oxy; only the optional server entry requires
-`@oxy.so/core >=7 <8`.
+Both entries are independent of Oxy at runtime and in their emitted types.
+The factory accepts only the structural service-client method it uses. The own
+integration requires Oxy core7 or newer; its built artifact is tested against
+published core7.0.0 in `tests/sdk-transport`, with its own frozen lockfile.
 
 This SDK release precedes the backend migrations in Allo and Homiio, so neither
-backend depends on an unpublished sibling SDK. The SDK's development core7 and
-contracts6 dependencies are isolated from the applications' existing major
-versions. The applications adopt the new majors in their separate migration.
-
-The release removes global core/contracts/protocol overrides. Existing app
-core6.14/contracts5.7 remain pinned; protocol1.5.1 is selected explicitly for
-the SDK7 transport instead of forcing an incompatible older protocol. The lock
-keeps compatible existing application resolutions alongside the new SDK.
+backend depends on an unpublished sibling SDK. Existing applications remain on
+core6.14/contracts5.7/protocol1.5.0. Doctor continues to verify their runtime
+dependency tree without conflating it with the independent integration test.

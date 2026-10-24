@@ -42,7 +42,7 @@
     "ajv-keywords": "^5.1.0",
     "tailwindcss": "4.3.3",
     "typescript": "^6.0.3",
-    "@oxy.so/protocol": "1.5.1"
+    "@oxy.so/protocol": "1.5.0"
   },
   "engines": {
     "node": "22.x"
