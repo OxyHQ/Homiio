@@ -15,7 +15,11 @@
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "composite": true
+    "composite": true,
+    // Inside outDir, so deleting `dist/` also deletes the record of what was
+    // emitted. Beside it, a surviving tsbuildinfo made `tsc` emit nothing into
+    // a fresh `dist/` (measured: 0 of 70 files) and leave a partial one.
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

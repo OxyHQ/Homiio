@@ -9,7 +9,7 @@
   "scripts": {
     "build": "bunx tsc",
     "dev": "bunx tsc --watch",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "clean": "rm -rf dist",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
