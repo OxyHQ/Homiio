@@ -45,6 +45,13 @@ module.exports = (config) => {
       // READING external mutable state from a memoized position freezes the
       // first value forever. This app reads Reanimated shared values and
       // zustand stores in plenty of places.
+      experiments: {
+        // Expo's oxc transformer, about 2x faster cold bundles than Babel. Development
+        // only: in a production export it keeps the requires of dead platform branches
+        // (`if (Platform.OS !== 'web') require(...)`), pulling native-only packages into
+        // the web bundle. The CLI sets NODE_ENV before it reads this config.
+        noxcturnalTransformWorker: process.env.NODE_ENV !== 'production',
+      },
       ios: {
         supportsTablet: true,
         bundleIdentifier: APP_ID,
