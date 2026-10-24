@@ -1,6 +1,6 @@
 {
   "name": "@oxy.so/homiio-contracts",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Homiio public case contracts",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
@@ -18,7 +18,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

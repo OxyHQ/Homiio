@@ -1,6 +1,6 @@
 {
   "name": "@oxy.so/homiio-sdk",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Homiio public case sdk",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
@@ -27,7 +27,11 @@
       "types": "./dist/*.d.ts",
       "default": "./dist/*.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    }
   },
   "files": [
     "dist"
@@ -38,9 +42,19 @@
     "test": "bun test tests"
   },
   "dependencies": {
-    "@oxy.so/homiio-contracts": "0.2.0"
+    "@oxy.so/homiio-contracts": "0.2.1"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "@oxy.so/core": "7.0.0",
+    "@oxy.so/contracts": "6.0.0"
+  },
+  "peerDependencies": {
+    "@oxy.so/core": ">=7.0.0 <8"
+  },
+  "peerDependenciesMeta": {
+    "@oxy.so/core": {
+      "optional": true
+    }
   }
 }
