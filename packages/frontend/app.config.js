@@ -14,16 +14,17 @@ module.exports = (config) => {
    */
   const PLATFORM = process.env.EAS_BUILD_PLATFORM;
 
-  const IS_TESTFLIGHT = process.env.EXPO_PUBLIC_ENV === 'testflight';
-  const IS_PRODUCTION = process.env.EXPO_PUBLIC_ENV === 'production';
-  const IS_DEV = !IS_TESTFLIGHT || !IS_PRODUCTION;
-
-  /**
-   * App variant — lets a development build sit next to the production app on the
-   * SAME device by giving it a distinct applicationId/bundleId + name. Build the
-   * dev variant with `APP_VARIANT=development`; production is the default, so
-   * nothing changes unless the variable is set.
-   */
+  // ONE build variant, chosen explicitly: `APP_VARIANT=development` builds the
+  // development app, anything else (unset included) is the production app.
+  //
+  // It lets a development build sit next to the production app on the SAME
+  // device by giving it a distinct applicationId/bundleId + name, and it is the
+  // only thing that decides whether dev-only entries (the `localhost` link host)
+  // ship. That used to be `IS_DEV = !IS_TESTFLIGHT || !IS_PRODUCTION`, read off
+  // `EXPO_PUBLIC_ENV`: true for every build that was not BOTH TestFlight and
+  // production at once, which is every build, so release builds claimed
+  // `http://localhost:4130`. `__tests__/appConfig.test.ts` asserts a production
+  // config names no local host.
   const IS_DEV_VARIANT = process.env.APP_VARIANT === 'development';
   const APP_ID = IS_DEV_VARIANT ? 'com.homiio.android.dev' : 'com.homiio.android';
   const APP_NAME = IS_DEV_VARIANT ? 'Homiio (Dev)' : 'Homiio';
@@ -77,13 +78,21 @@ module.exports = (config) => {
                 scheme: 'https',
                 host: 'oxy.so',
               },
-              IS_DEV && {
-                scheme: 'http',
-                host: 'localhost:4130',
-              },
             ],
             category: ['BROWSABLE', 'DEFAULT'],
           },
+          // The development variant also opens links to a local server. Its own
+          // filter, without autoVerify: an http host can never verify, and in a
+          // verified filter it would only fail it.
+          ...(IS_DEV_VARIANT
+            ? [
+                {
+                  action: 'VIEW',
+                  data: [{ scheme: 'http', host: 'localhost', port: '4130' }],
+                  category: ['BROWSABLE', 'DEFAULT'],
+                },
+              ]
+            : []),
         ],
         softwareKeyboardLayoutMode: 'pan',
       },
