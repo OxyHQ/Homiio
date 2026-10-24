@@ -68,7 +68,7 @@ module.exports = {
     '/node_modules/@react-native/babel-preset/',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  // Resolve the `@/...` path alias declared in tsconfig.json / babel.config.js.
+  // Resolve the `@/...` path alias declared in tsconfig.json `paths` (Metro reads it too).
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     // Shared-types SUBPATHS only. The bare specifier is deliberately left to

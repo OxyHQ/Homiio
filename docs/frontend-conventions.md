@@ -269,6 +269,11 @@ again.
 - Web fetches `/locales/<file>.json`, which `scripts/publish-web-locales.js` copies into `public/locales/` from `metro.config.js` (gitignored). Native `require`s the file (`utils/localeResources.ts`).
 - **Never import a non-English locale JSON in app code** — one static import puts that whole language back into every web page's JavaScript (the twelve bundled locales were ~517 KB gzipped, ~17% of the JS budget). `check:bundle-imports` enforces it.
 
+## Development bundles use Noxcturnal (no Babel plugins, no SVG transformer)
+
+- Development bundles go through Expo's oxc transformer, Noxcturnal (`experiments.noxcturnalTransformWorker` in `app.config.js`). It stays inactive, silently, when the Babel config is anything other than the bare Expo preset or Metro has a custom `babelTransformerPath`. So `babel.config.js` is only `require('@oxy.so/app-preset/babel')` (bare `babel-preset-expo` in development), `@/` resolves through `tsconfig.json` `paths` (Jest maps it in `moduleNameMapper`), and there is no `react-native-svg-transformer`: an SVG drawn as a component is a committed TSX component (`@svgr/cli --native --typescript`), never a `.svg` import.
+- Production exports (`NODE_ENV=production`) stay on Babel, because Noxcturnal keeps the requires of dead platform branches and pulls native-only packages into the web bundle. Run Expo with `LOG_EVENTS=<file>` to see which files fall back to Babel and why (`transform:noxcturnal:fallback`).
+
 ## Bloom primitives (no local copies)
 
 The local confirm dialog, action button, slider, progress bar and card shells
