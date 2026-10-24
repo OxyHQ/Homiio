@@ -1,0 +1,15 @@
+{
+  "name": "homiio-sdk-published-transport-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "bun test service.http.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@oxy.so/core": "7.0.0",
+    "@types/bun": "1.4.3",
+    "@types/node": "26.6.5",
+    "typescript": "6.0.3"
+  }
+}
