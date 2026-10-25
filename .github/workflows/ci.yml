@@ -198,7 +198,6 @@ jobs:
               - 'packages/shared-types/**'
               - 'packages/contracts/**'
               - 'packages/sdk/**'
-              - 'tests/sdk-transport/**'
             backend:
               - 'packages/backend/**'
               - 'packages/listing-providers/**'
@@ -478,9 +477,7 @@ jobs:
             (cd "packages/$package" && bun run build && node ../../scripts/assert-package-dist.mjs)
           done
           bun run --filter @oxy.so/homiio-sdk test
-          bun install --cwd tests/sdk-transport --frozen-lockfile --minimum-release-age=0
-          bun run --cwd tests/sdk-transport typecheck
-          bun run --cwd tests/sdk-transport test
+          bun run --cwd packages/sdk typecheck:tests
 
       # AGENTS.md is prepended to EVERY agent session, so its bytes are paid on
       # every task forever. It reached 52 KB here by accretion — a subsystem
