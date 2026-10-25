@@ -15,8 +15,14 @@ require('./scripts/publish-web-locales').publishWebLocales();
 //
 // `withGoWayMaps` serves MapLibre's worker from `public/vendor/` (maplibre-gl 6
 // starts it by URL), before Metro serves or exports `public/`.
-module.exports = withGoWayMaps(
+const config = withGoWayMaps(
   createOxyMetroConfig(__dirname, {
     cssInput: './styles/global.css',
   }),
 );
+
+// JavaScript is served as UTF-8; keep literal text compact instead of expanding
+// every non-ASCII character into a six-byte Unicode escape.
+config.transformer.minifierConfig.output.ascii_only = false;
+
+module.exports = config;

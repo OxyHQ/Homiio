@@ -75,8 +75,7 @@ function buildApp(): Express {
     }),
     external: createHomiioMcpHttpService({
       authorizationServer: ISSUER,
-      fetch: fetchStub,
-      getServiceToken: async () => 'service-token',
+      transport: { fetch: fetchStub },
     }),
   });
   // Anything a later middleware would do must never be reached by MCP.

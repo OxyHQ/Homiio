@@ -58,6 +58,7 @@ function authed(oxyUserId: string): Express {
     const withUser = req as unknown as { user: { id: string }; userId: string };
     withUser.user = { id: oxyUserId };
     withUser.userId = oxyUserId;
+    req.accessToken = `fixture-session-${oxyUserId}`;
     next();
   });
   app.get('/applications/:id/documents/:documentId', (req, res, next) =>
@@ -81,7 +82,11 @@ function publicImages(): Express {
 /** Store bytes as the applicant's private Oxy file and return the ref a row holds. */
 async function storeDocument(bytes: Buffer): Promise<string> {
   const stored = await storePrivateFile(
-    { ownerOxyUserId: APPLICANT, kind: 'tenant_application' },
+    {
+      requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+      ownerOxyUserId: APPLICANT,
+      kind: 'tenant_application',
+    },
     bytes,
     'image/jpeg',
     '.jpeg',

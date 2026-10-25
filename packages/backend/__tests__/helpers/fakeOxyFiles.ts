@@ -234,6 +234,25 @@ export class FakeOxyFiles {
   /** The `OxyFilesApi` the code under test receives. */
   api(): OxyFilesApi {
     const api = {
+      withRequester: (proof: {
+        accountId?: string;
+        requesterToken?: string;
+        capabilityTicket?: string;
+      }) => {
+        this.calls.push({ method: 'withRequester', args: [proof] });
+        if (!proof.requesterToken && !proof.capabilityTicket)
+          throw oxyError(403, 'REQUESTER_REQUIRED');
+        return api;
+      },
+      withMcpDocumentRequester: (proof: {
+        connectionToken: string;
+        tool: string;
+        accountId?: string;
+      }) => {
+        this.calls.push({ method: 'withMcpDocumentRequester', args: [proof] });
+        if (!proof.connectionToken) throw oxyError(403, 'REQUESTER_REQUIRED');
+        return api;
+      },
       publicUrl: (fileId: string, variant?: string) =>
         `https://cloud.oxy.test/${fileId}${variant ? `?variant=${variant}` : ''}`,
 

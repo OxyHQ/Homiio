@@ -27,12 +27,12 @@
     "backfill:price-ethics": "ts-node --transpile-only scripts/backfillPriceEthics.ts"
   },
   "dependencies": {
-    "@crowdsource.you/contracts": "1.1.0",
-    "@crowdsource.you/core": "3.0.3",
+    "@crowdsource.you/contracts": "1.1.1",
+    "@crowdsource.you/core": "3.1.0",
     "@homiio/listing-providers": "workspace:*",
     "@homiio/shared-types": "workspace:*",
-    "@oxy.so/contracts": "5.7.0",
-    "@oxy.so/core": "6.14.0",
+    "@oxy.so/contracts": "6.0.0",
+    "@oxy.so/core": "7.1.0",
     "@oxy.so/db": "^1.3.0",
     "@oxy.so/utils": "^1.3.0",
     "@peable.to/sdk": "0.2.2",
@@ -62,9 +62,10 @@
     "validator": "^13.15.35",
     "whatsapp-web.js": "^1.34.7",
     "@oxy.so/homiio-contracts": "workspace:*",
-    "@oxy.so/allo-sdk": "0.2.1",
-    "@oxy.so/allo-contracts": "0.2.0",
-    "@oxy.so/mcp": "1.3.1"
+    "@oxy.so/allo-sdk": "0.4.0",
+    "@oxy.so/allo-contracts": "0.2.1",
+    "@oxy.so/mcp": "1.4.0",
+    "@aws-sdk/credential-provider-node": "3.972.83"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

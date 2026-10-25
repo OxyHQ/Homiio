@@ -39,12 +39,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "test": "bun test tests"
+    "test": "bun test tests",
+    "typecheck:tests": "tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
     "@oxy.so/homiio-contracts": "0.2.1"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "@types/bun": "^1.4.3"
   }
 }

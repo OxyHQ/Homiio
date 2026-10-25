@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": ["bun", "node"]
   },
-  "include": ["service.http.test.ts"]
+  "include": ["tests/server.test.ts"]
 }

@@ -1,3 +1,4 @@
+import type { RequesterProof } from '@oxy.so/core/server';
 /**
  * Public photos in Oxy Files (ADR 0043) — every way one enters Homiio.
  *
@@ -70,8 +71,10 @@ function formatOfMime(mime: string): string {
  */
 export async function uploadAccountImage(
   ownerOxyUserId: string,
-  input: { buffer: Buffer; originalName?: string },
+  input: { buffer: Buffer; originalName?: string; requester?: RequesterProof },
 ): Promise<StoredPublicImage> {
+  if (!input.requester)
+    throw new AppError('The upload requires its original requester', 403, 'REQUESTER_REQUIRED');
   const source = sharp(input.buffer, SHARP_DECODE_OPTIONS);
   const metadata = await source.metadata();
   const stripped = await sharp(input.buffer, SHARP_DECODE_OPTIONS)
@@ -80,10 +83,12 @@ export async function uploadAccountImage(
     .toBuffer();
   const sha256 = createHash('sha256').update(stripped).digest('hex');
 
-  const file = await oxyFiles().uploadUserMedia(ownerOxyUserId, stripped, 'image/jpeg', {
-    ...(input.originalName ? { originalName: input.originalName } : {}),
-    timeout: 120_000,
-  });
+  const file = await oxyFiles()
+    .withRequester({ ...input.requester, accountId: ownerOxyUserId })
+    .uploadUserMedia(ownerOxyUserId, stripped, 'image/jpeg', {
+      ...(input.originalName ? { originalName: input.originalName } : {}),
+      timeout: 120_000,
+    });
   if (file.sha256 !== sha256) {
     throw new Error('Oxy stored different bytes than Homiio uploaded');
   }

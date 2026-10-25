@@ -54,7 +54,7 @@ export const APPLICATION_HANDLERS: HomiioToolHandlers = {
   getApplication: async (input, { accountId }) =>
     dataBody(await getApplication(accountId, requiredString(input, 'applicationId'))),
 
-  submitApplication: async (input, { accountId }) => {
+  submitApplication: async (input, { accountId, fileRequester }) => {
     const body: Record<string, unknown> = { ...input };
     delete body.documents;
     await runRouteValidation(validation.validateTenantApplication, { body });
@@ -71,17 +71,19 @@ export const APPLICATION_HANDLERS: HomiioToolHandlers = {
       referenceContacts: input.referenceContacts,
       documentTypes: documents.map((document) => document.type),
       files,
+      requester: fileRequester,
     });
     if (outcome.kind === 'external_listing') return { ...outcome.outcome };
     return dataBody(outcome.application);
   },
 
-  addApplicationDocuments: async (input, { accountId }) => {
+  addApplicationDocuments: async (input, { accountId, fileRequester }) => {
     const documents = (Array.isArray(input.documents) ? input.documents : []) as DocumentInput[];
     return dataBody(
       await addApplicationDocuments(accountId, requiredString(input, 'applicationId'), {
         documentTypes: documents.map((document) => document.type),
         files: documents.map(documentFileFromBase64),
+        requester: fileRequester,
       }),
     );
   },

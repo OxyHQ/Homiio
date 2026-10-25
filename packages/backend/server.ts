@@ -21,7 +21,6 @@ import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
 import { publicApiBodyErrorHandler } from './routes/publicApi';
 import {
-  OxyServer,
   createOptionalOxyAuth,
   createOxyAuthMiddleware,
   oxyTrustProxy,
@@ -42,7 +41,7 @@ interface RawBodyRequest extends Request {
   rawBody?: Buffer;
 }
 
-const oxy = new OxyServer({ baseURL: config.oxy.baseURL });
+import { HOMIIO_SERVICE_AUDIENCE, oxyService as oxy } from './services/oxy';
 
 const healthService = new HealthService();
 
@@ -72,6 +71,7 @@ const UNAUTHENTICATED_RATE_LIMIT_MAX = 600; // ~0.66 req/sec per anonymous IP
  */
 const oxyAuthOptions = {
   auth: {
+    expectedAudience: HOMIIO_SERVICE_AUDIENCE,
     /**
      * Why a credential was refused, in Homiio's own log.
      *

@@ -1,24 +1,6 @@
-/**
- * Homiio's side of Oxy's capability authority: verifying a ticket LIVE,
- * recording what a ticket did, and registering the catalogue.
- *
- * All three authenticate to Oxy as Homiio itself through `oxyService`
- * (`services/oxy.ts`): in ECS the task role attests (oxy ADR 0026) and no
- * secret exists anywhere; elsewhere a configured key pair does. The Homiio
- * application needs these Oxy service scopes, granted to the attested
- * workload binding:
- *
- *  - `catalogs:write` plus the application capability `catalog:homiio` —
- *    registering this catalogue (`POST /capabilities/catalogs/register`);
- *  - `capabilities:read` — live ticket introspection
- *    (`POST /capabilities/tickets/introspect`);
- *  - `capability-audit:write` — the audit record of every internal call
- *    (`POST /capabilities/audit`).
- *
- * The public `/mcp` lane's token introspection (`/auth/mcp/oauth/introspect`)
- * needs no scope beyond a live service principal: Oxy answers only for a
- * resource the calling application registered, which the catalogue
- * registration above is.
+/** Own catalogue registration, live ticket checks and audit use workload identity.
+ * Resource/account/operation checks remain live. OAuth clients keep their grants
+ * and scope limits; own execution carries task/requester provenance (Oxy ADR 0049).
  */
 
 import type { KeyObject } from 'node:crypto';
@@ -30,12 +12,11 @@ import {
 } from '@oxy.so/contracts';
 import { createLiveCapabilityTicketVerifier, createOxyJwksKeyResolver } from '@oxy.so/core/server';
 import { postOxyServiceJson, registerCapabilityCatalog } from '@oxy.so/mcp';
-import type { z } from 'zod';
 
 import config from '../config';
-import { oxyService } from '../services/oxy';
+import { oxyService, oxyServiceTransport } from '../services/oxy';
 
-type AuditResult = z.infer<typeof auditResultSchema>;
+type AuditResult = ReturnType<typeof auditResultSchema.parse>;
 type Introspection = Awaited<ReturnType<typeof oxyService.agency.introspectCapabilityTicket>>;
 
 /** Tickets are compact JWS; anything longer is not one of Oxy's. */
@@ -67,7 +48,7 @@ function ticketKeyId(ticket: string): string {
  *
  * The untrusted `kid` only selects which of Oxy's published keys to try; the
  * common verifier checks the original signed bytes. A ticket Oxy no longer
- * stands behind — revoked authority, a withdrawn ceiling — answers inactive
+ * stands behind — revoked task or external grant — answers inactive
  * and is refused, however valid its signature.
  */
 export function createTicketVerifier(options: TicketVerifierOptions): TicketVerifier {
@@ -98,11 +79,6 @@ export interface CapabilityAuditInput {
 
 export type CapabilityAuditor = (input: CapabilityAuditInput) => Promise<void>;
 
-const serviceToken = {
-  getServiceToken: () => oxyService.serviceToken(),
-  invalidateServiceToken: () => oxyService.invalidateServiceToken(),
-};
-
 /** The verifier, auditor and registration bound to Homiio's Oxy authority. */
 export function oxyCapabilityAuthority(catalog: AppCapabilityCatalog) {
   const oxyApiUrl = config.oxy.baseURL.replace(/\/+$/, '');
@@ -125,12 +101,16 @@ export function oxyCapabilityAuthority(catalog: AppCapabilityCatalog) {
         rollback: { supported: input.rollbackSupported, attempted: false },
         ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
       },
-      { ...serviceToken, endpoint: `${oxyApiUrl}/capabilities/audit` },
+      { transport: oxyServiceTransport, endpoint: `${oxyApiUrl}/capabilities/audit` },
     );
   };
 
   const register = (): Promise<CapabilityCatalogBinding> =>
-    registerCapabilityCatalog(catalog, { ...serviceToken, oxyApiUrl, timeoutMs: 15_000 });
+    registerCapabilityCatalog(catalog, {
+      transport: oxyServiceTransport,
+      oxyApiUrl,
+      timeoutMs: 15_000,
+    });
 
-  return { oxyApiUrl, verifyTicket, audit, register, ...serviceToken };
+  return { oxyApiUrl, verifyTicket, audit, register, transport: oxyServiceTransport };
 }

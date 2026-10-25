@@ -1,3 +1,4 @@
+import type { DocumentRequester } from '../../services/files/requester';
 /**
  * What a Homiio tool handler receives, and the helpers that read its input.
  *
@@ -23,6 +24,7 @@ import { AppError } from '../../middlewares/errorHandler';
 export interface HomiioToolContext {
   /** The effective Homiio account (an Oxy user id). The ONLY authority. */
   readonly accountId: string;
+  readonly fileRequester?: DocumentRequester;
   readonly tool: CatalogTool;
   /** The caller's idempotency key, when it sent one (always, for `required`). */
   readonly idempotencyKey?: string;

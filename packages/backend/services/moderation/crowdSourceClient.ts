@@ -1,3 +1,4 @@
+import { oxyService } from '../oxy';
 /**
  * Homiio's CrowdSource client, which is now one library call.
  *
@@ -11,21 +12,17 @@
  *
  * `CROWDSOURCE_SERVICE_KEY` is gone with the wrapper. The client presents the
  * Oxy service token this process already mints — by attesting its ECS task role
- * in a deployment, or from a credential pair in a checkout that has one (oxy ADR
- * 0026) — and CrowdSource resolves the tenant from the Oxy application that
+ * with a registered environment (Oxy ADR
+ * 0049) — and CrowdSource resolves the tenant from the Oxy application that
  * token names. Nothing is issued by hand, stored in a parameter store or rotated
  * by a person, and `applicationId` still appears nowhere: the client asks
  * CrowdSource which tenant the token names, once, and remembers the answer.
  *
- * ## `CROWDSOURCE_ENABLED` is not here either
- *
- * The flag gates the delivery LOOP, in `ModerationOutboxDispatcher` and
- * `services/cron.ts`, which is the place that acts on it. Repeating it here
- * would be a second answer to one question — and the wrong one for the state it
- * describes, because `undefined` from this factory means "this process cannot
- * authenticate", which is what a local checkout genuinely is. A report filed
- * against either state must still be STORED; the durable outbox row is never
- * gated, and the delivery worker is what notices there is nowhere to send it.
+ * The delivery loop owns `CROWDSOURCE_ENABLED`; intake always stores its durable
+ * outbox row. The injected shared client resolves temporary workload credentials
+ * on demand, including local SSO. Authentication failures remain retryable
+ * delivery failures; no application key can substitute for the workload.
+
  */
 
 import {
@@ -36,9 +33,10 @@ import {
 import config from '../../config';
 import { logger } from '../../middlewares/logging';
 
-/** The client, or `undefined` where this deployment cannot authenticate. */
+/** The shared workload client. Its request verifies the current identity. */
 export function getCrowdSourceClient(): CrowdSource | undefined {
   return crowdSourceForOxyService({
+    oxy: oxyService,
     ...(config.crowdSource.baseUrl === undefined ? {} : { baseUrl: config.crowdSource.baseUrl }),
     logger: {
       info: (message, context) => logger.info(message, context),

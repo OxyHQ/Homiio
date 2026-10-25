@@ -8,10 +8,10 @@
  * each is a PRIVATE file in the uploader's own Oxy account:
  *
  * - **Stored** with `uploadUserMediaLarge(owner, bytes, { visibility:
- *   'private' })` (`files:user-media:write`). Private never reaches `public/`
+ *   'private' })` with the original requester proof. Private never reaches `public/`
  *   or the CDN, and because Homiio stored it FOR the person, Oxy records their
  *   consent for Homiio to read it back. The row keeps `oxy:<fileId>` as the ref.
- * - **Read** with `linkedDownloadUrls([fileId])` (`files:linked:read`), fetched
+ * - **Read** with `linkedDownloadUrls([fileId])` under the stored resource entitlement, fetched
  *   here and handed to the caller as bytes — the short-lived URL never leaves
  *   the server. Oxy omits a file the person revoked Homiio's access to, trashed
  *   or that was taken down: absence is the refusal, and the caller's 404.
@@ -52,6 +52,7 @@
 import { createHash } from 'node:crypto';
 
 import sharp from 'sharp';
+import { personalDocumentFiles, type DocumentRequester } from './requester';
 
 import { AppError } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
@@ -63,6 +64,7 @@ import { downloadLinked, oxyErrorCode, oxyErrorStatus, oxyFiles } from './oxyFil
 export interface PrivateDocumentOwner {
   /** The person who uploaded it: the owner of the Oxy file. */
   ownerOxyUserId: string;
+  requester?: DocumentRequester;
   /** The entity that uses it (the reference's `entityType`). */
   kind: 'lease' | 'tenant_application' | 'maintenance_request';
   /**
@@ -261,7 +263,10 @@ async function storeInOxy(
   for (;;) {
     let answer: Awaited<ReturnType<ReturnType<typeof oxyFiles>['uploadUserMediaLarge']>>;
     try {
-      answer = await oxyFiles().uploadUserMediaLarge(owner.ownerOxyUserId, new Uint8Array(bytes), {
+      answer = await personalDocumentFiles(
+        owner.requester,
+        owner.ownerOxyUserId,
+      ).uploadUserMediaLarge(owner.ownerOxyUserId, new Uint8Array(bytes), {
         mime: contentType,
         visibility: 'private',
         filename: `${owner.kind}${extension}`,

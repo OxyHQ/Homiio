@@ -7,14 +7,24 @@ booking or an exchange — and asks for something *before* any code:
 > capacidad estable aplicable, con un adaptador claro; no asumir que la bandeja
 > de notificaciones o el chat con Sindi ya son mensajes entre particulares.*
 
-This page is that audit. Everything in it was read out of the repositories on
+This page preserves that audit. Its original findings were read out of the repositories on
 2026-09-19 and each claim names the file it came from, because the whole point
 of the exercise is to stop "there is no messaging platform" and "just use the
 messaging platform" from both being assertions nobody checked.
 
-**The short answer: the capability exists, it is good, and it is not consumable
-from this repository today.** Three specific things have to be decided by a
-person before Homiio writes a line of messaging code. They are in §5.
+**Current status (2026-10-25):** `@oxy.so/allo-sdk`0.4 and
+`@oxy.so/homiio-sdk`0.2 are published. [Case-team chat](./team-chat) uses their
+resource capabilities and preserves account membership, operation checks and
+client-held MLS keys. The [rollout contract](./first-party-team-rollout) records
+the receiver order and actual compatibility checks. SDK publication is no longer
+a blanket blocker to integration, but it does not expose the private headless
+`@allo/core`/React packages or activate generic landlord messaging. The
+[parity matrix](./housing-parity) still marks that feature blocked; its product
+and encryption requirements must be implemented before adding the button.
+
+The sections below describe the 2026-09-19 evidence, not the current SDK release
+state. Their design questions remain relevant to generic landlord messaging;
+they do not prohibit the case-team integration already documented above.
 
 ---
 
@@ -57,16 +67,16 @@ instance belongs to: `allo`, `mention`, …"*, and a DM is keyed
 different conversation from the same two people's personal Allo thread. The
 design anticipated exactly this.
 
-## 3. Why it cannot be adopted this week
+## 3. Adoption findings at the audit date
 
-### 3.1 The SDK is not published
+### 3.1 The private client packages observed then
 
 `@allo/core`, `@allo/react` and `@allo/shared-types` are each
 `"private": true`, and all three answer **404** on the public registry. Homiio
 has no private registry configured (`bunfig.toml`, `.npmrc`), and `@oxy.so/*`
 comes from public npm.
 
-There is no import path from this repository to that SDK. Publishing it — or
+At that date there was no import path from this repository to those client packages. Publishing them — or
 extracting a client — is work in the Allo repo, and it is not a formality: the
 Metro configuration alone needs the `@hpke/*` ESM mapping and the `ts-mls`
 optional-peer aliases Allo's `metro.config.js` documents, or the static-render

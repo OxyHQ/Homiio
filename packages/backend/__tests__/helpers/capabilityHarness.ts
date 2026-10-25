@@ -76,7 +76,9 @@ export async function callTool(
   const tool = HOMIIO_CAPABILITY_CATALOG.tools.find((entry) => entry.name === name);
   const handler = HOMIIO_INVOCATION_HANDLERS[name];
   if (!tool || !handler) throw new Error(`No catalogue tool named ${name}`);
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    authorization: `Bearer fixture-${options.lane ?? 'oauth'}-${accountId}`,
+  };
   if (options.idempotencyKey !== undefined) headers['idempotency-key'] = options.idempotencyKey;
   const context = {
     appId: 'homiio',

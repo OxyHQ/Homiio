@@ -1,3 +1,4 @@
+import type { DocumentRequester } from '../services/files/requester';
 /**
  * Repair requests (#518 §7.1, #519 §7.1) — the use cases behind
  * `/api/maintenance` and the catalogue's maintenance tools.
@@ -303,6 +304,7 @@ export async function attachMaintenancePhoto(
   oxyUserId: string,
   requestId: string,
   file: { readonly buffer: Buffer; readonly mimetype: string } | undefined,
+  requester?: DocumentRequester,
 ) {
   if (!file) throw new AppError('A photo is required', 400, 'VALIDATION_ERROR');
 
@@ -317,7 +319,7 @@ export async function attachMaintenancePhoto(
   }
 
   const stored = await storePrivateImage(
-    { ownerOxyUserId: oxyUserId, kind: 'maintenance_request', entityId: requestId },
+    { ownerOxyUserId: oxyUserId, kind: 'maintenance_request', entityId: requestId, requester },
     file.buffer,
   );
 

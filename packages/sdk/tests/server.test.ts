@@ -1,6 +1,6 @@
 import { afterAll, expect, it } from 'bun:test';
 import { OxyServer } from '@oxy.so/core/server';
-import { homiioTeamForOxyService, SERVICE_AUDIENCE } from '../../packages/sdk/dist/server.js';
+import { homiioTeamForOxyService, SERVICE_AUDIENCE } from '../dist/server.js';
 
 const requests: Request[] = [];
 const TOKEN = `e30.${Buffer.from(JSON.stringify({ type: 'service', authority: 'first_party', exp: Math.floor(Date.now() / 1000) + 300 })).toString('base64url')}.signature`;

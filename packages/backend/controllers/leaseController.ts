@@ -1,3 +1,4 @@
+import { sessionFileRequester } from '../services/files/requester';
 /**
  * Lease Controller — the HTTP adapter over `domain/leases.ts` and the
  * obligation half of `domain/payments.ts`.
@@ -197,6 +198,7 @@ class LeaseController {
       const file = (req as unknown as { file?: UploadedLeaseDocumentFile }).file;
       const document = await uploadLeaseDocument(oxyUserId, req.params.id, {
         file,
+        requester: sessionFileRequester(req),
         type: req.body?.type,
         name: req.body?.name,
       });

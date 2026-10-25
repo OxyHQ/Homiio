@@ -1,3 +1,4 @@
+import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
 /**
  * Lease tools, through the wrapped handlers both MCP lanes call, against the
  * REAL Postgres.
@@ -230,6 +231,13 @@ describe('documents', () => {
       contentBase64: pdf.toString('base64'),
     });
     expect(uploaded.isError).toBe(false);
+    expect(fakeOxyFiles.callsOf('withMcpDocumentRequester')).toContainEqual([
+      {
+        connectionToken: `fixture-oauth-${TENANT}`,
+        tool: 'uploadLeaseDocument',
+        accountId: TENANT,
+      },
+    ]);
     const document = uploaded.structuredContent.data as { id: string; url?: string };
     expect(document.url).toBeUndefined();
 
@@ -257,4 +265,23 @@ describe('documents', () => {
       await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, id)),
     ).toHaveLength(0);
   });
+});
+
+test('forwards an own execution ticket to Files without substituting the account owner', async () => {
+  const leaseId = await seedLease();
+  const result = await callTool(
+    'uploadLeaseDocument',
+    TENANT,
+    {
+      leaseId,
+      filename: 'agreement.pdf',
+      mimeType: 'application/pdf',
+      contentBase64: Buffer.from('%PDF-1.7\nown task agreement').toString('base64'),
+    },
+    { lane: 'capability' },
+  );
+  expect(result.isError).toBe(false);
+  expect(fakeOxyFiles.callsOf('withRequester')).toContainEqual([
+    { capabilityTicket: `fixture-capability-${TENANT}`, accountId: TENANT },
+  ]);
 });
