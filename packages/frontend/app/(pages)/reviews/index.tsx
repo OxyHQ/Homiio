@@ -11,7 +11,9 @@ import { useTranslation } from 'react-i18next';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
-import { RiAlertLine, RiEditBoxLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiEditBoxLine } from '@oxy.so/bloom/icons/RiEditBoxLine';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as Skeleton from '@oxy.so/bloom/skeleton';

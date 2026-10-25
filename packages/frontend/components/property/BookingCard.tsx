@@ -33,7 +33,7 @@ import { useOxy } from '@oxy.so/services/ui/client';
 import { BookingCard as BloomBookingCard } from '@oxy.so/bloom/booking';
 import { LinkButton } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
-import { RiFlagLine } from '@oxy.so/bloom/icons';
+import { RiFlagLine } from '@oxy.so/bloom/icons/RiFlagLine';
 import {
   RentalActionCard,
   SaleActionCard,

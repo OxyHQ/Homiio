@@ -14,26 +14,24 @@ import Constants from 'expo-constants';
 import { toast } from '@oxy.so/bloom/toast';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
-import {
-  RiChat3Line,
-  RiCodeSSlashLine,
-  RiDeleteBinLine,
-  RiDownloadLine,
-  RiEyeOffLine,
-  RiFolderLine,
-  RiGlobalLine,
-  RiCoinsLine,
-  RiPaletteLine,
-  RiLogoutBoxRLine,
-  RiNotification3Line,
-  RiEqualizerLine,
-  RiQuestionLine,
-  RiRefreshLine,
-  RiSmartphoneLine,
-  RiStarLine,
-  RiUserLine,
-  RiWrenchLine,
-} from '@oxy.so/bloom/icons';
+import { RiChat3Line } from '@oxy.so/bloom/icons/RiChat3Line';
+import { RiCodeSSlashLine } from '@oxy.so/bloom/icons/RiCodeSSlashLine';
+import { RiDeleteBinLine } from '@oxy.so/bloom/icons/RiDeleteBinLine';
+import { RiDownloadLine } from '@oxy.so/bloom/icons/RiDownloadLine';
+import { RiEyeOffLine } from '@oxy.so/bloom/icons/RiEyeOffLine';
+import { RiFolderLine } from '@oxy.so/bloom/icons/RiFolderLine';
+import { RiGlobalLine } from '@oxy.so/bloom/icons/RiGlobalLine';
+import { RiCoinsLine } from '@oxy.so/bloom/icons/RiCoinsLine';
+import { RiPaletteLine } from '@oxy.so/bloom/icons/RiPaletteLine';
+import { RiLogoutBoxRLine } from '@oxy.so/bloom/icons/RiLogoutBoxRLine';
+import { RiNotification3Line } from '@oxy.so/bloom/icons/RiNotification3Line';
+import { RiEqualizerLine } from '@oxy.so/bloom/icons/RiEqualizerLine';
+import { RiQuestionLine } from '@oxy.so/bloom/icons/RiQuestionLine';
+import { RiRefreshLine } from '@oxy.so/bloom/icons/RiRefreshLine';
+import { RiSmartphoneLine } from '@oxy.so/bloom/icons/RiSmartphoneLine';
+import { RiStarLine } from '@oxy.so/bloom/icons/RiStarLine';
+import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
+import { RiWrenchLine } from '@oxy.so/bloom/icons/RiWrenchLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Switch } from '@oxy.so/bloom/switch';

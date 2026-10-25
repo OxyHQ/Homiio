@@ -17,13 +17,11 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import {
-  RiDiscussLine,
-  RiEditBoxLine,
-  RiEditLine,
-  RiExternalLinkLine,
-  RiStarFill,
-} from '@oxy.so/bloom/icons';
+import { RiDiscussLine } from '@oxy.so/bloom/icons/RiDiscussLine';
+import { RiEditBoxLine } from '@oxy.so/bloom/icons/RiEditBoxLine';
+import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
+import { RiExternalLinkLine } from '@oxy.so/bloom/icons/RiExternalLinkLine';
+import { RiStarFill } from '@oxy.so/bloom/icons/RiStarFill';
 import {
   SegmentedControl,
   SegmentedControlItem,

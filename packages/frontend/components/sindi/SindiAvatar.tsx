@@ -9,7 +9,7 @@
 
 import type React from 'react';
 import { AgentAvatar } from '@oxy.so/bloom/agent-avatar';
-import { RiSparkling2Line } from '@oxy.so/bloom/icons';
+import { RiSparkling2Line } from '@oxy.so/bloom/icons/RiSparkling2Line';
 import { readAgentCharacter } from '@alia.onl/sdk';
 import { useAgentProfile } from '@alia.onl/sdk/runtime';
 

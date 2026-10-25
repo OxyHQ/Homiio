@@ -36,7 +36,7 @@ import { AlertExplanationText } from '@/components/watches/AlertExplanationText'
 import { useAlertReason } from '@/hooks/useHousingAlerts';
 import { contentClamp, spacing } from '@/constants/styles';
 import { useFormatting } from '@/utils/format';
-import { RiQuestionLine } from '@oxy.so/bloom/icons';
+import { RiQuestionLine } from '@oxy.so/bloom/icons/RiQuestionLine';
 
 export default function AlertReasonScreen() {
   const { t } = useTranslation();

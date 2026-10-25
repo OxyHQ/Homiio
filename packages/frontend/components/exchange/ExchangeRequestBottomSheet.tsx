@@ -6,7 +6,9 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Dialog } from '@oxy.so/bloom/dialog';
-import { RiArrowLeftRightLine, RiCalendarLine, RiHotelBedLine } from '@oxy.so/bloom/icons';
+import { RiArrowLeftRightLine } from '@oxy.so/bloom/icons/RiArrowLeftRightLine';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import {
   SegmentedControl,

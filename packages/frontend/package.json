@@ -23,7 +23,7 @@
     "clean": "rm -rf dist .expo"
   },
   "dependencies": {
-    "@alia.onl/sdk": "^21.5.0",
+    "@alia.onl/sdk": "22.0.0",
     "@bitdrift/react-native": "^0.14.1",
     "@expo/app-integrity": "~58.0.2",
     "@expo/vector-icons": "^15.1.1",
@@ -32,7 +32,7 @@
     "@homiio/shared-types": "workspace:*",
     "@maplibre/maplibre-react-native": "^11.4.0",
     "@oxy.so/app-preset": "^4.1.0",
-    "@oxy.so/bloom": "15.0.0",
+    "@oxy.so/bloom": "15.53.0",
     "@oxy.so/core": "7.1.0",
     "@oxy.so/expo-splash": "^1.1.0",
     "@oxy.so/homiio-contracts": "workspace:*",
@@ -87,7 +87,6 @@
     "react-native-css": "3.1.0-rc.0",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-keyboard-controller": "1.22.7",
-    "react-native-popup-menu": "^0.19.0",
     "react-native-qrcode-svg": "^6.3.26",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",

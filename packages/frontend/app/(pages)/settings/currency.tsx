@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { toast } from '@oxy.so/bloom/toast';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
-import { RiCheckLine } from '@oxy.so/bloom/icons';
+import { RiCheckLine } from '@oxy.so/bloom/icons/RiCheckLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';

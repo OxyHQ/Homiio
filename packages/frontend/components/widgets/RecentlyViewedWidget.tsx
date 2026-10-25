@@ -15,7 +15,8 @@ import { router } from 'expo-router';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Carousel, CarouselItem } from '@oxy.so/bloom/carousel';
-import { RiArrowRightSLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import type { Property } from '@homiio/shared-types';

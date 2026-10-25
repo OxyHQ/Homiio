@@ -21,14 +21,12 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
 import { Button } from '@oxy.so/bloom/button';
-import {
-  RiAddLine,
-  RiCalendarLine,
-  RiCheckboxCircleLine,
-  RiDeleteBinLine,
-  RiEditLine,
-  RiHomeLine,
-} from '@oxy.so/bloom/icons';
+import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiCheckboxCircleLine } from '@oxy.so/bloom/icons/RiCheckboxCircleLine';
+import { RiDeleteBinLine } from '@oxy.so/bloom/icons/RiDeleteBinLine';
+import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 

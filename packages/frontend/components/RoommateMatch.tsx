@@ -12,14 +12,12 @@ import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
-import {
-  RiCalendarLine,
-  RiEyeLine,
-  RiHomeLine,
-  RiSendPlaneLine,
-  RiUserAddLine,
-  RiWallet3Line,
-} from '@oxy.so/bloom/icons';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiEyeLine } from '@oxy.so/bloom/icons/RiEyeLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiSendPlaneLine } from '@oxy.so/bloom/icons/RiSendPlaneLine';
+import { RiUserAddLine } from '@oxy.so/bloom/icons/RiUserAddLine';
+import { RiWallet3Line } from '@oxy.so/bloom/icons/RiWallet3Line';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';

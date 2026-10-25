@@ -15,18 +15,16 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
-import {
-  RiBankCardLine,
-  RiChat3Fill,
-  RiChat4Fill,
-  RiDeleteBinLine,
-  RiFilePaper2Line,
-  RiGroupFill,
-  RiHome5Fill,
-  RiMegaphoneLine,
-  RiNotification3Fill,
-  RiQuestionLine,
-} from '@oxy.so/bloom/icons';
+import { RiBankCardLine } from '@oxy.so/bloom/icons/RiBankCardLine';
+import { RiChat3Fill } from '@oxy.so/bloom/icons/RiChat3Fill';
+import { RiChat4Fill } from '@oxy.so/bloom/icons/RiChat4Fill';
+import { RiDeleteBinLine } from '@oxy.so/bloom/icons/RiDeleteBinLine';
+import { RiFilePaper2Line } from '@oxy.so/bloom/icons/RiFilePaper2Line';
+import { RiGroupFill } from '@oxy.so/bloom/icons/RiGroupFill';
+import { RiHome5Fill } from '@oxy.so/bloom/icons/RiHome5Fill';
+import { RiMegaphoneLine } from '@oxy.so/bloom/icons/RiMegaphoneLine';
+import { RiNotification3Fill } from '@oxy.so/bloom/icons/RiNotification3Fill';
+import { RiQuestionLine } from '@oxy.so/bloom/icons/RiQuestionLine';
 import { Item } from '@oxy.so/bloom/item';
 import { useTheme, type ThemeColors } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

@@ -35,7 +35,9 @@ import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { useMyExchangeRequests, useUpdateExchangeStatus } from '@/hooks/useExchangeQueries';
 import { toast } from '@oxy.so/bloom/toast';
 import { spacing } from '@/constants/styles';
-import { RiAlertLine, RiArrowLeftRightLine, RiLoginBoxLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiArrowLeftRightLine } from '@oxy.so/bloom/icons/RiArrowLeftRightLine';
+import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
 
 type RoleView = 'guest' | 'host';
 type StatusFilter = 'all' | ExchangeRequestStatus;

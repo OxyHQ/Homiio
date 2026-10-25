@@ -14,7 +14,8 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { isThisWeek, isToday } from 'date-fns';
+import { isThisWeek } from 'date-fns/isThisWeek';
+import { isToday } from 'date-fns/isToday';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
@@ -35,7 +36,9 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { useMyApplications } from '@/hooks/useApplicationQueries';
 import { spacing, tracker } from '@/constants/styles';
-import { RiFileTextLine, RiLoginBoxLine, RiSearchLine } from '@oxy.so/bloom/icons';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
+import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
 
 type Filter = 'all' | 'active' | 'decided' | 'withdrawn';
 

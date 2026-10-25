@@ -35,7 +35,8 @@ import { useProfile } from '@/context/ProfileContext';
 import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
 import { spacing } from '@/constants/styles';
-import { RiAccountCircleLine, RiUserLine } from '@oxy.so/bloom/icons';
+import { RiAccountCircleLine } from '@oxy.so/bloom/icons/RiAccountCircleLine';
+import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
 
 type LifestyleChoice = 'yes' | 'no' | 'prefer_not';
 type Cleanliness = 'very_clean' | 'clean' | 'average' | 'relaxed';

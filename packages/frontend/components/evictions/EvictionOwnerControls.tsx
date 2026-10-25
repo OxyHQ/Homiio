@@ -18,7 +18,8 @@ import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
 import { DatePicker, TimeField } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
-import { RiCloseCircleLine, RiEditLine } from '@oxy.so/bloom/icons';
+import { RiCloseCircleLine } from '@oxy.so/bloom/icons/RiCloseCircleLine';
+import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { H3 } from '@oxy.so/bloom/typography';
 

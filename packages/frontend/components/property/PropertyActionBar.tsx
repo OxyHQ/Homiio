@@ -26,7 +26,7 @@ import type React from 'react';
 import { Platform, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { RiPhoneLine } from '@oxy.so/bloom/icons';
+import { RiPhoneLine } from '@oxy.so/bloom/icons/RiPhoneLine';
 import { ActionBar, type ActionBarProps } from '@oxy.so/bloom/listing-actions';
 import { HousingType, type Property } from '@homiio/shared-types';
 

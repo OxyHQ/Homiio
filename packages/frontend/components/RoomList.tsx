@@ -8,14 +8,12 @@ import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
 import { Dialog } from '@oxy.so/bloom/dialog';
-import {
-  RiEqualizerLine,
-  RiExpandDiagonalSLine,
-  RiFilterLine,
-  RiGroupLine,
-  RiHotelBedLine,
-  RiImageLine,
-} from '@oxy.so/bloom/icons';
+import { RiEqualizerLine } from '@oxy.so/bloom/icons/RiEqualizerLine';
+import { RiExpandDiagonalSLine } from '@oxy.so/bloom/icons/RiExpandDiagonalSLine';
+import { RiFilterLine } from '@oxy.so/bloom/icons/RiFilterLine';
+import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
+import { RiImageLine } from '@oxy.so/bloom/icons/RiImageLine';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Search } from '@oxy.so/bloom/search';
 import { useTheme } from '@oxy.so/bloom/theme';

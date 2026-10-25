@@ -19,14 +19,12 @@ import { toast } from '@oxy.so/bloom/toast';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import { radius, spacing } from '@/constants/styles';
-import {
-  RiArrowDownSLine,
-  RiArrowUpSLine,
-  RiErrorWarningFill,
-  RiFeedbackLine,
-  RiFileCopyLine,
-  RiRefreshLine,
-} from '@oxy.so/bloom/icons';
+import { RiArrowDownSLine } from '@oxy.so/bloom/icons/RiArrowDownSLine';
+import { RiArrowUpSLine } from '@oxy.so/bloom/icons/RiArrowUpSLine';
+import { RiErrorWarningFill } from '@oxy.so/bloom/icons/RiErrorWarningFill';
+import { RiFeedbackLine } from '@oxy.so/bloom/icons/RiFeedbackLine';
+import { RiFileCopyLine } from '@oxy.so/bloom/icons/RiFileCopyLine';
+import { RiRefreshLine } from '@oxy.so/bloom/icons/RiRefreshLine';
 
 interface Props {
   children: ReactNode;

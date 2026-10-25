@@ -17,7 +17,8 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ExploreList, ExploreRow } from '@/components/reviews/ExploreRow';
 import { useExploreCity } from '@/hooks/useExploreReviews';
 import { radius, spacing } from '@/constants/styles';
-import { RiAlertLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 
 export default function ReviewExploreCityScreen() {
   const router = useRouter();

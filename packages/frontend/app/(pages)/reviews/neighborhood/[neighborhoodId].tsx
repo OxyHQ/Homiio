@@ -19,7 +19,8 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ExploreList, ExploreRow } from '@/components/reviews/ExploreRow';
 import { useExploreNeighborhood } from '@/hooks/useExploreReviews';
 import { radius, spacing } from '@/constants/styles';
-import { RiAlertLine, RiBuilding2Line } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
 
 export default function ReviewExploreNeighborhoodScreen() {
   const router = useRouter();

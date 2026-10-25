@@ -7,7 +7,7 @@ import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
-import { RiArrowLeftLine } from '@oxy.so/bloom/icons';
+import { RiArrowLeftLine } from '@oxy.so/bloom/icons/RiArrowLeftLine';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';

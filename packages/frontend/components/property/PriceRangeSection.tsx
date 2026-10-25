@@ -35,7 +35,7 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { BarListCard, type BarListItem } from '@oxy.so/bloom/chart-cards';
-import { RiHome5Fill } from '@oxy.so/bloom/icons';
+import { RiHome5Fill } from '@oxy.so/bloom/icons/RiHome5Fill';
 import {
   PriceEstimate,
   PricePerAreaComparison,

@@ -7,7 +7,9 @@ import { useCallback } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { RiExternalLinkLine, RiMailLine, RiPhoneLine } from '@oxy.so/bloom/icons';
+import { RiExternalLinkLine } from '@oxy.so/bloom/icons/RiExternalLinkLine';
+import { RiMailLine } from '@oxy.so/bloom/icons/RiMailLine';
+import { RiPhoneLine } from '@oxy.so/bloom/icons/RiPhoneLine';
 import { Item } from '@oxy.so/bloom/item';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

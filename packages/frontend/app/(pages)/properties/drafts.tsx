@@ -20,22 +20,20 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
-import {
-  RiAddCircleLine,
-  RiAddLine,
-  RiBuilding2Line,
-  RiDeleteBinLine,
-  RiEditLine,
-  RiFolderOpenLine,
-  RiGroupLine,
-  RiHomeLine,
-  RiHotelBedLine,
-  RiLeafLine,
-  RiMoreFill,
-  RiSaveLine,
-  RiTeamLine,
-  RiTimeLine,
-} from '@oxy.so/bloom/icons';
+import { RiAddCircleLine } from '@oxy.so/bloom/icons/RiAddCircleLine';
+import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
+import { RiDeleteBinLine } from '@oxy.so/bloom/icons/RiDeleteBinLine';
+import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
+import { RiFolderOpenLine } from '@oxy.so/bloom/icons/RiFolderOpenLine';
+import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
+import { RiLeafLine } from '@oxy.so/bloom/icons/RiLeafLine';
+import { RiMoreFill } from '@oxy.so/bloom/icons/RiMoreFill';
+import { RiSaveLine } from '@oxy.so/bloom/icons/RiSaveLine';
+import { RiTeamLine } from '@oxy.so/bloom/icons/RiTeamLine';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H4, Text as BloomText } from '@oxy.so/bloom/typography';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';

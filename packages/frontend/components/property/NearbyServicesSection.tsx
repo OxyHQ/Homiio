@@ -26,20 +26,18 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import {
-  RiBankLine,
-  RiCapsuleFill,
-  RiFireLine,
-  RiFlowerLine,
-  RiHeartPulseLine,
-  RiRestaurantLine,
-  RiRouteLine,
-  RiSchoolLine,
-  RiSeedlingLine,
-  RiShieldLine,
-  RiShoppingBasketLine,
-  RiStethoscopeLine,
-} from '@oxy.so/bloom/icons';
+import { RiBankLine } from '@oxy.so/bloom/icons/RiBankLine';
+import { RiCapsuleFill } from '@oxy.so/bloom/icons/RiCapsuleFill';
+import { RiFireLine } from '@oxy.so/bloom/icons/RiFireLine';
+import { RiFlowerLine } from '@oxy.so/bloom/icons/RiFlowerLine';
+import { RiHeartPulseLine } from '@oxy.so/bloom/icons/RiHeartPulseLine';
+import { RiRestaurantLine } from '@oxy.so/bloom/icons/RiRestaurantLine';
+import { RiRouteLine } from '@oxy.so/bloom/icons/RiRouteLine';
+import { RiSchoolLine } from '@oxy.so/bloom/icons/RiSchoolLine';
+import { RiSeedlingLine } from '@oxy.so/bloom/icons/RiSeedlingLine';
+import { RiShieldLine } from '@oxy.so/bloom/icons/RiShieldLine';
+import { RiShoppingBasketLine } from '@oxy.so/bloom/icons/RiShoppingBasketLine';
+import { RiStethoscopeLine } from '@oxy.so/bloom/icons/RiStethoscopeLine';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

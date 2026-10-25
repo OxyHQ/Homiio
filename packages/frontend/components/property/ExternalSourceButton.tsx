@@ -10,7 +10,7 @@ import { useCallback } from 'react';
 import { Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
-import { RiExternalLinkLine } from '@oxy.so/bloom/icons';
+import { RiExternalLinkLine } from '@oxy.so/bloom/icons/RiExternalLinkLine';
 import { toast } from '@oxy.so/bloom/toast';
 import type { Property } from '@homiio/shared-types';
 

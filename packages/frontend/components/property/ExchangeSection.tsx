@@ -13,20 +13,19 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Divider } from '@oxy.so/bloom/divider';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import {
-  RiArrowLeftRightLine,
-  RiCalendarLine,
-  RiChat3Line,
-  RiGiftLine,
-  RiMoonLine,
-  RiRepeatLine,
-  RiRestaurantLine,
-} from '@oxy.so/bloom/icons';
+import { RiArrowLeftRightLine } from '@oxy.so/bloom/icons/RiArrowLeftRightLine';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiChat3Line } from '@oxy.so/bloom/icons/RiChat3Line';
+import { RiGiftLine } from '@oxy.so/bloom/icons/RiGiftLine';
+import { RiMoonLine } from '@oxy.so/bloom/icons/RiMoonLine';
+import { RiRepeatLine } from '@oxy.so/bloom/icons/RiRepeatLine';
+import { RiRestaurantLine } from '@oxy.so/bloom/icons/RiRestaurantLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import { ExchangeMode, type PropertyExchange } from '@homiio/shared-types';

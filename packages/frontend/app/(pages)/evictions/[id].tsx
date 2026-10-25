@@ -42,15 +42,13 @@ import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
 import { Card, CardTitle } from '@oxy.so/bloom/card';
 import { Divider } from '@oxy.so/bloom/divider';
-import {
-  RiAlertLine,
-  RiCheckboxCircleFill,
-  RiFlagLine,
-  RiMegaphoneLine,
-  RiNotification3Fill,
-  RiNotification3Line,
-  RiShare2Line,
-} from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiCheckboxCircleFill } from '@oxy.so/bloom/icons/RiCheckboxCircleFill';
+import { RiFlagLine } from '@oxy.so/bloom/icons/RiFlagLine';
+import { RiMegaphoneLine } from '@oxy.so/bloom/icons/RiMegaphoneLine';
+import { RiNotification3Fill } from '@oxy.so/bloom/icons/RiNotification3Fill';
+import { RiNotification3Line } from '@oxy.so/bloom/icons/RiNotification3Line';
+import { RiShare2Line } from '@oxy.so/bloom/icons/RiShare2Line';
 import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';

@@ -1,54 +1,52 @@
 import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 
-import {
-  RiAccessibilityLine,
-  RiArrowRightUpLine,
-  RiArrowUpCircleLine,
-  RiArrowUpLine,
-  RiBookOpenLine,
-  RiBox3Line,
-  RiBroadcastLine,
-  RiBuilding2Line,
-  RiCarLine,
-  RiChat3Line,
-  RiComputerLine,
-  RiDeleteBin6Line,
-  RiDeleteBinLine,
-  RiDropLine,
-  RiEmotionHappyLine,
-  RiEqualizerLine,
-  RiExpandDiagonalSLine,
-  RiFireLine,
-  RiFlowerLine,
-  RiGamepadLine,
-  RiGlobalLine,
-  RiGroupLine,
-  RiHand,
-  RiHeartLine,
-  RiHeartPulseLine,
-  RiHomeHeartLine,
-  RiHomeLine,
-  RiKey2Line,
-  RiLeafLine,
-  RiLightbulbLine,
-  RiLoopRightLine,
-  RiMacLine,
-  RiMailLine,
-  RiPlugLine,
-  RiPrinterLine,
-  RiRectangleLine,
-  RiRefreshLine,
-  RiRestaurantLine,
-  RiRouteLine,
-  RiShieldCheckLine,
-  RiShieldLine,
-  RiShoppingBag3Line,
-  RiSnowflakeLine,
-  RiSunFoggyLine,
-  RiSunLine,
-  RiVideoLine,
-  RiWalkLine,
-} from '@oxy.so/bloom/icons';
+import { RiAccessibilityLine } from '@oxy.so/bloom/icons/RiAccessibilityLine';
+import { RiArrowRightUpLine } from '@oxy.so/bloom/icons/RiArrowRightUpLine';
+import { RiArrowUpCircleLine } from '@oxy.so/bloom/icons/RiArrowUpCircleLine';
+import { RiArrowUpLine } from '@oxy.so/bloom/icons/RiArrowUpLine';
+import { RiBookOpenLine } from '@oxy.so/bloom/icons/RiBookOpenLine';
+import { RiBox3Line } from '@oxy.so/bloom/icons/RiBox3Line';
+import { RiBroadcastLine } from '@oxy.so/bloom/icons/RiBroadcastLine';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
+import { RiCarLine } from '@oxy.so/bloom/icons/RiCarLine';
+import { RiChat3Line } from '@oxy.so/bloom/icons/RiChat3Line';
+import { RiComputerLine } from '@oxy.so/bloom/icons/RiComputerLine';
+import { RiDeleteBin6Line } from '@oxy.so/bloom/icons/RiDeleteBin6Line';
+import { RiDeleteBinLine } from '@oxy.so/bloom/icons/RiDeleteBinLine';
+import { RiDropLine } from '@oxy.so/bloom/icons/RiDropLine';
+import { RiEmotionHappyLine } from '@oxy.so/bloom/icons/RiEmotionHappyLine';
+import { RiEqualizerLine } from '@oxy.so/bloom/icons/RiEqualizerLine';
+import { RiExpandDiagonalSLine } from '@oxy.so/bloom/icons/RiExpandDiagonalSLine';
+import { RiFireLine } from '@oxy.so/bloom/icons/RiFireLine';
+import { RiFlowerLine } from '@oxy.so/bloom/icons/RiFlowerLine';
+import { RiGamepadLine } from '@oxy.so/bloom/icons/RiGamepadLine';
+import { RiGlobalLine } from '@oxy.so/bloom/icons/RiGlobalLine';
+import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
+import { RiHand } from '@oxy.so/bloom/icons/RiHand';
+import { RiHeartLine } from '@oxy.so/bloom/icons/RiHeartLine';
+import { RiHeartPulseLine } from '@oxy.so/bloom/icons/RiHeartPulseLine';
+import { RiHomeHeartLine } from '@oxy.so/bloom/icons/RiHomeHeartLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiKey2Line } from '@oxy.so/bloom/icons/RiKey2Line';
+import { RiLeafLine } from '@oxy.so/bloom/icons/RiLeafLine';
+import { RiLightbulbLine } from '@oxy.so/bloom/icons/RiLightbulbLine';
+import { RiLoopRightLine } from '@oxy.so/bloom/icons/RiLoopRightLine';
+import { RiMacLine } from '@oxy.so/bloom/icons/RiMacLine';
+import { RiMailLine } from '@oxy.so/bloom/icons/RiMailLine';
+import { RiPlugLine } from '@oxy.so/bloom/icons/RiPlugLine';
+import { RiPrinterLine } from '@oxy.so/bloom/icons/RiPrinterLine';
+import { RiRectangleLine } from '@oxy.so/bloom/icons/RiRectangleLine';
+import { RiRefreshLine } from '@oxy.so/bloom/icons/RiRefreshLine';
+import { RiRestaurantLine } from '@oxy.so/bloom/icons/RiRestaurantLine';
+import { RiRouteLine } from '@oxy.so/bloom/icons/RiRouteLine';
+import { RiShieldCheckLine } from '@oxy.so/bloom/icons/RiShieldCheckLine';
+import { RiShieldLine } from '@oxy.so/bloom/icons/RiShieldLine';
+import { RiShoppingBag3Line } from '@oxy.so/bloom/icons/RiShoppingBag3Line';
+import { RiSnowflakeLine } from '@oxy.so/bloom/icons/RiSnowflakeLine';
+import { RiSunFoggyLine } from '@oxy.so/bloom/icons/RiSunFoggyLine';
+import { RiSunLine } from '@oxy.so/bloom/icons/RiSunLine';
+import { RiVideoLine } from '@oxy.so/bloom/icons/RiVideoLine';
+import { RiWalkLine } from '@oxy.so/bloom/icons/RiWalkLine';
 
 export interface Amenity {
   id: string;

@@ -23,7 +23,8 @@ import {
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
 import { Chip } from '@oxy.so/bloom/chip';
-import { RiCalendarLine, RiGlobalLine } from '@oxy.so/bloom/icons';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiGlobalLine } from '@oxy.so/bloom/icons/RiGlobalLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 

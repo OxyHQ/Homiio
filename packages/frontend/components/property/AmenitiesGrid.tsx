@@ -22,7 +22,7 @@ import { useCallback, useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AmenityList, type Amenity as ListedAmenity } from '@oxy.so/bloom/listing-details';
-import { RiCheckboxCircleLine } from '@oxy.so/bloom/icons';
+import { RiCheckboxCircleLine } from '@oxy.so/bloom/icons/RiCheckboxCircleLine';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';

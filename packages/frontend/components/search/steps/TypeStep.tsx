@@ -9,7 +9,10 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { RiBuilding2Line, RiDoorOpenLine, RiHome4Line, RiHotelBedLine } from '@oxy.so/bloom/icons';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
+import { RiDoorOpenLine } from '@oxy.so/bloom/icons/RiDoorOpenLine';
+import { RiHome4Line } from '@oxy.so/bloom/icons/RiHome4Line';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
 import { PropertyTypePicker } from '@oxy.so/bloom/home-search';
 import type { PropertyTypeOption } from '@oxy.so/bloom/stay-filters';
 

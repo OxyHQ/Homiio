@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Divider } from '@oxy.so/bloom/divider';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { RiArrowDownLine } from '@oxy.so/bloom/icons';
+import { RiArrowDownLine } from '@oxy.so/bloom/icons/RiArrowDownLine';
 import { Chip } from '@oxy.so/bloom/chip';
 import { useTheme } from '@oxy.so/bloom/theme';
 

@@ -15,7 +15,7 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Button } from '@oxy.so/bloom/button';
 import type { ButtonIconComponent } from '@oxy.so/bloom/button';
-import { RiErrorWarningFill } from '@oxy.so/bloom/icons';
+import { RiErrorWarningFill } from '@oxy.so/bloom/icons/RiErrorWarningFill';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 

@@ -16,7 +16,9 @@
  * / `notifications`) so the helper works outside React components too.
  */
 import i18next from 'i18next';
-import { format, formatDistanceToNowStrict, type Locale } from 'date-fns';
+import { format } from 'date-fns/format';
+import { formatDistanceToNowStrict } from 'date-fns/formatDistanceToNowStrict';
+import type { Locale } from 'date-fns';
 // One module per locale, never the `date-fns/locale` barrel: Metro does not
 // tree-shake, so the barrel ships every locale date-fns has (~90) to the
 // browser for the twelve Homiio speaks.

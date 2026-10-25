@@ -13,7 +13,7 @@ import type React from 'react';
 import { useCallback, useMemo } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { toast } from '@oxy.so/bloom/toast';
 import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
@@ -35,7 +35,7 @@ import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { radius, spacing, tracker } from '@/constants/styles';
-import { RiAlertLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
 
 const hoursUntil = (when: Date): number => {
   const now = Date.now();

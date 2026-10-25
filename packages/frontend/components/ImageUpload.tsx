@@ -24,7 +24,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@oxy.so/bloom/button';
-import { RiCameraLine } from '@oxy.so/bloom/icons';
+import { RiCameraLine } from '@oxy.so/bloom/icons/RiCameraLine';
 import { SortablePhotoGrid, type SortablePhoto } from '@oxy.so/bloom/sortable-media';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';

@@ -28,7 +28,7 @@ import { useAskAgent } from '@alia.onl/sdk';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
-import { RiVerifiedBadgeFill } from '@oxy.so/bloom/icons';
+import { RiVerifiedBadgeFill } from '@oxy.so/bloom/icons/RiVerifiedBadgeFill';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
 

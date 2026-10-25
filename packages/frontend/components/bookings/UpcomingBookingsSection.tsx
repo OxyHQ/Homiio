@@ -33,7 +33,9 @@ import { useTranslation } from 'react-i18next';
 
 import { Announcement } from '@oxy.so/bloom/announcement';
 import { Button } from '@oxy.so/bloom/button';
-import { RiAlertLine, RiArrowRightSLine, RiSuitcaseLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
+import { RiSuitcaseLine } from '@oxy.so/bloom/icons/RiSuitcaseLine';
 import { H3 } from '@oxy.so/bloom/typography';
 
 import { BookingTripCard } from '@/components/bookings/BookingTripCard';

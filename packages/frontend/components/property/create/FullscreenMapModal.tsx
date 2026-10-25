@@ -4,7 +4,7 @@ import { Modal, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@oxy.so/bloom/button';
-import { RiCloseLine } from '@oxy.so/bloom/icons';
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
 import { H4 } from '@oxy.so/bloom/typography';
 import { AddressPickerMap } from '@/components/map/AddressPickerMap';
 import { createPropertyStyles as styles } from './styles';

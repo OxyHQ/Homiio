@@ -38,7 +38,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 import { P } from '@oxy.so/bloom/typography';
 
 import type { LocationScope } from '@/hooks/useLocationScope';

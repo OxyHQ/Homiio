@@ -10,7 +10,8 @@ import type React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Fab } from '@oxy.so/bloom/fab';
-import { RiListUnordered, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiListUnordered } from '@oxy.so/bloom/icons/RiListUnordered';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 
 interface MapFabProps {
   onPress: () => void;

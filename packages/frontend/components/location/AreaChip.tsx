@@ -18,7 +18,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Chip } from '@oxy.so/bloom/chip';
 import { Dialog } from '@oxy.so/bloom/dialog';
-import { RiArrowDownSLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiArrowDownSLine } from '@oxy.so/bloom/icons/RiArrowDownSLine';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import type { LocationSelection } from '@homiio/shared-types';

@@ -5,7 +5,8 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { RiArrowLeftRightLine, RiHotelBedLine } from '@oxy.so/bloom/icons';
+import { RiArrowLeftRightLine } from '@oxy.so/bloom/icons/RiArrowLeftRightLine';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { ExchangeMode, type ExchangeRequest } from '@homiio/shared-types';
 

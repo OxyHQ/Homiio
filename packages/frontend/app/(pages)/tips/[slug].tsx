@@ -15,13 +15,11 @@ import { Image } from 'expo-image';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
-import {
-  RiCalendarLine,
-  RiFileTextLine,
-  RiNewspaperLine,
-  RiTimeLine,
-  RiUserLine,
-} from '@oxy.so/bloom/icons';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiNewspaperLine } from '@oxy.so/bloom/icons/RiNewspaperLine';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
+import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';

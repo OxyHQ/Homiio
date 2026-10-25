@@ -32,15 +32,13 @@ import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import {
-  RiAccountCircleLine,
-  RiCalendarLine,
-  RiHeartFill,
-  RiHeartLine,
-  RiHomeLine,
-  RiShapesLine,
-  RiShare2Line,
-} from '@oxy.so/bloom/icons';
+import { RiAccountCircleLine } from '@oxy.so/bloom/icons/RiAccountCircleLine';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiHeartFill } from '@oxy.so/bloom/icons/RiHeartFill';
+import { RiHeartLine } from '@oxy.so/bloom/icons/RiHeartLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiShapesLine } from '@oxy.so/bloom/icons/RiShapesLine';
+import { RiShare2Line } from '@oxy.so/bloom/icons/RiShare2Line';
 import { BookingBar } from '@oxy.so/bloom/booking';
 import {
   ListingHeader,
