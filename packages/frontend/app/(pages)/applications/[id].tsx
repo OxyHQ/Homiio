@@ -23,7 +23,9 @@ import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { toast } from '@oxy.so/bloom/toast';
 import { useTheme } from '@oxy.so/bloom/theme';
-import { RiAlertLine, RiCloseLine, RiEditLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
+import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';

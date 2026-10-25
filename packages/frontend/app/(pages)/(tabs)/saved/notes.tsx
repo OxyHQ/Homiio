@@ -16,14 +16,12 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Dialog } from '@oxy.so/bloom/dialog';
-import {
-  RiArchiveLine,
-  RiArrowRightSLine,
-  RiDeleteBinLine,
-  RiFileTextLine,
-  RiPushpinFill,
-  RiPushpinLine,
-} from '@oxy.so/bloom/icons';
+import { RiArchiveLine } from '@oxy.so/bloom/icons/RiArchiveLine';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
+import { RiDeleteBinLine } from '@oxy.so/bloom/icons/RiDeleteBinLine';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiPushpinFill } from '@oxy.so/bloom/icons/RiPushpinFill';
+import { RiPushpinLine } from '@oxy.so/bloom/icons/RiPushpinLine';
 import { Item } from '@oxy.so/bloom/item';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';

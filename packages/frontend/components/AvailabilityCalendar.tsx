@@ -13,14 +13,12 @@
 import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import {
-  addMonths,
-  differenceInCalendarDays,
-  eachDayOfInterval,
-  isSameDay,
-  parseISO,
-  startOfDay,
-} from 'date-fns';
+import { addMonths } from 'date-fns/addMonths';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { eachDayOfInterval } from 'date-fns/eachDayOfInterval';
+import { isSameDay } from 'date-fns/isSameDay';
+import { parseISO } from 'date-fns/parseISO';
+import { startOfDay } from 'date-fns/startOfDay';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { Calendar, RangeCalendar, type DateRange } from '@oxy.so/bloom/date-picker';

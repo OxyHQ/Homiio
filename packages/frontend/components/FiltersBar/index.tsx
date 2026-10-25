@@ -22,7 +22,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@oxy.so/bloom/dropdown-menu';
-import { RiExpandUpDownLine } from '@oxy.so/bloom/icons';
+import { RiExpandUpDownLine } from '@oxy.so/bloom/icons/RiExpandUpDownLine';
 import {
   CountFilter,
   FilterFooter,

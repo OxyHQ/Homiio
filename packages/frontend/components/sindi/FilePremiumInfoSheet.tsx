@@ -3,7 +3,9 @@ import { StyleSheet, View } from 'react-native';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { IconCircle } from '@oxy.so/bloom/icon-circle';
-import { RiCheckboxCircleFill, RiLockLine, RiStarLine } from '@oxy.so/bloom/icons';
+import { RiCheckboxCircleFill } from '@oxy.so/bloom/icons/RiCheckboxCircleFill';
+import { RiLockLine } from '@oxy.so/bloom/icons/RiLockLine';
+import { RiStarLine } from '@oxy.so/bloom/icons/RiStarLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text } from '@oxy.so/bloom/typography';
 

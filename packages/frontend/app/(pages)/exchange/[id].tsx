@@ -17,10 +17,13 @@ import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import { parseISO } from 'date-fns';
+import { parseISO } from 'date-fns/parseISO';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiAlertLine, RiCheckLine, RiCloseCircleLine, RiCloseLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiCheckLine } from '@oxy.so/bloom/icons/RiCheckLine';
+import { RiCloseCircleLine } from '@oxy.so/bloom/icons/RiCloseCircleLine';
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';

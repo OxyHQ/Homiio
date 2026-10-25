@@ -23,7 +23,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Card } from '@oxy.so/bloom/card';
-import { RiHotelBedLine } from '@oxy.so/bloom/icons';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 

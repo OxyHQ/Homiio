@@ -32,7 +32,7 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiAddLine } from '@oxy.so/bloom/icons';
+import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
 import { MaintenanceRequestCard } from '@oxy.so/bloom/tenancy';
 import { toast } from '@oxy.so/bloom/toast';
 import { P } from '@oxy.so/bloom/typography';

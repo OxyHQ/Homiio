@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
-import { RiSearchLine } from '@oxy.so/bloom/icons';
+import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
 import { Search } from '@oxy.so/bloom/search';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';

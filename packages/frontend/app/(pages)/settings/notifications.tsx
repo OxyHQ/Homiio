@@ -18,22 +18,20 @@ import {
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
-import {
-  RiBankCardLine,
-  RiChat3Line,
-  RiCheckboxCircleFill,
-  RiDeleteBinLine,
-  RiFileTextLine,
-  RiHomeLine,
-  RiInformationLine,
-  RiMegaphoneLine,
-  RiNotification3Line,
-  RiRepeatLine,
-  RiSettings3Line,
-  RiSmartphoneLine,
-  RiTimeLine,
-  RiVolumeUpLine,
-} from '@oxy.so/bloom/icons';
+import { RiBankCardLine } from '@oxy.so/bloom/icons/RiBankCardLine';
+import { RiChat3Line } from '@oxy.so/bloom/icons/RiChat3Line';
+import { RiCheckboxCircleFill } from '@oxy.so/bloom/icons/RiCheckboxCircleFill';
+import { RiDeleteBinLine } from '@oxy.so/bloom/icons/RiDeleteBinLine';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiInformationLine } from '@oxy.so/bloom/icons/RiInformationLine';
+import { RiMegaphoneLine } from '@oxy.so/bloom/icons/RiMegaphoneLine';
+import { RiNotification3Line } from '@oxy.so/bloom/icons/RiNotification3Line';
+import { RiRepeatLine } from '@oxy.so/bloom/icons/RiRepeatLine';
+import { RiSettings3Line } from '@oxy.so/bloom/icons/RiSettings3Line';
+import { RiSmartphoneLine } from '@oxy.so/bloom/icons/RiSmartphoneLine';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
+import { RiVolumeUpLine } from '@oxy.so/bloom/icons/RiVolumeUpLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Switch } from '@oxy.so/bloom/switch';

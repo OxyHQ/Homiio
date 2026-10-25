@@ -1,12 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Dialog } from '@oxy.so/bloom/dialog';
 import { Field } from '@oxy.so/bloom/field';
-import { RiAddLine, RiCalendarLine, RiCloseLine } from '@oxy.so/bloom/icons';
+import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
 import { Item } from '@oxy.so/bloom/item';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import { SwitchFilterRow, ToggleChipGroup } from '@oxy.so/bloom/stay-filters';

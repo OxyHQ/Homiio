@@ -25,14 +25,12 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  RiArrowUpCircleLine,
-  RiBox3Line,
-  RiCarLine,
-  RiHomeHeartLine,
-  RiHomeLine,
-  RiLeafLine,
-} from '@oxy.so/bloom/icons';
+import { RiArrowUpCircleLine } from '@oxy.so/bloom/icons/RiArrowUpCircleLine';
+import { RiBox3Line } from '@oxy.so/bloom/icons/RiBox3Line';
+import { RiCarLine } from '@oxy.so/bloom/icons/RiCarLine';
+import { RiHomeHeartLine } from '@oxy.so/bloom/icons/RiHomeHeartLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiLeafLine } from '@oxy.so/bloom/icons/RiLeafLine';
 
 import { Section } from '@/components/property/Section';
 import {

@@ -2,7 +2,7 @@ import { View, TouchableOpacity } from 'react-native';
 import { Text } from '@oxy.so/bloom/typography';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { RiErrorWarningFill } from '@oxy.so/bloom/icons';
+import { RiErrorWarningFill } from '@oxy.so/bloom/icons/RiErrorWarningFill';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 export default function NotFoundScreen() {

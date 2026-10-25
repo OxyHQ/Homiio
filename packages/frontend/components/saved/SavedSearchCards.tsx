@@ -19,7 +19,10 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { SavedSearchCard, type SavedSearchIcon } from '@oxy.so/bloom/home-search';
-import { RiBuilding2Line, RiHome4Line, RiHomeHeartLine, RiSuitcaseLine } from '@oxy.so/bloom/icons';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
+import { RiHome4Line } from '@oxy.so/bloom/icons/RiHome4Line';
+import { RiHomeHeartLine } from '@oxy.so/bloom/icons/RiHomeHeartLine';
+import { RiSuitcaseLine } from '@oxy.so/bloom/icons/RiSuitcaseLine';
 import { alert, confirm } from '@oxy.so/bloom/surfaces';
 import { OfferingType } from '@homiio/shared-types';
 

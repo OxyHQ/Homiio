@@ -14,7 +14,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Button } from '@oxy.so/bloom/button';
-import { RiBookmarkFill } from '@oxy.so/bloom/icons';
+import { RiBookmarkFill } from '@oxy.so/bloom/icons/RiBookmarkFill';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import { SavedSearchCards } from '@/components/saved/SavedSearchCards';

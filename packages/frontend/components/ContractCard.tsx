@@ -12,7 +12,7 @@ import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
-import { RiArrowRightSLine } from '@oxy.so/bloom/icons';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
 import { LeaseSummaryCard } from '@oxy.so/bloom/tenancy';
 import type { Lease } from '@homiio/shared-types';
 

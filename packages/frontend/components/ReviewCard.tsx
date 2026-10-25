@@ -19,17 +19,15 @@ import { useTranslation } from 'react-i18next';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
-import {
-  RiAddCircleLine,
-  RiAlertLine,
-  RiArrowRightSLine,
-  RiBuilding2Line,
-  RiCloseCircleLine,
-  RiFlagLine,
-  RiThumbDownLine,
-  RiThumbUpLine,
-  RiVerifiedBadgeFill,
-} from '@oxy.so/bloom/icons';
+import { RiAddCircleLine } from '@oxy.so/bloom/icons/RiAddCircleLine';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
+import { RiCloseCircleLine } from '@oxy.so/bloom/icons/RiCloseCircleLine';
+import { RiFlagLine } from '@oxy.so/bloom/icons/RiFlagLine';
+import { RiThumbDownLine } from '@oxy.so/bloom/icons/RiThumbDownLine';
+import { RiThumbUpLine } from '@oxy.so/bloom/icons/RiThumbUpLine';
+import { RiVerifiedBadgeFill } from '@oxy.so/bloom/icons/RiVerifiedBadgeFill';
 import { Rating } from '@oxy.so/bloom/rating';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

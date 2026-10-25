@@ -1,12 +1,16 @@
 import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { format, isValid, parse } from 'date-fns';
+import { format } from 'date-fns/format';
+import { isValid } from 'date-fns/isValid';
+import { parse } from 'date-fns/parse';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
 import { DatePicker } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
-import { RiExpandDiagonalSLine, RiEyeLine, RiEyeOffLine } from '@oxy.so/bloom/icons';
+import { RiExpandDiagonalSLine } from '@oxy.so/bloom/icons/RiExpandDiagonalSLine';
+import { RiEyeLine } from '@oxy.so/bloom/icons/RiEyeLine';
+import { RiEyeOffLine } from '@oxy.so/bloom/icons/RiEyeOffLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { AddressPickerMap } from '@/components/map/AddressPickerMap';
 import { COUNTRY_OPTIONS, STATE_OPTIONS, MAP_HEIGHT } from './constants';

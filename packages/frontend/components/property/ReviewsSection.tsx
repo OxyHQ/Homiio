@@ -23,7 +23,7 @@ import { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { RiDiscussLine } from '@oxy.so/bloom/icons';
+import { RiDiscussLine } from '@oxy.so/bloom/icons/RiDiscussLine';
 
 import { Button } from '@oxy.so/bloom/button';
 import { WriteReviewPrompt } from '@oxy.so/bloom/place-reviews';

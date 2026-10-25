@@ -65,7 +65,7 @@ import type { TFunction } from 'i18next';
 import { Button, CloseButton, LinkButton } from '@oxy.so/bloom/button';
 import { Dialog } from '@oxy.so/bloom/dialog';
 import { HomeSearchBar, SearchModeTabs, type HomeSearchSegment } from '@oxy.so/bloom/home-search';
-import { RiSearchLine } from '@oxy.so/bloom/icons';
+import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
 import {
   StaySearchCompact,
   StaySearchPanel,

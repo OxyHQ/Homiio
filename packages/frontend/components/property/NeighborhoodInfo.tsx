@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
-import { RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 

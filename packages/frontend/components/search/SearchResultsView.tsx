@@ -26,13 +26,11 @@ import { useTranslation } from 'react-i18next';
 import { AppShellPanel, AppShellPanels, useAppShellPanel } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { useBottomEdgeInset } from '@oxy.so/bloom/layout';
-import {
-  RiBookmarkFill,
-  RiBookmarkLine,
-  RiHomeLine,
-  RiRefreshLine,
-  RiSearchLine,
-} from '@oxy.so/bloom/icons';
+import { RiBookmarkFill } from '@oxy.so/bloom/icons/RiBookmarkFill';
+import { RiBookmarkLine } from '@oxy.so/bloom/icons/RiBookmarkLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiRefreshLine } from '@oxy.so/bloom/icons/RiRefreshLine';
+import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
 import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

@@ -11,12 +11,10 @@ import { useTranslation } from 'react-i18next';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
-import {
-  RiFileTextLine,
-  RiLockLine,
-  RiLoginBoxLine,
-  RiNotification3Line,
-} from '@oxy.so/bloom/icons';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiLockLine } from '@oxy.so/bloom/icons/RiLockLine';
+import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
+import { RiNotification3Line } from '@oxy.so/bloom/icons/RiNotification3Line';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useOxy } from '@oxy.so/services/ui/client';

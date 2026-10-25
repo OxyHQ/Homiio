@@ -2,13 +2,11 @@ import type React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import {
-  RiBuilding2Line,
-  RiCalendarLine,
-  RiCarLine,
-  RiHome4Line,
-  type Props as IconProps,
-} from '@oxy.so/bloom/icons';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiCarLine } from '@oxy.so/bloom/icons/RiCarLine';
+import { RiHome4Line } from '@oxy.so/bloom/icons/RiHome4Line';
+import type { Props as IconProps } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 

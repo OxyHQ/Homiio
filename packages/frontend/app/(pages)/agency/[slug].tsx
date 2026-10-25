@@ -20,13 +20,11 @@ import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
-import {
-  RiArrowRightSLine,
-  RiBuilding2Line,
-  RiDiscussLine,
-  RiHomeLine,
-  RiMapPinLine,
-} from '@oxy.so/bloom/icons';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
+import { RiDiscussLine } from '@oxy.so/bloom/icons/RiDiscussLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as Skeleton from '@oxy.so/bloom/skeleton';

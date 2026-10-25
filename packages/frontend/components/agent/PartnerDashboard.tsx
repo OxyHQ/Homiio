@@ -20,14 +20,12 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
 import { Divider } from '@oxy.so/bloom/divider';
-import {
-  RiBuilding2Line,
-  RiCoinsLine,
-  RiHandCoinLine,
-  RiHome4Line,
-  RiUserAddLine,
-  RiVipCrownLine,
-} from '@oxy.so/bloom/icons';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
+import { RiCoinsLine } from '@oxy.so/bloom/icons/RiCoinsLine';
+import { RiHandCoinLine } from '@oxy.so/bloom/icons/RiHandCoinLine';
+import { RiHome4Line } from '@oxy.so/bloom/icons/RiHome4Line';
+import { RiUserAddLine } from '@oxy.so/bloom/icons/RiUserAddLine';
+import { RiVipCrownLine } from '@oxy.so/bloom/icons/RiVipCrownLine';
 import { Item } from '@oxy.so/bloom/item';
 import { Loading } from '@oxy.so/bloom/loading';
 import { StatBar } from '@oxy.so/bloom/stat-bar';

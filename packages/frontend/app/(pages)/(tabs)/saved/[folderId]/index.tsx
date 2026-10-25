@@ -13,7 +13,10 @@ import { useOxy } from '@oxy.so/services/ui/client';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
-import { RiEditLine, RiFolderLine, RiFolderOpenLine, RiSearchLine } from '@oxy.so/bloom/icons';
+import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
+import { RiFolderLine } from '@oxy.so/bloom/icons/RiFolderLine';
+import { RiFolderOpenLine } from '@oxy.so/bloom/icons/RiFolderOpenLine';
+import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

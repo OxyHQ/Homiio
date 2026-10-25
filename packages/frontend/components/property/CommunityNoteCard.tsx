@@ -15,13 +15,11 @@ import { useTranslation } from 'react-i18next';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
-import {
-  RiAlertLine,
-  RiThumbDownLine,
-  RiThumbUpLine,
-  RiUserLine,
-  RiVerifiedBadgeFill,
-} from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiThumbDownLine } from '@oxy.so/bloom/icons/RiThumbDownLine';
+import { RiThumbUpLine } from '@oxy.so/bloom/icons/RiThumbUpLine';
+import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
+import { RiVerifiedBadgeFill } from '@oxy.so/bloom/icons/RiVerifiedBadgeFill';
 
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

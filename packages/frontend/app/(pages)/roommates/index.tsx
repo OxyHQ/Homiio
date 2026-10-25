@@ -15,17 +15,15 @@ import { RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@oxy.so/bloom/button';
-import {
-  RiAccountCircleLine,
-  RiCheckboxCircleFill,
-  RiGroupLine,
-  RiHotelBedLine,
-  RiMailLine,
-  RiSearchLine,
-  RiSettings3Line,
-  RiUserCommunityLine,
-  RiUserLine,
-} from '@oxy.so/bloom/icons';
+import { RiAccountCircleLine } from '@oxy.so/bloom/icons/RiAccountCircleLine';
+import { RiCheckboxCircleFill } from '@oxy.so/bloom/icons/RiCheckboxCircleFill';
+import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
+import { RiMailLine } from '@oxy.so/bloom/icons/RiMailLine';
+import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
+import { RiSettings3Line } from '@oxy.so/bloom/icons/RiSettings3Line';
+import { RiUserCommunityLine } from '@oxy.so/bloom/icons/RiUserCommunityLine';
+import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
 import { Tabs, TabsTrigger, type TabsIconComponent } from '@oxy.so/bloom/tabs';
 import { toast } from '@oxy.so/bloom/toast';
 import { Loading } from '@oxy.so/bloom/loading';

@@ -25,15 +25,13 @@ import { toast } from '@oxy.so/bloom/toast';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { useTheme } from '@oxy.so/bloom/theme';
-import {
-  RiAlertLine,
-  RiCheckLine,
-  RiCloseLine,
-  RiEditLine,
-  RiErrorWarningFill,
-  RiEyeLine,
-  RiLockLine,
-} from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiCheckLine } from '@oxy.so/bloom/icons/RiCheckLine';
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
+import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
+import { RiErrorWarningFill } from '@oxy.so/bloom/icons/RiErrorWarningFill';
+import { RiEyeLine } from '@oxy.so/bloom/icons/RiEyeLine';
+import { RiLockLine } from '@oxy.so/bloom/icons/RiLockLine';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
 import { Avatar } from '@oxy.so/bloom/avatar';

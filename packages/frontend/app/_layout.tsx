@@ -20,7 +20,6 @@ import {
 import i18n, { use as i18nUse, init as i18nInit } from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import enUS from '@/locales/en.json';
-import { MenuProvider } from 'react-native-popup-menu';
 
 import AppSplashScreen from '@/components/AppSplashScreen';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -375,7 +374,7 @@ export default function RootLayout() {
                           <NotificationProvider>
                             <I18nextProvider i18n={i18n}>
                               <BottomSheetProvider>
-                                <MenuProvider>
+                                <View className="flex-1">
                                   <PortalProvider>
                                     <ErrorBoundary>
                                       <AskAgentProvider>
@@ -391,7 +390,7 @@ export default function RootLayout() {
                               */}
                                     <PortalOutlet />
                                   </PortalProvider>
-                                </MenuProvider>
+                                </View>
                               </BottomSheetProvider>
                             </I18nextProvider>
                           </NotificationProvider>

@@ -14,7 +14,8 @@
  */
 import type React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { RiStarFill, RiStarLine } from '@oxy.so/bloom/icons';
+import { RiStarFill } from '@oxy.so/bloom/icons/RiStarFill';
+import { RiStarLine } from '@oxy.so/bloom/icons/RiStarLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 /** Total glyphs rendered (5-star scale). */

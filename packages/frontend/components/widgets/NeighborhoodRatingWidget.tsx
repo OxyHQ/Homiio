@@ -2,7 +2,9 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { RiArrowDownLine, RiArrowUpLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiArrowDownLine } from '@oxy.so/bloom/icons/RiArrowDownLine';
+import { RiArrowUpLine } from '@oxy.so/bloom/icons/RiArrowUpLine';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 

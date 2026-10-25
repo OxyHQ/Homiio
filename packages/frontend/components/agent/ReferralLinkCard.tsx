@@ -17,7 +17,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
-import { RiCheckLine, RiFileCopyLine, RiLink, RiShare2Line } from '@oxy.so/bloom/icons';
+import { RiCheckLine } from '@oxy.so/bloom/icons/RiCheckLine';
+import { RiFileCopyLine } from '@oxy.so/bloom/icons/RiFileCopyLine';
+import { RiLink } from '@oxy.so/bloom/icons/RiLink';
+import { RiShare2Line } from '@oxy.so/bloom/icons/RiShare2Line';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

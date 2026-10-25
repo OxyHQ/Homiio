@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiSearchLine } from '@oxy.so/bloom/icons';
+import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';

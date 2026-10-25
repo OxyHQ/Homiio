@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services/ui/client';
 import { getNativeLanguageName } from '@oxy.so/core';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
-import { RiGlobalLine } from '@oxy.so/bloom/icons';
+import { RiGlobalLine } from '@oxy.so/bloom/icons/RiGlobalLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';

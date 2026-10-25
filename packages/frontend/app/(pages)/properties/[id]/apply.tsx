@@ -22,14 +22,12 @@ import { Card, CardBody, CardDescription, CardHeader, CardTitle } from '@oxy.so/
 import { Chip } from '@oxy.so/bloom/chip';
 import { DatePicker } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
-import {
-  RiAddLine,
-  RiCloseLine,
-  RiFileTextLine,
-  RiImageLine,
-  RiMailLine,
-  RiUploadCloud2Line,
-} from '@oxy.so/bloom/icons';
+import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiImageLine } from '@oxy.so/bloom/icons/RiImageLine';
+import { RiMailLine } from '@oxy.so/bloom/icons/RiMailLine';
+import { RiUploadCloud2Line } from '@oxy.so/bloom/icons/RiUploadCloud2Line';
 import { Item } from '@oxy.so/bloom/item';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';

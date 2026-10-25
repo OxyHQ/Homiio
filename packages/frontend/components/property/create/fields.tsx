@@ -6,7 +6,8 @@ import { Command, type CommandItem } from '@oxy.so/bloom/command';
 import { Field } from '@oxy.so/bloom/field';
 import { TextFieldInput, type TextFieldInputProps } from '@oxy.so/bloom/text-field';
 import { Textarea, type TextareaProps } from '@oxy.so/bloom/textarea';
-import { RiArrowDownSLine, RiCheckLine } from '@oxy.so/bloom/icons';
+import { RiArrowDownSLine } from '@oxy.so/bloom/icons/RiArrowDownSLine';
+import { RiCheckLine } from '@oxy.so/bloom/icons/RiCheckLine';
 
 type WizardTextFieldProps = Omit<TextFieldInputProps, 'isInvalid' | 'style'> & {
   /** Visible label above the field; also the input's accessible name. */

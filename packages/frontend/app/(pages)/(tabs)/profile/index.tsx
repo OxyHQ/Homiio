@@ -4,17 +4,15 @@ import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';
-import {
-  RiArrowLeftRightLine,
-  RiArrowRightSLine,
-  RiBookmarkLine,
-  RiCoinsLine,
-  RiFileTextLine,
-  RiHotelBedLine,
-  RiLogoutBoxRLine,
-  RiSettings3Line,
-  RiStarLine,
-} from '@oxy.so/bloom/icons';
+import { RiArrowLeftRightLine } from '@oxy.so/bloom/icons/RiArrowLeftRightLine';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
+import { RiBookmarkLine } from '@oxy.so/bloom/icons/RiBookmarkLine';
+import { RiCoinsLine } from '@oxy.so/bloom/icons/RiCoinsLine';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
+import { RiLogoutBoxRLine } from '@oxy.so/bloom/icons/RiLogoutBoxRLine';
+import { RiSettings3Line } from '@oxy.so/bloom/icons/RiSettings3Line';
+import { RiStarLine } from '@oxy.so/bloom/icons/RiStarLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';

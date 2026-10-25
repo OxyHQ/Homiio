@@ -16,11 +16,9 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Card } from '@oxy.so/bloom/card';
-import {
-  RiCheckboxBlankCircleLine,
-  RiCheckboxCircleFill,
-  RiVipCrownLine,
-} from '@oxy.so/bloom/icons';
+import { RiCheckboxBlankCircleLine } from '@oxy.so/bloom/icons/RiCheckboxBlankCircleLine';
+import { RiCheckboxCircleFill } from '@oxy.so/bloom/icons/RiCheckboxCircleFill';
+import { RiVipCrownLine } from '@oxy.so/bloom/icons/RiVipCrownLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 

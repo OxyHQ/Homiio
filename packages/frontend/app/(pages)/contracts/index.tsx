@@ -29,7 +29,11 @@ import {
   DataTableSearch,
   type DataTableColumn,
 } from '@oxy.so/bloom/data-table';
-import { RiAddLine, RiAlertLine, RiEyeLine, RiFileTextLine, RiHomeLine } from '@oxy.so/bloom/icons';
+import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiEyeLine } from '@oxy.so/bloom/icons/RiEyeLine';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { formatMoney } from '@homiio/shared-types';
 import { ContractCard } from '@/components/ContractCard';

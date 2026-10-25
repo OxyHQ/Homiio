@@ -32,14 +32,12 @@ import {
   type DataTableColumn,
   type DataTableRowActionItem,
 } from '@oxy.so/bloom/data-table';
-import {
-  RiAlertLine,
-  RiArrowRightUpLine,
-  RiEditLine,
-  RiGroupLine,
-  RiLockLine,
-  RiLoginBoxLine,
-} from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiArrowRightUpLine } from '@oxy.so/bloom/icons/RiArrowRightUpLine';
+import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
+import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
+import { RiLockLine } from '@oxy.so/bloom/icons/RiLockLine';
+import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
 import { useOxy } from '@oxy.so/services/ui/client';
 import {
   type Profile,

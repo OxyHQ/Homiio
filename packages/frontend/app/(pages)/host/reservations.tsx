@@ -14,7 +14,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueries } from '@tanstack/react-query';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 import { toast } from '@oxy.so/bloom/toast';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { Button } from '@oxy.so/bloom/button';
@@ -28,14 +29,12 @@ import {
   type DataTableColumn,
   type DataTableRowActionItem,
 } from '@oxy.so/bloom/data-table';
-import {
-  RiAlertLine,
-  RiCheckLine,
-  RiCloseLine,
-  RiEyeLine,
-  RiLoginBoxLine,
-  RiMailLine,
-} from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiCheckLine } from '@oxy.so/bloom/icons/RiCheckLine';
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
+import { RiEyeLine } from '@oxy.so/bloom/icons/RiEyeLine';
+import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
+import { RiMailLine } from '@oxy.so/bloom/icons/RiMailLine';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services/ui/client';

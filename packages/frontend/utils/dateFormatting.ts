@@ -9,7 +9,8 @@
  * API). Either end being unparseable yields an empty string rather than
  * `"Invalid Date"`, matching the defensive guard the exchange card already had.
  */
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 
 /** Default date format for each end of the range (`Jun 1, 2026`). */
 const DEFAULT_DATE_FORMAT = 'MMM d, yyyy';

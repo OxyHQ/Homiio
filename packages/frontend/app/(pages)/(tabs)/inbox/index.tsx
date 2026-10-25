@@ -38,12 +38,10 @@ import {
 } from '@oxy.so/bloom/admonition';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button, CloseButton } from '@oxy.so/bloom/button';
-import {
-  RiCheckboxCircleLine,
-  RiFilterLine,
-  RiSettings3Line,
-  RiTimeLine,
-} from '@oxy.so/bloom/icons';
+import { RiCheckboxCircleLine } from '@oxy.so/bloom/icons/RiCheckboxCircleLine';
+import { RiFilterLine } from '@oxy.so/bloom/icons/RiFilterLine';
+import { RiSettings3Line } from '@oxy.so/bloom/icons/RiSettings3Line';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
 import {
   SegmentedControl,
   SegmentedControlItem,

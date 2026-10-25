@@ -1,7 +1,8 @@
 import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { RiCalendarLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import { Section, SectionRow } from '@/components/property/Section';

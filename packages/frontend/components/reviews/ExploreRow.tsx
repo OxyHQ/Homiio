@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Card } from '@oxy.so/bloom/card';
 import { Divider } from '@oxy.so/bloom/divider';
-import { RiArrowRightSLine } from '@oxy.so/bloom/icons';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
 import { Item } from '@oxy.so/bloom/item';
 import { Rating } from '@oxy.so/bloom/rating';
 import { useTheme } from '@oxy.so/bloom/theme';

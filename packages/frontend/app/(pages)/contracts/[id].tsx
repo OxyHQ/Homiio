@@ -30,7 +30,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { toast } from '@oxy.so/bloom/toast';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiAddLine, RiAlertLine } from '@oxy.so/bloom/icons';
+import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
 import { LeaseSummaryCard } from '@oxy.so/bloom/tenancy';

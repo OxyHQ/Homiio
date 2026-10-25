@@ -28,7 +28,8 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
-import { RiHomeLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
 
 /** Number of skeleton cards shown during the first load. */
 const SKELETON_COUNT = 4;

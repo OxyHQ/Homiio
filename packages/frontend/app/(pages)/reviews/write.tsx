@@ -50,7 +50,7 @@ import { reviewService } from '@/services/reviewService';
 import { api } from '@/utils/api';
 import type { CreateReviewPayload, CreateReviewAddressInput } from '@homiio/shared-types';
 import { radius, spacing } from '@/constants/styles';
-import { RiAlertLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
 
 /** The steps, in order: each one's copy lives at `reviews.write.steps.<key>`. */
 const STEP_KEYS = [

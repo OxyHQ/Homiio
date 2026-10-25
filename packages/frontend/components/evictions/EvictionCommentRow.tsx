@@ -13,7 +13,7 @@ import type { EvictionComment } from '@homiio/shared-types';
 
 import { IconButton } from '@/components/ui/IconButton';
 import { spacing } from '@/constants/styles';
-import { RiDeleteBinLine } from '@oxy.so/bloom/icons';
+import { RiDeleteBinLine } from '@oxy.so/bloom/icons/RiDeleteBinLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 interface EvictionCommentRowProps {

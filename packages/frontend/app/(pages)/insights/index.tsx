@@ -13,7 +13,10 @@ import {
   ChartHeadline,
   ChartStatTiles,
 } from '@oxy.so/bloom/chart-cards';
-import { RiBookmarkLine, RiBuilding2Line, RiGroupLine, RiHome4Line } from '@oxy.so/bloom/icons';
+import { RiBookmarkLine } from '@oxy.so/bloom/icons/RiBookmarkLine';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
+import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
+import { RiHome4Line } from '@oxy.so/bloom/icons/RiHome4Line';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { analyticsService } from '@/services/analyticsService';

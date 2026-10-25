@@ -13,7 +13,10 @@ import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
-import { RiArrowRightSLine, RiFileCopyLine, RiMapPinFill, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
+import { RiFileCopyLine } from '@oxy.so/bloom/icons/RiFileCopyLine';
+import { RiMapPinFill } from '@oxy.so/bloom/icons/RiMapPinFill';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 interface Address {

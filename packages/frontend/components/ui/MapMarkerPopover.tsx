@@ -17,7 +17,7 @@ import { Button } from '@oxy.so/bloom/button';
 import { PropertyCard } from '@/components/PropertyCard';
 import { cardShadow, radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
-import { RiCloseLine } from '@oxy.so/bloom/icons';
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
 
 interface MapMarkerPopoverProps {
   property: Property;

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { formatMoney, formatMoneyRange } from '@homiio/shared-types';
 import { Button } from '@oxy.so/bloom/button';
-import { RiNotification3Line } from '@oxy.so/bloom/icons';
+import { RiNotification3Line } from '@oxy.so/bloom/icons/RiNotification3Line';
 import { Item } from '@oxy.so/bloom/item';
 import { Switch } from '@oxy.so/bloom/switch';
 import { useTheme } from '@oxy.so/bloom/theme';

@@ -5,7 +5,10 @@ import { useAskAgent } from '@alia.onl/sdk';
 import { AliaAvatarIcon } from '@alia.onl/sdk/avatar';
 import { BottomBar } from '@oxy.so/bloom/bottom-bar';
 import { Fab } from '@oxy.so/bloom/fab';
-import { RiBookmarkLine, RiHomeLine, RiInbox2Line, RiUserLine } from '@oxy.so/bloom/icons';
+import { RiBookmarkLine } from '@oxy.so/bloom/icons/RiBookmarkLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiInbox2Line } from '@oxy.so/bloom/icons/RiInbox2Line';
+import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
 
 const DESTINATIONS = ['/saved', '/inbox', '/profile'] as const;
 

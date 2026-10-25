@@ -31,7 +31,9 @@ import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
 import { spacing } from '@/constants/styles';
-import { RiHotelBedLine, RiLoginBoxLine, RiSearchLine } from '@oxy.so/bloom/icons';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
+import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
+import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
 
 type Filter = 'all' | 'upcoming' | 'past' | 'cancelled';
 

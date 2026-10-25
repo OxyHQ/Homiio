@@ -11,7 +11,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CategoryBar, type CategoryBarItem } from '@oxy.so/bloom/category-bar';
-import { RiLayoutGridLine } from '@oxy.so/bloom/icons';
+import { RiLayoutGridLine } from '@oxy.so/bloom/icons/RiLayoutGridLine';
 
 import type { OfferingType, PropertyType } from '@homiio/shared-types';
 

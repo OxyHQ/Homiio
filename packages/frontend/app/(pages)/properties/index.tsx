@@ -23,7 +23,10 @@ import { useRouter } from 'expo-router';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Fab } from '@oxy.so/bloom/fab';
-import { RiAddLine, RiEqualizerLine, RiHomeLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
+import { RiEqualizerLine } from '@oxy.so/bloom/icons/RiEqualizerLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
 import { StaySearchCompact } from '@oxy.so/bloom/stay-search';

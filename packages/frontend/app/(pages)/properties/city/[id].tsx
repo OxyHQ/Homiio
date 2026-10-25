@@ -28,12 +28,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { FiltersBar, type CityFilterValues } from '@/components/FiltersBar';
 
-import {
-  RiArrowLeftLine,
-  RiErrorWarningFill,
-  RiHomeLine,
-  RiRefreshLine,
-} from '@oxy.so/bloom/icons';
+import { RiArrowLeftLine } from '@oxy.so/bloom/icons/RiArrowLeftLine';
+import { RiErrorWarningFill } from '@oxy.so/bloom/icons/RiErrorWarningFill';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiRefreshLine } from '@oxy.so/bloom/icons/RiRefreshLine';
 
 /** Number of skeleton cards shown during the first properties load. */
 const SKELETON_COUNT = 6;

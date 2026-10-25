@@ -49,12 +49,10 @@ import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
-import {
-  RiArrowRightSLine,
-  RiCompass3Line,
-  RiHomeHeartLine,
-  RiLoginBoxLine,
-} from '@oxy.so/bloom/icons';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
+import { RiCompass3Line } from '@oxy.so/bloom/icons/RiCompass3Line';
+import { RiHomeHeartLine } from '@oxy.so/bloom/icons/RiHomeHeartLine';
+import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
 import { LeaseSummaryCard } from '@oxy.so/bloom/tenancy';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { useOxy } from '@oxy.so/services/ui/client';

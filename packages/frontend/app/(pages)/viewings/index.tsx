@@ -33,7 +33,9 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { viewingService, type ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
 import { spacing } from '@/constants/styles';
-import { RiAlertLine, RiCalendarLine, RiLoginBoxLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
 
 type ViewingStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
 

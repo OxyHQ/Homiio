@@ -11,7 +11,10 @@ import type React from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { RiChat3Line, RiMailLine, RiPhoneLine, RiSendPlaneLine } from '@oxy.so/bloom/icons';
+import { RiChat3Line } from '@oxy.so/bloom/icons/RiChat3Line';
+import { RiMailLine } from '@oxy.so/bloom/icons/RiMailLine';
+import { RiPhoneLine } from '@oxy.so/bloom/icons/RiPhoneLine';
+import { RiSendPlaneLine } from '@oxy.so/bloom/icons/RiSendPlaneLine';
 import type { EvictionContactInfo } from '@homiio/shared-types';
 
 import { toast } from '@oxy.so/bloom/toast';

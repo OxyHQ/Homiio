@@ -13,7 +13,8 @@
  * did not send is simply not drawn.
  */
 import type { TFunction } from 'i18next';
-import { differenceInCalendarDays, formatDistanceStrict } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { formatDistanceStrict } from 'date-fns/formatDistanceStrict';
 import {
   formatMoney,
   LeaseStatus,

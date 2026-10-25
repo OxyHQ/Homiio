@@ -11,28 +11,26 @@ import type {
   SidebarTree,
   SidebarTreeItem,
 } from '@oxy.so/bloom/sidebar';
-import {
-  RiAccountCircleLine,
-  RiArrowLeftRightLine,
-  RiBookmarkLine,
-  RiCalendarLine,
-  RiCalendarScheduleLine,
-  RiFilePaper2Line,
-  RiFileTextLine,
-  RiGroupLine,
-  RiHomeLine,
-  RiHomeHeartLine,
-  RiHotelBedLine,
-  RiKey2Line,
-  RiLightbulbLine,
-  RiLoginBoxLine,
-  RiMegaphoneLine,
-  RiSearchLine,
-  RiSettings3Line,
-  RiShieldLine,
-  RiStarLine,
-  RiUserLine,
-} from '@oxy.so/bloom/icons';
+import { RiAccountCircleLine } from '@oxy.so/bloom/icons/RiAccountCircleLine';
+import { RiArrowLeftRightLine } from '@oxy.so/bloom/icons/RiArrowLeftRightLine';
+import { RiBookmarkLine } from '@oxy.so/bloom/icons/RiBookmarkLine';
+import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
+import { RiCalendarScheduleLine } from '@oxy.so/bloom/icons/RiCalendarScheduleLine';
+import { RiFilePaper2Line } from '@oxy.so/bloom/icons/RiFilePaper2Line';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
+import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiHomeHeartLine } from '@oxy.so/bloom/icons/RiHomeHeartLine';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
+import { RiKey2Line } from '@oxy.so/bloom/icons/RiKey2Line';
+import { RiLightbulbLine } from '@oxy.so/bloom/icons/RiLightbulbLine';
+import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
+import { RiMegaphoneLine } from '@oxy.so/bloom/icons/RiMegaphoneLine';
+import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
+import { RiSettings3Line } from '@oxy.so/bloom/icons/RiSettings3Line';
+import { RiShieldLine } from '@oxy.so/bloom/icons/RiShieldLine';
+import { RiStarLine } from '@oxy.so/bloom/icons/RiStarLine';
+import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { getAccountDisplayName, getAccountFallbackHandle } from '@oxy.so/core';
 import { useAuth, useOxy } from '@oxy.so/services/ui/client';

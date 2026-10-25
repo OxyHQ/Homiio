@@ -283,7 +283,7 @@ The mapping table lives in `packages/frontend/components/ui/README.md`.
 - **Import Bloom by family subpath only** (`@oxy.so/bloom/<family>`).
   `bun run check:bundle-imports` fails on the root `'@oxy.so/bloom'` specifier,
   because Metro does not tree-shake and the barrel pulls every family in.
-- **Icons are Remix `Ri*Line` / `Ri*Fill` from `@oxy.so/bloom/icons`.** Colour is
+- **Icons are Remix `Ri*Line` / `Ri*Fill` from their `@oxy.so/bloom/icons/Ri…` public subpaths.** Colour is
   NOT inherited: pass `fill`, or hand the component (not an element) to a Bloom
   control that colours it (`Button leadingIcon`, `Fab icon`).
 - **Confirmations are `confirm()` / `alert()` from `@oxy.so/bloom/surfaces`.** The
@@ -326,3 +326,15 @@ scroll, layout and content-size handlers work the same on web and native.
   and `totalPages` aliases alongside the nested `pagination` object, which keeps
   `normalizeEnvelope` intact. See `/api/properties/search` and
   `cityController.getPropertiesByCity`.
+
+
+### Keep imports within the web budget
+
+Metro retains every value export reachable from a barrel. Import individual
+Bloom glyphs and `date-fns` functions through their public subpaths; type-only
+imports can remain on their barrels. Custom glyph painting uses
+`@oxy.so/bloom/icons/shared`, preserving Bloom's theme and gradient behavior
+without loading its complete glyph catalogue. The former popup-menu provider
+had no remaining menu consumers and has been removed; Bloom owns menus and
+portals. The web budget remains in `performance-budgets.json` and is checked
+against the exported artifact.

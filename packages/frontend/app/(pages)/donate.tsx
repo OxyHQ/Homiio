@@ -27,15 +27,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
-import {
-  RiCheckboxCircleFill,
-  RiFileTextLine,
-  RiGroupLine,
-  RiHeartFill,
-  RiLightbulbLine,
-  RiShieldCheckLine,
-  RiWrenchLine,
-} from '@oxy.so/bloom/icons';
+import { RiCheckboxCircleFill } from '@oxy.so/bloom/icons/RiCheckboxCircleFill';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
+import { RiHeartFill } from '@oxy.so/bloom/icons/RiHeartFill';
+import { RiLightbulbLine } from '@oxy.so/bloom/icons/RiLightbulbLine';
+import { RiShieldCheckLine } from '@oxy.so/bloom/icons/RiShieldCheckLine';
+import { RiWrenchLine } from '@oxy.so/bloom/icons/RiWrenchLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { RadioCard } from '@oxy.so/bloom/radio';

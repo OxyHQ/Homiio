@@ -34,7 +34,8 @@ import { useCreateLeaseFromApplication } from '@/hooks/useLeaseQueries';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
 import { radius, spacing } from '@/constants/styles';
-import { RiFileTextLine, RiGalleryLine } from '@oxy.so/bloom/icons';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
+import { RiGalleryLine } from '@oxy.so/bloom/icons/RiGalleryLine';
 
 export default function NewContractScreen() {
   const { t } = useTranslation();

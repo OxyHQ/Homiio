@@ -44,13 +44,11 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import {
-  RiEarthLine,
-  RiFocus3Line,
-  RiHistoryLine,
-  RiMapPinLine,
-  RiTimeLine,
-} from '@oxy.so/bloom/icons';
+import { RiEarthLine } from '@oxy.so/bloom/icons/RiEarthLine';
+import { RiFocus3Line } from '@oxy.so/bloom/icons/RiFocus3Line';
+import { RiHistoryLine } from '@oxy.so/bloom/icons/RiHistoryLine';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
 import { Search } from '@oxy.so/bloom/search';
 import { DestinationSuggestions, type DestinationSuggestion } from '@oxy.so/bloom/stay-search';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

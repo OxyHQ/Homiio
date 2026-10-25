@@ -11,9 +11,9 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { RiTimeLine } from '@oxy.so/bloom/icons';
+import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
 import { useTheme } from '@oxy.so/bloom/theme';
-import { differenceInCalendarDays } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
 
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 

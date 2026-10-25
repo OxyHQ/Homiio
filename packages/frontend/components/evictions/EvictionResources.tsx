@@ -24,7 +24,7 @@ import type React from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Loading } from '@oxy.so/bloom/loading';
-import { RiFileTextLine } from '@oxy.so/bloom/icons';
+import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { JurisdictionResourceWithId } from '@homiio/shared-types';
