@@ -6,12 +6,7 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": [
-      "bun",
-      "node"
-    ]
+    "types": ["bun", "node"]
   },
-  "include": [
-    "tests/server.test.ts"
-  ]
+  "include": ["tests/server.test.ts"]
 }
