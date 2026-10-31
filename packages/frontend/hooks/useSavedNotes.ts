@@ -5,7 +5,7 @@ import {
   type UseMutateAsyncFunction,
   type UseMutateFunction,
 } from '@tanstack/react-query';
-import { randomUUID } from 'expo-crypto';
+import { createSavedOperationId } from '@/utils/createSavedOperationId';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { SavedPropertyChangeSupersededError } from '@/hooks/savedPropertyErrors';
@@ -39,7 +39,7 @@ export function useSavedNotesMutation() {
     },
   });
   const capture = (variables: UpdateNotesVars): CapturedVars => {
-    const operationId = randomUUID();
+    const operationId = createSavedOperationId();
     const unsubscribe = queryClient.getMutationCache().subscribe((event) => {
       if (event.type !== 'removed') return;
       const removed = event.mutation.state.variables as CapturedVars | undefined;
@@ -97,8 +97,10 @@ export function useSavedNotesMutation() {
   const mutate: UseMutateFunction<void, Error, UpdateNotesVars> = (variables, options) => {
     mutation.mutate(capture(variables), callbacks(options));
   };
-  const mutateAsync: UseMutateAsyncFunction<void, Error, UpdateNotesVars> = (variables, options) =>
-    mutation.mutateAsync(capture(variables), callbacks(options));
+  const mutateAsync: UseMutateAsyncFunction<void, Error, UpdateNotesVars> = async (
+    variables,
+    options,
+  ) => mutation.mutateAsync(capture(variables), callbacks(options));
   const variables = mutation.variables && {
     propertyId: mutation.variables.propertyId,
     notes: mutation.variables.notes,
