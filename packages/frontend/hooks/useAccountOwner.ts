@@ -6,8 +6,34 @@ export type AccountOwner = RequestOwner & { sessionId: string | null; generation
 type Projection = Omit<AccountOwner, 'generation'>;
 const observedProjections = new WeakMap<
   object,
-  { projection: Projection | null; generation: number }
+  { projection: Projection | null; generation: number; listeners: Set<() => void> }
 >();
+function coordinatorFor(instance: object) {
+  let coordinator = observedProjections.get(instance);
+  if (!coordinator) {
+    coordinator = { projection: null, generation: 0, listeners: new Set() };
+    observedProjections.set(instance, coordinator);
+  }
+  return coordinator;
+}
+function commitProjection(instance: object, projected: Projection | null) {
+  const coordinator = coordinatorFor(instance);
+  const prior = coordinator.projection;
+  const same =
+    (!prior && !projected) ||
+    Boolean(
+      prior &&
+        projected &&
+        prior.userId === projected.userId &&
+        prior.epoch === projected.epoch &&
+        (prior.sessionId === projected.sessionId || prior.sessionId === null),
+    );
+  coordinator.projection = projected;
+  if (!same) {
+    coordinator.generation += 1;
+    coordinator.listeners.forEach((listener) => listener());
+  }
+}
 const instanceIds = new WeakMap<object, number>();
 let nextInstanceId = 1;
 
@@ -61,19 +87,24 @@ export function useAccountOwner(): AccountOwner | null {
     userId && hasToken && bearerUser === userId
       ? { oxyServices, userId, sessionId: activeSessionId ?? null, epoch }
       : null;
-  const observed = observedProjections.get(oxyServices);
-  const prior = observed?.projection;
-  const same =
-    (!prior && !projected) ||
-    Boolean(
-      prior &&
-        projected &&
-        prior.userId === projected.userId &&
-        prior.epoch === projected.epoch &&
-        (prior.sessionId === projected.sessionId || prior.sessionId === null),
-    );
-  const generation = observed ? observed.generation + (same ? 0 : 1) : 0;
-  observedProjections.set(oxyServices, { projection: projected, generation });
+  const subscribeGeneration = useCallback(
+    (listener: () => void) => {
+      const coordinator = coordinatorFor(oxyServices);
+      coordinator.listeners.add(listener);
+      return () => {
+        coordinator.listeners.delete(listener);
+      };
+    },
+    [oxyServices],
+  );
+  const getGeneration = useCallback(
+    () => observedProjections.get(oxyServices)?.generation ?? 0,
+    [oxyServices],
+  );
+  const generation = useSyncExternalStore(subscribeGeneration, getGeneration, getGeneration);
+  useLayoutEffect(() => {
+    commitProjection(oxyServices, projected);
+  }, [oxyServices, userId, activeSessionId, snapshot]);
   return useMemo(
     () => (projected ? { ...projected, generation } : null),
     [oxyServices, userId, activeSessionId, snapshot, generation],

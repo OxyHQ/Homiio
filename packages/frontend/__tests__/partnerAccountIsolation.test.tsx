@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import { Suspense, startTransition, type ReactNode } from 'react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, render, renderHook, waitFor } from '@testing-library/react-native';
 import { OxyServices } from '@oxy.so/core';
 
 import { useEarnings, useJoinPartner, usePartnerMe, useReferrals } from '@/hooks/usePartner';
 import { partnerApi } from '@/services/partnerApi';
+import { useAccountOwner } from '@/hooks/useAccountOwner';
 
 const mockAuth = {
   isAuthenticated: true,
@@ -319,4 +320,48 @@ it('rejects a retained join after an observed projection-only A to B to A transi
     await expect(old()).rejects.toThrow('The active account changed');
   });
   expect(join).not.toHaveBeenCalled();
+});
+
+it('keeps the committed A owner valid when a B render suspends and is abandoned', async () => {
+  join.mockResolvedValue(response('A'));
+  const active = renderHook(() => useJoinPartner(), { wrapper });
+  const retained = active.result.current.mutateAsync;
+  let resume!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  const attempted = jest.fn();
+  function Candidate({ suspend }: { suspend: boolean }) {
+    useAccountOwner();
+    if (suspend) attempted();
+    if (suspend) throw pending;
+    return null;
+  }
+  const candidate = render(
+    <Suspense fallback={null}>
+      <Candidate suspend={false} />
+    </Suspense>,
+  );
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    startTransition(() =>
+      candidate.rerender(
+        <Suspense fallback={null}>
+          <Candidate suspend />
+        </Suspense>,
+      ),
+    );
+  });
+  expect(attempted).toHaveBeenCalled();
+  mockAuth.user = { id: 'A' };
+  mockAuth.activeSessionId = 'session-A';
+  await act(async () => {
+    await expect(retained()).resolves.toEqual(response('A'));
+  });
+  candidate.unmount();
+  await act(async () => {
+    resume();
+    await pending;
+  });
 });
