@@ -4,6 +4,11 @@ import type { RequestOwner } from '@/utils/api';
 
 export type AccountOwner = RequestOwner & { sessionId: string | null; generation: number };
 type Projection = Omit<AccountOwner, 'generation'>;
+/*
+ * Homiio has one OxyProvider in app/_layout.tsx. All consumers of an instance
+ * must observe that same projection: independent providers sharing an instance
+ * with divergent projections are not supported by this coordinator.
+ */
 const observedProjections = new WeakMap<
   object,
   { projection: Projection | null; generation: number; listeners: Set<() => void> }
