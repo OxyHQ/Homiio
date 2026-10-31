@@ -89,6 +89,9 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   const queryClient = useQueryClient();
   const owner = useAccountOwner();
   const committedOwner = useRef<AccountOwner | null>(null);
+  const pendingPropertyChanges = useRef(new Map<string, number>());
+  const latestPropertyChange = useRef(new Map<string, number>());
+  const nextPropertyChange = useRef(0);
   useLayoutEffect(() => {
     committedOwner.current = owner;
     return () => {
@@ -296,8 +299,18 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   const savePropertyToFolder = useCallback(
     async (propertyId: string, folderId: string | null, property?: Partial<SavedProperty>) => {
       const captured = currentOwner(owner);
+      await queryClient.cancelQueries({ queryKey: propertiesKey, exact: true }, { revert: false });
+      currentOwner(captured);
       // Snapshot for rollback on failure.
       const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
+      const previousProperty = previous?.properties.find((p) => propertyKey(p) === propertyId);
+      const changeKey = JSON.stringify([propertiesKey, propertyId]);
+      const changeId = ++nextPropertyChange.current;
+      latestPropertyChange.current.set(changeKey, changeId);
+      pendingPropertyChanges.current.set(
+        ownerKey,
+        (pendingPropertyChanges.current.get(ownerKey) ?? 0) + 1,
+      );
       try {
         setError(null);
 
@@ -346,22 +359,20 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           return newSet;
         });
         toast.success(i18next.t('saved.toast.propertySaved'));
-        if (captured.sessionId !== current.sessionId) {
-          await queryClient.invalidateQueries({
-            queryKey: savedKeys.properties(current),
-            exact: true,
-          });
-          currentOwner(captured);
-        }
         // Refresh folders to update counts immediately.
         await queryClient.invalidateQueries({ queryKey: savedKeys.folders(current), exact: true });
       } catch (error: unknown) {
         if (!isCurrentOwner(captured)) throw error;
         // Revert optimistic update on error.
-        if (previous) {
-          queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, previous);
-        } else {
-          void queryClient.resetQueries({ queryKey: propertiesKey, exact: true });
+        if (latestPropertyChange.current.get(changeKey) === changeId) {
+          queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (current) => {
+            if (!current) return current;
+            const withoutProperty = current.properties.filter((p) => propertyKey(p) !== propertyId);
+            const properties = previousProperty
+              ? [...withoutProperty, previousProperty]
+              : withoutProperty;
+            return { ...current, properties, total: properties.length };
+          });
         }
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
@@ -373,6 +384,29 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         setError(message);
         toast.error(i18next.t('saved.toast.propertySaveFailed'));
         throw error;
+      } finally {
+        if (latestPropertyChange.current.get(changeKey) === changeId) {
+          latestPropertyChange.current.delete(changeKey);
+        }
+        const remaining = (pendingPropertyChanges.current.get(ownerKey) ?? 1) - 1;
+        if (remaining > 0) pendingPropertyChanges.current.set(ownerKey, remaining);
+        else {
+          pendingPropertyChanges.current.delete(ownerKey);
+          if (isCurrentOwner(captured)) {
+            const key = savedKeys.properties(currentOwner(captured));
+            void queryClient
+              .cancelQueries({ queryKey: key, exact: true }, { revert: false })
+              .then(() => {
+                if (
+                  !pendingPropertyChanges.current.has(ownerKey) &&
+                  !pendingPropertyChanges.current.has(JSON.stringify(key)) &&
+                  isCurrentOwner(captured)
+                ) {
+                  void queryClient.invalidateQueries({ queryKey: key, exact: true });
+                }
+              });
+          }
+        }
       }
     },
     [
@@ -380,6 +414,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       currentOwner,
       owner,
       propertiesKey,
+      ownerKey,
       setError,
       setSavingPropertyIds,
       isCurrentOwner,
@@ -389,8 +424,17 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   const unsaveProperty = useCallback(
     async (propertyId: string) => {
       const captured = currentOwner(owner);
+      await queryClient.cancelQueries({ queryKey: propertiesKey, exact: true }, { revert: false });
+      currentOwner(captured);
       const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
       const removed = previous?.properties.find((p) => propertyKey(p) === propertyId);
+      const changeKey = JSON.stringify([propertiesKey, propertyId]);
+      const changeId = ++nextPropertyChange.current;
+      latestPropertyChange.current.set(changeKey, changeId);
+      pendingPropertyChanges.current.set(
+        ownerKey,
+        (pendingPropertyChanges.current.get(ownerKey) ?? 0) + 1,
+      );
       try {
         setError(null);
 
@@ -416,13 +460,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           return newSet;
         });
         toast.success(i18next.t('saved.toast.propertyRemoved'));
-        if (captured.sessionId !== current.sessionId) {
-          await queryClient.invalidateQueries({
-            queryKey: savedKeys.properties(current),
-            exact: true,
-          });
-          currentOwner(captured);
-        }
 
         // Update folder counts locally.
         if (removed?.folderId) {
@@ -453,10 +490,13 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         }
 
         // Revert optimistic update on error.
-        if (previous) {
-          queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, previous);
-        } else {
-          void queryClient.resetQueries({ queryKey: propertiesKey, exact: true });
+        if (latestPropertyChange.current.get(changeKey) === changeId) {
+          queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (current) => {
+            if (!current) return current;
+            const withoutProperty = current.properties.filter((p) => propertyKey(p) !== propertyId);
+            const properties = removed ? [...withoutProperty, removed] : withoutProperty;
+            return { ...current, properties, total: properties.length };
+          });
         }
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
@@ -467,6 +507,29 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         setError(message);
         toast.error(i18next.t('saved.toast.propertyUnsaveFailed'));
         throw error;
+      } finally {
+        if (latestPropertyChange.current.get(changeKey) === changeId) {
+          latestPropertyChange.current.delete(changeKey);
+        }
+        const remaining = (pendingPropertyChanges.current.get(ownerKey) ?? 1) - 1;
+        if (remaining > 0) pendingPropertyChanges.current.set(ownerKey, remaining);
+        else {
+          pendingPropertyChanges.current.delete(ownerKey);
+          if (isCurrentOwner(captured)) {
+            const key = savedKeys.properties(currentOwner(captured));
+            void queryClient
+              .cancelQueries({ queryKey: key, exact: true }, { revert: false })
+              .then(() => {
+                if (
+                  !pendingPropertyChanges.current.has(ownerKey) &&
+                  !pendingPropertyChanges.current.has(JSON.stringify(key)) &&
+                  isCurrentOwner(captured)
+                ) {
+                  void queryClient.invalidateQueries({ queryKey: key, exact: true });
+                }
+              });
+          }
+        }
       }
     },
     [
@@ -474,6 +537,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       currentOwner,
       owner,
       propertiesKey,
+      ownerKey,
       setError,
       setSavingPropertyIds,
       isCurrentOwner,

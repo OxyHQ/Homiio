@@ -67,6 +67,7 @@ beforeEach(() => {
   oxy.session.setAccessToken(token('A'));
   mockAuth.oxyServices = oxy;
   getSaved.mockReset();
+  getSaved.mockResolvedValue(properties('server-home'));
   getFolders.mockReset();
   save.mockReset();
   unsave.mockReset();
@@ -222,7 +223,8 @@ it('refreshes the new cache when the same session id arrives during a save', asy
   getSaved
     .mockResolvedValueOnce(properties('A-before'))
     .mockResolvedValueOnce(properties('A-before'))
-    .mockResolvedValueOnce(properties('A-after'));
+    .mockResolvedValueOnce(properties('A-after'))
+    .mockResolvedValue(properties('A-after'));
   getFolders.mockResolvedValue(folders('folder'));
   let finish!: (value: unknown) => void;
   save.mockImplementation(
@@ -395,9 +397,142 @@ it.each(['save', 'unsave'] as const)(
           : view.result.current.unsaveProperty('new-home');
       await expect(promise).rejects.toThrow('offline');
     });
-    await waitFor(() => expect(client.getQueryData(key)).toBeUndefined());
+    await waitFor(() =>
+      expect(client.getQueryData<{ properties: unknown[] }>(key)?.properties).toEqual([]),
+    );
     expect(view.result.current.savedProperties).toEqual([]);
     view.unmount();
     pending.forEach((resolve) => resolve(properties('server-home')));
   },
 );
+
+it.each([false, true])(
+  'preserves another pending save when the first fails (initial cache: %s)',
+  async (withCache) => {
+    const initialResolvers: Array<(value: Awaited<ReturnType<typeof getSaved>>) => void> = [];
+    if (withCache) getSaved.mockResolvedValueOnce(properties('existing'));
+    else
+      getSaved.mockImplementationOnce(
+        () => new Promise((resolve) => initialResolvers.push(resolve)),
+      );
+    getSaved.mockResolvedValue(properties('P2'));
+    getFolders.mockResolvedValue(folders('folder'));
+    let rejectFirst!: (error: Error) => void;
+    let resolveSecond!: (value: unknown) => void;
+    save.mockImplementation(
+      (_owner, id) =>
+        new Promise((resolve, reject) => {
+          if (id === 'P1') rejectFirst = reject;
+          else resolveSecond = resolve;
+        }),
+    );
+    const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+    await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(1));
+    if (withCache)
+      await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('existing'));
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      first = view.result.current.savePropertyToFolder('P1', null);
+      second = view.result.current.savePropertyToFolder('P2', null);
+    });
+    const rejection = expect(first).rejects.toThrow('offline');
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      rejectFirst(new Error('offline'));
+      await rejection;
+    });
+    expect(view.result.current.savedProperties.map((p) => p.id)).toContain('P2');
+    expect(view.result.current.savedProperties.map((p) => p.id)).not.toContain('P1');
+    await act(async () => {
+      resolveSecond(undefined);
+      await second;
+    });
+    await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(view.result.current.savedProperties.map((p) => p.id)).toEqual(['P2']),
+    );
+    view.unmount();
+    initialResolvers.forEach((resolve) => resolve(properties('old-response')));
+  },
+);
+
+it('does not undo a later action on the same property when an earlier request fails last', async () => {
+  const empty = { ...properties('unused'), properties: [], total: 0 };
+  getSaved.mockResolvedValueOnce(properties('P')).mockResolvedValue(empty);
+  getFolders.mockResolvedValue(folders('folder'));
+  let rejectFirst!: (error: Error) => void;
+  let resolveSecond!: (value: unknown) => void;
+  save.mockImplementation(
+    () =>
+      new Promise((_resolve, reject) => {
+        rejectFirst = reject;
+      }),
+  );
+  unsave.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        resolveSecond = resolve;
+      }),
+  );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+  let first!: Promise<void>;
+  let second!: Promise<void>;
+  act(() => {
+    first = view.result.current.savePropertyToFolder('P', null);
+    second = view.result.current.unsaveProperty('P');
+  });
+  const rejection = expect(first).rejects.toThrow('offline');
+  await waitFor(() => expect(unsave).toHaveBeenCalledTimes(1));
+  await act(async () => {
+    resolveSecond(undefined);
+    await second;
+  });
+  await act(async () => {
+    rejectFirst(new Error('offline'));
+    await rejection;
+  });
+  expect(view.result.current.savedProperties).toEqual([]);
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(view.result.current.savedProperties).toEqual([]));
+});
+
+it('ignores an older in-flight GET after starting an optimistic save', async () => {
+  let finishOldGet!: (value: Awaited<ReturnType<typeof getSaved>>) => void;
+  let finishSave!: (value: unknown) => void;
+  getSaved
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishOldGet = resolve;
+        }),
+    )
+    .mockResolvedValue(properties('new-home'));
+  getFolders.mockResolvedValue(folders('folder'));
+  save.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finishSave = resolve;
+      }),
+  );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(1));
+  let pending!: Promise<void>;
+  act(() => {
+    pending = view.result.current.savePropertyToFolder('new-home', null);
+  });
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  await act(async () => {
+    finishOldGet(properties('stale-home'));
+  });
+  expect(view.result.current.savedProperties.map((p) => p.id)).toEqual(['new-home']);
+  await act(async () => {
+    finishSave(undefined);
+    await pending;
+  });
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(view.result.current.savedProperties.map((p) => p.id)).toEqual(['new-home']),
+  );
+});
