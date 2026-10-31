@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, render, renderHook, waitFor } from '@testing-library/react-native';
 import { OxyServices } from '@oxy.so/core';
 import {
@@ -9,6 +9,7 @@ import {
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import savedPropertyService from '@/services/savedPropertyService';
 import { savedKeys } from '@/hooks/useSavedQueries';
+import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
 import type { AccountOwner } from '@/hooks/useAccountOwner';
 
 const mockAuth = {
@@ -17,6 +18,9 @@ const mockAuth = {
   activeSessionId: 'session-A' as string | null,
   oxyServices: null as unknown as OxyServices,
 };
+jest.mock('expo-crypto', () => ({
+  randomUUID: jest.fn().mockImplementation(() => `test-${Math.random()}`),
+}));
 jest.mock('@oxy.so/services/ui/client', () => ({ useOxy: () => mockAuth }));
 jest.mock('@oxy.so/bloom/toast', () => ({ toast: { error: jest.fn(), success: jest.fn() } }));
 jest.mock('i18next', () => ({ t: (key: string) => key }));
@@ -75,6 +79,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
+  client.unmount();
   client.clear();
   oxy.dispose();
 });
@@ -594,4 +600,178 @@ it('does not erase another property save when a notes update fails', async () =>
   await waitFor(() =>
     expect(view.result.current.savedProperties.map((p) => p.id)).toEqual(['new-home']),
   );
+});
+
+it('resumes a paused notes mutation for the same owner and releases its captured operation', async () => {
+  getSaved.mockResolvedValue(properties('A-home'));
+  getFolders.mockResolvedValue(folders('folder'));
+  updateNotes.mockResolvedValue(undefined);
+  client.setDefaultOptions({
+    queries: { retry: false, networkMode: 'always' },
+    mutations: { networkMode: 'online', gcTime: Infinity },
+  });
+  client.mount();
+  const view = renderHook(() => useSavedNotesMutation(), { wrapper });
+  await waitFor(() => expect(getSaved).toHaveBeenCalled());
+  act(() => {
+    onlineManager.setOnline(false);
+  });
+  const onSuccess = jest.fn();
+  const onSettled = jest.fn();
+  let pending!: Promise<void>;
+  act(() => {
+    pending = view.result.current.mutateAsync(
+      { propertyId: 'A-home', notes: 'draft' },
+      { onSuccess, onSettled },
+    );
+  });
+  await waitFor(() => expect(view.result.current.isPaused).toBe(true));
+  const queued = client.getMutationCache().getAll()[0];
+  const captured = queued.state.variables as {
+    propertyId: string;
+    notes: string;
+    operationId: string;
+  };
+  expect(JSON.stringify(captured)).not.toContain('oxyServices');
+  const run = queued.options.mutationFn!;
+  await expect(run({ ...captured, operationId: 'unknown' }, {} as never)).rejects.toThrow(
+    'no longer available',
+  );
+  expect(updateNotes).not.toHaveBeenCalled();
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await pending;
+  });
+  expect(updateNotes).toHaveBeenCalledTimes(1);
+  expect(onSuccess).toHaveBeenCalledTimes(1);
+  expect(onSettled).toHaveBeenCalledTimes(1);
+  await expect(run(captured, {} as never)).rejects.toThrow('no longer available');
+});
+
+it('rejects a paused notes mutation if another account is active when it resumes', async () => {
+  getSaved.mockResolvedValue(properties('A-home'));
+  getFolders.mockResolvedValue(folders('folder'));
+  updateNotes.mockResolvedValue(undefined);
+  client.setDefaultOptions({
+    queries: { retry: false, networkMode: 'always' },
+    mutations: { networkMode: 'online', gcTime: Infinity },
+  });
+  client.mount();
+  const view = renderHook(() => useSavedNotesMutation(), { wrapper });
+  await waitFor(() => expect(getSaved).toHaveBeenCalled());
+  act(() => {
+    onlineManager.setOnline(false);
+  });
+  const onSuccess = jest.fn();
+  const onError = jest.fn();
+  const onSettled = jest.fn();
+  let pending!: Promise<void>;
+  act(() => {
+    pending = view.result.current.mutateAsync(
+      { propertyId: 'A-home', notes: 'private A' },
+      { onSuccess, onError, onSettled },
+    );
+  });
+  const rejected = expect(pending).rejects.toThrow('The active account changed');
+  await waitFor(() => expect(view.result.current.isPaused).toBe(true));
+  const queued = client.getMutationCache().getAll()[0];
+  const captured = queued.state.variables as {
+    propertyId: string;
+    notes: string;
+    operationId: string;
+  };
+  const run = queued.options.mutationFn!;
+  act(() => {
+    oxy.session.setAccessToken(token('B'));
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await rejected;
+  });
+  expect(updateNotes).not.toHaveBeenCalled();
+  expect(onSuccess).not.toHaveBeenCalled();
+  expect(onError).not.toHaveBeenCalled();
+  expect(onSettled).not.toHaveBeenCalled();
+  await expect(run(captured, {} as never)).rejects.toThrow('no longer available');
+});
+
+it('resumes a paused notes mutation after its screen unmounts while the provider remains', async () => {
+  getSaved.mockResolvedValue(properties('A-home'));
+  getFolders.mockResolvedValue(folders('folder'));
+  updateNotes.mockResolvedValue(undefined);
+  client.setDefaultOptions({
+    queries: { retry: false, networkMode: 'always' },
+    mutations: { networkMode: 'online', gcTime: Infinity },
+  });
+  client.mount();
+  let notes!: ReturnType<typeof useSavedNotesMutation>;
+  function Child() {
+    notes = useSavedNotesMutation();
+    return null;
+  }
+  function App({ show }: { show: boolean }) {
+    return (
+      <QueryClientProvider client={client}>
+        <SavedPropertiesProvider>{show ? <Child /> : null}</SavedPropertiesProvider>
+      </QueryClientProvider>
+    );
+  }
+  const view = render(<App show />);
+  await waitFor(() => expect(getSaved).toHaveBeenCalled());
+  act(() => {
+    onlineManager.setOnline(false);
+  });
+  let pending!: Promise<void>;
+  act(() => {
+    pending = notes.mutateAsync({ propertyId: 'A-home', notes: 'draft' });
+  });
+  await waitFor(() => expect(notes.isPaused).toBe(true));
+  view.rerender(<App show={false} />);
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await pending;
+  });
+  expect(updateNotes).toHaveBeenCalledTimes(1);
+});
+
+it('releases a paused notes operation removed from its isolated query client', async () => {
+  getSaved.mockResolvedValue(properties('A-home'));
+  getFolders.mockResolvedValue(folders('folder'));
+  client.setDefaultOptions({
+    queries: { retry: false, networkMode: 'always' },
+    mutations: { networkMode: 'online', gcTime: Infinity },
+  });
+  client.mount();
+  const view = renderHook(() => useSavedNotesMutation(), { wrapper });
+  await waitFor(() => expect(getSaved).toHaveBeenCalled());
+  act(() => {
+    onlineManager.setOnline(false);
+  });
+  let pending!: Promise<void>;
+  act(() => {
+    pending = view.result.current.mutateAsync({ propertyId: 'A-home', notes: 'draft' });
+  });
+  const rejected = expect(pending).rejects.toThrow('no longer available');
+  await waitFor(() => expect(view.result.current.isPaused).toBe(true));
+  const queued = client.getMutationCache().getAll()[0];
+  const captured = queued.state.variables as {
+    propertyId: string;
+    notes: string;
+    operationId: string;
+  };
+  const run = queued.options.mutationFn!;
+  view.unmount();
+  act(() => {
+    client.clear();
+  });
+  await expect(run(captured, {} as never)).rejects.toThrow('no longer available');
+  await act(async () => {
+    onlineManager.setOnline(true);
+    void queued.continue().catch(() => {});
+    await rejected;
+  });
+  expect(updateNotes).not.toHaveBeenCalled();
 });
