@@ -111,7 +111,25 @@ export function useAccountOwner(): AccountOwner | null {
     commitProjection(oxyServices, projected);
   }, [oxyServices, userId, activeSessionId, snapshot]);
   return useMemo(
-    () => (projected ? { ...projected, generation } : null),
+    () =>
+      projected
+        ? {
+            ...projected,
+            generation,
+            isCurrent: () => observedProjections.get(oxyServices)?.generation === generation,
+            subscribeInvalidation: (listener: () => void) => {
+              const coordinator = coordinatorFor(oxyServices);
+              const onChange = () => {
+                if (coordinator.generation !== generation) listener();
+              };
+              coordinator.listeners.add(onChange);
+              onChange();
+              return () => {
+                coordinator.listeners.delete(onChange);
+              };
+            },
+          }
+        : null,
     [oxyServices, userId, activeSessionId, snapshot, generation],
   );
 }
