@@ -49,7 +49,24 @@ const toApiError = (error: unknown): ApiError => {
   }
   return new ApiError('Request failed');
 };
-type Options = { requireAuth?: boolean; params?: Record<string, any> };
+/** A locally captured owner for work that must not follow a later account switch. */
+export type RequestOwner = { oxyServices: OxyServices; userId: string; epoch: number };
+type Options = {
+  requireAuth?: boolean;
+  params?: Record<string, any>;
+  owner?: RequestOwner;
+};
+
+function assertRequestOwner(owner: RequestOwner | undefined): void {
+  if (
+    owner &&
+    (boundOxy !== owner.oxyServices ||
+      owner.oxyServices.session.userId !== owner.userId ||
+      owner.oxyServices.http.getSessionEpoch() !== owner.epoch)
+  ) {
+    throw new ApiError('The active account changed');
+  }
+}
 
 /** Preserve the complete wire envelope; the linked SDK owns session authority. */
 async function request<T>(
@@ -69,6 +86,7 @@ async function request<T>(
   // Preserve the linked client's prior default deadline, including body reads.
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
+    assertRequestOwner(options?.owner);
     const client = getClient();
     const config: ResponseRequest = {
       method,
@@ -83,6 +101,7 @@ async function request<T>(
       ? client.requestAuthenticatedResponse(config)
       : client.requestResponse(config));
     const text = await response.text();
+    assertRequestOwner(options?.owner);
     let data: unknown = null;
     if (text) {
       try {
