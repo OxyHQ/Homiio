@@ -37,6 +37,7 @@ jest.mock('@/services/savedPropertyFolderService', () => ({
 const getSaved = jest.mocked(savedPropertyService.getSavedProperties);
 const getFolders = jest.mocked(savedPropertyFolderService.getSavedPropertyFolders);
 const save = jest.mocked(savedPropertyService.saveProperty);
+const unsave = jest.mocked(savedPropertyService.unsaveProperty);
 const updateNotes = jest.mocked(savedPropertyService.updateNotes);
 const properties = (id: string) =>
   ({ properties: [{ id }], total: 1, page: 1, totalPages: 1 }) as Awaited<
@@ -68,6 +69,7 @@ beforeEach(() => {
   getSaved.mockReset();
   getFolders.mockReset();
   save.mockReset();
+  unsave.mockReset();
   updateNotes.mockReset();
 });
 afterEach(() => {
@@ -348,6 +350,7 @@ it('does not reuse a cache entry when the Oxy provider instance changes', async 
       expect(view.result.current.savedProperties[0]?.id).toBe('replacement-provider-home'),
     );
   } finally {
+    view.unmount();
     replacement.dispose();
   }
 });
@@ -365,3 +368,36 @@ it('hides cached data when the projected account and bearer disagree', async () 
   expect(view.result.current.folders).toEqual([]);
   expect(getSaved).toHaveBeenCalledTimes(1);
 });
+
+it.each(['save', 'unsave'] as const)(
+  'removes optimistic %s data after failure when the initial query has no data',
+  async (operation) => {
+    const pending: Array<(value: Awaited<ReturnType<typeof getSaved>>) => void> = [];
+    getSaved.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          pending.push(resolve);
+        }),
+    );
+    getFolders.mockResolvedValue(folders('A-folder'));
+    save.mockRejectedValue(new Error('offline'));
+    unsave.mockRejectedValue(new Error('offline'));
+    const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+    await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(1));
+    const key = client
+      .getQueryCache()
+      .find({ queryKey: ['savedProperties'], exact: false })!.queryKey;
+    expect(client.getQueryData(key)).toBeUndefined();
+    await act(async () => {
+      const promise =
+        operation === 'save'
+          ? view.result.current.savePropertyToFolder('new-home', null)
+          : view.result.current.unsaveProperty('new-home');
+      await expect(promise).rejects.toThrow('offline');
+    });
+    await waitFor(() => expect(client.getQueryData(key)).toBeUndefined());
+    expect(view.result.current.savedProperties).toEqual([]);
+    view.unmount();
+    pending.forEach((resolve) => resolve(properties('server-home')));
+  },
+);
