@@ -28,7 +28,8 @@ import { RiRepeatLine } from '@oxy.so/bloom/icons/RiRepeatLine';
 import { RiRestaurantLine } from '@oxy.so/bloom/icons/RiRestaurantLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
-import { ExchangeMode, type PropertyExchange } from '@homiio/shared-types';
+import { ExchangeMode } from '@homiio/shared-types/common';
+import type { PropertyExchange } from '@homiio/shared-types';
 import { Section } from '@/components/property/Section';
 import { spacing } from '@/constants/styles';
 

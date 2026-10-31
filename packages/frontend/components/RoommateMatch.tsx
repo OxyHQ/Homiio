@@ -7,7 +7,7 @@ import type React from 'react';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { formatPrice } from '@homiio/shared-types';
+import { formatPrice } from '@homiio/shared-types/format/money';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';

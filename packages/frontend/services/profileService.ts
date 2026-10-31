@@ -1,14 +1,13 @@
 import { api } from '@/utils/api';
+import type { Profile, UpdateProfileData } from '@homiio/shared-types';
 import {
-  type Profile,
-  type UpdateProfileData,
   EmploymentStatus,
   LeaseDuration,
   ReferenceRelationship,
   ReasonForLeaving,
   ProfileVisibility,
   PriceUnit,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/common';
 
 export type { Profile, UpdateProfileData };
 

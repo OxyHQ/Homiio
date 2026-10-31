@@ -23,7 +23,8 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { Section } from '@/components/property/Section';
 import { MoneyText } from '@/components/MoneyText';
 import { hairline, radius, spacing } from '@/constants/styles';
-import { OfferingType, type Property } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
+import type { Property } from '@homiio/shared-types';
 import { hasOffering, type RentalMode } from '@/utils/propertyUtils';
 
 interface Props {

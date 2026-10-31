@@ -23,12 +23,8 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { spacing, tracker } from '@/constants/styles';
-import {
-  REWARD_TIERS,
-  tierForPoints,
-  type RewardTier,
-  type RewardTierKey,
-} from '@homiio/shared-types';
+import { REWARD_TIERS, tierForPoints } from '@homiio/shared-types/partner';
+import type { RewardTier, RewardTierKey } from '@homiio/shared-types';
 
 /**
  * Medal tints per tier. These are intentionally literal metal colors (bronze /

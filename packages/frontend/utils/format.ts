@@ -16,12 +16,9 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
-import {
-  DEFAULT_AREA_UNIT_LABELS,
-  DEFAULT_PRICE_UNIT_LABELS,
-  type AreaUnitLabels,
-  type PriceUnitLabels,
-} from '@homiio/shared-types';
+import { DEFAULT_AREA_UNIT_LABELS } from '@homiio/shared-types/format/units';
+import { DEFAULT_PRICE_UNIT_LABELS } from '@homiio/shared-types/format/money';
+import type { AreaUnitLabels, PriceUnitLabels } from '@homiio/shared-types';
 
 import { getFormatLocale } from '@/utils/dateLocale';
 

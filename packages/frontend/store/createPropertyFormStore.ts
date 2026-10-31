@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ExchangeMode, OfferingType } from '@homiio/shared-types';
+import { ExchangeMode, OfferingType } from '@homiio/shared-types/common';
 import type { AvailabilityWindow } from '@homiio/shared-types';
 import type { UploadedImage } from '@/services/imageUploadService';
 

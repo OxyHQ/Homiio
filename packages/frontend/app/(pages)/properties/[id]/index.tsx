@@ -70,7 +70,9 @@ import { propertyService } from '@/services/propertyService';
 import profileService from '@/services/profileService';
 import ViewingService, { type ViewingRequest } from '@/services/viewingService';
 import { MY_VIEWINGS_KEY } from '@/hooks/useUpcomingBookings';
-import { formatArea, OfferingType, type Property } from '@homiio/shared-types';
+import { formatArea } from '@homiio/shared-types/format/units';
+import { OfferingType } from '@homiio/shared-types/common';
+import type { Property } from '@homiio/shared-types';
 
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
 

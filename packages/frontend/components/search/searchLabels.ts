@@ -11,14 +11,9 @@
  */
 import type { TFunction } from 'i18next';
 
-import {
-  OfferingType,
-  PropertyType,
-  formatDate,
-  formatDateRange,
-  formatMoney,
-  formatMoneyRange,
-} from '@homiio/shared-types';
+import { OfferingType, PropertyType } from '@homiio/shared-types/common';
+import { formatDate, formatDateRange } from '@homiio/shared-types/format/dates';
+import { formatMoney, formatMoneyRange } from '@homiio/shared-types/format/money';
 
 import { SEARCH_PRICE_CURRENCY, type SearchQuery } from './types';
 

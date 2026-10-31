@@ -1,14 +1,14 @@
 import { api, type ApiResponse } from '@/utils/api';
-import {
-  type AvailabilityWindow,
-  AvailabilityWindowStatus,
-  type CancellationPolicy,
-  type CreateReservationData,
-  type OfferingType,
-  type Reservation,
-  type ReservationStatus,
-  type UpdateReservationData,
+import type {
+  AvailabilityWindow,
+  CancellationPolicy,
+  CreateReservationData,
+  OfferingType,
+  Reservation,
+  ReservationStatus,
+  UpdateReservationData,
 } from '@homiio/shared-types';
+import { AvailabilityWindowStatus } from '@homiio/shared-types/common';
 
 /**
  * Server availability response for a single property. Mirrors the shape the

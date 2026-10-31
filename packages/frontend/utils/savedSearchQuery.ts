@@ -22,7 +22,9 @@
  */
 import type { TFunction } from 'i18next';
 
-import { OfferingType, parseListingCurrency, type PropertyType } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
+import { parseListingCurrency } from '@homiio/shared-types/currency';
+import type { PropertyType } from '@homiio/shared-types';
 
 import { locationDisplayLabel, type SearchQuery } from '@/components/search/types';
 import { datesLabel, guestsLabel, priceLabel, typeLabel } from '@/components/search/searchLabels';

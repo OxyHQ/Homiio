@@ -50,7 +50,8 @@ import { Section } from '@/components/property/Section';
 import { useAreaInsights } from '@/hooks';
 import { useFormatting } from '@/utils/format';
 import { radius, spacing } from '@/constants/styles';
-import { formatMoney, type PropertyAreaInsights } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import type { PropertyAreaInsights } from '@homiio/shared-types';
 
 interface PriceRangeSectionProps {
   propertyId: string;

@@ -28,7 +28,8 @@ import { useTranslation } from 'react-i18next';
 
 import { RiPhoneLine } from '@oxy.so/bloom/icons/RiPhoneLine';
 import { ActionBar, type ActionBarProps } from '@oxy.so/bloom/listing-actions';
-import { HousingType, type Property } from '@homiio/shared-types';
+import { HousingType } from '@homiio/shared-types/common';
+import type { Property } from '@homiio/shared-types';
 
 interface Props {
   property: Property | null;

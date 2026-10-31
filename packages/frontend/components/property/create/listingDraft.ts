@@ -17,7 +17,9 @@
 import type { TFunction } from 'i18next';
 import type { ListingPreviewData, ListingQualityItem } from '@oxy.so/bloom/listing-editor';
 import type { Offering } from '@oxy.so/bloom/offering-badge';
-import { OfferingType, PropertyType, formatArea, formatMoney } from '@homiio/shared-types';
+import { OfferingType, PropertyType } from '@homiio/shared-types/common';
+import { formatArea } from '@homiio/shared-types/format/units';
+import { formatMoney } from '@homiio/shared-types/format/money';
 
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import type { Formatting } from '@/utils/format';

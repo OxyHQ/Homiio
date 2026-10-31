@@ -53,11 +53,8 @@ import {
 import { getIconArt } from '@/constants/iconArt';
 import { useNearbyServices } from '@/hooks';
 import { radius, spacing } from '@/constants/styles';
-import {
-  formatDistance,
-  type NearbyServiceCategory,
-  type NearbyServiceKey,
-} from '@homiio/shared-types';
+import { formatDistance } from '@homiio/shared-types/format/units';
+import type { NearbyServiceCategory, NearbyServiceKey } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 
 interface NearbyServicesSectionProps {

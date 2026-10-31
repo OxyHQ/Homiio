@@ -6,7 +6,7 @@
  * are unchanged to preserve the exact wizard behaviour (step order, which
  * fields are visible per type/step, and picker options).
  */
-import { ExchangeMode, OfferingType } from '@homiio/shared-types';
+import { ExchangeMode, OfferingType } from '@homiio/shared-types/common';
 
 /**
  * The property types a host can publish, in tile order. Labels are

@@ -45,7 +45,7 @@ import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
 import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
-import { formatPrice } from '@homiio/shared-types';
+import { formatPrice } from '@homiio/shared-types/format/money';
 import { useFormatting } from '@/utils/format';
 import { deleteDraft, openDraft, readDrafts, type PropertyDraft } from '@/utils/propertyDrafts';
 

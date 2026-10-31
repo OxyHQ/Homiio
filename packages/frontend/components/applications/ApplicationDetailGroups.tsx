@@ -15,12 +15,9 @@ import { RiWallet3Line } from '@oxy.so/bloom/icons/RiWallet3Line';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Button } from '@oxy.so/bloom/button';
 import { toast } from '@oxy.so/bloom/toast';
-import {
-  applicationChecklist,
-  formatMoney,
-  type TenantApplication,
-  type TenantApplicationDocument,
-} from '@homiio/shared-types';
+import { applicationChecklist } from '@homiio/shared-types/applicationChecklist';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import type { TenantApplication, TenantApplicationDocument } from '@homiio/shared-types';
 
 import { SettingsRowIcon, type SettingsIconComponent } from '@/components/profile/SettingsRowIcon';
 import { openPrivateDocument } from '@/utils/privateDocument';

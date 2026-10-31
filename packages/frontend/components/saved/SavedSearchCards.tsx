@@ -24,7 +24,7 @@ import { RiHome4Line } from '@oxy.so/bloom/icons/RiHome4Line';
 import { RiHomeHeartLine } from '@oxy.so/bloom/icons/RiHomeHeartLine';
 import { RiSuitcaseLine } from '@oxy.so/bloom/icons/RiSuitcaseLine';
 import { alert, confirm } from '@oxy.so/bloom/surfaces';
-import { OfferingType } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
 
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import type { SavedSearch } from '@/store/savedSearchesStore';

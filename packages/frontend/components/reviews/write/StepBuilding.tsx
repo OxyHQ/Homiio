@@ -12,7 +12,7 @@ import {
   NeighborRelations,
   CleaningRating,
   ServiceType,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/review';
 
 import { EnumChipSelector } from '@/components/reviews/EnumChipSelector';
 import { YesNoSelector } from '@/components/reviews/write/YesNoSelector';

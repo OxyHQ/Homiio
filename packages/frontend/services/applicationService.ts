@@ -16,12 +16,14 @@ import {
   APPLICATION_DOCUMENT_MAX_BYTES,
   APPLICATION_DOCUMENT_MAX_COUNT,
   planUploadBatches,
-  TenantApplicationStatus,
-  type DocumentVerificationStatus,
-  type EmploymentStatus,
-  type ReferenceRelationship,
-  type TenantApplication,
-  type TenantApplicationDocumentType,
+} from '@homiio/shared-types/upload';
+import { TenantApplicationStatus } from '@homiio/shared-types/application';
+import type {
+  DocumentVerificationStatus,
+  EmploymentStatus,
+  ReferenceRelationship,
+  TenantApplication,
+  TenantApplicationDocumentType,
 } from '@homiio/shared-types';
 
 import { api, ApiError, type ApiResponse } from '@/utils/api';

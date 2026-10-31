@@ -8,7 +8,7 @@ import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { formatMoney } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { useNeighborhood } from '@/hooks/useNeighborhood';
 import { useFormatting } from '@/utils/format';
 import { BaseWidget } from './BaseWidget';

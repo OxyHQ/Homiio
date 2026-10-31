@@ -17,12 +17,17 @@
  *   draw) in the web entry chunk. Import `@oxy.so/services/ui/client`, the lean
  *   entry; `OxyProvider` loads the screens on its own. In a component, the
  *   account dialog opens through `useOxy().openAccountDialog`.
+ * - `@homiio/shared-types` root at runtime: import values from their source
+ *   module, leaving the unrelated server contracts out of the Metro graph.
+ *   Use declaration-level `import type` or `export type` for the root: a
+ *   mixed import containing only `type` specifiers can retain the barrel.
  *
- * The check is line-based on import/require/mock specifiers. Comment lines are
- * skipped, so a doc comment that quotes the forbidden form does not trip it.
+ * The icon and Oxy checks are line-based on import/require/mock specifiers.
+ * The shared-types check parses declarations to distinguish type-only imports.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, relative } from 'node:path';
+import ts from 'typescript';
 
 const ROOT = resolve(process.argv[2] ?? new URL('../packages/frontend', import.meta.url).pathname);
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx']);
@@ -104,6 +109,7 @@ function sourceFiles(directory) {
 }
 
 const violations = BARRELS.map(() => []);
+const sharedTypesViolations = [];
 for (const file of sourceFiles(ROOT)) {
   const lines = readFileSync(file, 'utf8').split('\n');
   lines.forEach((line, index) => {
@@ -115,6 +121,39 @@ for (const file of sourceFiles(ROOT)) {
       }
     });
   });
+  const relativeFile = relative(ROOT, file);
+  if (relativeFile.startsWith('__tests__/') || /\.(test|spec)\.[jt]sx?$/.test(relativeFile)) {
+    continue;
+  }
+  const source = ts.createSourceFile(file, lines.join('\n'), ts.ScriptTarget.Latest, true);
+  function checkSharedTypes(node) {
+    let specifier;
+    let typeOnly = false;
+    if (ts.isImportDeclaration(node)) {
+      specifier = node.moduleSpecifier;
+      typeOnly = node.importClause?.isTypeOnly === true;
+    } else if (ts.isExportDeclaration(node)) {
+      specifier = node.moduleSpecifier;
+      typeOnly = node.isTypeOnly;
+    } else if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === 'require'))
+    ) {
+      specifier = node.arguments[0];
+    }
+    if (
+      specifier &&
+      ts.isStringLiteral(specifier) &&
+      specifier.text === '@homiio/shared-types' &&
+      !typeOnly
+    ) {
+      const position = source.getLineAndCharacterOfPosition(node.getStart(source));
+      sharedTypesViolations.push(`${relativeFile}:${position.line + 1}`);
+    }
+    ts.forEachChild(node, checkSharedTypes);
+  }
+  checkSharedTypes(source);
 }
 
 let failed = false;
@@ -123,8 +162,15 @@ BARRELS.forEach(({ message }, barrel) => {
   failed = true;
   console.error(`${message}\n${violations[barrel].join('\n')}`);
 });
+if (sharedTypesViolations.length > 0) {
+  failed = true;
+  console.error(
+    'Import runtime values from @homiio/shared-types/<module>; use import type or export type for the root barrel.\n' +
+      sharedTypesViolations.join('\n'),
+  );
+}
 if (failed) process.exit(1);
 
 console.log(
-  'Frontend bundle imports: no @expo/vector-icons, lucide-react-native, @oxy.so/bloom or @oxy.so/services root-barrel, or bundled non-English locale imports.',
+  'Frontend bundle imports: no forbidden icon, root-barrel, or bundled non-English locale imports.',
 );

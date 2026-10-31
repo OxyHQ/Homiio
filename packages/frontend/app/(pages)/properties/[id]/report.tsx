@@ -35,7 +35,8 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services/ui/client';
 
-import { ListingReportReason, PropertyType } from '@homiio/shared-types';
+import { ListingReportReason } from '@homiio/shared-types/report';
+import { PropertyType } from '@homiio/shared-types/common';
 import { useProperty } from '@/hooks';
 import { useReportListingMutation } from '@/hooks/useReportMutation';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';

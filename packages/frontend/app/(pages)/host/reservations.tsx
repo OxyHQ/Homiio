@@ -42,12 +42,9 @@ import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import {
-  type Reservation,
-  ReservationStatus,
-  formatMoney,
-  type Property,
-} from '@homiio/shared-types';
+import type { Reservation, Property } from '@homiio/shared-types';
+import { ReservationStatus } from '@homiio/shared-types/reservation';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { ReservationCard } from '@/components/ReservationCard';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';

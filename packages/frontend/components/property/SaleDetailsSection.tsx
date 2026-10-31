@@ -20,7 +20,8 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Section } from '@/components/property/Section';
 import { MoneyText } from '@/components/MoneyText';
 import { spacing } from '@/constants/styles';
-import { formatPercentage, type PropertySale } from '@homiio/shared-types';
+import { formatPercentage } from '@homiio/shared-types/format/percentage';
+import type { PropertySale } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 
 interface Props {

@@ -22,7 +22,8 @@ import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PlaceReviewSummary } from '@oxy.so/bloom/place-reviews';
-import { DepositReturn, type ReviewDTO } from '@homiio/shared-types';
+import { DepositReturn } from '@homiio/shared-types/review';
+import type { ReviewDTO } from '@homiio/shared-types';
 
 /** ADR 0003 §4.4: an aggregate needs this many records… */
 export const AGGREGATE_MIN_RECORDS = 5;

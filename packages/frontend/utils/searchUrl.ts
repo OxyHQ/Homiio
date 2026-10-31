@@ -29,18 +29,11 @@
  * distinction is the whole of ADR 0002 decision 5 at the URL layer: a location
  * that was requested and lost must never widen into a global feed.
  */
-import {
-  OfferingType,
-  ExchangeMode,
-  PropertyType,
-  HOUSING_FEATURES,
-  parseListingCurrency,
-  type HousingFeature,
-  parseLocationToken,
-  serializeLocationToken,
-  type LocationRef,
-  type LocationTokenFailure,
-} from '@homiio/shared-types';
+import { OfferingType, ExchangeMode, PropertyType } from '@homiio/shared-types/common';
+import { HOUSING_FEATURES } from '@homiio/shared-types/housingFeature';
+import { parseListingCurrency } from '@homiio/shared-types/currency';
+import type { HousingFeature, LocationRef, LocationTokenFailure } from '@homiio/shared-types';
+import { parseLocationToken, serializeLocationToken } from '@homiio/shared-types/location';
 
 const HOUSING_FEATURE_VALUES = new Set<string>(HOUSING_FEATURES);
 

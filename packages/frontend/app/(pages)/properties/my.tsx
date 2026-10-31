@@ -41,7 +41,8 @@ import { useMarkPropertyTransacted } from '@/hooks/usePartner';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { toast } from '@oxy.so/bloom/toast';
 import { spacing } from '@/constants/styles';
-import { OfferingType, PropertyStatus, type Property } from '@homiio/shared-types';
+import { OfferingType, PropertyStatus } from '@homiio/shared-types/common';
+import type { Property } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
 
 /** Number of skeleton cards shown during the first load. */

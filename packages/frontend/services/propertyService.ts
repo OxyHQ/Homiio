@@ -1,19 +1,19 @@
 import { api, ApiError } from '@/utils/api';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
-import {
-  PropertyType,
-  type PropertyStatus,
-  type PropertyFilters,
-  type Property,
-  type PropertyImage,
-  type PropertyAreaInsights,
-  type PropertyNearbyServices,
-  type CreatePropertyData,
-  type UpdatePropertyData,
-  type Commission,
-  formatPrice,
-  type PriceDescriptor,
+import { PropertyType } from '@homiio/shared-types/common';
+import type {
+  PropertyStatus,
+  PropertyFilters,
+  Property,
+  PropertyImage,
+  PropertyAreaInsights,
+  PropertyNearbyServices,
+  CreatePropertyData,
+  UpdatePropertyData,
+  Commission,
+  PriceDescriptor,
 } from '@homiio/shared-types';
+import { formatPrice } from '@homiio/shared-types/format/money';
 import type { Formatting } from '@/utils/format';
 
 /** The `{ property, commission }` payload returned by mark-transacted. */
@@ -24,7 +24,7 @@ export interface MarkTransactedResult {
 }
 
 // Re-export types for use in other files
-export { Property, PropertyFilters } from '@homiio/shared-types';
+export type { Property, PropertyFilters } from '@homiio/shared-types';
 
 /**
  * ## Transport failures propagate; they are not an empty result

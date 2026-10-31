@@ -43,15 +43,11 @@ import {
 import { Rating } from '@oxy.so/bloom/rating';
 import { GuestPicker } from '@oxy.so/bloom/stay-search';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import {
-  CancellationPolicy,
-  DEFAULT_MORTGAGE_CONFIG,
-  PropertyStatus,
-  UtilitiesIncluded,
-  formatDate,
-  formatMoney,
-  type Property,
-} from '@homiio/shared-types';
+import { CancellationPolicy, PropertyStatus, UtilitiesIncluded } from '@homiio/shared-types/common';
+import { DEFAULT_MORTGAGE_CONFIG } from '@homiio/shared-types/property';
+import { formatDate } from '@homiio/shared-types/format/dates';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import type { Property } from '@homiio/shared-types';
 
 import { ExternalSourceButton } from '@/components/property/ExternalSourceButton';
 import { useActiveApplicationForProperty } from '@/hooks/useApplicationQueries';

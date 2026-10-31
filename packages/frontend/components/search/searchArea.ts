@@ -40,12 +40,8 @@
  * searched area" then means "back where the app put us", which is exact.
  */
 
-import {
-  boundsSpanDegrees,
-  normalizeLongitude,
-  type GeoBounds,
-  type LocationSelection,
-} from '@homiio/shared-types';
+import { boundsSpanDegrees, normalizeLongitude } from '@homiio/shared-types/location';
+import type { GeoBounds, LocationSelection } from '@homiio/shared-types';
 
 import type { MapMoveSource } from '@goway.to/maps';
 

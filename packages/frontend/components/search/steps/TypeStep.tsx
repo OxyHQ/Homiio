@@ -16,7 +16,7 @@ import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
 import { PropertyTypePicker } from '@oxy.so/bloom/home-search';
 import type { PropertyTypeOption } from '@oxy.so/bloom/stay-filters';
 
-import { OfferingType, PropertyType } from '@homiio/shared-types';
+import { OfferingType, PropertyType } from '@homiio/shared-types/common';
 
 /** A selectable property type with its glyph and its long-term and short-term labels. */
 export interface SearchTypeOption {

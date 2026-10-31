@@ -36,11 +36,8 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Textarea } from '@oxy.so/bloom/textarea';
-import {
-  type Profile,
-  type TenantApplication,
-  TenantApplicationStatus,
-} from '@homiio/shared-types';
+import type { Profile, TenantApplication } from '@homiio/shared-types';
+import { TenantApplicationStatus } from '@homiio/shared-types/application';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import {
   ApplicationDocumentsGroup,

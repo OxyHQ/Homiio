@@ -6,15 +6,15 @@
  */
 
 import i18next from 'i18next';
+import { PropertyType } from '@homiio/shared-types/common';
 import {
-  PropertyType,
   buildLargeTitleLocation,
   composeTitle,
   removePropertyNumber,
   resolveShortTitleLocation,
   SHORT_TITLE_MAX_LENGTH,
   LARGE_TITLE_MAX_LENGTH,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/utils/propertyTitle';
 
 export interface PropertyData {
   type?: PropertyType;

@@ -65,7 +65,9 @@ import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { H1, P } from '@oxy.so/bloom/typography';
 
-import { formatRelativeDate, serializeLocationToken, type Property } from '@homiio/shared-types';
+import { formatRelativeDate } from '@homiio/shared-types/format/dates';
+import { serializeLocationToken } from '@homiio/shared-types/location';
+import type { Property } from '@homiio/shared-types';
 
 import { useLocationScope } from '@/hooks/useLocationScope';
 import { useCity } from '@/hooks/useCityQueries';

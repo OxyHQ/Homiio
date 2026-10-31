@@ -15,7 +15,7 @@ import {
   PriceBreakdown as BloomPriceBreakdown,
   type PriceBreakdownProps as BloomPriceBreakdownProps,
 } from '@oxy.so/bloom/booking';
-import { formatMoney } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { useFormatting } from '@/utils/format';
 
 /** A price breakdown always shows cents, so fix precision at 2 fraction digits. */

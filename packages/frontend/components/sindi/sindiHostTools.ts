@@ -11,12 +11,8 @@
  */
 
 import type { AliaHostAction, AliaHostOutcome, AliaHostToolDefinition } from '@alia.onl/sdk';
-import {
-  parseSindiHostCall,
-  SINDI_HOST_TOOLS,
-  type SindiAction,
-  type SindiActionOutcome,
-} from '@homiio/shared-types';
+import { parseSindiHostCall, SINDI_HOST_TOOLS } from '@homiio/shared-types/sindiAction';
+import type { SindiAction, SindiActionOutcome } from '@homiio/shared-types';
 
 /** Homiio's app slug for Alia: the chat's `app`, so the model sees `host_homiio__<name>` and its conversations are labelled Homiio's. */
 export const SINDI_HOST_APP = 'homiio';

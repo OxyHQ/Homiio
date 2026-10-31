@@ -21,7 +21,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { formatMoney, type AlertExplanationDetail } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import type { AlertExplanationDetail } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 
 interface Props {

@@ -8,7 +8,7 @@
  * `RoomList` only renders what this returns.
  */
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
-import { PropertyType } from '@homiio/shared-types';
+import { PropertyType } from '@homiio/shared-types/common';
 
 import type { RoomFilterOptions } from '@/components/RoomFilters';
 import { propertyService } from '@/services/propertyService';

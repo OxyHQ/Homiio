@@ -33,13 +33,9 @@
  * against a backend ordering by listing count, so whichever Barcelona had more
  * listings won, arbitrarily, and the winner could change as data arrived.
  */
-import {
-  boundsCenter,
-  citySelection,
-  type LocationRef,
-  type LocationResolution,
-  type LocationSelection,
-} from '@homiio/shared-types';
+import { boundsCenter } from '@homiio/shared-types/location';
+import { citySelection } from '@homiio/shared-types/city';
+import type { LocationRef, LocationResolution, LocationSelection } from '@homiio/shared-types';
 
 import { cityService } from '@/services/cityService';
 

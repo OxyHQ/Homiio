@@ -14,7 +14,8 @@ import { spacing } from '@/constants/styles';
 
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
-import { type Property, formatNumber } from '@homiio/shared-types';
+import type { Property } from '@homiio/shared-types';
+import { formatNumber } from '@homiio/shared-types/format/numbers';
 import { useFormatting } from '@/utils/format';
 import { useCity } from '@/hooks/useCityQueries';
 import {

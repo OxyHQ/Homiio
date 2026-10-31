@@ -26,7 +26,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { OfferingType, parseListingCurrency, type ListingCurrency } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
+import { parseListingCurrency } from '@homiio/shared-types/currency';
+import type { ListingCurrency } from '@homiio/shared-types';
 import type { SearchQuery } from '@/components/search/types';
 import type { PriceTrack } from '@/components/search/steps/PriceStep';
 import { api } from '@/utils/api';

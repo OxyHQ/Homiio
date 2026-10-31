@@ -40,12 +40,8 @@ import { useMemo } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import {
-  formatDistance,
-  type LocationSelection,
-  type OfferingType,
-  type Property,
-} from '@homiio/shared-types';
+import { formatDistance } from '@homiio/shared-types/format/units';
+import type { LocationSelection, OfferingType, Property } from '@homiio/shared-types';
 import { BaseWidget } from './BaseWidget';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useLocationScope } from '@/hooks/useLocationScope';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
-import { ExchangeRequestStatus } from '@homiio/shared-types';
+import { ExchangeRequestStatus } from '@homiio/shared-types/common';
 
 /** Exchange status → Bloom Chip data hue + i18n label key (mirrors ReservationStatusBadge). */
 const STATUS_MAP: Record<ExchangeRequestStatus, { hue: ChipHue; i18nKey: string }> = {

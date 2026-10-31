@@ -22,7 +22,8 @@ import {
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
 import { useOxy } from '@oxy.so/services/ui/client';
-import { type Reservation, ReservationStatus } from '@homiio/shared-types';
+import type { Reservation } from '@homiio/shared-types';
+import { ReservationStatus } from '@homiio/shared-types/reservation';
 
 import { ReservationCard } from '@/components/ReservationCard';
 import { EmptyState } from '@/components/ui/EmptyState';

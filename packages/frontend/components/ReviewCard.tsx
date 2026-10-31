@@ -34,11 +34,8 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services/ui/client';
 import type { User } from '@oxy.so/core';
 
-import {
-  ReviewModerationStatus,
-  type ReviewDTO,
-  type ReviewReportReason,
-} from '@homiio/shared-types';
+import { ReviewModerationStatus } from '@homiio/shared-types/review';
+import type { ReviewDTO, ReviewReportReason } from '@homiio/shared-types';
 
 import { ReportReviewSheet } from '@/components/reviews/ReportReviewSheet';
 import {

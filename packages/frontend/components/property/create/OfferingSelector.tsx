@@ -8,7 +8,7 @@ import {
   SegmentedControlItem,
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
-import { OfferingType } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
 import { PRICING_OFFERING_OPTIONS, CURRENCY_OPTIONS } from './constants';
 import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';

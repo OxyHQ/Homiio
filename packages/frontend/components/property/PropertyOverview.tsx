@@ -8,7 +8,7 @@
  */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatArea } from '@homiio/shared-types';
+import { formatArea } from '@homiio/shared-types/format/units';
 import { useFormatting } from '@/utils/format';
 
 import { Divider } from '@oxy.so/bloom/divider';

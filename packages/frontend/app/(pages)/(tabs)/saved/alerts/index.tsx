@@ -34,7 +34,7 @@ import { AlertExplanationText } from '@/components/watches/AlertExplanationText'
 import { useHousingAlerts, type HousingAlert } from '@/hooks/useHousingAlerts';
 import { contentClamp, spacing } from '@/constants/styles';
 import { useFormatting } from '@/utils/format';
-import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types/format/dates';
 
 const ICON_SIZE = 18;
 

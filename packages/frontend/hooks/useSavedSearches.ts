@@ -5,15 +5,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services/ui/client';
 import { api, ApiError } from '@/utils/api';
-import {
-  AVAILABLE_HOUSING_ALERT_RULE_TYPES,
-  type AlertChannel,
-  type HousingAlertRule,
-  type HousingAlertRuleType,
-  type LocationSelection,
-  type PushPrivacyMode,
-  type WatchAlertStatus,
-  type WatchCadence,
+import { AVAILABLE_HOUSING_ALERT_RULE_TYPES } from '@homiio/shared-types/watch';
+import type {
+  AlertChannel,
+  HousingAlertRule,
+  HousingAlertRuleType,
+  LocationSelection,
+  PushPrivacyMode,
+  WatchAlertStatus,
+  WatchCadence,
 } from '@homiio/shared-types';
 
 /**

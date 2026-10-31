@@ -24,7 +24,7 @@ import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 
 import { TripCard } from '@oxy.so/bloom/booking';
-import { deviceTimeZone, formatDate, formatDateRange } from '@homiio/shared-types';
+import { deviceTimeZone, formatDate, formatDateRange } from '@homiio/shared-types/format/dates';
 
 import { ExternalSourceButton } from '@/components/property/ExternalSourceButton';
 import { propertyService } from '@/services/propertyService';

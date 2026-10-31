@@ -30,7 +30,7 @@ import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
-import { TenantApplicationStatus } from '@homiio/shared-types';
+import { TenantApplicationStatus } from '@homiio/shared-types/application';
 
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import {

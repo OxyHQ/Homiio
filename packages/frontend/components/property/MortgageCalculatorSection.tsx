@@ -23,7 +23,8 @@ import { MortgageCalculator, type MortgageCalculatorLabels } from '@oxy.so/bloom
 
 import { Section } from '@/components/property/Section';
 import { useFormatting } from '@/utils/format';
-import { DEFAULT_MORTGAGE_CONFIG, formatMoney } from '@homiio/shared-types';
+import { DEFAULT_MORTGAGE_CONFIG } from '@homiio/shared-types/property';
+import { formatMoney } from '@homiio/shared-types/format/money';
 
 interface Props {
   salePrice: number;

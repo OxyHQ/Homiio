@@ -28,7 +28,8 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
-import { ExchangeMode, ExchangeRequestStatus, type ExchangeWindow } from '@homiio/shared-types';
+import { ExchangeMode, ExchangeRequestStatus } from '@homiio/shared-types/common';
+import type { ExchangeWindow } from '@homiio/shared-types';
 
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';

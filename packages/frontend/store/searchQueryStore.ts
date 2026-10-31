@@ -1,12 +1,12 @@
 import { create } from 'zustand';
-import {
-  OfferingType,
-  type PropertyType,
-  boundsCenter,
-  type GeoBounds,
-  type ListingCurrency,
-  type LocationSelection,
+import { OfferingType } from '@homiio/shared-types/common';
+import type {
+  PropertyType,
+  GeoBounds,
+  ListingCurrency,
+  LocationSelection,
 } from '@homiio/shared-types';
+import { boundsCenter } from '@homiio/shared-types/location';
 import type {
   SearchDateRange,
   SearchQuery,

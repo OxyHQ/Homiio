@@ -6,7 +6,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { formatDistance, locationKey, type LocationSelection } from '@homiio/shared-types';
+import { formatDistance } from '@homiio/shared-types/format/units';
+import { locationKey } from '@homiio/shared-types/location';
+import type { LocationSelection } from '@homiio/shared-types';
 
 import { DEVICE_SCOPE_RADIUS_METERS, type LocationScope } from '@/hooks/useLocationScope';
 import { useLocationScopeStore } from '@/store/locationScopeStore';

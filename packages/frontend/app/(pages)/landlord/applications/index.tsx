@@ -39,12 +39,9 @@ import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
 import { RiLockLine } from '@oxy.so/bloom/icons/RiLockLine';
 import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
 import { useOxy } from '@oxy.so/services/ui/client';
-import {
-  type Profile,
-  type TenantApplication,
-  TenantApplicationStatus,
-  formatMoney,
-} from '@homiio/shared-types';
+import type { Profile, TenantApplication } from '@homiio/shared-types';
+import { TenantApplicationStatus } from '@homiio/shared-types/application';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { ApplicationCard } from '@/components/ApplicationCard';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';

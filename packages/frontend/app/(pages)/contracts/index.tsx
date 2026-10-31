@@ -35,7 +35,7 @@ import { RiEyeLine } from '@oxy.so/bloom/icons/RiEyeLine';
 import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
 import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
-import { formatMoney } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { ContractCard } from '@/components/ContractCard';
 import { ContractStatusBadge } from '@/components/ContractStatusBadge';
 import { useLeaseFormatContext } from '@/components/tenancy/useLeaseFormatContext';

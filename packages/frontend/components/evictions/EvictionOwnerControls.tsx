@@ -23,7 +23,7 @@ import { RiEditLine } from '@oxy.so/bloom/icons/RiEditLine';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { H3 } from '@oxy.so/bloom/typography';
 
-import { EvictionCaseStatus } from '@homiio/shared-types';
+import { EvictionCaseStatus } from '@homiio/shared-types/eviction';
 import { useCreateEvictionUpdate, useUpdateEviction } from '@/hooks/useEvictionQueries';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';

@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types/format/dates';
 import { useFormatting } from '@/utils/format';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@oxy.so/bloom/toast';

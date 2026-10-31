@@ -30,7 +30,7 @@ import { RiCheckboxCircleFill } from '@oxy.so/bloom/icons/RiCheckboxCircleFill';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { ReviewAuthorIdentity } from '@homiio/shared-types';
+import { ReviewAuthorIdentity } from '@homiio/shared-types/review';
 import { spacing, radius } from '@/constants/styles';
 
 /** In the order they disclose least to most, so the safest choice reads first. */

@@ -23,7 +23,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { Calendar, RangeCalendar, type DateRange } from '@oxy.so/bloom/date-picker';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { type AvailabilityWindow, AvailabilityWindowStatus } from '@homiio/shared-types';
+import type { AvailabilityWindow } from '@homiio/shared-types';
+import { AvailabilityWindowStatus } from '@homiio/shared-types/common';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { formatLocalized, getFormatLocale } from '@/utils/dateLocale';
 

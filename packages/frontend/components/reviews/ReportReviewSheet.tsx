@@ -18,7 +18,7 @@ import { Dialog } from '@oxy.so/bloom/dialog';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import { Textarea } from '@oxy.so/bloom/textarea';
 
-import { ReviewReportReason } from '@homiio/shared-types';
+import { ReviewReportReason } from '@homiio/shared-types/review';
 
 interface ReportReviewSheetProps {
   visible: boolean;

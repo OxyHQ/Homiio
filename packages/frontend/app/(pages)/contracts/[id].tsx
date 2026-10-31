@@ -35,7 +35,7 @@ import { RiAlertLine } from '@oxy.so/bloom/icons/RiAlertLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
 import { LeaseSummaryCard } from '@oxy.so/bloom/tenancy';
-import { LeaseStatus } from '@homiio/shared-types';
+import { LeaseStatus } from '@homiio/shared-types/lease';
 
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ContractStatusBadge } from '@/components/ContractStatusBadge';

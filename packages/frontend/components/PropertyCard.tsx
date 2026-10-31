@@ -33,12 +33,9 @@ import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'reac
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { ListingCard } from '@oxy.so/bloom/listing-card';
-import {
-  formatArea,
-  formatMoney,
-  priceFrequencyFromPriceUnit,
-  type Property,
-} from '@homiio/shared-types';
+import { formatArea } from '@homiio/shared-types/format/units';
+import { formatMoney, priceFrequencyFromPriceUnit } from '@homiio/shared-types/format/money';
+import type { Property } from '@homiio/shared-types';
 
 import { useOpenSaveToFolderSheet } from '@/components/SaveToFolderBottomSheet';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';

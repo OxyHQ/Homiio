@@ -48,12 +48,8 @@ import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services/ui/client';
 
-import {
-  EvictionCaseStatus,
-  EvictionHelpNeedType,
-  type EvictionBoardScope,
-  type EvictionBoardSort,
-} from '@homiio/shared-types';
+import { EvictionCaseStatus, EvictionHelpNeedType } from '@homiio/shared-types/eviction';
+import type { EvictionBoardScope, EvictionBoardSort } from '@homiio/shared-types';
 import { MapView, Markers, type MapMarkerData } from '@goway.to/maps';
 
 import { DEVICE_ZOOM, HOMIIO_OPENING_VIEW } from '@/components/map/mapDefaults';

@@ -8,11 +8,8 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from '@tanstack/react-query';
-import {
-  type TenantApplication,
-  TenantApplicationStatus,
-  type DocumentVerificationStatus,
-} from '@homiio/shared-types';
+import type { TenantApplication, DocumentVerificationStatus } from '@homiio/shared-types';
+import { TenantApplicationStatus } from '@homiio/shared-types/application';
 
 import {
   type CreateApplicationInput,

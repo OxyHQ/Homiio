@@ -60,12 +60,8 @@ import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@oxy.so/services/ui/client';
-import {
-  KEY_COORD_DECIMALS,
-  type ApproximateLocation,
-  type GeoPlace,
-  type LocationSelection,
-} from '@homiio/shared-types';
+import { KEY_COORD_DECIMALS } from '@homiio/shared-types/location';
+import type { ApproximateLocation, GeoPlace, LocationSelection } from '@homiio/shared-types';
 
 import { reversePlace } from '@/services/geoService';
 import { useLocationScopeStore } from '@/store/locationScopeStore';

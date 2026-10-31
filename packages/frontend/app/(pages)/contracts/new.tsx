@@ -23,7 +23,7 @@ import { Loading } from '@oxy.so/bloom/loading';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
-import { TenantApplicationStatus } from '@homiio/shared-types';
+import { TenantApplicationStatus } from '@homiio/shared-types/application';
 
 import { Card } from '@oxy.so/bloom/card';
 import { EmptyState } from '@/components/ui/EmptyState';

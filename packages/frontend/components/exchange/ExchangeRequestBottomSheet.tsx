@@ -21,13 +21,9 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services/ui/client';
-import {
-  ExchangeMode,
-  guestPointsForWindow,
-  OfferingType,
-  type CreateExchangeRequestData,
-  type Property,
-} from '@homiio/shared-types';
+import { ExchangeMode, OfferingType } from '@homiio/shared-types/common';
+import { guestPointsForWindow } from '@homiio/shared-types/guestPoints';
+import type { CreateExchangeRequestData, Property } from '@homiio/shared-types';
 import {
   AvailabilityCalendar,
   type AvailabilityCalendarRange,

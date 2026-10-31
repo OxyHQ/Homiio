@@ -22,7 +22,8 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { toast } from '@oxy.so/bloom/toast';
 import type { GuestCounts } from '@oxy.so/bloom/stay-search';
 import { useOxy } from '@oxy.so/services/ui/client';
-import { formatMoney, type Property } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import type { Property } from '@homiio/shared-types';
 
 import {
   AvailabilityCalendar,
