@@ -29,6 +29,7 @@ import type { Property } from '@homiio/shared-types';
 import { spacing } from '@/constants/styles';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { SavedPropertyChangeSupersededError } from '@/hooks/savedPropertyErrors';
 import type { SavedPropertyFolder } from '@/services/savedPropertyFolderService';
 import {
   sameAccountProjection,
@@ -413,7 +414,11 @@ export function useOpenSaveToFolderSheet(): (
       const captured = owner;
       if (!isCurrent(captured)) return;
       if (!isPropertySaved(propertyId)) {
-        await savePropertyToFolder(propertyId, null, property).catch(() => undefined);
+        try {
+          await savePropertyToFolder(propertyId, null, property);
+        } catch (error) {
+          if (error instanceof SavedPropertyChangeSupersededError) return;
+        }
       }
       if (!isCurrent(captured)) return;
       // Opening the sheet is what asks for fresh folder counts.
