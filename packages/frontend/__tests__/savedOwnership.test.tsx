@@ -536,3 +536,64 @@ it('ignores an older in-flight GET after starting an optimistic save', async () 
     expect(view.result.current.savedProperties.map((p) => p.id)).toEqual(['new-home']),
   );
 });
+
+it('rejects a retained A action after an observed projection-only A to B to A transition', async () => {
+  getSaved.mockResolvedValue(properties('A-home'));
+  getFolders.mockResolvedValue(folders('folder'));
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('A-home'));
+  const retained = view.result.current.savePropertyToFolder;
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  act(() => {
+    mockAuth.user = { id: 'A' };
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  await expect(retained('home', null)).rejects.toThrow('The active account changed');
+  expect(save).not.toHaveBeenCalled();
+});
+
+it('does not erase another property save when a notes update fails', async () => {
+  getSaved.mockResolvedValueOnce(properties('existing')).mockResolvedValue(properties('new-home'));
+  getFolders.mockResolvedValue(folders('folder'));
+  let rejectNotes!: (error: Error) => void;
+  let resolveSave!: (value: unknown) => void;
+  updateNotes.mockImplementation(
+    () =>
+      new Promise((_resolve, reject) => {
+        rejectNotes = reject;
+      }),
+  );
+  save.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        resolveSave = resolve;
+      }),
+  );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('existing'));
+  let notes!: Promise<void>;
+  let saved!: Promise<void>;
+  act(() => {
+    notes = view.result.current.updateNotes('existing', 'private note');
+    saved = view.result.current.savePropertyToFolder('new-home', null);
+  });
+  const rejection = expect(notes).rejects.toThrow('offline');
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  await act(async () => {
+    rejectNotes(new Error('offline'));
+    await rejection;
+  });
+  expect(view.result.current.savedProperties.map((p) => p.id)).toContain('new-home');
+  await act(async () => {
+    resolveSave(undefined);
+    await saved;
+  });
+  await waitFor(() =>
+    expect(view.result.current.savedProperties.map((p) => p.id)).toEqual(['new-home']),
+  );
+});

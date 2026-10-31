@@ -2,19 +2,24 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } f
 import { useOxy } from '@oxy.so/services/ui/client';
 import type { RequestOwner } from '@/utils/api';
 
-export type AccountOwner = RequestOwner & { sessionId: string | null };
+export type AccountOwner = RequestOwner & { sessionId: string | null; generation: number };
+type Projection = Omit<AccountOwner, 'generation'>;
+const observedProjections = new WeakMap<
+  object,
+  { projection: Projection | null; generation: number }
+>();
 const instanceIds = new WeakMap<object, number>();
 let nextInstanceId = 1;
 
 /** A non-secret key for this in-memory provider instance and observed account. */
 export function accountOwnerKey(owner: AccountOwner | null) {
-  if (!owner) return [null, null, null, null] as const;
+  if (!owner) return [null, null, null, null, null] as const;
   let instanceId = instanceIds.get(owner.oxyServices);
   if (instanceId === undefined) {
     instanceId = nextInstanceId++;
     instanceIds.set(owner.oxyServices, instanceId);
   }
-  return [owner.userId, owner.sessionId, owner.epoch, instanceId] as const;
+  return [owner.userId, owner.sessionId, owner.epoch, instanceId, owner.generation] as const;
 }
 
 /** A session id may arrive after the bearer while the same account is restored. */
@@ -28,6 +33,7 @@ export function sameAccountProjection(
       previous.oxyServices === current.oxyServices &&
       previous.userId === current.userId &&
       previous.epoch === current.epoch &&
+      previous.generation === current.generation &&
       (previous.sessionId === current.sessionId || previous.sessionId === null),
   );
 }
@@ -50,18 +56,36 @@ export function useAccountOwner(): AccountOwner | null {
   );
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   const userId = isAuthenticated ? (user?.id ?? null) : null;
-  return useMemo(() => {
-    const [epoch, bearerUser, hasToken] = JSON.parse(snapshot) as [number, string | null, boolean];
-    if (!userId || !hasToken || bearerUser !== userId) return null;
-    return { oxyServices, userId, sessionId: activeSessionId ?? null, epoch };
-  }, [oxyServices, userId, activeSessionId, snapshot]);
+  const [epoch, bearerUser, hasToken] = JSON.parse(snapshot) as [number, string | null, boolean];
+  const projected: Projection | null =
+    userId && hasToken && bearerUser === userId
+      ? { oxyServices, userId, sessionId: activeSessionId ?? null, epoch }
+      : null;
+  const observed = observedProjections.get(oxyServices);
+  const prior = observed?.projection;
+  const same =
+    (!prior && !projected) ||
+    Boolean(
+      prior &&
+        projected &&
+        prior.userId === projected.userId &&
+        prior.epoch === projected.epoch &&
+        (prior.sessionId === projected.sessionId || prior.sessionId === null),
+    );
+  const generation = observed ? observed.generation + (same ? 0 : 1) : 0;
+  observedProjections.set(oxyServices, { projection: projected, generation });
+  return useMemo(
+    () => (projected ? { ...projected, generation } : null),
+    [oxyServices, userId, activeSessionId, snapshot, generation],
+  );
 }
 
 export function assertAccountOwner(owner: AccountOwner | null): asserts owner is AccountOwner {
   if (
     !owner ||
     owner.oxyServices.session.userId !== owner.userId ||
-    owner.oxyServices.http.getSessionEpoch() !== owner.epoch
+    owner.oxyServices.http.getSessionEpoch() !== owner.epoch ||
+    observedProjections.get(owner.oxyServices)?.generation !== owner.generation
   ) {
     throw new Error('The active account changed');
   }
