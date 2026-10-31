@@ -360,6 +360,8 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         // Revert optimistic update on error.
         if (previous) {
           queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, previous);
+        } else {
+          void queryClient.resetQueries({ queryKey: propertiesKey, exact: true });
         }
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
@@ -453,6 +455,8 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         // Revert optimistic update on error.
         if (previous) {
           queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, previous);
+        } else {
+          void queryClient.resetQueries({ queryKey: propertiesKey, exact: true });
         }
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
