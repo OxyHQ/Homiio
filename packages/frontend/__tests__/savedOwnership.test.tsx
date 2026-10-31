@@ -386,9 +386,7 @@ it.each(['save', 'unsave'] as const)(
     unsave.mockRejectedValue(new Error('offline'));
     const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
     await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(1));
-    const key = client
-      .getQueryCache()
-      .find({ queryKey: ['savedProperties'], exact: false })!.queryKey;
+    const key = savedKeys.properties(getSaved.mock.calls[0][0] as AccountOwner);
     expect(client.getQueryData(key)).toBeUndefined();
     await act(async () => {
       const promise =
