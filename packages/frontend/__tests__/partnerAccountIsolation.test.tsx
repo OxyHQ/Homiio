@@ -1,4 +1,4 @@
-import { Suspense, startTransition, type ReactNode } from 'react';
+import { StrictMode, Suspense, startTransition, type ReactNode } from 'react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, renderHook, waitFor } from '@testing-library/react-native';
 import { OxyServices } from '@oxy.so/core';
@@ -363,5 +363,44 @@ it('keeps the committed A owner valid when a B render suspends and is abandoned'
   await act(async () => {
     resume();
     await pending;
+  });
+});
+
+it('keeps multiple subscribers in sync through committed changes under StrictMode', async () => {
+  getMe.mockResolvedValue(response('A'));
+  join.mockResolvedValue(response('A'));
+  const strictWrapper = ({ children }: { children: ReactNode }) => (
+    <StrictMode>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    </StrictMode>
+  );
+  const view = renderHook(
+    () => ({
+      first: useAccountOwner(),
+      second: useAccountOwner(),
+      me: usePartnerMe(),
+      join: useJoinPartner(),
+    }),
+    { wrapper: strictWrapper },
+  );
+  await waitFor(() => expect(view.result.current.me.data).toEqual(response('A')));
+  expect(view.result.current.first?.generation).toBe(view.result.current.second?.generation);
+  const old = view.result.current.join.mutateAsync;
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  act(() => {
+    mockAuth.user = { id: 'A' };
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  await act(async () => {
+    await expect(old()).rejects.toThrow('The active account changed');
+  });
+  expect(view.result.current.first?.generation).toBe(view.result.current.second?.generation);
+  await act(async () => {
+    await expect(view.result.current.join.mutateAsync()).resolves.toEqual(response('A'));
   });
 });
