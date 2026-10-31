@@ -144,6 +144,25 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     },
     [currentOwner],
   );
+  const beginPropertyChange = (propertyId: string) => {
+    const captured = currentOwner(owner);
+    const identity = accountOwnerKey(captured);
+    const groupKey = JSON.stringify([identity[0], identity[2], identity[3], identity[4]]);
+    const changeKey = JSON.stringify([groupKey, propertyId]);
+    const changeId = ++nextPropertyChange.current;
+    latestPropertyChange.current.set(changeKey, changeId);
+    pendingPropertyChanges.current.set(
+      groupKey,
+      (pendingPropertyChanges.current.get(groupKey) ?? 0) + 1,
+    );
+    return { captured, groupKey, changeKey, changeId };
+  };
+  const assertCurrentChange = (captured: AccountOwner, changeKey: string, changeId: number) => {
+    currentOwner(captured);
+    if (latestPropertyChange.current.get(changeKey) !== changeId) {
+      throw new SavedPropertyChangeSupersededError();
+    }
+  };
   const finishPropertyChange = useCallback(
     (captured: AccountOwner, ownerKey: string, changeKey: string, changeId: number) => {
       if (latestPropertyChange.current.get(changeKey) === changeId) {
@@ -321,239 +340,105 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     [queryClient, currentOwner, owner, setError, isCurrentOwner],
   );
 
-  const savePropertyToFolder = useCallback(
-    async (propertyId: string, folderId: string | null, property?: Partial<SavedProperty>) => {
-      const captured = currentOwner(owner);
-      const identity = accountOwnerKey(captured);
-      const groupKey = JSON.stringify([identity[0], identity[2], identity[3], identity[4]]);
-      const changeKey = JSON.stringify([groupKey, propertyId]);
-      const changeId = ++nextPropertyChange.current;
-      latestPropertyChange.current.set(changeKey, changeId);
-      pendingPropertyChanges.current.set(
-        groupKey,
-        (pendingPropertyChanges.current.get(groupKey) ?? 0) + 1,
-      );
+  const changeSavedProperty = useCallback(
+    async (
+      propertyId: string,
+      saving: boolean,
+      folderId: string | null = null,
+      property?: Partial<SavedProperty>,
+    ) => {
+      const { captured, groupKey, changeKey, changeId } = beginPropertyChange(propertyId);
       try {
         await queryClient.cancelQueries(
           { queryKey: propertiesKey, exact: true },
           { revert: false },
         );
-        currentOwner(captured);
-        if (latestPropertyChange.current.get(changeKey) !== changeId) {
-          throw new SavedPropertyChangeSupersededError();
-        }
-        // Snapshot for rollback on failure.
+        assertCurrentChange(captured, changeKey, changeId);
         const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
         const previousProperty = previous?.properties.find((p) => propertyKey(p) === propertyId);
-
+        const setSaving = (active: boolean) =>
+          setSavingPropertyIds((prev) => {
+            const next = new Set(prev);
+            if (active) next.add(propertyId);
+            else next.delete(propertyId);
+            return next;
+          });
         try {
           setError(null);
-
-          // Optimistic update to the query cache (drives `savedProperties` +
-          // `savedPropertyIds` via the memos above).
-          const optimistic: SavedProperty = {
-            id: propertyId,
-            savedAt: new Date().toISOString(),
-            folderId: folderId || undefined,
-            ...(property || {}),
-          } as SavedProperty;
-
           queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (prev) => {
             const list = prev?.properties ?? [];
-            const existingIndex = list.findIndex((p) => propertyKey(p) === propertyId);
-            const nextList =
-              existingIndex >= 0
-                ? list.map((p, index) =>
-                    index === existingIndex ? ({ ...p, ...optimistic } as SavedProperty) : p,
-                  )
-                : [...list, optimistic];
-            return {
-              properties: nextList,
-              total: nextList.length,
-              page: 1,
-              totalPages: 1,
-            };
+            const index = list.findIndex((p) => propertyKey(p) === propertyId);
+            const optimistic = {
+              id: propertyId,
+              savedAt: new Date().toISOString(),
+              folderId: folderId || undefined,
+              ...(property || {}),
+            } as SavedProperty;
+            const next = saving
+              ? index >= 0
+                ? list.map((p, i) => (i === index ? { ...p, ...optimistic } : p))
+                : [...list, optimistic]
+              : list.filter((p) => propertyKey(p) !== propertyId);
+            return { properties: next, total: next.length, page: 1, totalPages: 1 };
           });
-
-          setSavingPropertyIds((prev) => {
-            if (prev.has(propertyId)) return prev;
-            return new Set([...prev, propertyId]);
-          });
-
-          await savedPropertyService.saveProperty(
-            captured,
-            propertyId,
-            undefined,
-            folderId || undefined,
+          setSaving(true);
+          if (saving)
+            await savedPropertyService.saveProperty(
+              captured,
+              propertyId,
+              undefined,
+              folderId || undefined,
+            );
+          else await savedPropertyService.unsaveProperty(captured, propertyId);
+          const current = currentOwner(captured);
+          assertCurrentChange(captured, changeKey, changeId);
+          setSaving(false);
+          toast.success(
+            i18next.t(saving ? 'saved.toast.propertySaved' : 'saved.toast.propertyRemoved'),
           );
-          const current = currentOwner(captured);
-          if (latestPropertyChange.current.get(changeKey) !== changeId) {
-            throw new SavedPropertyChangeSupersededError();
-          }
-
-          setSavingPropertyIds((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(propertyId);
-            return newSet;
-          });
-          toast.success(i18next.t('saved.toast.propertySaved'));
-          // Refresh folders to update counts immediately.
-          await queryClient.invalidateQueries({
-            queryKey: savedKeys.folders(current),
-            exact: true,
-          });
-        } catch (error: unknown) {
-          if (!isCurrentOwner(captured)) throw error;
-          if (latestPropertyChange.current.get(changeKey) !== changeId) {
-            throw new SavedPropertyChangeSupersededError();
-          }
-          // Revert optimistic update on error.
-          if (latestPropertyChange.current.get(changeKey) === changeId) {
-            queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (current) => {
-              if (!current) return current;
-              const withoutProperty = current.properties.filter(
-                (p) => propertyKey(p) !== propertyId,
-              );
-              const properties = previousProperty
-                ? [...withoutProperty, previousProperty]
-                : withoutProperty;
-              return { ...current, properties, total: properties.length };
-            });
-          }
-          setSavingPropertyIds((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(propertyId);
-            return newSet;
-          });
-
-          const message = error instanceof Error ? error.message : 'Failed to save property';
-          setError(message);
-          toast.error(i18next.t('saved.toast.propertySaveFailed'));
-          throw error;
-        }
-      } finally {
-        finishPropertyChange(captured, groupKey, changeKey, changeId);
-      }
-    },
-    [
-      queryClient,
-      currentOwner,
-      owner,
-      propertiesKey,
-      ownerKey,
-      setError,
-      setSavingPropertyIds,
-      isCurrentOwner,
-      finishPropertyChange,
-    ],
-  );
-
-  const unsaveProperty = useCallback(
-    async (propertyId: string) => {
-      const captured = currentOwner(owner);
-      const identity = accountOwnerKey(captured);
-      const groupKey = JSON.stringify([identity[0], identity[2], identity[3], identity[4]]);
-      const changeKey = JSON.stringify([groupKey, propertyId]);
-      const changeId = ++nextPropertyChange.current;
-      latestPropertyChange.current.set(changeKey, changeId);
-      pendingPropertyChanges.current.set(
-        groupKey,
-        (pendingPropertyChanges.current.get(groupKey) ?? 0) + 1,
-      );
-      try {
-        await queryClient.cancelQueries(
-          { queryKey: propertiesKey, exact: true },
-          { revert: false },
-        );
-        currentOwner(captured);
-        if (latestPropertyChange.current.get(changeKey) !== changeId) {
-          throw new SavedPropertyChangeSupersededError();
-        }
-        const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
-        const removed = previous?.properties.find((p) => propertyKey(p) === propertyId);
-
-        try {
-          setError(null);
-
-          // Optimistic removal from the query cache.
-          queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (prev) => {
-            const list = prev?.properties ?? [];
-            const nextList = list.filter((p) => propertyKey(p) !== propertyId);
-            return {
-              properties: nextList,
-              total: nextList.length,
-              page: 1,
-              totalPages: 1,
-            };
-          });
-          setSavingPropertyIds((prev) => new Set([...prev, propertyId]));
-
-          await savedPropertyService.unsaveProperty(captured, propertyId);
-          const current = currentOwner(captured);
-          if (latestPropertyChange.current.get(changeKey) !== changeId) {
-            throw new SavedPropertyChangeSupersededError();
-          }
-
-          setSavingPropertyIds((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(propertyId);
-            return newSet;
-          });
-          toast.success(i18next.t('saved.toast.propertyRemoved'));
-
-          // Update folder counts locally.
-          if (removed?.folderId) {
+          if (!saving && previousProperty?.folderId) {
             queryClient.setQueryData<SavedPropertyFoldersResponse>(
               savedKeys.folders(current),
               (prev) => ({
                 folders: (prev?.folders ?? []).map((folder) =>
-                  folder.id === removed.folderId
+                  folder.id === previousProperty.folderId
                     ? { ...folder, propertyCount: Math.max(0, (folder.propertyCount || 0) - 1) }
                     : folder,
                 ),
               }),
             );
           }
-
           await queryClient.invalidateQueries({
             queryKey: savedKeys.folders(current),
             exact: true,
           });
         } catch (error: unknown) {
           if (!isCurrentOwner(captured)) throw error;
-          if (latestPropertyChange.current.get(changeKey) !== changeId) {
-            throw new SavedPropertyChangeSupersededError();
-          }
+          assertCurrentChange(captured, changeKey, changeId);
+          const message =
+            error instanceof Error
+              ? error.message
+              : saving
+                ? 'Failed to save property'
+                : 'Failed to unsave property';
           const status = (error as { status?: number })?.status;
-          const message = error instanceof Error ? error.message : 'Failed to unsave property';
-          if (status === 404 || message.includes('not found')) {
-            setSavingPropertyIds((prev) => {
-              const newSet = new Set(prev);
-              newSet.delete(propertyId);
-              return newSet;
-            });
+          if (!saving && (status === 404 || message.includes('not found'))) {
+            setSaving(false);
             return;
           }
-
-          // Revert optimistic update on error.
-          if (latestPropertyChange.current.get(changeKey) === changeId) {
-            queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (current) => {
-              if (!current) return current;
-              const withoutProperty = current.properties.filter(
-                (p) => propertyKey(p) !== propertyId,
-              );
-              const properties = removed ? [...withoutProperty, removed] : withoutProperty;
-              return { ...current, properties, total: properties.length };
-            });
-          }
-          setSavingPropertyIds((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(propertyId);
-            return newSet;
+          queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (current) => {
+            if (!current) return current;
+            const list = current.properties.filter((p) => propertyKey(p) !== propertyId);
+            const properties = previousProperty ? [...list, previousProperty] : list;
+            return { ...current, properties, total: properties.length };
           });
-
+          setSaving(false);
           setError(message);
-          toast.error(i18next.t('saved.toast.propertyUnsaveFailed'));
+          toast.error(
+            i18next.t(
+              saving ? 'saved.toast.propertySaveFailed' : 'saved.toast.propertyUnsaveFailed',
+            ),
+          );
           throw error;
         }
       } finally {
@@ -565,7 +450,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       currentOwner,
       owner,
       propertiesKey,
-      ownerKey,
       setError,
       setSavingPropertyIds,
       isCurrentOwner,
@@ -573,27 +457,25 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     ],
   );
 
+  const savePropertyToFolder = useCallback(
+    (propertyId: string, folderId: string | null, property?: Partial<SavedProperty>) =>
+      changeSavedProperty(propertyId, true, folderId, property),
+    [changeSavedProperty],
+  );
+  const unsaveProperty = useCallback(
+    (propertyId: string) => changeSavedProperty(propertyId, false),
+    [changeSavedProperty],
+  );
+
   const updateNotes = useCallback(
     async (propertyId: string, notes: string) => {
-      const captured = currentOwner(owner);
-      const identity = accountOwnerKey(captured);
-      const groupKey = JSON.stringify([identity[0], identity[2], identity[3], identity[4]]);
-      const changeKey = JSON.stringify([groupKey, propertyId]);
-      const changeId = ++nextPropertyChange.current;
-      latestPropertyChange.current.set(changeKey, changeId);
-      pendingPropertyChanges.current.set(
-        groupKey,
-        (pendingPropertyChanges.current.get(groupKey) ?? 0) + 1,
-      );
+      const { captured, groupKey, changeKey, changeId } = beginPropertyChange(propertyId);
       try {
         await queryClient.cancelQueries(
           { queryKey: propertiesKey, exact: true },
           { revert: false },
         );
-        currentOwner(captured);
-        if (latestPropertyChange.current.get(changeKey) !== changeId) {
-          throw new SavedPropertyChangeSupersededError();
-        }
+        assertCurrentChange(captured, changeKey, changeId);
         const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
         const previousProperty = previous?.properties.find(
           (property) => property.id === propertyId,
