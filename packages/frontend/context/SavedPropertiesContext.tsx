@@ -1,8 +1,23 @@
 import type React from 'react';
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from 'react';
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
-import { useOxy } from '@oxy.so/services/ui/client';
+import {
+  useAccountOwner,
+  assertAccountOwner,
+  sameAccountProjection,
+  type AccountOwner,
+} from '@/hooks/useAccountOwner';
+import { savedKeys, useSavedFoldersQuery, useSavedPropertiesQuery } from '@/hooks/useSavedQueries';
 import savedPropertyFolderService, {
   type SavedPropertyFolder,
   type SavedPropertyFoldersResponse,
@@ -12,10 +27,7 @@ import savedPropertyService, {
   type SavedPropertiesResponse,
 } from '@/services/savedPropertyService';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-
-const SAVED_FOLDERS_KEY = ['savedFolders'] as const;
-const SAVED_PROPERTIES_KEY = ['savedProperties'] as const;
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SavedPropertiesContextType {
   // State
@@ -47,6 +59,7 @@ interface SavedPropertiesContextType {
     property?: Partial<SavedProperty>,
   ) => Promise<void>;
   unsaveProperty: (propertyId: string) => Promise<void>;
+  updateNotes: (propertyId: string, notes: string) => Promise<void>;
   getDefaultFolder: () => SavedPropertyFolder | undefined;
   getFolderById: (folderId: string) => SavedPropertyFolder | undefined;
   isPropertySaved: (propertyId: string) => boolean;
@@ -74,32 +87,60 @@ const propertyKey = (property: Pick<SavedProperty, 'id' | 'id'>): string | undef
 
 export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = ({ children }) => {
   const queryClient = useQueryClient();
-  // `isAuthenticated` is the app-wide auth signal exposed by the Oxy provider
-  // (same value `ProfileContext` gates on). The two saved-* reads below hit
-  // saved-* reads below hit auth-only `/me/...` endpoints, so they must not run
-  // logged out — `enabled: isAuthenticated` gates them declaratively (no
-  // useEffect) and TanStack Query re-runs them automatically once the user
-  // signs in (and clears them on sign-out via the changing query state).
-  const { isAuthenticated } = useOxy();
-
-  const [_savingPropertyIds, setSavingPropertyIds] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-
-  const foldersQuery = useQuery<SavedPropertyFoldersResponse>({
-    queryKey: SAVED_FOLDERS_KEY,
-    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(),
-    enabled: isAuthenticated,
-    staleTime: 1000 * 60,
-    gcTime: 1000 * 60 * 10,
+  const owner = useAccountOwner();
+  const committedOwner = useRef<AccountOwner | null>(null);
+  useLayoutEffect(() => {
+    committedOwner.current = owner;
+    return () => {
+      if (committedOwner.current === owner) committedOwner.current = null;
+    };
+  }, [owner]);
+  const currentOwner = useCallback((expected: AccountOwner | null): AccountOwner => {
+    assertAccountOwner(expected);
+    if (!sameAccountProjection(expected, committedOwner.current))
+      throw new Error('The active account changed');
+    assertAccountOwner(committedOwner.current);
+    return committedOwner.current;
+  }, []);
+  const isAuthenticated = Boolean(owner);
+  const foldersKey = useMemo(() => savedKeys.folders(owner), [owner]);
+  const propertiesKey = useMemo(() => savedKeys.properties(owner), [owner]);
+  const ownerKey = JSON.stringify(propertiesKey);
+  const [savingState, setSavingState] = useState<{ key: string; ids: Set<string> }>({
+    key: ownerKey,
+    ids: new Set(),
   });
-
-  const savedPropertiesQuery = useQuery<SavedPropertiesResponse>({
-    queryKey: SAVED_PROPERTIES_KEY,
-    queryFn: () => savedPropertyService.getSavedProperties(),
-    enabled: isAuthenticated,
-    staleTime: 1000 * 60,
-    gcTime: 1000 * 60 * 10,
+  const [errorState, setErrorState] = useState<{ key: string; message: string | null }>({
+    key: ownerKey,
+    message: null,
   });
+  const _savingPropertyIds = savingState.key === ownerKey ? savingState.ids : new Set<string>();
+  const error = errorState.key === ownerKey ? errorState.message : null;
+  const setError = useCallback(
+    (message: string | null) => setErrorState({ key: ownerKey, message }),
+    [ownerKey],
+  );
+  const setSavingPropertyIds = useCallback(
+    (updater: (previous: Set<string>) => Set<string>) =>
+      setSavingState((previous) => ({
+        key: ownerKey,
+        ids: updater(previous.key === ownerKey ? previous.ids : new Set()),
+      })),
+    [ownerKey],
+  );
+  const isCurrentOwner = useCallback(
+    (expected: AccountOwner | null) => {
+      try {
+        currentOwner(expected);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [currentOwner],
+  );
+  const foldersQuery = useSavedFoldersQuery();
+  const savedPropertiesQuery = useSavedPropertiesQuery();
 
   const folders = useMemo<SavedPropertyFolder[]>(
     () => foldersQuery.data?.folders ?? [],
@@ -128,45 +169,60 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   const loadFolders = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
+      currentOwner(owner);
       setError(null);
-      await queryClient.refetchQueries({ queryKey: SAVED_FOLDERS_KEY });
+      await queryClient.refetchQueries({ queryKey: foldersKey, exact: true });
     } catch (error: unknown) {
+      if (!isCurrentOwner(owner)) return;
       const message = error instanceof Error ? error.message : 'Failed to load folders';
       setError(message);
       toast.error(i18next.t('saved.toast.loadFoldersFailed'));
     }
-  }, [isAuthenticated, queryClient]);
+  }, [isAuthenticated, queryClient, currentOwner, owner, setError, foldersKey, isCurrentOwner]);
 
   const loadSavedProperties = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
+      currentOwner(owner);
       setError(null);
-      await queryClient.refetchQueries({ queryKey: SAVED_PROPERTIES_KEY });
+      await queryClient.refetchQueries({ queryKey: propertiesKey, exact: true });
     } catch (error: unknown) {
+      if (!isCurrentOwner(owner)) return;
       const message = error instanceof Error ? error.message : 'Failed to load saved properties';
       setError(message);
     }
-  }, [isAuthenticated, queryClient]);
+  }, [isAuthenticated, queryClient, currentOwner, owner, setError, propertiesKey, isCurrentOwner]);
 
   const createFolder = useCallback(
     async (folderData: { name: string; description?: string; color?: string; icon?: string }) => {
       try {
+        const captured = currentOwner(owner);
         setError(null);
-
-        const newFolder = await savedPropertyFolderService.createSavedPropertyFolder(folderData);
-        queryClient.setQueryData<SavedPropertyFoldersResponse>(SAVED_FOLDERS_KEY, (prev) => ({
-          folders: [...(prev?.folders ?? []), newFolder],
-        }));
+        const newFolder = await savedPropertyFolderService.createSavedPropertyFolder(
+          captured,
+          folderData,
+        );
+        const current = currentOwner(captured);
+        queryClient.setQueryData<SavedPropertyFoldersResponse>(
+          savedKeys.folders(current),
+          (prev) => ({
+            folders: [...(prev?.folders ?? []), newFolder],
+          }),
+        );
+        if (captured.sessionId !== current.sessionId) {
+          void queryClient.invalidateQueries({ queryKey: savedKeys.folders(current), exact: true });
+        }
         toast.success(i18next.t('saved.toast.folderCreated'));
         return newFolder;
       } catch (error: unknown) {
+        if (!isCurrentOwner(owner)) throw error;
         const message = error instanceof Error ? error.message : 'Failed to create folder';
         setError(message);
         toast.error(i18next.t('saved.toast.folderCreateFailed'));
         throw error;
       }
     },
-    [queryClient],
+    [queryClient, currentOwner, owner, setError, isCurrentOwner],
   );
 
   const updateFolder = useCallback(
@@ -175,53 +231,73 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       folderData: { name?: string; description?: string; color?: string; icon?: string },
     ) => {
       try {
+        const captured = currentOwner(owner);
         setError(null);
 
         const updatedFolder = await savedPropertyFolderService.updateSavedPropertyFolder(
+          captured,
           folderId,
           folderData,
         );
-        queryClient.setQueryData<SavedPropertyFoldersResponse>(SAVED_FOLDERS_KEY, (prev) => ({
-          folders: (prev?.folders ?? []).map((folder) =>
-            folder.id === folderId ? updatedFolder : folder,
-          ),
-        }));
+        const current = currentOwner(captured);
+        queryClient.setQueryData<SavedPropertyFoldersResponse>(
+          savedKeys.folders(current),
+          (prev) => ({
+            folders: (prev?.folders ?? []).map((folder) =>
+              folder.id === folderId ? updatedFolder : folder,
+            ),
+          }),
+        );
+        if (captured.sessionId !== current.sessionId) {
+          void queryClient.invalidateQueries({ queryKey: savedKeys.folders(current), exact: true });
+        }
         toast.success(i18next.t('saved.toast.folderUpdated'));
         return updatedFolder;
       } catch (error: unknown) {
+        if (!isCurrentOwner(owner)) throw error;
         const message = error instanceof Error ? error.message : 'Failed to update folder';
         setError(message);
         toast.error(i18next.t('saved.toast.folderUpdateFailed'));
         throw error;
       }
     },
-    [queryClient],
+    [queryClient, currentOwner, owner, setError, isCurrentOwner],
   );
 
   const deleteFolder = useCallback(
     async (folderId: string) => {
       try {
+        const captured = currentOwner(owner);
         setError(null);
 
-        await savedPropertyFolderService.deleteSavedPropertyFolder(folderId);
-        queryClient.setQueryData<SavedPropertyFoldersResponse>(SAVED_FOLDERS_KEY, (prev) => ({
-          folders: (prev?.folders ?? []).filter((folder) => folder.id !== folderId),
-        }));
+        await savedPropertyFolderService.deleteSavedPropertyFolder(captured, folderId);
+        const current = currentOwner(captured);
+        queryClient.setQueryData<SavedPropertyFoldersResponse>(
+          savedKeys.folders(current),
+          (prev) => ({
+            folders: (prev?.folders ?? []).filter((folder) => folder.id !== folderId),
+          }),
+        );
+        if (captured.sessionId !== current.sessionId) {
+          void queryClient.invalidateQueries({ queryKey: savedKeys.folders(current), exact: true });
+        }
         toast.success(i18next.t('saved.toast.folderDeleted'));
       } catch (error: unknown) {
+        if (!isCurrentOwner(owner)) throw error;
         const message = error instanceof Error ? error.message : 'Failed to delete folder';
         setError(message);
         toast.error(i18next.t('saved.toast.folderDeleteFailed'));
         throw error;
       }
     },
-    [queryClient],
+    [queryClient, currentOwner, owner, setError, isCurrentOwner],
   );
 
   const savePropertyToFolder = useCallback(
     async (propertyId: string, folderId: string | null, property?: Partial<SavedProperty>) => {
+      const captured = currentOwner(owner);
       // Snapshot for rollback on failure.
-      const previous = queryClient.getQueryData<SavedPropertiesResponse>(SAVED_PROPERTIES_KEY);
+      const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
       try {
         setError(null);
 
@@ -234,7 +310,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           ...(property || {}),
         } as SavedProperty;
 
-        queryClient.setQueryData<SavedPropertiesResponse>(SAVED_PROPERTIES_KEY, (prev) => {
+        queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (prev) => {
           const list = prev?.properties ?? [];
           const existingIndex = list.findIndex((p) => propertyKey(p) === propertyId);
           const nextList =
@@ -256,7 +332,13 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           return new Set([...prev, propertyId]);
         });
 
-        await savedPropertyService.saveProperty(propertyId, undefined, folderId || undefined);
+        await savedPropertyService.saveProperty(
+          captured,
+          propertyId,
+          undefined,
+          folderId || undefined,
+        );
+        const current = currentOwner(captured);
 
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
@@ -264,12 +346,20 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           return newSet;
         });
         toast.success(i18next.t('saved.toast.propertySaved'));
+        if (captured.sessionId !== current.sessionId) {
+          await queryClient.invalidateQueries({
+            queryKey: savedKeys.properties(current),
+            exact: true,
+          });
+          currentOwner(captured);
+        }
         // Refresh folders to update counts immediately.
-        await queryClient.invalidateQueries({ queryKey: SAVED_FOLDERS_KEY });
+        await queryClient.invalidateQueries({ queryKey: savedKeys.folders(current), exact: true });
       } catch (error: unknown) {
+        if (!isCurrentOwner(captured)) throw error;
         // Revert optimistic update on error.
         if (previous) {
-          queryClient.setQueryData<SavedPropertiesResponse>(SAVED_PROPERTIES_KEY, previous);
+          queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, previous);
         }
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
@@ -283,18 +373,27 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         throw error;
       }
     },
-    [queryClient],
+    [
+      queryClient,
+      currentOwner,
+      owner,
+      propertiesKey,
+      setError,
+      setSavingPropertyIds,
+      isCurrentOwner,
+    ],
   );
 
   const unsaveProperty = useCallback(
     async (propertyId: string) => {
-      const previous = queryClient.getQueryData<SavedPropertiesResponse>(SAVED_PROPERTIES_KEY);
+      const captured = currentOwner(owner);
+      const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
       const removed = previous?.properties.find((p) => propertyKey(p) === propertyId);
       try {
         setError(null);
 
         // Optimistic removal from the query cache.
-        queryClient.setQueryData<SavedPropertiesResponse>(SAVED_PROPERTIES_KEY, (prev) => {
+        queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (prev) => {
           const list = prev?.properties ?? [];
           const nextList = list.filter((p) => propertyKey(p) !== propertyId);
           return {
@@ -306,7 +405,8 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         });
         setSavingPropertyIds((prev) => new Set([...prev, propertyId]));
 
-        await savedPropertyService.unsaveProperty(propertyId);
+        await savedPropertyService.unsaveProperty(captured, propertyId);
+        const current = currentOwner(captured);
 
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
@@ -314,20 +414,31 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           return newSet;
         });
         toast.success(i18next.t('saved.toast.propertyRemoved'));
+        if (captured.sessionId !== current.sessionId) {
+          await queryClient.invalidateQueries({
+            queryKey: savedKeys.properties(current),
+            exact: true,
+          });
+          currentOwner(captured);
+        }
 
         // Update folder counts locally.
         if (removed?.folderId) {
-          queryClient.setQueryData<SavedPropertyFoldersResponse>(SAVED_FOLDERS_KEY, (prev) => ({
-            folders: (prev?.folders ?? []).map((folder) =>
-              folder.id === removed.folderId
-                ? { ...folder, propertyCount: Math.max(0, (folder.propertyCount || 0) - 1) }
-                : folder,
-            ),
-          }));
+          queryClient.setQueryData<SavedPropertyFoldersResponse>(
+            savedKeys.folders(current),
+            (prev) => ({
+              folders: (prev?.folders ?? []).map((folder) =>
+                folder.id === removed.folderId
+                  ? { ...folder, propertyCount: Math.max(0, (folder.propertyCount || 0) - 1) }
+                  : folder,
+              ),
+            }),
+          );
         }
 
-        await queryClient.invalidateQueries({ queryKey: SAVED_FOLDERS_KEY });
+        await queryClient.invalidateQueries({ queryKey: savedKeys.folders(current), exact: true });
       } catch (error: unknown) {
+        if (!isCurrentOwner(captured)) throw error;
         const status = (error as { status?: number })?.status;
         const message = error instanceof Error ? error.message : 'Failed to unsave property';
         if (status === 404 || message.includes('not found')) {
@@ -341,7 +452,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
 
         // Revert optimistic update on error.
         if (previous) {
-          queryClient.setQueryData<SavedPropertiesResponse>(SAVED_PROPERTIES_KEY, previous);
+          queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, previous);
         }
         setSavingPropertyIds((prev) => {
           const newSet = new Set(prev);
@@ -354,7 +465,44 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         throw error;
       }
     },
-    [queryClient],
+    [
+      queryClient,
+      currentOwner,
+      owner,
+      propertiesKey,
+      setError,
+      setSavingPropertyIds,
+      isCurrentOwner,
+    ],
+  );
+
+  const updateNotes = useCallback(
+    async (propertyId: string, notes: string) => {
+      const captured = currentOwner(owner);
+      await queryClient.cancelQueries({ queryKey: propertiesKey, exact: true });
+      currentOwner(captured);
+      const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
+      if (previous) {
+        queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, {
+          ...previous,
+          properties: previous.properties.map((property) =>
+            property.id === propertyId ? { ...property, notes } : property,
+          ),
+        });
+      }
+      try {
+        await savedPropertyService.updateNotes(captured, propertyId, notes);
+        const current = currentOwner(captured);
+        await queryClient.invalidateQueries({
+          queryKey: savedKeys.properties(current),
+          exact: true,
+        });
+      } catch (error) {
+        if (isCurrentOwner(captured) && previous) queryClient.setQueryData(propertiesKey, previous);
+        throw error;
+      }
+    },
+    [currentOwner, owner, queryClient, propertiesKey, isCurrentOwner],
   );
 
   const getDefaultFolder = useCallback(() => {
@@ -405,6 +553,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
     deleteFolder,
     savePropertyToFolder,
     unsaveProperty,
+    updateNotes,
     getDefaultFolder,
     getFolderById,
     isPropertySaved,

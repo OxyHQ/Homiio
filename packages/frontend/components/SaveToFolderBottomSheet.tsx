@@ -9,10 +9,9 @@
  * as `FolderColorSwatches` (with `FolderEmojiChips`) so the Saved screen's
  * "New folder" dialog and the folder edit screen draw the same ones.
  */
-import React, { useCallback, useContext, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { Button, CloseButton } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
@@ -30,11 +29,12 @@ import type { Property } from '@homiio/shared-types';
 import { spacing } from '@/constants/styles';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import savedPropertyFolderService, {
-  type SavedPropertyFolder,
-} from '@/services/savedPropertyFolderService';
-import savedPropertyService from '@/services/savedPropertyService';
-import { logger } from '@/utils/logger';
+import type { SavedPropertyFolder } from '@/services/savedPropertyFolderService';
+import {
+  sameAccountProjection,
+  useAccountOwner,
+  useAccountOwnerGuard,
+} from '@/hooks/useAccountOwner';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 
 interface SaveToFolderBottomSheetProps {
@@ -125,7 +125,17 @@ export function FolderColorSwatches({ value, onChange, disabled }: FolderColorSw
   );
 }
 
-function SaveToFolderBottomSheet({
+function SaveToFolderBottomSheet(props: SaveToFolderBottomSheetProps) {
+  const owner = useAccountOwner();
+  const [openedFor] = useState(owner);
+  const sameOwner = sameAccountProjection(openedFor, owner);
+  useEffect(() => {
+    if (!sameOwner) props.onClose();
+  }, [sameOwner, props.onClose]);
+  return sameOwner ? <SaveToFolderBottomSheetContent {...props} /> : null;
+}
+
+function SaveToFolderBottomSheetContent({
   propertyId,
   propertyTitle,
   property,
@@ -134,72 +144,67 @@ function SaveToFolderBottomSheet({
 }: SaveToFolderBottomSheetProps) {
   const { t } = useTranslation();
   const { colors: theme } = useTheme();
-  const { folders, isLoading } = useSavedPropertiesContext();
-  const queryClient = useQueryClient();
+  const { folders, isLoading, savePropertyToFolder, createFolder } = useSavedPropertiesContext();
+  const { owner, isCurrent } = useAccountOwnerGuard();
 
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [selectedColor, setSelectedColor] = useState(FOLDER_COLORS[0]);
   const [selectedEmoji, setSelectedEmoji] = useState(FOLDER_EMOJIS[0]);
-
-  const saveToFolderMutation = useMutation({
-    mutationFn: async ({ folderId }: { folderId: string | null }) =>
-      savedPropertyService.saveProperty(propertyId, undefined, folderId || undefined),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
-      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      toast.success(t('saved.toast.propertySavedToFolder'));
-    },
-    onError: (error: Error) => {
-      logger.error('Failed to save to folder:', error);
-      toast.error(t('saved.toast.saveToFolderFailed'));
-    },
-  });
-
-  const createFolderMutation = useMutation({
-    mutationFn: async (folderData: { name: string; color: string; icon: string }) =>
-      savedPropertyFolderService.createSavedPropertyFolder(folderData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      toast.success(t('saved.toast.folderCreated'));
-    },
-    onError: (error: Error) => {
-      logger.error('Failed to create folder:', error);
-      toast.error(t('saved.toast.folderCreateFailed'));
-    },
-  });
+  const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const handleSaveToFolder = useCallback(
     async (folderId: string | null) => {
+      const captured = owner;
+      if (!isCurrent(captured)) return;
+      setSaving(true);
       try {
-        await saveToFolderMutation.mutateAsync({ folderId });
+        await savePropertyToFolder(propertyId, folderId, property);
+        if (!isCurrent(captured)) return;
         onSave(folderId);
         onClose();
       } catch {
-        // Reported by the mutation's onError toast.
+        // The context reports errors while the owner is current.
+      } finally {
+        if (isCurrent(captured)) setSaving(false);
       }
     },
-    [saveToFolderMutation, onSave, onClose],
+    [owner, isCurrent, savePropertyToFolder, propertyId, property, onSave, onClose],
   );
 
   const handleCreateFolder = useCallback(async () => {
+    const captured = owner;
+    if (!isCurrent(captured)) return;
     if (!newFolderName.trim()) {
       toast.error(t('saved.folder.alertFolderNameRequired'));
       return;
     }
+    setCreating(true);
     try {
-      const newFolder = await createFolderMutation.mutateAsync({
+      const newFolder = await createFolder({
         name: newFolderName.trim(),
         color: selectedColor,
         icon: selectedEmoji,
       });
-      if (newFolder) {
+      if (newFolder && isCurrent(captured)) {
         await handleSaveToFolder(newFolder.id);
       }
     } catch {
-      // Reported by the mutation's onError toast.
+      // The context reports errors while the owner is current.
+    } finally {
+      if (isCurrent(captured)) setCreating(false);
     }
-  }, [newFolderName, selectedColor, selectedEmoji, createFolderMutation, handleSaveToFolder, t]);
+  }, [
+    owner,
+    isCurrent,
+    newFolderName,
+    selectedColor,
+    selectedEmoji,
+    createFolder,
+    handleSaveToFolder,
+    t,
+  ]);
 
   const renderFolderItem = (folder: SavedPropertyFolder) => (
     <Item
@@ -215,7 +220,7 @@ function SaveToFolderBottomSheet({
       subtitle={t('saved.folder.propertyCount', { count: folder.propertyCount })}
       trailing={<RiArrowRightSLine width={20} height={20} fill={theme.textTertiary} />}
       onPress={() => void handleSaveToFolder(folder.id)}
-      disabled={isLoading || saveToFolderMutation.isPending}
+      disabled={isLoading || saving}
     />
   );
 
@@ -285,8 +290,8 @@ function SaveToFolderBottomSheet({
               <Button
                 style={styles.flex}
                 onPress={() => void handleCreateFolder()}
-                loading={createFolderMutation.isPending}
-                disabled={createFolderMutation.isPending || !newFolderName.trim()}
+                loading={creating}
+                disabled={creating || !newFolderName.trim()}
               >
                 {t('saved.folder.createAndSave')}
               </Button>
@@ -401,12 +406,16 @@ export function useOpenSaveToFolderSheet(): (
 ) => Promise<void> {
   const { openBottomSheet, closeBottomSheet } = useContext(BottomSheetContext);
   const { savePropertyToFolder, isPropertySaved, loadFolders } = useSavedPropertiesContext();
+  const { owner, isCurrent } = useAccountOwnerGuard();
 
   return useCallback(
     async (property: Property, propertyId: string) => {
+      const captured = owner;
+      if (!isCurrent(captured)) return;
       if (!isPropertySaved(propertyId)) {
         await savePropertyToFolder(propertyId, null, property).catch(() => undefined);
       }
+      if (!isCurrent(captured)) return;
       // Opening the sheet is what asks for fresh folder counts.
       void loadFolders();
       openBottomSheet(
@@ -420,6 +429,14 @@ export function useOpenSaveToFolderSheet(): (
         />,
       );
     },
-    [openBottomSheet, closeBottomSheet, savePropertyToFolder, isPropertySaved, loadFolders],
+    [
+      owner,
+      isCurrent,
+      openBottomSheet,
+      closeBottomSheet,
+      savePropertyToFolder,
+      isPropertySaved,
+      loadFolders,
+    ],
   );
 }

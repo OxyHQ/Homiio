@@ -19,105 +19,29 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { useOxy } from '@oxy.so/services/ui/client';
+import { useLayoutEffect, useRef } from 'react';
 import type { Commission, PartnerMeResponse, Property, PropertyStatus } from '@homiio/shared-types';
 
 import { partnerApi } from '@/services/partnerApi';
 import { propertyService, type MarkTransactedResult } from '@/services/propertyService';
-import type { RequestOwner } from '@/utils/api';
-
-type PartnerOwner = RequestOwner & { sessionId: string | null };
-
-/** A session id may arrive after the bearer while the same account is restored. */
-function sameProjection(previous: PartnerOwner | null, current: PartnerOwner | null): boolean {
-  return Boolean(
-    previous &&
-      current &&
-      previous.oxyServices === current.oxyServices &&
-      previous.userId === current.userId &&
-      previous.epoch === current.epoch &&
-      (previous.sessionId === current.sessionId || previous.sessionId === null),
-  );
-}
-
-/** Bind the projected account to the locally observed bearer and session epoch. */
-function usePartnerOwner(): PartnerOwner | null {
-  const { isAuthenticated, user, activeSessionId, oxyServices } = useOxy();
-  const subscribe = useCallback(
-    (listener: () => void) => oxyServices.session.onChange(listener),
-    [oxyServices],
-  );
-  const getSnapshot = useCallback(
-    () =>
-      JSON.stringify([
-        oxyServices.http.getSessionEpoch(),
-        oxyServices.session.userId,
-        Boolean(oxyServices.session.accessToken),
-      ]),
-    [oxyServices],
-  );
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  const userId = isAuthenticated ? (user?.id ?? null) : null;
-  return useMemo(() => {
-    const [epoch, bearerUser, hasToken] = JSON.parse(snapshot) as [number, string | null, boolean];
-    if (!userId || !hasToken || bearerUser !== userId) return null;
-    return {
-      oxyServices,
-      userId,
-      sessionId: activeSessionId ?? null,
-      epoch,
-    };
-  }, [oxyServices, userId, activeSessionId, snapshot]);
-}
-
-function assertPartnerOwner(owner: PartnerOwner | null): asserts owner is PartnerOwner {
-  if (
-    !owner ||
-    owner.oxyServices.session.userId !== owner.userId ||
-    owner.oxyServices.http.getSessionEpoch() !== owner.epoch
-  ) {
-    throw new Error('The active account changed');
-  }
-}
-
-async function withPartnerOwner<T>(
-  owner: PartnerOwner | null,
-  operation: (owner: PartnerOwner) => Promise<T>,
-): Promise<T> {
-  assertPartnerOwner(owner);
-  const value = await operation(owner);
-  assertPartnerOwner(owner);
-  return value;
-}
+import {
+  accountOwnerKey,
+  useAccountOwner as usePartnerOwner,
+  sameAccountProjection as sameProjection,
+  assertAccountOwner as assertPartnerOwner,
+  withAccountOwner as withPartnerOwner,
+  type AccountOwner as PartnerOwner,
+} from '@/hooks/useAccountOwner';
 
 /** Stable query-key factory so invalidation never drifts from the queries. */
 const partnerKeys = {
   all: ['partner'] as const,
   me: (owner: PartnerOwner | null) =>
-    [
-      ...partnerKeys.all,
-      owner?.userId ?? null,
-      owner?.sessionId ?? null,
-      owner?.epoch ?? null,
-      'me',
-    ] as const,
+    [...partnerKeys.all, ...accountOwnerKey(owner), 'me'] as const,
   referrals: (owner: PartnerOwner | null) =>
-    [
-      ...partnerKeys.all,
-      owner?.userId ?? null,
-      owner?.sessionId ?? null,
-      owner?.epoch ?? null,
-      'referrals',
-    ] as const,
+    [...partnerKeys.all, ...accountOwnerKey(owner), 'referrals'] as const,
   earnings: (owner: PartnerOwner | null) =>
-    [
-      ...partnerKeys.all,
-      owner?.userId ?? null,
-      owner?.sessionId ?? null,
-      owner?.epoch ?? null,
-      'earnings',
-    ] as const,
+    [...partnerKeys.all, ...accountOwnerKey(owner), 'earnings'] as const,
 };
 
 /** Five minutes — partner state changes rarely (join, a closed deal). */
