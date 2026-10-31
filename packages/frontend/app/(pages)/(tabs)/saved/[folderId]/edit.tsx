@@ -2,8 +2,6 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxy.so/services/ui/client';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
@@ -20,24 +18,17 @@ import { FolderColorSwatches, FOLDER_COLORS } from '@/components/SaveToFolderBot
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { contentClamp, spacing } from '@/constants/styles';
-import savedPropertyFolderService, {
-  type SavedPropertyFolder,
-} from '@/services/savedPropertyFolderService';
+import type { SavedPropertyFolder } from '@/services/savedPropertyFolderService';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { accountOwnerKey, useAccountOwner, useAccountOwnerGuard } from '@/hooks/useAccountOwner';
+import { useSavedFoldersQuery } from '@/hooks/useSavedQueries';
 import { logger } from '@/utils/logger';
 
 export default function EditFolderScreen() {
   const { t } = useTranslation();
   const { folderId } = useLocalSearchParams<{ folderId: string }>();
-  const { oxyServices, activeSessionId } = useOxy();
-
-  const { data: foldersData, isLoading } = useQuery({
-    queryKey: ['savedFolders'],
-    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(),
-    enabled: !!oxyServices && !!activeSessionId,
-    staleTime: 1000 * 60,
-    gcTime: 1000 * 60 * 10,
-  });
+  const owner = useAccountOwner();
+  const { data: foldersData, isLoading } = useSavedFoldersQuery();
 
   const folder = useMemo(
     () => (foldersData?.folders ?? []).find((f) => f.id === folderId),
@@ -77,42 +68,28 @@ export default function EditFolderScreen() {
 
   // Keyed on the folder so the form state seeds from the loaded folder rather
   // than from the empty first render before the query resolved.
-  return <EditFolderForm key={folder.id} folder={folder} />;
+  return (
+    <EditFolderForm key={JSON.stringify([...accountOwnerKey(owner), folder.id])} folder={folder} />
+  );
 }
 
 function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
   const { t } = useTranslation();
-  const { oxyServices, activeSessionId } = useOxy();
-  const queryClient = useQueryClient();
+  const { owner, isCurrent } = useAccountOwnerGuard();
 
   const [name, setName] = useState(folder.name || '');
   const [emoji, setEmoji] = useState(folder.icon || '📁');
   const [color, setColor] = useState(folder.color || FOLDER_COLORS[0]);
 
-  const updateFolderMutation = useMutation({
-    mutationFn: async (folderData: { name: string; icon: string; color: string }) => {
-      if (!oxyServices || !activeSessionId) {
-        throw new Error('Authentication required');
-      }
-      return savedPropertyFolderService.updateSavedPropertyFolder(folder.id, folderData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
-      toast.success(t('saved.toast.folderUpdated'));
-      router.back();
-    },
-    onError: (error: unknown) => {
-      logger.error('Failed to update folder:', error);
-      toast.error(t('saved.toast.folderUpdateFailed'));
-    },
-  });
-
-  const { deleteFolder } = useSavedPropertiesContext();
+  const { deleteFolder, updateFolder, loadSavedProperties } = useSavedPropertiesContext();
   const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const locked = folder.isDefault || updateFolderMutation.isPending || deleting;
+  const locked = folder.isDefault || saving || deleting;
 
   const handleDelete = async () => {
+    const captured = owner;
+    if (!isCurrent(captured)) return;
     const ok = await confirm({
       title: t('saved.folders.deleteTitle'),
       description: t('saved.folders.deleteMessage', { name: folder.name }),
@@ -120,22 +97,25 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
       cancelLabel: t('common.cancel'),
       destructive: true,
     });
-    if (!ok) return;
+    if (!ok || !isCurrent(captured)) return;
     setDeleting(true);
     try {
       // The context toasts the outcome. The homes filed here stay saved — the
       // server clears their folder — so the saved list is refetched too.
       await deleteFolder(folder.id);
-      void queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+      if (!isCurrent(captured)) return;
+      void loadSavedProperties();
       router.replace('/saved');
     } catch (error: unknown) {
       logger.error('Failed to delete folder:', error);
     } finally {
-      setDeleting(false);
+      if (isCurrent(captured)) setDeleting(false);
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    const captured = owner;
+    if (!isCurrent(captured)) return;
     if (folder.isDefault) {
       toast.error(t('saved.folder.alertDefaultFolderRename'));
       return;
@@ -144,7 +124,15 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
       toast.error(t('saved.folder.alertFolderNameRequired'));
       return;
     }
-    updateFolderMutation.mutate({ name: name.trim(), icon: emoji, color });
+    setSaving(true);
+    try {
+      await updateFolder(folder.id, { name: name.trim(), icon: emoji, color });
+      if (isCurrent(captured)) router.back();
+    } catch (error) {
+      if (isCurrent(captured)) logger.error('Failed to update folder:', error);
+    } finally {
+      if (isCurrent(captured)) setSaving(false);
+    }
   };
 
   return (
@@ -185,10 +173,10 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
         </Field>
 
         <Button
-          onPress={handleSave}
+          onPress={() => void handleSave()}
           size="lg"
-          loading={updateFolderMutation.isPending}
-          disabled={updateFolderMutation.isPending || deleting}
+          loading={saving}
+          disabled={saving || deleting}
         >
           {t('common.save')}
         </Button>
