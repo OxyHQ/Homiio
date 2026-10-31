@@ -404,3 +404,35 @@ it('keeps multiple subscribers in sync through committed changes under StrictMod
     await expect(view.result.current.join.mutateAsync()).resolves.toEqual(response('A'));
   });
 });
+
+it('invalidates a captured owner when a mismatched projection commits without changing bearer', async () => {
+  const view = renderHook(() => useAccountOwner(), { wrapper });
+  const captured = view.result.current!;
+  const invalidated = jest.fn();
+  const unsubscribe = captured.subscribeInvalidation!(invalidated);
+  expect(captured.isCurrent!()).toBe(true);
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  expect(invalidated).toHaveBeenCalledTimes(1);
+  expect(captured.isCurrent!()).toBe(false);
+  expect(oxy.session.userId).toBe('A');
+  unsubscribe();
+});
+
+it('does not invalidate the owner when a session id arrives during recovery', () => {
+  mockAuth.activeSessionId = null;
+  const view = renderHook(() => useAccountOwner(), { wrapper });
+  const captured = view.result.current!;
+  const invalidated = jest.fn();
+  const unsubscribe = captured.subscribeInvalidation!(invalidated);
+  act(() => {
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  expect(invalidated).not.toHaveBeenCalled();
+  expect(captured.isCurrent!()).toBe(true);
+  unsubscribe();
+});

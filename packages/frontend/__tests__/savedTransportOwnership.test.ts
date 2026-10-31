@@ -87,3 +87,108 @@ it.each([false, true])('rejects a saved response after B and return to A: %s', a
   await rejected;
   expect(seen).toEqual([`GET /api/profiles/me/saved-properties Bearer ${jwt('A')}`]);
 });
+
+it('aborts before sending when projection ownership changes during auth preflight', async () => {
+  let enter!: () => void;
+  let release!: () => void;
+  let complete!: () => void;
+  const completed = new Promise<void>((resolve) => {
+    complete = resolve;
+  });
+  const entered = new Promise<void>((resolve) => {
+    enter = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const prototype = Object.getPrototypeOf(oxy.http) as {
+    getAuthHeader: () => Promise<string | null>;
+  };
+  const original = prototype.getAuthHeader;
+  const spy = jest.spyOn(prototype, 'getAuthHeader').mockImplementation(function (
+    this: typeof prototype,
+  ) {
+    enter();
+    return gate.then(async () => {
+      try {
+        return await original.call(this);
+      } finally {
+        complete();
+      }
+    });
+  });
+  let valid = true;
+  const listeners = new Set<() => void>();
+  const captured = {
+    ...owner(),
+    isCurrent: () => valid,
+    subscribeInvalidation: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+  try {
+    const pending = saved.saveProperty(captured, 'home');
+    const rejected = expect(pending).rejects.toThrow('The active account changed');
+    await entered;
+    valid = false;
+    listeners.forEach((listener) => listener());
+    await rejected;
+    release();
+    await completed;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(seen).toEqual([]);
+    expect(listeners.size).toBe(0);
+  } finally {
+    release();
+    spy.mockRestore();
+  }
+});
+
+it('unsubscribes owner invalidation after a successful request', async () => {
+  const listeners = new Set<() => void>();
+  const captured = {
+    ...owner(),
+    isCurrent: () => true,
+    subscribeInvalidation: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+  await saved.getSavedProperties(captured);
+  expect(seen).toHaveLength(1);
+  expect(listeners.size).toBe(0);
+});
+
+it('rejects an already dispatched response on projection invalidation without claiming to undo it', async () => {
+  let started!: (response: ServerResponse) => void;
+  const arrived = new Promise<ServerResponse>((resolve) => {
+    started = resolve;
+  });
+  hold = started;
+  let valid = true;
+  const listeners = new Set<() => void>();
+  const captured = {
+    ...owner(),
+    isCurrent: () => valid,
+    subscribeInvalidation: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+  const pending = saved.saveProperty(captured, 'home');
+  const rejected = expect(pending).rejects.toThrow('The active account changed');
+  const response = await arrived;
+  valid = false;
+  listeners.forEach((listener) => listener());
+  await rejected;
+  response.end(JSON.stringify(payload));
+  expect(seen).toHaveLength(1);
+  expect(listeners.size).toBe(0);
+});
