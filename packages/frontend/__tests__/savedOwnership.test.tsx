@@ -37,11 +37,12 @@ jest.mock('@/services/savedPropertyService', () => ({
 }));
 jest.mock('@/services/savedPropertyFolderService', () => ({
   __esModule: true,
-  default: { getSavedPropertyFolders: jest.fn() },
+  default: { getSavedPropertyFolders: jest.fn(), updateSavedPropertyFolder: jest.fn() },
 }));
 
 const getSaved = jest.mocked(savedPropertyService.getSavedProperties);
 const getFolders = jest.mocked(savedPropertyFolderService.getSavedPropertyFolders);
+const updateFolder = jest.mocked(savedPropertyFolderService.updateSavedPropertyFolder);
 const save = jest.mocked(savedPropertyService.saveProperty);
 const unsave = jest.mocked(savedPropertyService.unsaveProperty);
 const updateNotes = jest.mocked(savedPropertyService.updateNotes);
@@ -75,6 +76,7 @@ beforeEach(() => {
   getSaved.mockReset();
   getSaved.mockResolvedValue(properties('server-home'));
   getFolders.mockReset();
+  updateFolder.mockReset();
   save.mockReset();
   unsave.mockReset();
   updateNotes.mockReset();
@@ -1182,4 +1184,32 @@ it('does not clear B save spinner when an earlier A save completes', async () =>
     await b;
   });
   await waitFor(() => expect(view.result.current.isPropertySaving('P')).toBe(false));
+});
+
+it('attempts folder and saved-home actions offline with Homiio offlineFirst defaults', async () => {
+  client.setDefaultOptions({
+    queries: { retry: false, networkMode: 'always' },
+    mutations: { networkMode: 'offlineFirst', retry: 0 },
+  });
+  client.mount();
+  getSaved.mockResolvedValue(properties('P'));
+  getFolders.mockResolvedValue(folders('folder'));
+  save.mockRejectedValue(new Error('offline'));
+  updateFolder.mockRejectedValue(new Error('offline'));
+  act(() => {
+    onlineManager.setOnline(false);
+  });
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+  await act(async () => {
+    const saveResult = view.result.current.savePropertyToFolder('P', null);
+    const folderResult = view.result.current.updateFolder('folder', { name: 'new name' });
+    await Promise.all([
+      expect(saveResult).rejects.toThrow('offline'),
+      expect(folderResult).rejects.toThrow('offline'),
+    ]);
+  });
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(updateFolder).toHaveBeenCalledTimes(1);
+  expect(client.getMutationCache().getAll()).toHaveLength(0);
 });
