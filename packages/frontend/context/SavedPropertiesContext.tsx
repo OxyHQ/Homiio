@@ -547,9 +547,17 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   const updateNotes = useCallback(
     async (propertyId: string, notes: string) => {
       const captured = currentOwner(owner);
-      await queryClient.cancelQueries({ queryKey: propertiesKey, exact: true });
+      await queryClient.cancelQueries({ queryKey: propertiesKey, exact: true }, { revert: false });
       currentOwner(captured);
       const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
+      const previousProperty = previous?.properties.find((property) => property.id === propertyId);
+      const changeKey = JSON.stringify([propertiesKey, propertyId]);
+      const changeId = ++nextPropertyChange.current;
+      latestPropertyChange.current.set(changeKey, changeId);
+      pendingPropertyChanges.current.set(
+        ownerKey,
+        (pendingPropertyChanges.current.get(ownerKey) ?? 0) + 1,
+      );
       if (previous) {
         queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, {
           ...previous,
@@ -560,17 +568,52 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       }
       try {
         await savedPropertyService.updateNotes(captured, propertyId, notes);
-        const current = currentOwner(captured);
-        await queryClient.invalidateQueries({
-          queryKey: savedKeys.properties(current),
-          exact: true,
-        });
+        currentOwner(captured);
       } catch (error) {
-        if (isCurrentOwner(captured) && previous) queryClient.setQueryData(propertiesKey, previous);
+        if (
+          isCurrentOwner(captured) &&
+          previousProperty &&
+          latestPropertyChange.current.get(changeKey) === changeId
+        ) {
+          queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (current) => {
+            if (!current) return current;
+            return {
+              ...current,
+              properties: current.properties.map((property) =>
+                property.id === propertyId
+                  ? { ...property, notes: previousProperty.notes }
+                  : property,
+              ),
+            };
+          });
+        }
         throw error;
+      } finally {
+        if (latestPropertyChange.current.get(changeKey) === changeId) {
+          latestPropertyChange.current.delete(changeKey);
+        }
+        const remaining = (pendingPropertyChanges.current.get(ownerKey) ?? 1) - 1;
+        if (remaining > 0) pendingPropertyChanges.current.set(ownerKey, remaining);
+        else {
+          pendingPropertyChanges.current.delete(ownerKey);
+          if (isCurrentOwner(captured)) {
+            const key = savedKeys.properties(currentOwner(captured));
+            void queryClient
+              .cancelQueries({ queryKey: key, exact: true }, { revert: false })
+              .then(() => {
+                if (
+                  !pendingPropertyChanges.current.has(ownerKey) &&
+                  !pendingPropertyChanges.current.has(JSON.stringify(key)) &&
+                  isCurrentOwner(captured)
+                ) {
+                  void queryClient.invalidateQueries({ queryKey: key, exact: true });
+                }
+              });
+          }
+        }
       }
     },
-    [currentOwner, owner, queryClient, propertiesKey, isCurrentOwner],
+    [currentOwner, owner, queryClient, propertiesKey, ownerKey, isCurrentOwner],
   );
 
   const getDefaultFolder = useCallback(() => {

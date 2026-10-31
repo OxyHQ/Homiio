@@ -301,3 +301,22 @@ it('allows an accepted offline join to resume after unmount for the same session
   expect(join).toHaveBeenCalledTimes(1);
   client.unmount();
 });
+
+it('rejects a retained join after an observed projection-only A to B to A transition', async () => {
+  const view = renderHook(() => useJoinPartner(), { wrapper });
+  const old = view.result.current.mutateAsync;
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  act(() => {
+    mockAuth.user = { id: 'A' };
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  await act(async () => {
+    await expect(old()).rejects.toThrow('The active account changed');
+  });
+  expect(join).not.toHaveBeenCalled();
+});
