@@ -68,6 +68,10 @@ export default function AgentScreen() {
       return;
     }
     if (!isPartner) {
+      if (!joinMutation.isOwnerReady) {
+        toast.error(t('agent.join.error'));
+        return;
+      }
       joinMutation.mutate(undefined, {
         onError: () => {
           toast.error(t('agent.join.error'));
