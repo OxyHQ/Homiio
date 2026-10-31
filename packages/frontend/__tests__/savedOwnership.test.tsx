@@ -1061,3 +1061,125 @@ it('supersedes an earlier preparation across null to known session recovery', as
   await waitFor(() => expect(view.result.current.savedProperties).toEqual([]));
   spy.mockRestore();
 });
+
+it('clears the save spinner after a newer notes action supersedes the pending save', async () => {
+  getSaved.mockResolvedValue(properties('P'));
+  getFolders.mockResolvedValue(folders('folder'));
+  updateNotes.mockResolvedValue(undefined);
+  let finishSave!: (value: unknown) => void;
+  save.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finishSave = resolve;
+      }),
+  );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+  let earlier!: Promise<void>;
+  act(() => {
+    earlier = view.result.current.savePropertyToFolder('P', null);
+  });
+  const rejected = expect(earlier).rejects.toBeInstanceOf(SavedPropertyChangeSupersededError);
+  await waitFor(() => expect(view.result.current.isPropertySaving('P')).toBe(true));
+  await act(async () => {
+    await view.result.current.updateNotes('P', 'new note');
+  });
+  await act(async () => {
+    finishSave(undefined);
+    await rejected;
+  });
+  await waitFor(() => expect(view.result.current.isPropertySaving('P')).toBe(false));
+});
+
+it('keeps the spinner while a later save on the same property is still active', async () => {
+  getSaved.mockResolvedValue(properties('P'));
+  getFolders.mockResolvedValue(folders('folder'));
+  let first!: (value: unknown) => void;
+  let second!: (value: unknown) => void;
+  save
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          first = resolve;
+        }),
+    )
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          second = resolve;
+        }),
+    );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+  let older!: Promise<void>;
+  let newer!: Promise<void>;
+  act(() => {
+    older = view.result.current.savePropertyToFolder('P', null);
+  });
+  const rejected = expect(older).rejects.toBeInstanceOf(SavedPropertyChangeSupersededError);
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  act(() => {
+    newer = view.result.current.savePropertyToFolder('P', null);
+  });
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+  await act(async () => {
+    first(undefined);
+    await rejected;
+  });
+  expect(view.result.current.isPropertySaving('P')).toBe(true);
+  await act(async () => {
+    second(undefined);
+    await newer;
+  });
+  await waitFor(() => expect(view.result.current.isPropertySaving('P')).toBe(false));
+});
+
+it('does not clear B save spinner when an earlier A save completes', async () => {
+  getSaved.mockResolvedValueOnce(properties('A-home')).mockResolvedValue(properties('B-home'));
+  getFolders.mockResolvedValue(folders('folder'));
+  let finishA!: (value: unknown) => void;
+  let finishB!: (value: unknown) => void;
+  save
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishA = resolve;
+        }),
+    )
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishB = resolve;
+        }),
+    );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('A-home'));
+  let a!: Promise<void>;
+  act(() => {
+    a = view.result.current.savePropertyToFolder('P', null);
+  });
+  const rejected = expect(a).rejects.toThrow('The active account changed');
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  act(() => {
+    oxy.session.setAccessToken(token('B'));
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('B-home'));
+  let b!: Promise<void>;
+  act(() => {
+    b = view.result.current.savePropertyToFolder('P', null);
+  });
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+  await act(async () => {
+    finishA(undefined);
+    await rejected;
+  });
+  expect(view.result.current.isPropertySaving('P')).toBe(true);
+  await act(async () => {
+    finishB(undefined);
+    await b;
+  });
+  await waitFor(() => expect(view.result.current.isPropertySaving('P')).toBe(false));
+});

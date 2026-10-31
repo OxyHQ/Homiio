@@ -92,6 +92,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   const owner = useAccountOwner();
   const committedOwner = useRef<AccountOwner | null>(null);
   const pendingPropertyChanges = useRef(new Map<string, number>());
+  const activeSavingChanges = useRef(new Map<string, Set<number>>());
   const latestPropertyChange = useRef(new Map<string, number>());
   const nextPropertyChange = useRef(0);
   useLayoutEffect(() => {
@@ -348,6 +349,8 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       property?: Partial<SavedProperty>,
     ) => {
       const { captured, groupKey, changeKey, changeId } = beginPropertyChange(propertyId);
+      const savingKey = JSON.stringify([propertiesKey, propertyId]);
+      let startedSaving = false;
       try {
         await queryClient.cancelQueries(
           { queryKey: propertiesKey, exact: true },
@@ -356,13 +359,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
         assertCurrentChange(captured, changeKey, changeId);
         const previous = queryClient.getQueryData<SavedPropertiesResponse>(propertiesKey);
         const previousProperty = previous?.properties.find((p) => propertyKey(p) === propertyId);
-        const setSaving = (active: boolean) =>
-          setSavingPropertyIds((prev) => {
-            const next = new Set(prev);
-            if (active) next.add(propertyId);
-            else next.delete(propertyId);
-            return next;
-          });
         try {
           setError(null);
           queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (prev) => {
@@ -381,7 +377,11 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
               : list.filter((p) => propertyKey(p) !== propertyId);
             return { properties: next, total: next.length, page: 1, totalPages: 1 };
           });
-          setSaving(true);
+          const active = activeSavingChanges.current.get(savingKey) ?? new Set<number>();
+          active.add(changeId);
+          activeSavingChanges.current.set(savingKey, active);
+          startedSaving = true;
+          setSavingPropertyIds((prev) => new Set([...prev, propertyId]));
           if (saving)
             await savedPropertyService.saveProperty(
               captured,
@@ -392,7 +392,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           else await savedPropertyService.unsaveProperty(captured, propertyId);
           const current = currentOwner(captured);
           assertCurrentChange(captured, changeKey, changeId);
-          setSaving(false);
           toast.success(
             i18next.t(saving ? 'saved.toast.propertySaved' : 'saved.toast.propertyRemoved'),
           );
@@ -423,7 +422,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
                 : 'Failed to unsave property';
           const status = (error as { status?: number })?.status;
           if (!saving && (status === 404 || message.includes('not found'))) {
-            setSaving(false);
             return;
           }
           queryClient.setQueryData<SavedPropertiesResponse>(propertiesKey, (current) => {
@@ -432,7 +430,6 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
             const properties = previousProperty ? [...list, previousProperty] : list;
             return { ...current, properties, total: properties.length };
           });
-          setSaving(false);
           setError(message);
           toast.error(
             i18next.t(
@@ -442,6 +439,19 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           throw error;
         }
       } finally {
+        if (startedSaving) {
+          const active = activeSavingChanges.current.get(savingKey);
+          active?.delete(changeId);
+          if (!active?.size) {
+            activeSavingChanges.current.delete(savingKey);
+            setSavingState((previous) => {
+              if (previous.key !== ownerKey) return previous;
+              const ids = new Set(previous.ids);
+              ids.delete(propertyId);
+              return { key: ownerKey, ids };
+            });
+          }
+        }
         finishPropertyChange(captured, groupKey, changeKey, changeId);
       }
     },
@@ -450,6 +460,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       currentOwner,
       owner,
       propertiesKey,
+      ownerKey,
       setError,
       setSavingPropertyIds,
       isCurrentOwner,
