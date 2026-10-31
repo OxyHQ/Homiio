@@ -775,3 +775,124 @@ it('releases a paused notes operation removed from its isolated query client', a
   });
   expect(updateNotes).not.toHaveBeenCalled();
 });
+
+it('does not refetch between an earlier completion and a second mutation waiting to prepare', async () => {
+  getSaved.mockResolvedValue(properties('existing'));
+  getFolders.mockResolvedValue(folders('folder'));
+  let finishFirst!: (value: unknown) => void;
+  let finishSecond!: (value: unknown) => void;
+  let finishPreparation!: () => void;
+  save.mockImplementation(
+    (_owner, id) =>
+      new Promise((resolve) => {
+        if (id === 'P1') finishFirst = resolve;
+        else finishSecond = resolve;
+      }),
+  );
+  const originalCancel = client.cancelQueries.bind(client);
+  let cancellations = 0;
+  const spy = jest.spyOn(client, 'cancelQueries').mockImplementation((...args) => {
+    cancellations += 1;
+    const cancelled = originalCancel(...args);
+    return cancellations === 2
+      ? cancelled.then(
+          () =>
+            new Promise<void>((resolve) => {
+              finishPreparation = resolve;
+            }),
+        )
+      : cancelled;
+  });
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  try {
+    await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('existing'));
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      first = view.result.current.savePropertyToFolder('P1', null);
+    });
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    act(() => {
+      second = view.result.current.savePropertyToFolder('P2', null);
+    });
+    await waitFor(() => expect(finishPreparation).toBeDefined());
+    await act(async () => {
+      finishFirst(undefined);
+      await first;
+    });
+    expect(getSaved).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      finishPreparation();
+    });
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      finishSecond(undefined);
+      await second;
+    });
+  } finally {
+    spy.mockRestore();
+    finishPreparation?.();
+    finishSecond?.(undefined);
+    view.unmount();
+  }
+});
+
+it('releases preparation after cancellation fails and reconciles the same owner', async () => {
+  getSaved.mockResolvedValue(properties('existing'));
+  getFolders.mockResolvedValue(folders('folder'));
+  save.mockResolvedValue(undefined);
+  const spy = jest.spyOn(client, 'cancelQueries').mockRejectedValueOnce(new Error('cancel failed'));
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('existing'));
+  await act(async () => {
+    await expect(view.result.current.savePropertyToFolder('P1', null)).rejects.toThrow(
+      'cancel failed',
+    );
+  });
+  expect(save).not.toHaveBeenCalled();
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(2));
+  await act(async () => {
+    await view.result.current.savePropertyToFolder('P2', null);
+  });
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(3));
+  spy.mockRestore();
+});
+
+it('releases preparation without reconciling B when A changes during cancellation', async () => {
+  getSaved.mockResolvedValueOnce(properties('A-home')).mockResolvedValue(properties('B-home'));
+  getFolders.mockResolvedValue(folders('folder'));
+  let finishPreparation!: () => void;
+  const spy = jest.spyOn(client, 'cancelQueries').mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishPreparation = resolve;
+      }),
+  );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('A-home'));
+  let pending!: Promise<void>;
+  act(() => {
+    pending = view.result.current.savePropertyToFolder('A-other', null);
+  });
+  const rejected = expect(pending).rejects.toThrow('The active account changed');
+  await waitFor(() => expect(finishPreparation).toBeDefined());
+  act(() => {
+    oxy.session.setAccessToken(token('B'));
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('B-home'));
+  await act(async () => {
+    finishPreparation();
+    await rejected;
+  });
+  expect(save).not.toHaveBeenCalled();
+  expect(getSaved).toHaveBeenCalledTimes(2);
+  save.mockResolvedValue(undefined);
+  await act(async () => {
+    await view.result.current.savePropertyToFolder('B-other', null);
+  });
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(3));
+  spy.mockRestore();
+});
