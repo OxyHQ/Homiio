@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, render, renderHook, waitFor } from '@testing-library/react-native';
 import { OxyServices } from '@oxy.so/core';
+import { toast } from '@oxy.so/bloom/toast';
+import { SavedPropertyChangeSupersededError } from '@/hooks/savedPropertyErrors';
 import {
   SavedPropertiesProvider,
   useSavedPropertiesContext,
@@ -76,6 +78,8 @@ beforeEach(() => {
   save.mockReset();
   unsave.mockReset();
   updateNotes.mockReset();
+  jest.mocked(toast.error).mockClear();
+  jest.mocked(toast.success).mockClear();
 });
 afterEach(() => {
   cleanup();
@@ -485,9 +489,12 @@ it('does not undo a later action on the same property when an earlier request fa
   let second!: Promise<void>;
   act(() => {
     first = view.result.current.savePropertyToFolder('P', null);
+  });
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  act(() => {
     second = view.result.current.unsaveProperty('P');
   });
-  const rejection = expect(first).rejects.toThrow('offline');
+  const rejection = expect(first).rejects.toBeInstanceOf(SavedPropertyChangeSupersededError);
   await waitFor(() => expect(unsave).toHaveBeenCalledTimes(1));
   await act(async () => {
     resolveSecond(undefined);
@@ -894,5 +901,163 @@ it('releases preparation without reconciling B when A changes during cancellatio
     await view.result.current.savePropertyToFolder('B-other', null);
   });
   await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(3));
+  spy.mockRestore();
+});
+
+it('rejects an earlier change prepared after a later action on the same property', async () => {
+  const empty = { ...properties('unused'), properties: [], total: 0 };
+  getSaved.mockResolvedValueOnce(properties('P')).mockResolvedValue(empty);
+  getFolders.mockResolvedValue(folders('folder'));
+  unsave.mockResolvedValue(undefined);
+  let finishFirstPreparation!: () => void;
+  const spy = jest.spyOn(client, 'cancelQueries').mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishFirstPreparation = resolve;
+      }),
+  );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+  let earlier!: Promise<void>;
+  act(() => {
+    earlier = view.result.current.savePropertyToFolder('P', null);
+  });
+  const rejected = expect(earlier).rejects.toThrow('superseded');
+  await waitFor(() => expect(finishFirstPreparation).toBeDefined());
+  await act(async () => {
+    await view.result.current.unsaveProperty('P');
+  });
+  expect(unsave).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    finishFirstPreparation();
+    await rejected;
+  });
+  expect(save).not.toHaveBeenCalled();
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(view.result.current.savedProperties).toEqual([]));
+  spy.mockRestore();
+});
+
+it.each([false, true])('suppresses an older sent change when it later %s', async (succeeds) => {
+  getSaved.mockResolvedValue(properties('P'));
+  getFolders.mockResolvedValue(folders('folder'));
+  let finishFirst!: (value: unknown) => void;
+  let failFirst!: (error: Error) => void;
+  save.mockImplementation(
+    () =>
+      new Promise((resolve, reject) => {
+        finishFirst = resolve;
+        failFirst = reject;
+      }),
+  );
+  unsave.mockResolvedValue(undefined);
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+  let earlier!: Promise<void>;
+  act(() => {
+    earlier = view.result.current.savePropertyToFolder('P', null);
+  });
+  const rejected = expect(earlier).rejects.toBeInstanceOf(SavedPropertyChangeSupersededError);
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  await act(async () => {
+    await view.result.current.unsaveProperty('P');
+  });
+  await act(async () => {
+    if (succeeds) finishFirst(undefined);
+    else failFirst(new Error('network'));
+    await rejected;
+  });
+  expect(toast.success).toHaveBeenCalledTimes(1);
+  expect(toast.error).not.toHaveBeenCalled();
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+});
+
+it('suppresses callbacks for an older notes mutation after a later one succeeds', async () => {
+  getSaved.mockResolvedValue(properties('P'));
+  getFolders.mockResolvedValue(folders('folder'));
+  let finishFirst!: () => void;
+  updateNotes
+    .mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishFirst = resolve;
+        }),
+    )
+    .mockResolvedValue(undefined);
+  const view = renderHook(
+    () => ({ first: useSavedNotesMutation(), second: useSavedNotesMutation() }),
+    { wrapper },
+  );
+  await waitFor(() => expect(getSaved).toHaveBeenCalled());
+  const onSuccess = jest.fn();
+  const onError = jest.fn();
+  const onSettled = jest.fn();
+  const laterSuccess = jest.fn();
+  let earlier!: Promise<void>;
+  act(() => {
+    earlier = view.result.current.first.mutateAsync(
+      { propertyId: 'P', notes: 'old' },
+      { onSuccess, onError, onSettled },
+    );
+  });
+  const rejected = expect(earlier).rejects.toBeInstanceOf(SavedPropertyChangeSupersededError);
+  await waitFor(() => expect(updateNotes).toHaveBeenCalledTimes(1));
+  await act(async () => {
+    await view.result.current.second.mutateAsync(
+      { propertyId: 'P', notes: 'new' },
+      { onSuccess: laterSuccess },
+    );
+  });
+  await act(async () => {
+    finishFirst();
+    await rejected;
+  });
+  expect(onSuccess).not.toHaveBeenCalled();
+  expect(onError).not.toHaveBeenCalled();
+  expect(onSettled).not.toHaveBeenCalled();
+  expect(laterSuccess).toHaveBeenCalledTimes(1);
+});
+
+it('supersedes an earlier preparation across null to known session recovery', async () => {
+  mockAuth.activeSessionId = null;
+  const empty = { ...properties('unused'), properties: [], total: 0 };
+  getSaved
+    .mockResolvedValueOnce(properties('P'))
+    .mockResolvedValueOnce(properties('P'))
+    .mockResolvedValue(empty);
+  getFolders.mockResolvedValue(folders('folder'));
+  unsave.mockResolvedValue(undefined);
+  let finishPreparation!: () => void;
+  const spy = jest.spyOn(client, 'cancelQueries').mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishPreparation = resolve;
+      }),
+  );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+  let earlier!: Promise<void>;
+  act(() => {
+    earlier = view.result.current.savePropertyToFolder('P', null);
+  });
+  const rejected = expect(earlier).rejects.toBeInstanceOf(SavedPropertyChangeSupersededError);
+  await waitFor(() => expect(finishPreparation).toBeDefined());
+  act(() => {
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(2));
+  await act(async () => {
+    await view.result.current.unsaveProperty('P');
+  });
+  expect(getSaved).toHaveBeenCalledTimes(2);
+  await act(async () => {
+    finishPreparation();
+    await rejected;
+  });
+  expect(save).not.toHaveBeenCalled();
+  await waitFor(() => expect(getSaved).toHaveBeenCalledTimes(3));
+  await waitFor(() => expect(view.result.current.savedProperties).toEqual([]));
   spy.mockRestore();
 });

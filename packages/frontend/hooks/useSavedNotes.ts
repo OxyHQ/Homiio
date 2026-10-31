@@ -8,6 +8,7 @@ import {
 import { randomUUID } from 'expo-crypto';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
+import { SavedPropertyChangeSupersededError } from '@/hooks/savedPropertyErrors';
 
 type UpdateNotesVars = { propertyId: string; notes: string };
 type CapturedVars = UpdateNotesVars & { operationId: string };
@@ -69,6 +70,7 @@ export function useSavedNotesMutation() {
         context: Parameters<NonNullable<typeof options.onError>>[3],
       ) =>
         isCurrent(owner) &&
+        !(error instanceof SavedPropertyChangeSupersededError) &&
         options.onError?.(
           error,
           { propertyId: variables.propertyId, notes: variables.notes },
@@ -83,6 +85,7 @@ export function useSavedNotesMutation() {
         context: Parameters<NonNullable<typeof options.onSettled>>[4],
       ) =>
         isCurrent(owner) &&
+        !(error instanceof SavedPropertyChangeSupersededError) &&
         options.onSettled?.(
           data,
           error,

@@ -39,6 +39,7 @@ import { useRentalMode } from '@/context/RentalModeContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { accountOwnerKey, useAccountOwner, useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
+import { SavedPropertyChangeSupersededError } from '@/hooks/savedPropertyErrors';
 import { logger } from '@/utils/logger';
 import {
   deleteNote,
@@ -173,7 +174,7 @@ function NotesScreenContent() {
       closeEditor();
       toast.success(t('saved.notes.saved'));
     } catch (error: unknown) {
-      if (!isCurrent(captured)) return;
+      if (!isCurrent(captured) || error instanceof SavedPropertyChangeSupersededError) return;
       logger.error('Failed to save note:', error);
       toast.error(t('saved.errors.updateNotesFailed'));
     } finally {
@@ -198,7 +199,7 @@ function NotesScreenContent() {
         if (!isCurrent(captured)) return;
         toast.success(t('saved.notes.deleted'));
       } catch (error: unknown) {
-        if (!isCurrent(captured)) return;
+        if (!isCurrent(captured) || error instanceof SavedPropertyChangeSupersededError) return;
         logger.error('Failed to delete note:', error);
         toast.error(t('saved.errors.updateNotesFailed'));
       }
@@ -215,7 +216,7 @@ function NotesScreenContent() {
           kind === 'pin' ? togglePin(notes, noteId) : toggleArchive(notes, noteId),
         );
       } catch (error: unknown) {
-        if (!isCurrent(captured)) return;
+        if (!isCurrent(captured) || error instanceof SavedPropertyChangeSupersededError) return;
         logger.error(`Failed to toggle note ${kind}:`, error);
         toast.error(t('saved.errors.updateNotesFailed'));
       }
