@@ -319,7 +319,9 @@ it('saves successfully for the unchanged owner', async () => {
     owner: 'A',
     path: '/api/profiles/me/saved-searches',
   });
-  expect(view.result.current.searches.map((item) => item.id)).toContain('new-A');
+  await waitFor(() =>
+    expect(view.result.current.searches.map((item) => item.id)).toContain('new-A'),
+  );
   expect(mockToast.success).toHaveBeenCalledTimes(1);
 });
 
