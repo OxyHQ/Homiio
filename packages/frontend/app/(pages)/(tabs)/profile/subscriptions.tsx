@@ -67,7 +67,8 @@ function parseEntitlements(value: unknown): Entitlements {
   if (
     typeof data.plusActive !== 'boolean' ||
     typeof data.fileCredits !== 'number' ||
-    !Number.isFinite(data.fileCredits) ||
+    !Number.isInteger(data.fileCredits) ||
+    data.fileCredits < 0 ||
     typeof data.founderSupporter !== 'boolean' ||
     !Array.isArray(data.processedSessions) ||
     !data.processedSessions.every((session) => typeof session === 'string')
@@ -133,16 +134,22 @@ export default function SubscriptionsScreen() {
     enabled: Boolean(owner?.sessionId),
   });
   const entitlements = entitlementsQuery.data ?? null;
+  const currentEntitlements = () => {
+    const state = queryClient.getQueryState<Entitlements>(entitlementsKey);
+    return state?.status === 'success' ? state.data : undefined;
+  };
 
   const checkoutMutation = useMutation({
     mutationFn: async (action: { product: Product }) => {
       const captured = owners.current.get(action);
       if (!captured || !isCurrent(captured)) throw new Error('The active account changed');
+      const latest = currentEntitlements();
+      if (!latest) throw new Error('Subscription status is unavailable');
       const { product } = action;
-      if (product === 'plus' && entitlements?.plusActive) {
+      if (product === 'plus' && latest.plusActive) {
         throw new Error('You already have Homiio+ subscription');
       }
-      if (product === 'file' && entitlements?.plusActive) {
+      if (product === 'file' && latest.plusActive) {
         throw new Error('File uploads are included in your Homiio+ subscription');
       }
       return withAccountOwner(captured, async (current) => {
@@ -165,15 +172,15 @@ export default function SubscriptionsScreen() {
   const checkoutBusy = checkoutMutation.isPending;
 
   const handleStartCheckout = async (product: Product) => {
-    if (!owner || !isCurrent(owner)) return;
+    if (!owner || !isCurrent(owner) || !currentEntitlements()) return;
     const action = { product };
     owners.current.set(action, owner);
     try {
       const url = await checkoutMutation.mutateAsync(action);
-      if (!isCurrent(owner)) return;
+      if (!isCurrent(owner) || !currentEntitlements()) return;
       await Linking.openURL(url);
     } catch (error: unknown) {
-      if (!isCurrent(owner)) return;
+      if (!isCurrent(owner) || !currentEntitlements()) return;
       logger.error('Failed to start checkout:', error);
       toast.error(getErrorMessage(error, t('subscriptions.checkoutFailed')));
     }
@@ -181,8 +188,10 @@ export default function SubscriptionsScreen() {
 
   const handleManageSubscription = async () => {
     if (!owner || !isCurrent(owner)) return;
+    const current = currentEntitlements();
+    if (!current) return;
     try {
-      const subscriptionId = entitlements?.plusStripeSubscriptionId;
+      const subscriptionId = current.plusStripeSubscriptionId;
       if (!subscriptionId) throw new Error('No subscription found to manage');
       const { data } = await withAccountOwner(owner, (current) =>
         api.post<{
@@ -191,19 +200,19 @@ export default function SubscriptionsScreen() {
           error?: { code: string; message: string };
         }>('/api/billing/customer-portal', { subscriptionId }, { owner: current }),
       );
-      if (!isCurrent(owner)) return;
+      if (!isCurrent(owner) || !currentEntitlements()) return;
       if (!data?.success)
         throw new Error(data?.error?.message || 'Failed to create customer portal session');
       await Linking.openURL(data.url);
     } catch (error: unknown) {
-      if (!isCurrent(owner)) return;
+      if (!isCurrent(owner) || !currentEntitlements()) return;
       logger.error('Failed to open subscription management:', error);
       toast.error(getErrorMessage(error, t('subscriptions.portalFailed')));
     }
   };
 
   const handleSyncSubscription = async () => {
-    if (!owner || !isCurrent(owner)) return;
+    if (!owner || !isCurrent(owner) || !currentEntitlements()) return;
     try {
       const next = await withAccountOwner(owner, (current) =>
         postForEntitlements(
@@ -224,7 +233,7 @@ export default function SubscriptionsScreen() {
   };
 
   const handleCancelSubscription = async (immediate: boolean) => {
-    if (!owner || !isCurrent(owner)) return;
+    if (!owner || !isCurrent(owner) || !currentEntitlements()) return;
     if (immediate) {
       const ok = await confirm({
         title: t('subscriptions.page.cancelImmediateTitle'),
@@ -233,7 +242,7 @@ export default function SubscriptionsScreen() {
         cancelLabel: t('subscriptions.page.no'),
         destructive: true,
       });
-      if (!ok || !isCurrent(owner)) return;
+      if (!ok || !isCurrent(owner) || !currentEntitlements()) return;
     }
     try {
       const next = await withAccountOwner(owner, (current) =>
@@ -259,7 +268,7 @@ export default function SubscriptionsScreen() {
   };
 
   const handleDebugSubscription = async () => {
-    if (!owner || !isCurrent(owner)) return;
+    if (!owner || !isCurrent(owner) || !currentEntitlements()) return;
     try {
       const response = await withAccountOwner(owner, (current) =>
         api.get('/api/billing/debug-subscription', { owner: current }),

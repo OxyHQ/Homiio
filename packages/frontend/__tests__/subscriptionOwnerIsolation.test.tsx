@@ -16,6 +16,7 @@ const mockAuth = {
 };
 let mockConfirm: (value: boolean) => void = () => {};
 let mockRetainedCancel: (() => void) | undefined;
+let mockRetainedCheckout: (() => void) | undefined;
 const mockConfirmStarted = jest.fn();
 const mockOpen = jest.fn(async () => {});
 const mockToast = { success: jest.fn(), error: jest.fn(), info: jest.fn() };
@@ -66,6 +67,7 @@ jest.mock('@oxy.so/bloom/typography', () => {
 jest.mock('@oxy.so/bloom/button', () => ({
   Button: ({ children, onPress }: { children: React.ReactNode; onPress: () => void }) => {
     const { Pressable, Text } = require('react-native');
+    if (children === 'subscriptions.page.founder.becomeSupporter') mockRetainedCheckout = onPress;
     return (
       <Pressable accessibilityRole="button" onPress={onPress}>
         <Text>{children}</Text>
@@ -187,6 +189,7 @@ beforeEach(() => {
   mockPost.mockClear();
   mockConfirmStarted.mockClear();
   mockRetainedCancel = undefined;
+  mockRetainedCheckout = undefined;
   Object.values(mockToast).forEach((fn) => {
     fn.mockClear();
   });
@@ -390,6 +393,30 @@ it.each([
   ['missing', { success: true }],
   ['null', { success: true, entitlements: null }],
   [
+    'negative credits',
+    {
+      success: true,
+      entitlements: {
+        plusActive: false,
+        fileCredits: -1,
+        founderSupporter: false,
+        processedSessions: [],
+      },
+    },
+  ],
+  [
+    'fractional credits',
+    {
+      success: true,
+      entitlements: {
+        plusActive: false,
+        fileCredits: 1.5,
+        founderSupporter: false,
+        processedSessions: [],
+      },
+    },
+  ],
+  [
     'malformed',
     {
       success: true,
@@ -423,7 +450,7 @@ it('accepts the zeroed free entitlement shape returned by the backend', async ()
   );
 });
 
-it('accepts a finite credit count outside JavaScript safe integer precision', async () => {
+it('accepts a credit count outside JavaScript safe integer precision', async () => {
   entitlementsOverride = {
     success: true,
     entitlements: {
@@ -437,4 +464,70 @@ it('accepts a finite credit count outside JavaScript safe integer precision', as
   await waitFor(() =>
     expect(screen.getByText('subscriptions.page.plus.subscribeNow')).toBeTruthy(),
   );
+});
+
+it('ignores retained checkout while entitlements are reset, then permits it after recovery', async () => {
+  const screen = render(view());
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
+  );
+  const retained = mockRetainedCheckout;
+  expect(retained).toBeDefined();
+  holdPath = '/api/profiles/me/entitlements';
+  await act(async () => {
+    void client.resetQueries({ queryKey: ['profiles', 'me', 'entitlements'] });
+  });
+  await waitFor(() => expect(held).toBeDefined());
+  expect(screen.queryByText('subscriptions.page.founder.becomeSupporter')).toBeNull();
+  await act(async () => {
+    retained?.();
+  });
+  expect(mockPost.mock.calls.map((call) => call[0])).not.toContain('/api/billing/checkout');
+  await act(async () => {
+    if (held)
+      respond(held, {
+        success: true,
+        entitlements: {
+          plusActive: true,
+          plusStripeSubscriptionId: 'sub-A',
+          fileCredits: 0,
+          founderSupporter: false,
+          processedSessions: [],
+        },
+      });
+  });
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
+  );
+  fireEvent.press(screen.getByText('subscriptions.page.founder.becomeSupporter'));
+  await waitFor(() => expect(mockOpen).toHaveBeenCalledWith('https://example.invalid/checkout'));
+  expect(requests).toContainEqual({ owner: 'A', path: '/api/billing/checkout', method: 'POST' });
+});
+
+it('does not replay a paused checkout while entitlements are unavailable', async () => {
+  const screen = render(view());
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
+  );
+  onlineManager.setOnline(false);
+  fireEvent.press(screen.getByText('subscriptions.page.founder.becomeSupporter'));
+  await waitFor(() =>
+    expect(
+      client
+        .getMutationCache()
+        .getAll()
+        .some((m) => m.state.isPaused),
+    ).toBe(true),
+  );
+  holdPath = '/api/profiles/me/entitlements';
+  await act(async () => {
+    void client.resetQueries({ queryKey: ['profiles', 'me', 'entitlements'] });
+  });
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await client.resumePausedMutations();
+  });
+  expect(mockPost.mock.calls.map((call) => call[0])).not.toContain('/api/billing/checkout');
+  expect(mockOpen).not.toHaveBeenCalled();
+  expect(mockToast.error).not.toHaveBeenCalled();
 });
