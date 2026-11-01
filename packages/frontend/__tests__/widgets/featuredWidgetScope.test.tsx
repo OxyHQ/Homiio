@@ -112,6 +112,7 @@ function scope(overrides: Partial<LocationScope>): LocationScope {
     resolution: { status: 'idle' },
     source: null,
     deviceIssue: null,
+    savedAreaUnavailable: false,
     discovery: true,
     isGlobal: false,
     isApproximate: false,

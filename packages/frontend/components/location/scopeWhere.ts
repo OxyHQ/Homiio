@@ -104,12 +104,14 @@ export function scopeStatement(input: {
   resolution: LocationResolution;
   nearbyPlace?: GeoPlace | null;
   inferredFromNetwork?: boolean;
+  savedAreaUnavailable?: boolean;
   t: Translate;
   formatDistanceValue: (metres: number) => string;
 }): ScopeStatement {
   const { selection, isGlobal, resolution, t } = input;
-  const placeholder =
-    resolution.status === 'resolving'
+  const placeholder = input.savedAreaUnavailable
+    ? t('search.widgets.savedSearches.loadFailed')
+    : resolution.status === 'resolving'
       ? t('location.scope.resolving')
       : t('location.scope.chooseArea');
   if (!selection && !isGlobal) return { value: null, placeholder };

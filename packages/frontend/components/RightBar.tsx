@@ -18,7 +18,7 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { usePathname } from 'expo-router';
-import { WidgetManager } from './widgets';
+import { WidgetManager } from './widgets/WidgetManager';
 import { railForPathname } from './widgets/routeRail';
 
 /** The column's width, handed to `AppShell` as `asideWidth`. */

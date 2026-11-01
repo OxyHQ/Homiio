@@ -48,6 +48,19 @@ describe('the statement is never a silent empty', () => {
     ).toEqual({ value: null, placeholder: 'location.scope.chooseArea' });
   });
 
+  it('explains when the saved area cannot be verified', () => {
+    expect(
+      scopeStatement({
+        selection: null,
+        isGlobal: false,
+        resolution: IDLE,
+        savedAreaUnavailable: true,
+        t,
+        formatDistanceValue,
+      }),
+    ).toEqual({ value: null, placeholder: 'search.widgets.savedSearches.loadFailed' });
+  });
+
   it('location denied: still asks for an area — a failure is not a place and not "everywhere"', () => {
     const statement = scopeStatement({
       selection: null,

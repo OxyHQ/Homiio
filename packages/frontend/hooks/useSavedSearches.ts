@@ -1,10 +1,18 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { SavedSearch, SavedSearchFilters } from '@/store/savedSearchesStore';
 import { toast } from '@oxy.so/bloom/toast';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services/ui/client';
-import { api, ApiError } from '@/utils/api';
+import { api, ApiError, isBoundOxyInstance, isBoundSubjectUnavailable } from '@/utils/api';
+import {
+  accountOwnerKey,
+  assertAccountOwner,
+  isExactAccountProjection,
+  useAccountOwnerGuard,
+  withAccountOwner,
+  type AccountOwner,
+} from '@/hooks/useAccountOwner';
 import { AVAILABLE_HOUSING_ALERT_RULE_TYPES } from '@homiio/shared-types/watch';
 import type {
   AlertChannel,
@@ -236,20 +244,133 @@ export interface UseSavedSearches {
  * learned something the other did not, which is the worst version of this: one
  * consumer silently reading a shape the other stopped producing.
  */
-function savedSearchesQueryOptions(isAuthenticated: boolean) {
+export const savedSearchesKeyFor = (owner: AccountOwner | null) =>
+  [...SAVED_SEARCHES_KEY, ...accountOwnerKey(owner)] as const;
+
+/** Non-secret, process-local identity for comparing paused mutation owners. */
+function mutationOwnerKey(owner: AccountOwner): string {
+  const [, , epoch, instance, generation] = accountOwnerKey(owner);
+  return JSON.stringify([epoch, instance, generation]);
+}
+
+const savedSearchOwners = new WeakMap<
+  object,
+  { owner: AccountOwner; data: SavedSearch[] | undefined }
+>();
+
+class SupersededSavedSearchRead extends Error {}
+
+const savedSearchRevisions = new WeakMap<object, number>();
+const savedSearchReadRevisions = new WeakMap<
+  SavedSearch[],
+  { owner: AccountOwner; query: object; revision: number }
+>();
+
+function hasVerifiedSavedSearches(client: QueryClient, owner: AccountOwner | null): boolean {
+  if (!owner) return false;
+  const query = client.getQueryCache().find({ queryKey: savedSearchesKeyFor(owner), exact: true });
+  const binding = query && savedSearchOwners.get(query);
+  return Boolean(
+    binding?.data &&
+      query?.state.data === binding.data &&
+      isBoundOxyInstance(binding.owner.oxyServices) &&
+      isExactAccountProjection(binding.owner),
+  );
+}
+
+function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClient) {
+  const queryKey = savedSearchesKeyFor(owner);
+  const verified = hasVerifiedSavedSearches(client, owner);
   return {
-    queryKey: SAVED_SEARCHES_KEY,
-    // Gated so a logged-out client never fires the request (the route sits
-    // behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
-    // when there is no token, which would otherwise 401-spam).
-    enabled: isAuthenticated,
-    staleTime: 1000 * 30,
+    queryKey,
+    enabled: Boolean(owner),
+    staleTime: verified ? 1000 * 30 : 0,
+    ...(verified ? {} : { refetchOnMount: 'always' as const }),
     gcTime: 1000 * 60 * 10,
-    queryFn: async (): Promise<SavedSearch[]> => {
-      const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches');
-      return extractSearchList(response.data).map((raw) => normalizeSearch(raw));
+    structuralSharing: (_oldData: unknown, newData: unknown) => {
+      if (!Array.isArray(newData)) return newData;
+      const query = client.getQueryCache().find({ queryKey, exact: true });
+      const read = savedSearchReadRevisions.get(newData);
+      if (!read) return newData;
+      if (
+        !query ||
+        read.query !== query ||
+        read.revision !== (savedSearchRevisions.get(query) ?? 0) ||
+        !isBoundOxyInstance(read.owner.oxyServices) ||
+        !isExactAccountProjection(read.owner)
+      ) {
+        throw new SupersededSavedSearchRead('Saved search read was superseded');
+      }
+      savedSearchOwners.set(query, { owner: read.owner, data: newData });
+      return newData;
     },
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      withAccountOwner(owner, async (current): Promise<SavedSearch[]> => {
+        const query = client.getQueryCache().find({ queryKey, exact: true });
+        const revision = query ? (savedSearchRevisions.get(query) ?? 0) : 0;
+        const previous = query && savedSearchOwners.get(query);
+        if (query && (!previous || !isExactAccountProjection(previous.owner))) {
+          savedSearchOwners.set(query, { owner: current, data: undefined });
+        }
+        const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches', {
+          owner: current,
+        });
+        const searches = extractSearchList(response.data).map((raw) => normalizeSearch(raw));
+        assertAccountOwner(current);
+        if (signal.aborted) throw new Error('Saved search read was cancelled');
+        if (query) savedSearchReadRevisions.set(searches, { owner: current, query, revision });
+        return searches;
+      }),
   };
+}
+
+function useBoundSavedSearchesQuery(owner: AccountOwner | null, client: QueryClient) {
+  const query = useQuery(savedSearchesQueryOptions(owner, client));
+  const verified = hasVerifiedSavedSearches(client, owner);
+  useEffect(() => {
+    if (owner && !verified && query.status === 'success' && query.fetchStatus === 'idle') {
+      void query.refetch({ cancelRefetch: false });
+    }
+  }, [owner, verified, query.status, query.fetchStatus, query.refetch]);
+  return { query, verified };
+}
+
+function ownerIsBound(owner: AccountOwner | null): boolean {
+  try {
+    assertAccountOwner(owner);
+    return isBoundOxyInstance(owner.oxyServices);
+  } catch {
+    return false;
+  }
+}
+
+/** Locate a currently bound result for the out-of-React location observer. */
+export function savedSearchesReading(client: QueryClient, userId: string | undefined) {
+  for (const query of client.getQueryCache().findAll({ queryKey: SAVED_SEARCHES_KEY })) {
+    const binding = savedSearchOwners.get(query);
+    if (
+      !binding ||
+      binding.owner.userId !== userId ||
+      !isBoundOxyInstance(binding.owner.oxyServices) ||
+      !isExactAccountProjection(binding.owner)
+    )
+      continue;
+    const verified = Boolean(binding.data && query.state.data === binding.data);
+    return {
+      data: verified ? binding.data : undefined,
+      isPending: verified
+        ? query.state.status === 'pending'
+        : query.state.status !== 'error' && query.state.fetchStatus !== 'paused',
+      isFetching: query.state.fetchStatus === 'fetching',
+      isUnavailable:
+        !verified && (query.state.status === 'error' || query.state.fetchStatus === 'paused'),
+    };
+  }
+  const paused = client
+    .getQueryCache()
+    .findAll({ queryKey: SAVED_SEARCHES_KEY })
+    .some((query) => query.queryKey[1] === userId && query.state.fetchStatus === 'paused');
+  return { data: undefined, isPending: !paused, isFetching: false, isUnavailable: paused };
 }
 
 /**
@@ -301,6 +422,8 @@ export interface PrimarySavedArea {
    * waits on a request that will not be made.
    */
   readonly pending: boolean;
+  /** The account's saved area could not be established yet. */
+  readonly unavailable?: boolean;
 }
 
 /**
@@ -320,11 +443,22 @@ export interface PrimarySavedArea {
  */
 export const usePrimarySavedArea = (): PrimarySavedArea => {
   const { isAuthenticated } = useOxy();
-  const query = useQuery(savedSearchesQueryOptions(isAuthenticated));
-
+  const { owner } = useAccountOwnerGuard();
+  const client = useQueryClient();
+  const { query, verified } = useBoundSavedSearchesQuery(owner, client);
+  const valid = Boolean(owner);
+  const unavailable =
+    isBoundSubjectUnavailable() || (!verified && (query.fetchStatus === 'paused' || query.isError));
   return useMemo(
-    () => primarySavedAreaOf(isAuthenticated, { isPending: query.isPending, data: query.data }),
-    [isAuthenticated, query.isPending, query.data],
+    () =>
+      primarySavedAreaOf(isAuthenticated, {
+        isPending: valid
+          ? !unavailable && ((!verified && !query.isError) || query.isPending)
+          : !unavailable,
+        data: valid && verified ? query.data : undefined,
+        isUnavailable: unavailable,
+      }),
+    [isAuthenticated, valid, verified, unavailable, query.isPending, query.isError, query.data],
   );
 };
 
@@ -337,9 +471,14 @@ export const usePrimarySavedArea = (): PrimarySavedArea => {
  */
 export function primarySavedAreaOf(
   isAuthenticated: boolean,
-  query: { readonly isPending: boolean; readonly data: readonly SavedSearch[] | undefined },
+  query: {
+    readonly isPending: boolean;
+    readonly data: readonly SavedSearch[] | undefined;
+    readonly isUnavailable?: boolean;
+  },
 ): PrimarySavedArea {
   if (!isAuthenticated) return { selection: null, pending: false };
+  if (query.isUnavailable) return { selection: null, pending: false, unavailable: true };
   // `isPending` is true while disabled too, so the guard above has to come
   // first — otherwise a logged-out Home would wait forever for a request that
   // is never sent.
@@ -347,10 +486,47 @@ export function primarySavedAreaOf(
   return { selection: primaryAreaOf(query.data ?? []), pending: false };
 }
 
+type SavedSearchAction = { ownerKey: string };
+type SaveSearchInput = {
+  name: string;
+  query: string;
+  filters?: SavedSearchFilters;
+  notificationsEnabled?: boolean;
+  location?: LocationSelection | null;
+};
+type UpdateSearchInput = {
+  searchId: string;
+  updates: {
+    name?: string;
+    query?: string;
+    filters?: SavedSearchFilters;
+    notificationsEnabled?: boolean;
+  };
+};
+type DeleteSearchInput = { searchId: string; searchName?: string };
+type AlertSettingsInput = { searchId: string; settings: WatchAlertSettingsInput };
+
 export const useSavedSearches = (): UseSavedSearches => {
   const { t } = useTranslation();
   const { isAuthenticated } = useOxy();
+  const { owner, isCurrent } = useAccountOwnerGuard();
   const queryClient = useQueryClient();
+  const bindings = useRef(new WeakMap<object, { owner: AccountOwner; input: unknown }>());
+  function capture(input: object): SavedSearchAction {
+    if (!owner || !isCurrent(owner)) throw new Error('The active account changed');
+    const action = { ownerKey: mutationOwnerKey(owner) };
+    bindings.current.set(action, { owner, input });
+    return action;
+  }
+  function captured<T>(variables: SavedSearchAction): { owner: AccountOwner; input: T } {
+    const binding = bindings.current.get(variables);
+    if (!binding || !isCurrent(binding.owner)) throw new Error('The active account changed');
+    return binding as { owner: AccountOwner; input: T };
+  }
+  function currentFor(variables: SavedSearchAction): AccountOwner | null {
+    const current = bindings.current.get(variables)?.owner;
+    return current && isCurrent(current) ? current : null;
+  }
 
   /**
    * The single source of truth for the user's saved searches. Gated on
@@ -358,72 +534,100 @@ export const useSavedSearches = (): UseSavedSearches => {
    * sits behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
    * when there is no token, which would otherwise 401-spam).
    */
-  const listQuery = useQuery(savedSearchesQueryOptions(isAuthenticated));
+  const { query: listQuery, verified } = useBoundSavedSearchesQuery(owner, queryClient);
 
   // When logged out the query is disabled and never resolves, so fall back to a
   // stable empty list rather than leaving `searches` undefined. Memoised on the
   // query data so consumers' `useCallback`/`useMemo` deps stay referentially
   // stable across renders where the data is unchanged.
-  const searches = useMemo<SavedSearch[]>(() => listQuery.data ?? EMPTY_SEARCHES, [listQuery.data]);
+  const searches = useMemo<SavedSearch[]>(
+    () => (owner && verified ? (listQuery.data ?? EMPTY_SEARCHES) : EMPTY_SEARCHES),
+    [owner, verified, listQuery.data],
+  );
 
   /** Replace a single search in the cached list by id, or append if new. */
   const upsertCachedSearch = useCallback(
-    (next: SavedSearch) => {
-      queryClient.setQueryData<SavedSearch[]>(SAVED_SEARCHES_KEY, (prev) => {
+    async (next: SavedSearch, capturedOwner: AccountOwner) => {
+      const queryKey = savedSearchesKeyFor(capturedOwner);
+      await queryClient.cancelQueries({ queryKey, exact: true }, { revert: false });
+      if (!isCurrent(capturedOwner)) return;
+      const query = queryClient.getQueryCache().find({ queryKey, exact: true });
+      if (!query || !hasVerifiedSavedSearches(queryClient, capturedOwner)) {
+        void queryClient.invalidateQueries({ queryKey, exact: true });
+        return;
+      }
+      queryClient.setQueryData<SavedSearch[]>(queryKey, (prev) => {
         const list = prev ?? [];
         const index = list.findIndex((s) => s.id === next.id);
-        if (index === -1) return [...list, next];
-        const copy = list.slice();
-        copy[index] = next;
-        return copy;
+        const result = [...list];
+        if (index === -1) result.push(next);
+        else result[index] = next;
+        if (query) {
+          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
+          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        }
+        return result;
       });
     },
-    [queryClient],
+    [queryClient, isCurrent],
   );
 
   /** Remove a single search from the cached list by id. */
   const removeCachedSearch = useCallback(
-    (searchId: string) => {
-      queryClient.setQueryData<SavedSearch[]>(SAVED_SEARCHES_KEY, (prev) =>
-        (prev ?? []).filter((s) => s.id !== searchId),
-      );
+    async (searchId: string, capturedOwner: AccountOwner) => {
+      const queryKey = savedSearchesKeyFor(capturedOwner);
+      await queryClient.cancelQueries({ queryKey, exact: true }, { revert: false });
+      if (!isCurrent(capturedOwner)) return;
+      const query = queryClient.getQueryCache().find({ queryKey, exact: true });
+      if (!query || !hasVerifiedSavedSearches(queryClient, capturedOwner)) {
+        void queryClient.invalidateQueries({ queryKey, exact: true });
+        return;
+      }
+      queryClient.setQueryData<SavedSearch[]>(queryKey, (prev) => {
+        const result = (prev ?? []).filter((s) => s.id !== searchId);
+        if (query) {
+          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
+          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        }
+        return result;
+      });
     },
-    [queryClient],
+    [queryClient, isCurrent],
   );
 
   const saveSearchMutation = useMutation({
     mutationKey: ['saveSearch'],
-    mutationFn: async (vars: {
-      name: string;
-      query: string;
-      filters?: SavedSearchFilters;
-      notificationsEnabled?: boolean;
-      location?: LocationSelection | null;
-    }): Promise<SavedSearch> => {
-      const response = await api.post<SavedSearchPayload>('/api/profiles/me/saved-searches', {
-        name: vars.name,
-        query: vars.query,
-        filters: vars.filters,
-        notificationsEnabled: Boolean(vars.notificationsEnabled),
-        // Stored so reopening resolves by IDENTITY. Omitted rather than sent as
-        // null when absent, so a row written by an older client and one written
-        // deliberately without a place are the same thing to the backend.
-        ...(vars.location ? { location: vars.location } : {}),
-      });
+    mutationFn: async (vars: SavedSearchAction): Promise<SavedSearch> => {
+      const { owner: current, input } = captured<SaveSearchInput>(vars);
+      const response = await api.post<SavedSearchPayload>(
+        '/api/profiles/me/saved-searches',
+        {
+          name: input.name,
+          query: input.query,
+          filters: input.filters,
+          notificationsEnabled: Boolean(input.notificationsEnabled),
+          ...(input.location ? { location: input.location } : {}),
+        },
+        { owner: current },
+      );
 
       const payload = response.data;
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
       return normalizeSearch(raw, {
-        name: vars.name,
-        query: vars.query,
-        filters: vars.filters,
+        name: input.name,
+        query: input.query,
+        filters: input.filters,
       });
     },
-    onSuccess: (saved) => {
-      upsertCachedSearch(saved);
+    onSuccess: async (saved, vars) => {
+      const current = currentFor(vars);
+      if (!current) return;
+      await upsertCachedSearch(saved, current);
+      if (!isCurrent(current)) return;
       toast.success(t('search.widgets.savedSearches.saveSuccess', { name: saved.name }));
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, vars) => {
+      if (!currentFor(vars)) return;
       if (isApiError(error) && error.status === 409) {
         const response =
           error.response && typeof error.response === 'object'
@@ -440,51 +644,55 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   const updateSearchMutation = useMutation({
     mutationKey: ['updateSearch'],
-    mutationFn: async (vars: {
-      searchId: string;
-      updates: {
-        name?: string;
-        query?: string;
-        filters?: SavedSearchFilters;
-        notificationsEnabled?: boolean;
-      };
-    }): Promise<SavedSearch> => {
+    mutationFn: async (vars: SavedSearchAction): Promise<SavedSearch> => {
+      const { owner: current, input } = captured<UpdateSearchInput>(vars);
       const response = await api.put<SavedSearchPayload>(
-        `/api/profiles/me/saved-searches/${vars.searchId}`,
-        vars.updates,
+        `/api/profiles/me/saved-searches/${input.searchId}`,
+        input.updates,
+        { owner: current },
       );
       const payload = response.data;
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
       return normalizeSearch(raw, {
-        id: vars.searchId,
-        name: vars.updates.name,
-        query: vars.updates.query,
-        filters: vars.updates.filters,
+        id: input.searchId,
+        name: input.updates.name,
+        query: input.updates.query,
+        filters: input.updates.filters,
       });
     },
-    onSuccess: (updated) => {
-      upsertCachedSearch(updated);
+    onSuccess: async (updated, vars) => {
+      const current = currentFor(vars);
+      if (!current) return;
+      await upsertCachedSearch(updated, current);
+      if (!isCurrent(current)) return;
       toast.success(t('search.widgets.savedSearches.updateSuccess'));
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, vars) => {
+      if (!currentFor(vars)) return;
       toast.error(getErrorMessage(error, t('search.widgets.savedSearches.updateFailed')));
     },
   });
 
   const deleteSearchMutation = useMutation({
     mutationKey: ['deleteSearch'],
-    mutationFn: async (vars: { searchId: string; searchName?: string }): Promise<void> => {
-      await api.delete(`/api/profiles/me/saved-searches/${vars.searchId}`);
+    mutationFn: async (vars: SavedSearchAction): Promise<void> => {
+      const { owner: current, input } = captured<DeleteSearchInput>(vars);
+      await api.delete(`/api/profiles/me/saved-searches/${input.searchId}`, { owner: current });
     },
-    onSuccess: (_result, vars) => {
-      removeCachedSearch(vars.searchId);
+    onSuccess: async (_result, vars) => {
+      const current = currentFor(vars);
+      if (!current) return;
+      const { input } = captured<DeleteSearchInput>(vars);
+      await removeCachedSearch(input.searchId, current);
+      if (!isCurrent(current)) return;
       toast.success(
-        vars.searchName
-          ? t('search.widgets.savedSearches.deleteSuccessNamed', { name: vars.searchName })
+        input.searchName
+          ? t('search.widgets.savedSearches.deleteSuccessNamed', { name: input.searchName })
           : t('search.widgets.savedSearches.deleteSuccess'),
       );
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, vars) => {
+      if (!currentFor(vars)) return;
       toast.error(getErrorMessage(error, t('search.widgets.savedSearches.deleteFailed')));
     },
   });
@@ -497,6 +705,7 @@ export const useSavedSearches = (): UseSavedSearches => {
       notificationsEnabled: boolean = false,
       location: LocationSelection | null = null,
     ): Promise<boolean> => {
+      if (!owner || !isCurrent(owner)) return false;
       // A name, and SOMETHING to search — a place, free text, or both. It used
       // to require a non-empty `query`, which held the location's LABEL; now
       // that `query` is the free-text dimension and is normally empty for a
@@ -536,32 +745,34 @@ export const useSavedSearches = (): UseSavedSearches => {
       }
 
       try {
-        await saveSearchMutation.mutateAsync({
-          name: normalizedName,
-          query: normalizedQuery,
-          filters,
-          notificationsEnabled,
-          location,
-        });
-        return true;
+        await saveSearchMutation.mutateAsync(
+          capture({
+            name: normalizedName,
+            query: normalizedQuery,
+            filters,
+            notificationsEnabled,
+            location,
+          }),
+        );
+        return isCurrent(owner);
       } catch {
         // onError surfaces the toast; the boolean tells the caller it failed.
         return false;
       }
     },
-    [searches, t, saveSearchMutation],
+    [searches, t, saveSearchMutation, owner, isCurrent, capture],
   );
 
   const deleteSavedSearch = useCallback(
     async (searchId: string, searchName?: string): Promise<boolean> => {
       try {
-        await deleteSearchMutation.mutateAsync({ searchId, searchName });
-        return true;
+        await deleteSearchMutation.mutateAsync(capture({ searchId, searchName }));
+        return isCurrent(owner);
       } catch {
         return false;
       }
     },
-    [deleteSearchMutation],
+    [deleteSearchMutation, owner, isCurrent, capture],
   );
 
   const updateSearch = useCallback(
@@ -575,33 +786,34 @@ export const useSavedSearches = (): UseSavedSearches => {
       },
     ): Promise<boolean> => {
       try {
-        await updateSearchMutation.mutateAsync({ searchId, updates });
-        return true;
+        await updateSearchMutation.mutateAsync(capture({ searchId, updates }));
+        return isCurrent(owner);
       } catch {
         return false;
       }
     },
-    [updateSearchMutation],
+    [updateSearchMutation, owner, isCurrent, capture],
   );
 
   const alertSettingsMutation = useMutation({
     mutationKey: ['updateWatchAlertSettings'],
-    mutationFn: async (vars: {
-      searchId: string;
-      settings: WatchAlertSettingsInput;
-    }): Promise<SavedSearch> => {
+    mutationFn: async (vars: SavedSearchAction): Promise<SavedSearch> => {
+      const { owner: current, input } = captured<AlertSettingsInput>(vars);
       const response = await api.put<SavedSearchPayload>(
-        `/api/profiles/me/saved-searches/${vars.searchId}`,
-        vars.settings,
+        `/api/profiles/me/saved-searches/${input.searchId}`,
+        input.settings,
+        { owner: current },
       );
       const payload = response.data;
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
-      return normalizeSearch(raw, { id: vars.searchId });
+      return normalizeSearch(raw, { id: input.searchId });
     },
-    onSuccess: (updated) => {
-      upsertCachedSearch(updated);
+    onSuccess: async (updated, vars) => {
+      const current = currentFor(vars);
+      if (current) await upsertCachedSearch(updated, current);
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, vars) => {
+      if (!currentFor(vars)) return;
       // The server refuses a rule it cannot evaluate rather than storing a dead
       // switch, so this path is reachable by design and needs its own message —
       // "update failed" would leave the user re-trying something that will
@@ -623,60 +835,84 @@ export const useSavedSearches = (): UseSavedSearches => {
   const updateAlertSettings = useCallback(
     async (searchId: string, settings: WatchAlertSettingsInput): Promise<boolean> => {
       try {
-        await alertSettingsMutation.mutateAsync({ searchId, settings });
+        await alertSettingsMutation.mutateAsync(capture({ searchId, settings }));
+        if (!isCurrent(owner)) return false;
         toast.success(t('alerts.settings.updated'));
         return true;
       } catch {
         return false;
       }
     },
-    [alertSettingsMutation, t],
+    [alertSettingsMutation, t, owner, isCurrent, capture],
   );
 
   const setPrimaryArea = useCallback(
     async (searchId: string): Promise<boolean> => {
       try {
-        await alertSettingsMutation.mutateAsync({ searchId, settings: { isPrimaryArea: true } });
+        await alertSettingsMutation.mutateAsync(
+          capture({ searchId, settings: { isPrimaryArea: true } }),
+        );
+        if (!isCurrent(owner)) return false;
         // The server clears whichever watch previously held the flag, in the
         // same transaction. The local cache cannot know WHICH one that was
         // without re-reading, so the whole list is invalidated rather than
         // patched — a patched cache would show two primary areas until the next
         // refetch, which is precisely the state the partial unique index makes
         // impossible on the server.
-        await queryClient.invalidateQueries({ queryKey: SAVED_SEARCHES_KEY });
+        await queryClient.invalidateQueries({ queryKey: savedSearchesKeyFor(owner), exact: true });
+        if (!isCurrent(owner)) return false;
         toast.success(t('alerts.settings.primaryAreaSet'));
         return true;
       } catch {
         return false;
       }
     },
-    [alertSettingsMutation, queryClient, t],
+    [alertSettingsMutation, queryClient, t, owner, isCurrent, capture],
   );
 
   const searchExists = useCallback(
     (name: string, query?: string): boolean =>
+      ownerIsBound(owner) &&
       searches.some(
         (search) =>
           search.name.toLowerCase() === name.toLowerCase() ||
           (query !== undefined && search.query.toLowerCase() === query.toLowerCase()),
       ),
-    [searches],
+    [searches, owner],
   );
 
   const getSearchById = useCallback(
     (searchId: string): SavedSearch | undefined =>
-      searches.find((search) => search.id === searchId),
-    [searches],
+      ownerIsBound(owner) ? searches.find((search) => search.id === searchId) : undefined,
+    [searches, owner],
   );
 
-  const error = listQuery.error
-    ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
-    : null;
+  const unavailable =
+    isAuthenticated &&
+    ((!owner && isBoundSubjectUnavailable()) || (!verified && listQuery.fetchStatus === 'paused'));
+  const error = unavailable
+    ? t('search.widgets.savedSearches.loadFailed')
+    : listQuery.error instanceof SupersededSavedSearchRead
+      ? verified
+        ? null
+        : t('search.widgets.savedSearches.loadFailed')
+      : listQuery.error
+        ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
+        : null;
 
   return {
     searches,
-    isLoading: listQuery.isLoading,
-    isSaving: saveSearchMutation.isPending,
+    isLoading:
+      !unavailable &&
+      ((isAuthenticated && !owner) ||
+        (Boolean(owner) && !verified && !listQuery.isError) ||
+        listQuery.isLoading),
+    isSaving: Boolean(
+      saveSearchMutation.isPending &&
+        saveSearchMutation.variables &&
+        owner &&
+        saveSearchMutation.variables.ownerKey === mutationOwnerKey(owner),
+    ),
     error,
     saveSearch,
     deleteSavedSearch,

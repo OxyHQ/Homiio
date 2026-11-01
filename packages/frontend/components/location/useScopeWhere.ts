@@ -43,7 +43,15 @@ export function useScopeWhere(scope: LocationScope, current: LocationSelection |
   const lastChosenArea = useLocationScopeStore((s) => s.lastChosenArea);
   const supported = geolocationSupported();
 
-  const { selection, isGlobal, resolution, nearbyPlace, source, deviceIssue } = scope;
+  const {
+    selection,
+    isGlobal,
+    resolution,
+    nearbyPlace,
+    source,
+    deviceIssue,
+    savedAreaUnavailable,
+  } = scope;
 
   return useMemo(() => {
     const formatDistanceValue = (metres: number): string => formatDistance(metres, locale);
@@ -66,6 +74,7 @@ export function useScopeWhere(scope: LocationScope, current: LocationSelection |
         nearbyPlace,
         // The NETWORK case only — a device fix already describes its own radius.
         inferredFromNetwork: source === 'ip',
+        savedAreaUnavailable,
         t,
         formatDistanceValue,
       }),
@@ -80,6 +89,7 @@ export function useScopeWhere(scope: LocationScope, current: LocationSelection |
     resolution,
     nearbyPlace,
     source,
+    savedAreaUnavailable,
     deviceIssue,
     supported,
     lastChosenArea,

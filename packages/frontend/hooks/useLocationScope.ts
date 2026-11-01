@@ -64,11 +64,11 @@ import { KEY_COORD_DECIMALS } from '@homiio/shared-types/location';
 import type { ApproximateLocation, GeoPlace, LocationSelection } from '@homiio/shared-types';
 
 import { reversePlace } from '@/services/geoService';
+import { isBoundSubjectUnavailable } from '@/utils/api';
 import { useLocationScopeStore } from '@/store/locationScopeStore';
-import type { SavedSearch } from '@/store/savedSearchesStore';
 import {
   primarySavedAreaOf,
-  SAVED_SEARCHES_KEY,
+  savedSearchesReading,
   usePrimarySavedArea,
   type PrimarySavedArea,
 } from './useSavedSearches';
@@ -205,6 +205,8 @@ function deviceAreaKey(longitude: number, latitude: number): string {
 }
 
 export interface LocationScope extends LocationScopeState {
+  /** Saved-area state could not be established; explicit selection is still available. */
+  readonly savedAreaUnavailable: boolean;
   /**
    * The nearest named place, when a reverse geocode succeeded.
    *
@@ -324,6 +326,7 @@ function inferenceUsable(choices: ScopeChoices, savedArea: PrimarySavedArea): bo
     !choices.explicitGlobal &&
     !choices.sessionSelection &&
     !savedArea.pending &&
+    !savedArea.unavailable &&
     !savedArea.selection &&
     !choices.lastChosenArea
   );
@@ -347,7 +350,10 @@ function deviceNeeded(choices: ScopeChoices, savedArea: PrimarySavedArea): boole
  * the cache entry the ladder is reading from.
  */
 function approximateEnabled(choices: ScopeChoices, savedArea: PrimarySavedArea): boolean {
-  return inferenceUsable(choices, savedArea) || choices.autoScope?.source === 'ip';
+  return (
+    inferenceUsable(choices, savedArea) ||
+    (!savedArea.unavailable && choices.autoScope?.source === 'ip')
+  );
 }
 
 /** What the device rung knows, before the startup budget is applied. */
@@ -357,6 +363,7 @@ function deviceStateOf({ choices, savedArea, fix }: ScopeSources): DevicePositio
   // the destinations board for the half-second the saved-search request takes,
   // for a user who has already chosen an area.
   if (savedArea.pending) return { status: 'resolving' };
+  if (savedArea.unavailable && !choices.deviceRequested) return { status: 'idle' };
   if (!deviceNeeded(choices, savedArea)) return { status: 'idle' };
   if (fix.isPending || fix.isFetching) return { status: 'resolving' };
   const outcome = fix.data;
@@ -410,7 +417,7 @@ function scopeOf(sources: ScopeSources): LocationScopeState {
       elapsedBudget: budgetElapsed,
       data: approximate.data,
     }),
-    committedAuto: choices.autoScope,
+    committedAuto: savedArea.unavailable ? null : choices.autoScope,
     deviceRequested: choices.deviceRequested,
   });
 }
@@ -548,6 +555,7 @@ export function useLocationScope(): LocationScope {
 
   return {
     ...state,
+    savedAreaUnavailable: Boolean(savedArea.unavailable),
     nearbyPlace: state.source === 'device' ? (areaQuery.data ?? null) : null,
     choose,
     exploreGlobal,
@@ -608,7 +616,9 @@ export function observeInferredScope(queryClient: QueryClient): () => void {
         // The session `usePrimarySavedArea` reads through `useOxy`, read here
         // through the SDK's out-of-render surface for it.
         useAuthStore.getState().isAuthenticated,
-        cachedReading<SavedSearch[]>(queryClient, SAVED_SEARCHES_KEY),
+        isBoundSubjectUnavailable()
+          ? { data: undefined, isPending: false, isFetching: false, isUnavailable: true }
+          : savedSearchesReading(queryClient, useAuthStore.getState().user?.id),
       ),
       fix: cachedReading(queryClient, deviceFixQueryKey(false)),
       approximate: cachedReading(queryClient, APPROXIMATE_LOCATION_QUERY_KEY),
