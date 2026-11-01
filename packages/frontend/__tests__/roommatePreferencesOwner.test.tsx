@@ -314,6 +314,11 @@ it('does not apply a profile refresh that finishes after switching', async () =>
   fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
   await waitFor(() => expect(mockProfile).toHaveBeenCalledTimes(1));
   switchTo('B', () => screen.rerender(wrap(<RoommatePreferencesPage />)));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
   await act(async () => {
     finish({ oxyUserId: 'A' });
   });
