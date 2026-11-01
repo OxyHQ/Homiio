@@ -287,7 +287,7 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
     staleTime: verified ? 1000 * 30 : 0,
     ...(verified ? {} : { refetchOnMount: 'always' as const }),
     gcTime: 1000 * 60 * 10,
-    structuralSharing: (oldData: unknown, newData: unknown) => {
+    structuralSharing: (_oldData: unknown, newData: unknown) => {
       if (!Array.isArray(newData)) return newData;
       const query = client.getQueryCache().find({ queryKey, exact: true });
       const read = savedSearchReadRevisions.get(newData);
@@ -892,9 +892,13 @@ export const useSavedSearches = (): UseSavedSearches => {
     ((!owner && isBoundSubjectUnavailable()) || (!verified && listQuery.fetchStatus === 'paused'));
   const error = unavailable
     ? t('search.widgets.savedSearches.loadFailed')
-    : listQuery.error && !(verified && listQuery.error instanceof SupersededSavedSearchRead)
-      ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
-      : null;
+    : listQuery.error instanceof SupersededSavedSearchRead
+      ? verified
+        ? null
+        : t('search.widgets.savedSearches.loadFailed')
+      : listQuery.error
+        ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
+        : null;
 
   return {
     searches,
