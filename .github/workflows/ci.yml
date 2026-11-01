@@ -44,13 +44,20 @@ jobs:
             for (const name of map.sources) {
               if (sample.length < 8) sample.push(name);
               const pkg=name.match(/node_modules\/(?:\.bun\/[^/]+\/node_modules\/)?(@[^/]+\/[^/]+|[^/]+)/)?.[1] ?? '(app)';
-              groups.set(pkg,(groups.get(pkg) ?? 0) + 1);
+              const bloom=name.match(/@oxy\.so\/bloom\/lib\/module\/([^/]+)/)?.[1];
+              const key=bloom ? `${pkg}/${bloom}` : pkg;
+              const item=groups.get(key) ?? {count:0,sourceBytes:0,unresolved:0};
+              item.count++;
+              const filename=path.resolve(process.cwd(), `.${name}`);
+              if (filename.startsWith(process.cwd()+path.sep) && fs.existsSync(filename) && fs.statSync(filename).isFile()) item.sourceBytes+=fs.statSync(filename).size;
+              else item.unresolved++;
+              groups.set(key,item);
             }
           }
           for (const file of maps) visit(JSON.parse(fs.readFileSync(file, 'utf8')));
           if (!groups.size) throw Error('No source names in any map section');
           console.log('Sections without embedded source names:', missing);
-          console.log('Module counts only; they do not measure bundle contribution or removal savings.');
+          console.log('Module counts and on-disk source bytes only; neither measures bundle contribution or removal savings.');
           console.log('Sample source names',JSON.stringify(sample));
-          console.log(JSON.stringify([...groups].map(([name,count]) => ({name,count})).sort((a,b)=>b.count-a.count).slice(0,100),null,2));
+          console.log(JSON.stringify([...groups].map(([name,data]) => ({name,...data})).sort((a,b)=>b.sourceBytes-a.sourceBytes).slice(0,100),null,2));
           NODE
