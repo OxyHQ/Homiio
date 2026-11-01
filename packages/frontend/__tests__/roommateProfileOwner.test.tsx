@@ -225,8 +225,8 @@ it.each(['success', 'failure'] as const)(
       screen.rerender(wrap(<RoommatePreferencesPage />));
     });
     expect(
-      await screen.findByRole('button', { name: 'roommates.preferencesPage.save' }),
-    ).not.toBeDisabled();
+      await screen.findByRole('button', { name: 'roommates.preferencesPage.saving' }),
+    ).toBeDisabled();
     await act(async () => {
       if (outcome === 'success') finish({});
       else fail(new Error('A failed'));
