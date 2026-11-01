@@ -10,7 +10,7 @@
  * `DatePicker` move-in date (stored as `YYYY-MM-DD`, converted at the
  * boundary), `Chip` option rows, `Switch`, and a `toast` for the save outcome.
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -32,6 +32,13 @@ import { LeaseDuration } from '@homiio/shared-types/common';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
+import {
+  accountOwnerKey,
+  type AccountOwner,
+  useAccountOwnerGuard,
+  withAccountOwner,
+} from '@/hooks/useAccountOwner';
+import profileService from '@/services/profileService';
 import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
 import { spacing } from '@/constants/styles';
@@ -242,53 +249,109 @@ function toPreferences(form: FormState): RoommateMatchingPreferences {
 }
 
 export default function RoommatePreferencesPage() {
+  const { owner, isCurrent } = useAccountOwnerGuard();
+  if (!owner?.sessionId) return <UnavailablePreferences />;
+  return (
+    <OwnedPreferences
+      key={JSON.stringify(accountOwnerKey(owner))}
+      owner={owner}
+      isCurrent={isCurrent}
+    />
+  );
+}
+
+function UnavailablePreferences() {
+  const { t } = useTranslation();
+  return (
+    <Screen documentScroll>
+      <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
+        <BloomText accessibilityRole="alert">
+          {t('contracts.detail.signAccountUnavailable')}
+        </BloomText>
+      </ScreenScrollView>
+    </Screen>
+  );
+}
+
+function OwnedPreferences({
+  owner,
+  isCurrent,
+}: {
+  owner: AccountOwner;
+  isCurrent: (owner: AccountOwner | null) => boolean;
+}) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [roommateEnabled, setRoommateEnabled] = useState(false);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const { profile, hasProfile } = useProfile();
+  const { hasProfile } = useProfile();
 
-  const profileSettingsKey = hasProfile ? profile : null;
-  const [prevProfileSettingsKey, setPrevProfileSettingsKey] = useState(profileSettingsKey);
-  if (profileSettingsKey !== prevProfileSettingsKey) {
-    setPrevProfileSettingsKey(profileSettingsKey);
-    const roommateSettings = profileSettingsKey?.personalProfile?.settings?.roommate;
-    if (roommateSettings) {
-      setRoommateEnabled(Boolean(roommateSettings.enabled));
-    }
-  }
-
+  const ownerKey = accountOwnerKey(owner);
+  const preferencesKey = ['roommates', 'preferences', ...ownerKey] as const;
+  const statusKey = ['roommates', 'status', ...ownerKey] as const;
   const preferencesQuery = useQuery({
-    queryKey: ['roommates', 'preferences'],
-    queryFn: async () => roommateService.getMyRoommatePreferences(),
+    queryKey: preferencesKey,
+    queryFn: () =>
+      withAccountOwner(owner, (current) =>
+        roommateService.getMyRoommatePreferences(undefined, undefined, current),
+      ),
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 10,
+  });
+  const statusQuery = useQuery({
+    queryKey: statusKey,
+    queryFn: () =>
+      withAccountOwner(owner, (current) =>
+        roommateService.getMyRoommateStatus(undefined, undefined, current),
+      ),
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
   });
 
-  // Merge server-saved preferences into the form once the query resolves.
   const preferencesData = preferencesQuery.data;
-  const [prevPreferencesData, setPrevPreferencesData] = useState(preferencesData);
+  const [prevPreferencesData, setPrevPreferencesData] = useState<typeof preferencesData>(undefined);
   if (preferencesData !== prevPreferencesData) {
     setPrevPreferencesData(preferencesData);
-    if (preferencesData) {
-      setForm(seedForm(preferencesData));
-    }
+    setForm(preferencesData ? seedForm(preferencesData) : DEFAULT_FORM);
+  }
+  const statusData = statusQuery.data;
+  const [prevStatusData, setPrevStatusData] = useState<typeof statusData>(undefined);
+  if (statusData !== prevStatusData) {
+    setPrevStatusData(statusData);
+    if (statusData) setRoommateEnabled(statusData.hasRoommateMatching);
   }
 
   const saveMutation = useMutation({
-    mutationKey: ['roommates', 'savePreferences'],
-    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) =>
-      roommateService.updateRoommatePreferences(vars.preferences, vars.enabled),
+    mutationKey: ['roommates', 'savePreferences', ...ownerKey],
+    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) => {
+      if (!isCurrent(owner)) throw new Error('The active account changed');
+      return withAccountOwner(owner, (current) =>
+        roommateService.updateRoommatePreferences(vars.preferences, vars.enabled, current),
+      );
+    },
     onSuccess: async () => {
-      await useProfileStore.getState().fetchProfile();
-      await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
-      await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'] });
-      toast.success(t('roommates.alert.preferencesSaved'));
+      if (!isCurrent(owner)) return;
+      try {
+        const updated = await withAccountOwner(
+          owner,
+          profileService.getOrCreateProfile.bind(profileService),
+        );
+        if (!isCurrent(owner) || (updated && updated.oxyUserId !== owner.userId)) return;
+        useProfileStore.getState().setProfile(updated);
+        if (!isCurrent(owner)) return;
+        await queryClient.invalidateQueries({ queryKey: preferencesKey, exact: true });
+        if (!isCurrent(owner)) return;
+        await queryClient.invalidateQueries({ queryKey: statusKey, exact: true });
+        if (!isCurrent(owner)) return;
+        toast.success(t('roommates.alert.preferencesSaved'));
+      } catch {
+        if (isCurrent(owner)) toast.error(t('roommates.alert.preferencesFailed'));
+      }
     },
     onError: () => {
-      toast.error(t('roommates.alert.preferencesFailed'));
+      if (isCurrent(owner)) toast.error(t('roommates.alert.preferencesFailed'));
     },
   });
 
@@ -299,6 +362,7 @@ export default function RoommatePreferencesPage() {
   });
 
   const handleSave = () => {
+    if (!isCurrent(owner) || preferencesData === undefined || !statusData) return;
     saveMutation.mutate({ preferences: toPreferences(form), enabled: roommateEnabled });
   };
 
@@ -330,6 +394,32 @@ export default function RoommatePreferencesPage() {
             actionIcon={RiAccountCircleLine}
             onAction={() => router.push('/profile')}
           />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+
+  if (preferencesData === undefined || !statusData) {
+    const failed = preferencesQuery.isError || statusQuery.isError;
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
+          <BloomText accessibilityLiveRegion="polite" accessibilityRole={failed ? 'alert' : 'text'}>
+            {failed ? t('roommates.screen.loadError') : t('common.loading')}
+          </BloomText>
+          {failed && (
+            <Button
+              size="md"
+              onPress={() => {
+                if (isCurrent(owner)) {
+                  void preferencesQuery.refetch();
+                  void statusQuery.refetch();
+                }
+              }}
+            >
+              {t('common.retry')}
+            </Button>
+          )}
         </ScreenScrollView>
       </Screen>
     );
@@ -446,7 +536,7 @@ export default function RoommatePreferencesPage() {
           size="lg"
           onPress={handleSave}
           loading={saveMutation.isPending}
-          disabled={saveMutation.isPending}
+          disabled={saveMutation.isPending || preferencesData === undefined || !statusData}
           style={styles.saveButton}
           tone="accent"
           appearance="solid"
