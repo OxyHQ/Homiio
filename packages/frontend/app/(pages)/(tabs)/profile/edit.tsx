@@ -9,15 +9,64 @@ import { ProfileSkeleton } from '@/components/ui/skeletons/ProfileSkeleton';
 import { PersonalProfileSections } from '@/components/profile/edit/PersonalProfileSections';
 import { useProfileEditForm } from '@/hooks/profile/useProfileEditForm';
 import { useProfileEditTabs } from '@/hooks/profile/useProfileEditTabs';
+import { accountOwnerKey, type AccountOwner, useAccountOwnerGuard } from '@/hooks/useAccountOwner';
+import { useOxy } from '@oxy.so/services/ui/client';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { contentClamp, spacing } from '@/constants/styles';
 
 export default function ProfileEditScreen() {
+  const { owner, isCurrent } = useAccountOwnerGuard();
+  const { openAccountDialog } = useOxy();
   const { t } = useTranslation();
-  const form = useProfileEditForm();
-  const { activeProfile, profileLoading, isFormInitialized } = form;
+  if (!owner) {
+    return (
+      <Screen documentScroll>
+        <ErrorState
+          title={t('contracts.detail.signAccountUnavailable')}
+          onRetry={() => openAccountDialog()}
+          retryLabel={t('settings.sections.account')}
+        />
+      </Screen>
+    );
+  }
+  const [userId, , epoch, instance, generation] = accountOwnerKey(owner);
+  const formKey = JSON.stringify([userId, epoch, instance, generation]);
+  return <OwnedProfileEdit key={formKey} owner={owner} isCurrent={isCurrent} />;
+}
+
+function OwnedProfileEdit({
+  owner,
+  isCurrent,
+}: {
+  owner: AccountOwner;
+  isCurrent: (owner: AccountOwner | null) => boolean;
+}) {
+  const { t } = useTranslation();
+  const form = useProfileEditForm(owner, isCurrent);
+  const {
+    activeProfile,
+    profileLoading,
+    profilePaused,
+    profileError,
+    retryProfile,
+    isFormInitialized,
+  } = form;
   const { activeSection, setActiveSection, tabs } = useProfileEditTabs(isFormInitialized);
 
   const shouldShowLoading = profileLoading || (!isFormInitialized && Boolean(activeProfile));
+
+  if (profilePaused || profileError) {
+    return (
+      <Screen documentScroll>
+        <ErrorState
+          title={t('profile.loadFailed')}
+          description={t('profile.loadFailedHint')}
+          onRetry={retryProfile}
+          retryLabel={t('common.retry')}
+        />
+      </Screen>
+    );
+  }
 
   if (shouldShowLoading) {
     return (
