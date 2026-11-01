@@ -59,6 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           export CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          if SMOKE_FORCE_ERROR=1 node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs base/packages/frontend/dist; then echo "Forced error was missed"; exit 1; fi
           node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs base/packages/frontend/dist
           node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs candidate/packages/frontend/dist
       - name: Verify changed caller delegates during a frozen production build
@@ -78,6 +79,36 @@ jobs:
           echo Mismatch
           (cd candidate && bun scripts/check-web-export-budget.mjs packages/frontend/dist) || true
           cp "$RUNNER_TEMP/resolver.cjs" candidate/packages/frontend/scripts/reanimated-production-web-resolver.cjs
+      - name: Verify changed module delegates during a frozen production build
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
+        run: |
+          set -euo pipefail
+          cp candidate/packages/frontend/scripts/reanimated-production-web-resolver.cjs "$RUNNER_TEMP/resolver.cjs"
+          node - <<'NODE'
+          const fs=require('fs'); const file='candidate/packages/frontend/scripts/reanimated-production-web-resolver.cjs';
+          const before=fs.readFileSync(file,'utf8'); const hash='245dd76f22a19a6bfd3b3fe0c96098f2db757a728d800c545e05a8d0a6549b73';
+          if(!before.includes(hash)) throw Error('expected hash absent');
+          fs.writeFileSync(file,before.replace(hash,'0'.repeat(64)));
+          NODE
+          (cd candidate && bun run --cwd packages/frontend build --clear)
+          echo ModuleMismatch
+          (cd candidate && bun scripts/check-web-export-budget.mjs packages/frontend/dist) || true
+          cp "$RUNNER_TEMP/resolver.cjs" candidate/packages/frontend/scripts/reanimated-production-web-resolver.cjs
+      - name: List frozen validator initialization dependencies
+        run: |
+          cd candidate/packages/frontend
+          node - <<'NODE'
+          const crypto=require('crypto'),fs=require('fs'),path=require('path');
+          const manifest=require.resolve('react-native-reanimated/package.json');
+          const validator=path.join(path.dirname(manifest),'scripts/validate-worklets-version.js');
+          require(validator);
+          for(const file of Object.keys(require.cache).sort()) {
+            if(file===validator || file.includes('/node_modules/semver/') || file.endsWith('/react-native-reanimated/compatibility.json'))
+              console.log(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),file);
+          }
+          NODE
       - name: Export native JS bundles without changing resolver behavior
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'

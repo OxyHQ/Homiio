@@ -14,7 +14,12 @@ const server = http.createServer((req, res) => {
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(root, 'index.html');
   let body = fs.readFileSync(file);
   if (file.endsWith('.html')) {
-    const hook = `<script>window.addEventListener('error',e=>{if(String(e.message).includes('Unexpected production call to Reanimated'))document.documentElement.dataset.reanimatedFailure='1'});window.addEventListener('unhandledrejection',e=>{if(String(e.reason).includes('Unexpected production call to Reanimated'))document.documentElement.dataset.reanimatedFailure='1'});</script>`;
+    const hook = `<script>
+      window.addEventListener('error', e => { document.documentElement.dataset.smokeError = '1'; console.error('SMOKE_ERROR', e.message || e.target?.src || 'resource'); }, true);
+      window.addEventListener('unhandledrejection', e => { document.documentElement.dataset.smokeError = '1'; console.error('SMOKE_REJECTION', String(e.reason)); });
+      window.addEventListener('load', () => setTimeout(() => { document.documentElement.dataset.smokeMounted = String(Boolean(document.getElementById('root')?.firstElementChild)); }, 5000));
+      ${process.env.SMOKE_FORCE_ERROR ? "setTimeout(() => { throw new Error('deliberate smoke error'); }, 0);" : ''}
+    </script>`;
     body = Buffer.from(body.toString().replace('<head>', `<head>${hook}`));
   }
   res.setHeader('Content-Type', types[path.extname(file)] || 'application/octet-stream');
@@ -29,9 +34,9 @@ server.listen(0, '127.0.0.1', () => {
   child.on('exit', code => {
     try {
       assert.equal(code, 0);
-      assert.ok(dom.includes('id="root"'), 'Expected the Expo root in the rendered DOM');
-      assert.ok(!dom.includes('data-reanimated-failure="1"'), 'Development-only Reanimated check ran in production');
-      console.log('Headless production web bootstrap: Expo root present and dev-only assertion was not called');
+      assert.ok(dom.includes('data-smoke-mounted="true"'), 'Expected app content inside the Expo root');
+      assert.ok(!dom.includes('data-smoke-error="1"'), 'A JavaScript or resource error occurred');
+      console.log('Headless production web bootstrap: root has content and no captured errors');
       server.close();
     } catch (error) {
       console.error(error.message);

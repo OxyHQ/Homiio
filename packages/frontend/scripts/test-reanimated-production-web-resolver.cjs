@@ -5,11 +5,17 @@ const { withProductionWebReanimatedGuard } = require('./reanimated-production-we
 const root = path.dirname(require.resolve('react-native-reanimated/package.json'));
 const origin = fs.realpathSync(path.join(root, 'lib/module/ReanimatedModule/js-reanimated/JSReanimated.js'));
 const request = '../../platform-specific/workletsVersion.js';
-const fallback = { type: 'sourceFile', filePath: '/sentinel' };
-const config = { resolver: { resolveRequest: () => fallback } };
+const target = fs.realpathSync(path.join(root, 'lib/module/platform-specific/workletsVersion.js'));
+const fallback = { type: 'sourceFile', filePath: target };
+let previousCalls = 0;
+const config = { resolver: { resolveRequest: () => { previousCalls++; return fallback; } } };
 withProductionWebReanimatedGuard(config, __dirname);
 const run = (dev, platform, name = request, from = origin) => config.resolver.resolveRequest({ dev, originModulePath: from }, name, platform);
 assert.equal(run(false, 'web').filePath, path.join(__dirname, 'reanimated-dev-assert-stub.cjs'));
+assert.equal(previousCalls, 1);
+const alias = { type: 'sourceFile', filePath: __filename };
+const aliased = withProductionWebReanimatedGuard({ resolver: { resolveRequest: () => alias } }, __dirname);
+assert.equal(aliased.resolver.resolveRequest({ dev: false, originModulePath: origin }, request, 'web'), alias);
 assert.equal(run(true, 'web'), fallback);
 assert.equal(run(false, 'ios'), fallback);
 assert.equal(run(false, 'android'), fallback);
@@ -18,6 +24,8 @@ assert.equal(run(false, 'web', request, __filename), fallback);
 const originalRead = fs.readFileSync;
 try {
   fs.readFileSync = (file, ...args) => file === origin ? Buffer.from('modified caller') : originalRead(file, ...args);
+  assert.equal(run(false, 'web'), fallback);
+  fs.readFileSync = (file, ...args) => file === target ? Buffer.from('modified module') : originalRead(file, ...args);
   assert.equal(run(false, 'web'), fallback);
 } finally {
   fs.readFileSync = originalRead;
