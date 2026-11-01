@@ -590,9 +590,21 @@ it('does not let a paused checkout from A disable checkout for B', async () => {
     expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
   );
   expect(mockFounderDisabled).toBe(false);
+  fireEvent.press(screen.getByText('subscriptions.page.founder.becomeSupporter'));
+  await waitFor(() =>
+    expect(
+      client
+        .getMutationCache()
+        .getAll()
+        .filter((m) => m.state.isPaused),
+    ).toHaveLength(2),
+  );
   await act(async () => {
     onlineManager.setOnline(true);
     await client.resumePausedMutations();
   });
-  expect(mockPost.mock.calls.map((call) => call[0])).not.toContain('/api/billing/checkout');
+  await waitFor(() => expect(mockOpen).toHaveBeenCalledWith('https://example.invalid/checkout'));
+  expect(requests.filter((r) => r.path === '/api/billing/checkout')).toEqual([
+    { owner: 'B', path: '/api/billing/checkout', method: 'POST' },
+  ]);
 });

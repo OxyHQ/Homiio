@@ -102,6 +102,7 @@ async function postForEntitlements(
 }
 
 type Product = 'plus' | 'file' | 'founder';
+type CheckoutAction = { product: Product; ownerKey: string };
 
 export default function SubscriptionsScreen() {
   const { t, i18n } = useTranslation();
@@ -110,7 +111,9 @@ export default function SubscriptionsScreen() {
   const { openAccountDialog } = useOxy();
   const { owner, isCurrent } = useAccountOwnerGuard();
   const queryClient = useQueryClient();
-  const owners = useRef(new WeakMap<{ product: Product }, AccountOwner>());
+  const owners = useRef(new WeakMap<CheckoutAction, AccountOwner>());
+  const [ownerUserId, , ownerEpoch, ownerInstance, ownerGeneration] = accountOwnerKey(owner);
+  const ownerKey = JSON.stringify([ownerUserId, ownerEpoch, ownerInstance, ownerGeneration]);
   const entitlementsKey = [
     'profiles',
     'me',
@@ -140,7 +143,7 @@ export default function SubscriptionsScreen() {
   };
 
   const checkoutMutation = useMutation({
-    mutationFn: async (action: { product: Product }) => {
+    mutationFn: async (action: CheckoutAction) => {
       const captured = owners.current.get(action);
       if (!captured || !isCurrent(captured)) throw new Error('The active account changed');
       const latest = currentEntitlements();
@@ -170,14 +173,12 @@ export default function SubscriptionsScreen() {
   const fileCredits = entitlements?.fileCredits || 0;
   const lastPayment = entitlements?.lastPaymentAt;
   const checkoutBusy = Boolean(
-    checkoutMutation.isPending &&
-      checkoutMutation.variables &&
-      isCurrent(owners.current.get(checkoutMutation.variables) ?? null),
+    owner && checkoutMutation.isPending && checkoutMutation.variables?.ownerKey === ownerKey,
   );
 
   const handleStartCheckout = async (product: Product) => {
     if (!owner || !isCurrent(owner) || !currentEntitlements()) return;
-    const action = { product };
+    const action = { product, ownerKey };
     owners.current.set(action, owner);
     try {
       const url = await checkoutMutation.mutateAsync(action);
