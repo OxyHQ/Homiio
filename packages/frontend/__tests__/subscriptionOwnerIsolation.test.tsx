@@ -16,6 +16,7 @@ const mockAuth = {
 };
 let mockConfirm: (value: boolean) => void = () => {};
 let mockRetainedCancel: (() => void) | undefined;
+let mockRetainedCheckout: (() => void) | undefined;
 const mockConfirmStarted = jest.fn();
 const mockOpen = jest.fn(async () => {});
 const mockToast = { success: jest.fn(), error: jest.fn(), info: jest.fn() };
@@ -66,6 +67,7 @@ jest.mock('@oxy.so/bloom/typography', () => {
 jest.mock('@oxy.so/bloom/button', () => ({
   Button: ({ children, onPress }: { children: React.ReactNode; onPress: () => void }) => {
     const { Pressable, Text } = require('react-native');
+    if (children === 'subscriptions.page.founder.becomeSupporter') mockRetainedCheckout = onPress;
     return (
       <Pressable accessibilityRole="button" onPress={onPress}>
         <Text>{children}</Text>
@@ -437,4 +439,20 @@ it('accepts a finite credit count outside JavaScript safe integer precision', as
   await waitFor(() =>
     expect(screen.getByText('subscriptions.page.plus.subscribeNow')).toBeTruthy(),
   );
+});
+
+
+it('diagnostic: retained checkout can run when entitlements were reset and are pending', async () => {
+  const screen = render(view());
+  await waitFor(() => expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy());
+  const retained = mockRetainedCheckout;
+  expect(retained).toBeDefined();
+  holdPath = '/api/profiles/me/entitlements';
+  let resetting!: Promise<void>;
+  act(() => { resetting = client.resetQueries({ queryKey: ['profiles', 'me', 'entitlements'] }); });
+  await waitFor(() => expect(held).toBeDefined());
+  await waitFor(() => expect(screen.queryByText('subscriptions.page.founder.becomeSupporter')).toBeNull());
+  await act(async () => { retained?.(); });
+  await waitFor(() => expect(requests).toContainEqual({ owner: 'A', path: '/api/billing/checkout', method: 'POST' }));
+  await act(async () => { respond(held!, { success: true, entitlements: { plusActive: true, fileCredits: 0, founderSupporter: false, processedSessions: [] } }); await resetting; });
 });
