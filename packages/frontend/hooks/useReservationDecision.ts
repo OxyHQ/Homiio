@@ -4,7 +4,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import type { Reservation } from '@homiio/shared-types';
 import { ReservationStatus } from '@homiio/shared-types/reservation';
-import { useUpdateReservation } from '@/hooks/useReservationQueries';
+import { useUpdateReservationCommand as useUpdateReservation } from '@/hooks/useReservationCommands';
 import { accountOwnerKey, useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 
 type Decision = ReservationStatus.CONFIRMED | ReservationStatus.DECLINED;

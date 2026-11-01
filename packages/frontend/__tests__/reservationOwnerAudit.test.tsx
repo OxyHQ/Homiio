@@ -530,3 +530,47 @@ it('does not replay a paused creation after a switch to B', async () => {
   expect(requests.filter((r) => r.method === 'POST')).toEqual([]);
   expect(hook.result.current.isPending).toBe(false);
 });
+
+it('preserves the full reservation mutation per-call callback contract', async () => {
+  allowPatch = true;
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  const hook = renderHook(() => useUpdate('reservation-B'), { wrapper });
+  const onSuccess = jest.fn();
+  const onSettled = jest.fn();
+  const input = { status: 'declined' } as never;
+  await act(async () => {
+    await hook.result.current.mutateAsync(input, { onSuccess, onSettled });
+  });
+  expect(onSuccess).toHaveBeenCalledTimes(1);
+  expect(onSuccess.mock.calls[0][1]).toBe(input);
+  expect(onSettled).toHaveBeenCalledTimes(1);
+  expect(onSettled.mock.calls[0][2]).toBe(input);
+});
+
+it('does not invoke full mutation callbacks for a retained action after account change', async () => {
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  const hook = renderHook(() => useUpdate('reservation-A'), { wrapper });
+  const retained = hook.result.current.mutateAsync;
+  const onSuccess = jest.fn();
+  const onError = jest.fn();
+  const onSettled = jest.fn();
+  await act(async () => {
+    oxy.session.setAccessToken(token('B'));
+    session = 'B';
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+  });
+  await act(async () => {
+    await retained({ status: 'declined' } as never, { onSuccess, onError, onSettled }).catch(
+      () => {},
+    );
+  });
+  expect(requests.filter((request) => request.method === 'PATCH')).toEqual([]);
+  expect(onSuccess).not.toHaveBeenCalled();
+  expect(onError).not.toHaveBeenCalled();
+  expect(onSettled).not.toHaveBeenCalled();
+});

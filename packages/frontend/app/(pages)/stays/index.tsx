@@ -30,7 +30,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
-import { useReservationsQuery } from '@/hooks/useReservationQueries';
+import { useReservationsQuery } from '@/hooks/useReservationReads';
 import { spacing } from '@/constants/styles';
 import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
 import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';

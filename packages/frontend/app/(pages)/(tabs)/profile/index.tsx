@@ -33,7 +33,7 @@ import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProfileQuery } from '@/hooks/query/useProfiles';
 import { useMyApplications } from '@/hooks/useApplicationQueries';
-import { useReservationsQuery } from '@/hooks/useReservationQueries';
+import { useReservationsQuery } from '@/hooks/useReservationReads';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';

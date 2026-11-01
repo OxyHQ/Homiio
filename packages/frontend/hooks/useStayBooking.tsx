@@ -30,7 +30,8 @@ import {
   type AvailabilityCalendarRange,
 } from '@/components/AvailabilityCalendar';
 import { useStayQuoteBreakdown } from '@/components/PriceBreakdown';
-import { useCreateReservation, usePropertyAvailabilityQuery } from '@/hooks/useReservationQueries';
+import { usePropertyAvailabilityQuery } from '@/hooks/useReservationReads';
+import { useCreateReservationCommand as useCreateReservation } from '@/hooks/useReservationCommands';
 import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { formatLocalized } from '@/utils/dateLocale';
 import { useFormatting } from '@/utils/format';

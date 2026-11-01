@@ -20,7 +20,7 @@ import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useMyExchangeRequests } from '@/hooks/useExchangeQueries';
-import { useReservationsQuery } from '@/hooks/useReservationQueries';
+import { useReservationsQuery } from '@/hooks/useReservationReads';
 import { viewingService, type ViewingRequest } from '@/services/viewingService';
 import {
   upcomingBookings,

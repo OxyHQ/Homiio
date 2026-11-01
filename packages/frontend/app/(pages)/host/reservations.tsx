@@ -49,7 +49,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
-import { useReservationsQuery } from '@/hooks/useReservationQueries';
+import { useReservationsQuery } from '@/hooks/useReservationReads';
 import { useReservationDecision } from '@/hooks/useReservationDecision';
 import { propertyService } from '@/services/propertyService';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';

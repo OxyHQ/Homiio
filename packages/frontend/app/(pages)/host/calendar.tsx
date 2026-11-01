@@ -101,7 +101,7 @@ import {
   reservationKeys,
   usePropertyAvailabilityQuery,
   useReservationsQuery,
-} from '@/hooks/useReservationQueries';
+} from '@/hooks/useReservationReads';
 import { useMyExchangeRequests } from '@/hooks/useExchangeQueries';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { exchangeSpansForProperty } from '@/utils/upcomingBookings';

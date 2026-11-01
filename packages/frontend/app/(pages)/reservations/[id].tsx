@@ -29,7 +29,8 @@ import { ReservationStatus } from '@homiio/shared-types/reservation';
 
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
-import { useReservationQuery, useUpdateReservation } from '@/hooks/useReservationQueries';
+import { useReservationQuery } from '@/hooks/useReservationReads';
+import { useUpdateReservationCommand as useUpdateReservation } from '@/hooks/useReservationCommands';
 import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { useOxy } from '@oxy.so/services/ui/client';
 import { PriceBreakdown } from '@/components/PriceBreakdown';
