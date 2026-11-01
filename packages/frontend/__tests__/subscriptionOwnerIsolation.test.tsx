@@ -11,7 +11,7 @@ let mockOrigin = '';
 const mockAuth = {
   isAuthenticated: true,
   user: { id: 'A' },
-  activeSessionId: 'session-A',
+  activeSessionId: 'session-A' as string | null,
   oxyServices: null as unknown as OxyServices,
 };
 let mockConfirm: (value: boolean) => void = () => {};
@@ -607,4 +607,68 @@ it('does not let a paused checkout from A disable checkout for B', async () => {
   expect(requests.filter((r) => r.path === '/api/billing/checkout')).toEqual([
     { owner: 'B', path: '/api/billing/checkout', method: 'POST' },
   ]);
+});
+
+it('does not persist account identifiers or bearer in the shared paused-mutation blob', async () => {
+  const path = require('node:path');
+  const servicesRoot = path.dirname(require.resolve('@oxy.so/services/package.json'));
+  const { attachQueryPersistence } = require(
+    path.join(servicesRoot, 'lib/commonjs/ui/hooks/queryClient.js'),
+  );
+  let stored: string | null = null;
+  const storage = {
+    getItem: async () => null,
+    setItem: async (_key: string, value: string) => {
+      stored = value;
+    },
+    removeItem: async () => {},
+  };
+  const persistence = attachQueryPersistence(client, storage);
+  await persistence.restored;
+  const sentinel = 'PRIVATE_ACCOUNT_SUBJECT_SENTINEL';
+  await act(async () => {
+    oxy.session.setAccessToken(token(sentinel));
+    mockAuth.user = { id: sentinel };
+    mockAuth.activeSessionId = 'PRIVATE_SESSION_SENTINEL';
+  });
+  const screen = render(view());
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
+  );
+  await act(async () => {
+    onlineManager.setOnline(false);
+  });
+  fireEvent.press(screen.getByText('subscriptions.page.founder.becomeSupporter'));
+  await waitFor(() =>
+    expect(
+      client
+        .getMutationCache()
+        .getAll()
+        .some((m) => m.state.isPaused),
+    ).toBe(true),
+  );
+  try {
+    await waitFor(() => expect(stored).not.toBeNull(), { timeout: 4000 });
+    const payload = JSON.parse(stored ?? '');
+    expect(payload.clientState.mutations.length).toBeGreaterThan(0);
+    expect(payload.clientState.mutations[0].state.variables.ownerKey).toMatch(/^\[\d+,\d+,\d+\]$/);
+    expect(stored).not.toContain(sentinel);
+    expect(stored).not.toContain('PRIVATE_SESSION_SENTINEL');
+    expect(stored).not.toContain(token(sentinel));
+  } finally {
+    persistence.unsubscribe();
+  }
+});
+
+it('loads subscriptions when the same observed session ID arrives after the bearer', async () => {
+  mockAuth.activeSessionId = null;
+  const screen = render(view());
+  expect(screen.queryByText('subscriptions.page.founder.becomeSupporter')).toBeNull();
+  await act(async () => {
+    mockAuth.activeSessionId = 'session-A';
+    screen.rerender(view());
+  });
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
+  );
 });

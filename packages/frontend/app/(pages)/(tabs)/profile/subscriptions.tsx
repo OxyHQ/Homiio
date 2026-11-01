@@ -112,8 +112,8 @@ export default function SubscriptionsScreen() {
   const { owner, isCurrent } = useAccountOwnerGuard();
   const queryClient = useQueryClient();
   const owners = useRef(new WeakMap<CheckoutAction, AccountOwner>());
-  const [ownerUserId, , ownerEpoch, ownerInstance, ownerGeneration] = accountOwnerKey(owner);
-  const ownerKey = JSON.stringify([ownerUserId, ownerEpoch, ownerInstance, ownerGeneration]);
+  const [, , ownerEpoch, ownerInstance, ownerGeneration] = accountOwnerKey(owner);
+  const ownerKey = JSON.stringify([ownerEpoch, ownerInstance, ownerGeneration]);
   const entitlementsKey = [
     'profiles',
     'me',
