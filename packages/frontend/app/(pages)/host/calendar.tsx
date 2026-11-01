@@ -86,14 +86,14 @@ import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import {
-  type AvailabilityWindow,
-  AvailabilityWindowStatus,
-  type ExchangeRequest,
-  type Property,
-  type Reservation,
-  ReservationStatus,
+import type {
+  AvailabilityWindow,
+  ExchangeRequest,
+  Property,
+  Reservation,
 } from '@homiio/shared-types';
+import { AvailabilityWindowStatus } from '@homiio/shared-types/common';
+import { ReservationStatus } from '@homiio/shared-types/reservation';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';

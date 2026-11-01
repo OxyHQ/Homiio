@@ -6,7 +6,7 @@ import { RiTimeLine } from '@oxy.so/bloom/icons/RiTimeLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import { Section, SectionRow } from '@/components/property/Section';
-import { formatDate } from '@homiio/shared-types';
+import { formatDate } from '@homiio/shared-types/format/dates';
 import { useFormatting } from '@/utils/format';
 import type { Property } from '@homiio/shared-types';
 

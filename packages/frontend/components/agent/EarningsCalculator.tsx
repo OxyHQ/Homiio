@@ -37,9 +37,10 @@ import {
 } from '@oxy.so/bloom/segmented-control';
 
 import { Slider } from '@oxy.so/bloom/slider';
-import { formatMoney } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { useFormatting } from '@/utils/format';
-import { COMMISSION_CONFIG, commissionAmount, type CommissionOffering } from '@homiio/shared-types';
+import { COMMISSION_CONFIG, commissionAmount } from '@homiio/shared-types/partner';
+import type { CommissionOffering } from '@homiio/shared-types';
 
 /** Tabular figures so the live amounts don't jitter while the slider drags. */
 const TABULAR: TextStyle = { fontVariant: ['tabular-nums'] };

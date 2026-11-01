@@ -3,18 +3,16 @@ import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
-import {
-  UtilitiesIncluded,
-  PropertyStatus,
-  OfferingType,
-  type CreatePropertyData,
-  type PropertyType,
-  type Property,
-  type PropertyImageWrite,
-  type PropertySale,
-  type PropertyExchange,
-  type LongTermRent,
-  type ShortTermRent,
+import { UtilitiesIncluded, PropertyStatus, OfferingType } from '@homiio/shared-types/common';
+import type {
+  CreatePropertyData,
+  PropertyType,
+  Property,
+  PropertyImageWrite,
+  PropertySale,
+  PropertyExchange,
+  LongTermRent,
+  ShortTermRent,
 } from '@homiio/shared-types';
 import {
   useCreatePropertyFormStore,

@@ -11,7 +11,8 @@ import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
-import { EvictionCaseStatus, type EvictionBoardScope } from '@homiio/shared-types';
+import { EvictionCaseStatus } from '@homiio/shared-types/eviction';
+import type { EvictionBoardScope } from '@homiio/shared-types';
 
 import { EvictionCard } from '@/components/evictions/EvictionCard';
 import { selectionToBoardScope } from '@/components/evictions/evictionScope';

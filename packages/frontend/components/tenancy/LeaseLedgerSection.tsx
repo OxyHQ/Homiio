@@ -30,13 +30,9 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { toast } from '@oxy.so/bloom/toast';
 import { P } from '@oxy.so/bloom/typography';
-import {
-  formatMoney,
-  leaseOutstandingTotal,
-  type Lease,
-  type LeaseObligationSummary,
-  type LeasePaymentMovement,
-} from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import { leaseOutstandingTotal } from '@homiio/shared-types/leasePayment';
+import type { Lease, LeaseObligationSummary, LeasePaymentMovement } from '@homiio/shared-types';
 
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import {

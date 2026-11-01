@@ -15,12 +15,9 @@
  */
 import type { TFunction } from 'i18next';
 
-import {
-  formatMoney,
-  formatMoneyRange,
-  ReviewAuthorIdentity,
-  type ReviewDTO,
-} from '@homiio/shared-types';
+import { formatMoney, formatMoneyRange } from '@homiio/shared-types/format/money';
+import { ReviewAuthorIdentity } from '@homiio/shared-types/review';
+import type { ReviewDTO } from '@homiio/shared-types';
 import type { User } from '@oxy.so/core';
 
 /** How many characters of the pseudonym become the visible reference. */

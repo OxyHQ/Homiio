@@ -23,7 +23,9 @@ import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
-import { CancellationPolicy, type Reservation, ReservationStatus } from '@homiio/shared-types';
+import { CancellationPolicy } from '@homiio/shared-types/common';
+import type { Reservation } from '@homiio/shared-types';
+import { ReservationStatus } from '@homiio/shared-types/reservation';
 
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';

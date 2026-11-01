@@ -54,7 +54,7 @@ import {
   DETAIL_ICON_SIZE,
 } from '@/components/property/DetailIconGrid';
 import { hairline, spacing, tracker } from '@/constants/styles';
-import { formatMoney } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { api } from '@/utils/api';
 import { useFormatting } from '@/utils/format';
 import { logger } from '@/utils/logger';

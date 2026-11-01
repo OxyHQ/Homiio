@@ -11,13 +11,8 @@ import {
 import { useProperty } from '@/hooks/usePropertyQueries';
 import { propertyService } from '@/services/propertyService';
 import type { UploadedImage } from '@/services/imageUploadService';
-import {
-  ExchangeMode,
-  OfferingType,
-  type Property,
-  type PropertyImage,
-  type PropertyImageRef,
-} from '@homiio/shared-types';
+import { ExchangeMode, OfferingType } from '@homiio/shared-types/common';
+import type { Property, PropertyImage, PropertyImageRef } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
 import { newDraftId, saveDraft } from '@/utils/propertyDrafts';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';

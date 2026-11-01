@@ -27,7 +27,8 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { APPROXIMATE_LOCATION_TTL_MS, type ApproximateLocation } from '@homiio/shared-types';
+import { APPROXIMATE_LOCATION_TTL_MS } from '@homiio/shared-types/approximateLocation';
+import type { ApproximateLocation } from '@homiio/shared-types';
 
 import { fetchApproximateLocation } from '@/services/approximateLocationService';
 import type { ApproximatePositionState } from './locationScopeLadder';

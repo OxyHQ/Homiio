@@ -33,7 +33,7 @@ import {
   IMAGE_UPLOAD_MAX_FILE_BYTES,
   IMAGE_UPLOAD_MAX_FILES_PER_REQUEST,
   planUploadBatches,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/upload';
 import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 import { coverFirst } from '@/utils/propertyPhotos';

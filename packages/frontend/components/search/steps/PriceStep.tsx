@@ -37,7 +37,9 @@ import {
 import { PriceRangeFilter } from '@oxy.so/bloom/stay-filters';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { OfferingType, formatMoney, type ListingCurrency } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import type { ListingCurrency } from '@homiio/shared-types';
 
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import type { SearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';

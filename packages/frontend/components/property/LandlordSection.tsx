@@ -21,7 +21,8 @@ import { RiCalendarLine } from '@oxy.so/bloom/icons/RiCalendarLine';
 import { RiGlobalLine } from '@oxy.so/bloom/icons/RiGlobalLine';
 import { HostCard } from '@oxy.so/bloom/listing-details';
 import { FollowButton, useOxy } from '@oxy.so/services/ui/client';
-import { deviceTimeZone, formatDate, type Profile, type Property } from '@homiio/shared-types';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types/format/dates';
+import type { Profile, Property } from '@homiio/shared-types';
 
 import { Section, SECTION_GUTTER } from '@/components/property/Section';
 import { Shelf } from '@oxy.so/bloom/media-shelf';

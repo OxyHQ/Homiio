@@ -12,7 +12,7 @@ import { Section } from '@/components/property/Section';
 import { spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 import { useNeighborhood } from '@/hooks/useNeighborhood';
-import { formatMoney } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { useFormatting } from '@/utils/format';
 
 interface Props {

@@ -28,7 +28,8 @@ import {
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services/ui/client';
-import { type TenantApplication, TenantApplicationStatus } from '@homiio/shared-types';
+import type { TenantApplication } from '@homiio/shared-types';
+import { TenantApplicationStatus } from '@homiio/shared-types/application';
 
 import { ApplicationCard } from '@/components/ApplicationCard';
 import { EmptyState } from '@/components/ui/EmptyState';

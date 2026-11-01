@@ -8,7 +8,8 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { RiArrowLeftRightLine } from '@oxy.so/bloom/icons/RiArrowLeftRightLine';
 import { RiHotelBedLine } from '@oxy.so/bloom/icons/RiHotelBedLine';
 import { useTheme } from '@oxy.so/bloom/theme';
-import { ExchangeMode, type ExchangeRequest } from '@homiio/shared-types';
+import { ExchangeMode } from '@homiio/shared-types/common';
+import type { ExchangeRequest } from '@homiio/shared-types';
 
 import { ExchangeStatusBadge } from '@/components/exchange/ExchangeStatusBadge';
 import { Card, CardFooter } from '@oxy.so/bloom/card';

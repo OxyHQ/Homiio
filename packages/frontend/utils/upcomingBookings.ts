@@ -38,13 +38,9 @@
  * `Date.now()` would not be pure, and a test of it would be a test of the
  * machine it ran on.
  */
-import {
-  ExchangeRequestStatus,
-  ReservationStatus,
-  type ExchangeMode,
-  type ExchangeRequest,
-  type Reservation,
-} from '@homiio/shared-types';
+import { ExchangeRequestStatus } from '@homiio/shared-types/common';
+import { ReservationStatus } from '@homiio/shared-types/reservation';
+import type { ExchangeMode, ExchangeRequest, Reservation } from '@homiio/shared-types';
 // Type-only, so nothing here pulls Bloom into a Node test run.
 import type { TripStatus } from '@oxy.so/bloom/booking';
 

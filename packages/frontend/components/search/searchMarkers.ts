@@ -6,7 +6,8 @@
  * rule that cannot be unit-tested is a pure rule nobody checks.
  */
 import type { MapMarkerData } from '@goway.to/maps';
-import { formatMoney, type OfferingType, type Property } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import type { OfferingType, Property } from '@homiio/shared-types';
 
 import { resolvePrimaryOffering, toPriceDescriptor } from '@/utils/propertyUtils';
 import type { Formatting } from '@/utils/format';

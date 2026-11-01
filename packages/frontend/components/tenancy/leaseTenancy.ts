@@ -15,15 +15,15 @@
 import type { TFunction } from 'i18next';
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
 import { formatDistanceStrict } from 'date-fns/formatDistanceStrict';
-import {
-  formatMoney,
-  LeaseStatus,
-  type Lease,
-  type LeaseDocument,
-  type LeaseEvent,
-  type LeaseEventType,
-  type LeasePayment,
-  type LeaseSignatureRecord,
+import { formatMoney } from '@homiio/shared-types/format/money';
+import { LeaseStatus } from '@homiio/shared-types/lease';
+import type {
+  Lease,
+  LeaseDocument,
+  LeaseEvent,
+  LeaseEventType,
+  LeasePayment,
+  LeaseSignatureRecord,
 } from '@homiio/shared-types';
 import type {
   LeaseNextPayment,

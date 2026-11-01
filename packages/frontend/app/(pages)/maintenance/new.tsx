@@ -33,9 +33,8 @@ import {
   MAINTENANCE_DESCRIPTION_MAX,
   MAINTENANCE_TITLE_MAX,
   MAINTENANCE_URGENCIES,
-  type MaintenanceCategory,
-  type MaintenanceUrgency,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/maintenance';
+import type { MaintenanceCategory, MaintenanceUrgency } from '@homiio/shared-types';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useReportRepair } from '@/hooks/useMaintenanceQueries';

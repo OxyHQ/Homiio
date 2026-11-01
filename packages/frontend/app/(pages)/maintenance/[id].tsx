@@ -36,7 +36,8 @@ import { MaintenanceRequestCard } from '@oxy.so/bloom/tenancy';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { toast } from '@oxy.so/bloom/toast';
 import { P } from '@oxy.so/bloom/typography';
-import { MAINTENANCE_COMMENT_MAX, type MaintenanceStatus } from '@homiio/shared-types';
+import { MAINTENANCE_COMMENT_MAX } from '@homiio/shared-types/maintenance';
+import type { MaintenanceStatus } from '@homiio/shared-types';
 
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';

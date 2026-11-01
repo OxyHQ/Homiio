@@ -5,7 +5,7 @@
  * dimension step is skippable); only the hard-required fields are validated per
  * step in `write.tsx` before advancing.
  */
-import { ReviewAuthorIdentity } from '@homiio/shared-types';
+import { ReviewAuthorIdentity } from '@homiio/shared-types/review';
 import type {
   TemperatureRating,
   NoiseLevel,

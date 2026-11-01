@@ -56,7 +56,8 @@ import { RiLoginBoxLine } from '@oxy.so/bloom/icons/RiLoginBoxLine';
 import { LeaseSummaryCard } from '@oxy.so/bloom/tenancy';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { useOxy } from '@oxy.so/services/ui/client';
-import { LeaseStatus, type Lease } from '@homiio/shared-types';
+import { LeaseStatus } from '@homiio/shared-types/lease';
+import type { Lease } from '@homiio/shared-types';
 
 import { UpcomingBookingsSection } from '@/components/bookings/UpcomingBookingsSection';
 import { leaseSummaryProps } from '@/components/tenancy/leaseTenancy';

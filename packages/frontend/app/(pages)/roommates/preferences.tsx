@@ -28,7 +28,7 @@ import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import { LeaseDuration } from '@homiio/shared-types';
+import { LeaseDuration } from '@homiio/shared-types/common';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';

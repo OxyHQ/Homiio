@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Textarea } from '@oxy.so/bloom/textarea';
 
-import { LandlordTreatment, ResponseRating, DepositReturn } from '@homiio/shared-types';
+import { LandlordTreatment, ResponseRating, DepositReturn } from '@homiio/shared-types/review';
 
 import { EnumChipSelector } from '@/components/reviews/EnumChipSelector';
 import type { StepProps } from '@/components/reviews/write/types';

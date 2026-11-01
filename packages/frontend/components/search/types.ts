@@ -7,7 +7,7 @@
  * data (no React) so both the Zustand stores and the components can depend on
  * them without a cycle.
  */
-import { OfferingType } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
 import type {
   ExchangeMode,
   HousingFeature,

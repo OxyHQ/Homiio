@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 
-import { formatPrice, formatPriceLabel, type Property } from '@homiio/shared-types';
+import { formatPrice, formatPriceLabel } from '@homiio/shared-types/format/money';
+import type { Property } from '@homiio/shared-types';
 
 import type { BrowseMode } from '@/components/search/types';
 import type { Formatting } from '@/utils/format';

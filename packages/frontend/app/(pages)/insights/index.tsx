@@ -24,7 +24,8 @@ import { propertyService } from '@/services/propertyService';
 import { Shelf, ShelfSkeleton } from '@oxy.so/bloom/media-shelf';
 import { PropertyCard } from '@/components/PropertyCard';
 import { InsightsSkeleton } from '@/components/ui/skeletons/InsightsSkeleton';
-import { formatMoney, type Property } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import type { Property } from '@homiio/shared-types';
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
 

@@ -52,7 +52,7 @@ import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
-import { OfferingType } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
 import type { GeoBounds, LocationSelection, Property, PropertyType } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import {

@@ -24,7 +24,8 @@ import { RiVerifiedBadgeFill } from '@oxy.so/bloom/icons/RiVerifiedBadgeFill';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { ReviewModerationStatus, type ReviewDTO } from '@homiio/shared-types';
+import { ReviewModerationStatus } from '@homiio/shared-types/review';
+import type { ReviewDTO } from '@homiio/shared-types';
 import { Stars } from '@/components/ui/Stars';
 import { reviewRentLabel } from '@/components/reviews/publishedFacts';
 import { formatLocalized } from '@/utils/dateLocale';

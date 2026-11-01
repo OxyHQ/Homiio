@@ -25,7 +25,8 @@ import {
 } from '@oxy.so/bloom/segmented-control';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useOxy } from '@oxy.so/services/ui/client';
-import { type ExchangeRequest, ExchangeRequestStatus } from '@homiio/shared-types';
+import type { ExchangeRequest } from '@homiio/shared-types';
+import { ExchangeRequestStatus } from '@homiio/shared-types/common';
 
 import { ExchangeRequestCard } from '@/components/exchange/ExchangeRequestCard';
 import { GuestPointsSummary } from '@/components/exchange/GuestPointsSummary';

@@ -20,17 +20,17 @@
  */
 import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import {
-  OfferingType,
-  deriveQueryId,
-  locationKey,
-  type GeoBounds,
-  type GeoPoint,
-  type LocationKind,
-  type LocationSelection,
-  type Property,
-  type QueryDescriptor,
-  type SingleLocationSelection,
+import { OfferingType } from '@homiio/shared-types/common';
+import { deriveQueryId } from '@homiio/shared-types/observability/queryIdentity';
+import { locationKey } from '@homiio/shared-types/location';
+import type {
+  GeoBounds,
+  GeoPoint,
+  LocationKind,
+  LocationSelection,
+  Property,
+  QueryDescriptor,
+  SingleLocationSelection,
 } from '@homiio/shared-types';
 import type { SearchQuery } from '@/components/search/types';
 import { PROPERTY_LIST_PAGE_SIZE, useInfinitePropertyList } from './useInfinitePropertyList';

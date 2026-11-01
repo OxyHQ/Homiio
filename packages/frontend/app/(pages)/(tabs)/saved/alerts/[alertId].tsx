@@ -30,7 +30,7 @@ import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
-import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types/format/dates';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AlertExplanationText } from '@/components/watches/AlertExplanationText';
 import { useAlertReason } from '@/hooks/useHousingAlerts';

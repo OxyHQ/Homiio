@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { locationKey } from '@homiio/shared-types';
+import { locationKey } from '@homiio/shared-types/location';
 import type { SearchQuery } from '@/components/search/types';
 
 /** How many recent searches to retain. Older entries are dropped. */

@@ -39,11 +39,8 @@ import { useMemo } from 'react';
 import { usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import {
-  serializeLocationToken,
-  type SindiAppContext,
-  type SindiDestination,
-} from '@homiio/shared-types';
+import { serializeLocationToken } from '@homiio/shared-types/location';
+import type { SindiAppContext, SindiDestination } from '@homiio/shared-types';
 
 import { locationDisplayLabel } from '@/components/search/types';
 import { useSearchQueryStore } from '@/store/searchQueryStore';

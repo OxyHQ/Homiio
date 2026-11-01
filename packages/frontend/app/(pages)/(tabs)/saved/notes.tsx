@@ -31,7 +31,7 @@ import { Textarea } from '@oxy.so/bloom/textarea';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { formatMoney, priceFrequencyFromPriceUnit } from '@homiio/shared-types';
+import { formatMoney, priceFrequencyFromPriceUnit } from '@homiio/shared-types/format/money';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { spacing } from '@/constants/styles';

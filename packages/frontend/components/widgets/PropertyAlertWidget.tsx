@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { formatMoney, formatMoneyRange } from '@homiio/shared-types';
+import { formatMoney, formatMoneyRange } from '@homiio/shared-types/format/money';
 import { Button } from '@oxy.so/bloom/button';
 import { RiNotification3Line } from '@oxy.so/bloom/icons/RiNotification3Line';
 import { Item } from '@oxy.so/bloom/item';

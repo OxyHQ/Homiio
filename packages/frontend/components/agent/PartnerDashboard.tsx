@@ -33,18 +33,17 @@ import { StatCards, type StatCardsItem } from '@oxy.so/bloom/stat-cards';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { formatMoney } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
-import {
-  REWARD_TIERS,
-  tierForPoints,
-  type Commission,
-  type CommissionOffering,
-  type CommissionStatus,
-  type PartnerStats,
-  type Property,
-  type RewardTierKey,
+import { REWARD_TIERS, tierForPoints } from '@homiio/shared-types/partner';
+import type {
+  Commission,
+  CommissionOffering,
+  CommissionStatus,
+  PartnerStats,
+  Property,
+  RewardTierKey,
 } from '@homiio/shared-types';
 
 interface PartnerDashboardProps {

@@ -18,8 +18,8 @@ import {
   TouristLevel,
   SecurityLevel,
   ServiceType,
-  type ReviewDTO,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/review';
+import type { ReviewDTO } from '@homiio/shared-types';
 
 export type ReviewSection = 'apartment' | 'management' | 'building' | 'area';
 

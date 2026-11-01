@@ -5,12 +5,8 @@
  * tel:/mailto:/https://wa.me/https://t.me contact link builders. No JSX, no
  * hooks, so both the board card and the detail screen import from here.
  */
-import {
-  EvictionCaseStatus,
-  EvictionTimelineEventType,
-  type EvictionCase,
-  type EvictionContactInfo,
-} from '@homiio/shared-types';
+import { EvictionCaseStatus, EvictionTimelineEventType } from '@homiio/shared-types/eviction';
+import type { EvictionCase, EvictionContactInfo } from '@homiio/shared-types';
 import type { EvictionEventKind, EvictionStatus } from '@oxy.so/bloom/eviction';
 
 /** The Bloom status (badge tone) + Homiio's own i18n label key per lifecycle status. */

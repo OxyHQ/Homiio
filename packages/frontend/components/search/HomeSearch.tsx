@@ -74,12 +74,8 @@ import {
 } from '@oxy.so/bloom/stay-search';
 import { H3 } from '@oxy.so/bloom/typography';
 
-import {
-  OfferingType,
-  type ListingCurrency,
-  type LocationSelection,
-  type PropertyType,
-} from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
+import type { ListingCurrency, LocationSelection, PropertyType } from '@homiio/shared-types';
 import { useScopeWhere } from '@/components/location/useScopeWhere';
 import {
   deviceOptionDescription,

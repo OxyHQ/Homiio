@@ -23,7 +23,10 @@ import { Admonition } from '@oxy.so/bloom/admonition';
 import { RadioGroup, type RadioOption } from '@oxy.so/bloom/radio';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
-import { EvictionReportReason, EVICTION_PRECAUTIONARY_HOLD_REASONS } from '@homiio/shared-types';
+import {
+  EvictionReportReason,
+  EVICTION_PRECAUTIONARY_HOLD_REASONS,
+} from '@homiio/shared-types/eviction';
 
 import { useReportEviction } from '@/hooks/useEvictionQueries';
 import { toast } from '@oxy.so/bloom/toast';

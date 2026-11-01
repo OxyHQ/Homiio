@@ -40,11 +40,9 @@ import { Text } from '@oxy.so/bloom/typography';
 import {
   APPLICATION_DOCUMENT_MAX_BYTES,
   APPLICATION_DOCUMENT_MAX_COUNT,
-  EmploymentStatus,
-  ReferenceRelationship,
-  TenantApplicationDocumentType,
-  PropertyType,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/upload';
+import { EmploymentStatus, ReferenceRelationship, PropertyType } from '@homiio/shared-types/common';
+import { TenantApplicationDocumentType } from '@homiio/shared-types/application';
 import { useProperty } from '@/hooks';
 import { useCreateApplicationMutation } from '@/hooks/useApplicationQueries';
 import type {

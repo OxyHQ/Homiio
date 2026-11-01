@@ -1,14 +1,13 @@
 import { generatePropertyTitle, type TitleFormat } from './propertyTitleGenerator';
-import {
-  OfferingType,
-  PriceUnit,
-  type Property,
-  type PropertyAddress,
-  type PropertyImage,
-  priceFrequencyFromPriceUnit,
-  type ImageVariantName,
-  type PriceDescriptor,
+import { OfferingType, PriceUnit } from '@homiio/shared-types/common';
+import type {
+  Property,
+  PropertyAddress,
+  PropertyImage,
+  ImageVariantName,
+  PriceDescriptor,
 } from '@homiio/shared-types';
+import { priceFrequencyFromPriceUnit } from '@homiio/shared-types/format/money';
 import type { BrowseMode } from '@/components/search/types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';

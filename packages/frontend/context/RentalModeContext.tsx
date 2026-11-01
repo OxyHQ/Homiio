@@ -3,7 +3,7 @@ import { createContext, useContext, useMemo, useSyncExternalStore } from 'react'
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { OfferingType } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
 
 import { BROWSE_MODE_OFFERING, type BrowseMode } from '@/components/search/types';
 import { useSearchQueryStore } from '@/store/searchQueryStore';

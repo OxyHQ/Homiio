@@ -61,11 +61,8 @@ import {
   normalizeLongitude,
   geoPlaceToSelection,
   locationKey,
-  type GeoBounds,
-  type GeoPlace,
-  type LocationSelection,
-  type GeoPoint,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/location';
+import type { GeoBounds, GeoPlace, LocationSelection, GeoPoint } from '@homiio/shared-types';
 import { spacing } from '@/constants/styles';
 import { selectionLabel } from '../types';
 import type { DeviceOptionState } from '@/components/location/scopeWhere';

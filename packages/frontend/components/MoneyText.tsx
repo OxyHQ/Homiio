@@ -1,7 +1,8 @@
 import type React from 'react';
 import type { TextProps } from 'react-native';
 
-import { formatMoney, type CurrencyDisplay } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
+import type { CurrencyDisplay } from '@homiio/shared-types';
 
 import { ThemedText } from './ThemedText';
 import { useFormatting } from '@/utils/format';

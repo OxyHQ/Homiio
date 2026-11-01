@@ -23,11 +23,8 @@
 import type React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Admonition } from '@oxy.so/bloom/admonition';
-import {
-  formatDistance,
-  type EvictionLocationPublic,
-  type EvictionModerationState,
-} from '@homiio/shared-types';
+import { formatDistance } from '@homiio/shared-types/format/units';
+import type { EvictionLocationPublic, EvictionModerationState } from '@homiio/shared-types';
 
 export interface EvictionPrecisionNoteProps {
   readonly location: EvictionLocationPublic;

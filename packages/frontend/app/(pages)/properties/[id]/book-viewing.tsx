@@ -48,16 +48,14 @@ import { Textarea } from '@oxy.so/bloom/textarea';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
+import { PropertyType } from '@homiio/shared-types/common';
 import {
-  PropertyType,
   VIEWING_HORIZON_DEFAULT_DAYS,
   VIEWING_MODALITIES,
-  formatDate,
-  instantToZonedCivil,
   parseMinuteOfDay,
-  type ViewingModality,
-  type ViewingSlot,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/viewing';
+import { formatDate, instantToZonedCivil } from '@homiio/shared-types/format/dates';
+import type { ViewingModality, ViewingSlot } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useOxy } from '@oxy.so/services/ui/client';
 import ViewingService, { type ViewingRequest } from '@/services/viewingService';

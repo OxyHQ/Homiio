@@ -18,7 +18,7 @@
  * `refreshExchangeRates()` (from `@/utils/exchangeRates`) to keep the
  * synchronous lookups below current.
  */
-import { formatMoney } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { convertAmount } from '@oxy.so/utils/currency';
 
 import type { ExchangeRateTable } from '@/utils/exchangeRates';

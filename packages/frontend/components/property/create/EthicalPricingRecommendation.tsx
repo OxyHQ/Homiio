@@ -9,7 +9,8 @@ import {
 } from '@oxy.so/bloom/admonition';
 import { StatBar } from '@oxy.so/bloom/stat-bar';
 import { useTheme } from '@oxy.so/bloom/theme';
-import { type PropertyType, formatMoney } from '@homiio/shared-types';
+import type { PropertyType } from '@homiio/shared-types';
+import { formatMoney } from '@homiio/shared-types/format/money';
 import { validateEthicalPricing, type EthicalPricingCharacteristics } from '@/utils/ethicalPricing';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import { useFormatting } from '@/utils/format';

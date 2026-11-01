@@ -48,13 +48,11 @@ import {
   MIN_VIEWING_DURATION_MINUTES,
   VIEWING_MODALITIES,
   VIEWING_WINDOWS_MAX,
-  deviceTimeZone,
   formatMinuteOfDay,
-  isSupportedTimeZone,
   parseMinuteOfDay,
-  type ViewingModality,
-  type ViewingWindowInput,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/viewing';
+import { deviceTimeZone, isSupportedTimeZone } from '@homiio/shared-types/format/dates';
+import type { ViewingModality, ViewingWindowInput } from '@homiio/shared-types';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';

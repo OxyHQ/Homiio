@@ -17,12 +17,8 @@
  */
 
 import { api, type ApiResponse } from '@/utils/api';
-import {
-  serializeLocationToken,
-  type HomeSectionsResponse,
-  type LocationSelection,
-  type Property,
-} from '@homiio/shared-types';
+import { serializeLocationToken } from '@homiio/shared-types/location';
+import type { HomeSectionsResponse, LocationSelection, Property } from '@homiio/shared-types';
 
 /** A scope the grammar cannot express. Reaches the surface as an error state. */
 export class UnscopableLocationError extends Error {

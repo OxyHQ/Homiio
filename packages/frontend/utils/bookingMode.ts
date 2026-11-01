@@ -15,7 +15,8 @@
  *  - `'none'`       — nothing applies (e.g. vacation mode on a listing with no
  *                     short-term offering), so no booking/apply surface shows.
  */
-import { OfferingType, type Property } from '@homiio/shared-types';
+import { OfferingType } from '@homiio/shared-types/common';
+import type { Property } from '@homiio/shared-types';
 
 import type { BrowseMode } from '@/components/search/types';
 import { hasOffering, type RentalMode } from './propertyUtils';

@@ -55,17 +55,15 @@ import {
 import { StepperRow } from '@oxy.so/bloom/stepper';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
+import { formatArea } from '@homiio/shared-types/format/units';
+import { HOUSING_FEATURES } from '@homiio/shared-types/housingFeature';
+import { OfferingType } from '@homiio/shared-types/common';
 import {
-  formatArea,
-  HOUSING_FEATURES,
-  OfferingType,
   PLACE_KINDS,
   placeKindOf,
   propertyTypesForPlaceKind,
-  type HousingFeature,
-  type PlaceKind,
-  type PropertyType,
-} from '@homiio/shared-types';
+} from '@homiio/shared-types/placeKind';
+import type { HousingFeature, PlaceKind, PropertyType } from '@homiio/shared-types';
 import { getAmenityById } from '@/constants/amenities';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useFormatting } from '@/utils/format';
