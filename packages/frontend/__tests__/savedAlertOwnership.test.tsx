@@ -618,7 +618,7 @@ it('deletes a saved search for the unchanged owner', async () => {
 it('does not expose an externally hydrated fresh query without an in-memory binding', async () => {
   const first = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
-  const query = client.getQueryCache().find({ queryKey: ['savedSearches'] });
+  const query = client.getQueryCache().find({ queryKey: ['savedSearches'], exact: false });
   expect(query).toBeDefined();
   const key = query!.queryKey;
   first.unmount();
@@ -682,7 +682,7 @@ it('keeps verified same-owner searches on an in-memory offline remount', async (
 it('reports a paused unbound hydration as unavailable and recovers on reconnect', async () => {
   const first = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
-  const key = client.getQueryCache().find({ queryKey: ['savedSearches'] })!.queryKey;
+  const key = client.getQueryCache().find({ queryKey: ['savedSearches'], exact: false })!.queryKey;
   first.unmount();
   client.clear();
   const source = new QueryClient();
@@ -718,7 +718,7 @@ it('recovers from a cache publication that does not match the verified object', 
     wrapper,
   });
   await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
-  const query = client.getQueryCache().find({ queryKey: ['savedSearches'] });
+  const query = client.getQueryCache().find({ queryKey: ['savedSearches'], exact: false });
   expect(query).toBeDefined();
   shouldHoldA = true;
   act(() => {
