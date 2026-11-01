@@ -331,13 +331,17 @@ it('DIAGNOSTIC reproduces an older same-owner GET overwriting a completed profil
   const view = renderHook(() => useProfile(), { wrapper });
   const oldResponse = await held;
   const first = spy.mock.results[0].value;
+  first.catch(() => undefined);
   const owner = useProfileStore.getState().profileRequest?.owner;
   expect(owner).toBeDefined();
+  console.log('DIAGNOSTIC owner before update', owner?.isCurrent(), oxy.http.getSessionEpoch());
   await act(async () => {
     await useProfileStore.getState().updateProfile({}, owner!);
   });
+  console.log('DIAGNOSTIC owner after update', owner?.isCurrent(), oxy.http.getSessionEpoch());
   expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-2' }));
   await act(async () => {
+    console.log('DIAGNOSTIC owner before old GET completes', owner?.isCurrent(), oxy.http.getSessionEpoch());
     oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-update' })}}`);
     await first;
   });
