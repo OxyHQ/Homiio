@@ -169,7 +169,11 @@ export default function SubscriptionsScreen() {
   const plusCanceledAt = entitlements?.plusCanceledAt;
   const fileCredits = entitlements?.fileCredits || 0;
   const lastPayment = entitlements?.lastPaymentAt;
-  const checkoutBusy = checkoutMutation.isPending;
+  const checkoutBusy = Boolean(
+    checkoutMutation.isPending &&
+      checkoutMutation.variables &&
+      isCurrent(owners.current.get(checkoutMutation.variables) ?? null),
+  );
 
   const handleStartCheckout = async (product: Product) => {
     if (!owner || !isCurrent(owner) || !currentEntitlements()) return;

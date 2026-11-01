@@ -17,6 +17,7 @@ const mockAuth = {
 let mockConfirm: (value: boolean) => void = () => {};
 let mockRetainedCancel: (() => void) | undefined;
 let mockRetainedCheckout: (() => void) | undefined;
+let mockFounderDisabled: boolean | undefined;
 const mockConfirmStarted = jest.fn();
 const mockOpen = jest.fn(async () => {});
 const mockToast = { success: jest.fn(), error: jest.fn(), info: jest.fn() };
@@ -65,11 +66,22 @@ jest.mock('@oxy.so/bloom/typography', () => {
   return { H1: Text, H3: Text, Text };
 });
 jest.mock('@oxy.so/bloom/button', () => ({
-  Button: ({ children, onPress }: { children: React.ReactNode; onPress: () => void }) => {
+  Button: ({
+    children,
+    onPress,
+    disabled,
+  }: {
+    children: React.ReactNode;
+    onPress: () => void;
+    disabled?: boolean;
+  }) => {
     const { Pressable, Text } = require('react-native');
-    if (children === 'subscriptions.page.founder.becomeSupporter') mockRetainedCheckout = onPress;
+    if (children === 'subscriptions.page.founder.becomeSupporter') {
+      mockRetainedCheckout = onPress;
+      mockFounderDisabled = disabled;
+    }
     return (
-      <Pressable accessibilityRole="button" onPress={onPress}>
+      <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled}>
         <Text>{children}</Text>
       </Pressable>
     );
@@ -190,6 +202,7 @@ beforeEach(() => {
   mockConfirmStarted.mockClear();
   mockRetainedCancel = undefined;
   mockRetainedCheckout = undefined;
+  mockFounderDisabled = undefined;
   Object.values(mockToast).forEach((fn) => {
     fn.mockClear();
   });
@@ -209,12 +222,15 @@ beforeEach(() => {
   });
   bind(oxy);
 });
-afterEach(() => {
+afterEach(async () => {
   held?.destroy();
-  cleanup();
-  client.clear();
-  oxy.dispose();
-  onlineManager.setOnline(true);
+  await act(async () => {
+    cleanup();
+    onlineManager.setOnline(true);
+    await client.resumePausedMutations();
+    client.clear();
+    oxy.dispose();
+  });
 });
 afterAll(async () => {
   server.closeAllConnections();
@@ -287,7 +303,9 @@ it('does not execute a checkout paused in A after switching to B', async () => {
   await waitFor(() =>
     expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
   );
-  onlineManager.setOnline(false);
+  await act(async () => {
+    onlineManager.setOnline(false);
+  });
   fireEvent.press(screen.getByText('subscriptions.page.founder.becomeSupporter'));
   await waitFor(() =>
     expect(
@@ -369,7 +387,9 @@ it('does not open checkout or report an old error after an account change', asyn
 });
 
 it('does not present purchase actions while the first entitlements query is offline', async () => {
-  onlineManager.setOnline(false);
+  await act(async () => {
+    onlineManager.setOnline(false);
+  });
   const screen = render(view());
   await waitFor(() => expect(screen.getByText('Could not load your subscription')).toBeTruthy());
   expect(screen.queryByText('subscriptions.page.founder.becomeSupporter')).toBeNull();
@@ -509,7 +529,9 @@ it('does not replay a paused checkout while entitlements are unavailable', async
   await waitFor(() =>
     expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
   );
-  onlineManager.setOnline(false);
+  await act(async () => {
+    onlineManager.setOnline(false);
+  });
   fireEvent.press(screen.getByText('subscriptions.page.founder.becomeSupporter'));
   await waitFor(() =>
     expect(
@@ -530,4 +552,47 @@ it('does not replay a paused checkout while entitlements are unavailable', async
   expect(mockPost.mock.calls.map((call) => call[0])).not.toContain('/api/billing/checkout');
   expect(mockOpen).not.toHaveBeenCalled();
   expect(mockToast.error).not.toHaveBeenCalled();
+});
+
+it('does not let a paused checkout from A disable checkout for B', async () => {
+  client.clear();
+  client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0, networkMode: 'offlineFirst' },
+      mutations: { retry: false, gcTime: 0, networkMode: 'online' },
+    },
+  });
+  const screen = render(view());
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
+  );
+  await act(async () => {
+    onlineManager.setOnline(false);
+  });
+  fireEvent.press(screen.getByText('subscriptions.page.founder.becomeSupporter'));
+  await waitFor(() =>
+    expect(
+      client
+        .getMutationCache()
+        .getAll()
+        .some((m) => m.state.isPaused),
+    ).toBe(true),
+  );
+  await switchToB(screen.rerender);
+  await waitFor(() =>
+    expect(requests).toContainEqual({
+      owner: 'B',
+      path: '/api/profiles/me/entitlements',
+      method: 'GET',
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
+  );
+  expect(mockFounderDisabled).toBe(false);
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await client.resumePausedMutations();
+  });
+  expect(mockPost.mock.calls.map((call) => call[0])).not.toContain('/api/billing/checkout');
 });
