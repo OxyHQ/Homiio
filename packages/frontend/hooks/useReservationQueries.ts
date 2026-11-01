@@ -1,13 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseMutationResult,
-  type MutateOptions,
-  type UseMutateFunction,
-  type UseMutateAsyncFunction,
-  type UseQueryResult,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import {
   accountOwnerKey,
   useAccountOwner,
@@ -102,9 +93,9 @@ type OwnedVariables = { ownerKey: string };
 type CapturedReservation = { owner: AccountOwner | null; id?: string; input: object };
 const reservationOwners = new WeakMap<object, CapturedReservation>();
 
-type OwnedResult<Input> = Omit<UseMutationResult<Reservation, Error, Input>, 'variables'> & {
-  variables: Input | undefined;
-  isOwnerReady: boolean;
+type OwnedResult<Input> = {
+  mutateAsync: (input: Input) => Promise<Reservation>;
+  isPending: boolean;
 };
 
 function useOwnedReservationMutation<Input extends object>(id?: string): OwnedResult<Input> {
@@ -143,49 +134,11 @@ function useOwnedReservationMutation<Input extends object>(id?: string): OwnedRe
     reservationOwners.set(variables, { owner, id, input });
     return variables;
   };
-  const callbacks = (options?: MutateOptions<Reservation, Error, Input>) =>
-    options && {
-      onSuccess: (
-        data: Reservation,
-        variables: OwnedVariables,
-        result: unknown,
-        context: Parameters<NonNullable<typeof options.onSuccess>>[3],
-      ) => {
-        const captured = reservationOwners.get(variables);
-        if (captured && isCurrent(captured.owner))
-          options.onSuccess?.(data, captured.input as Input, result, context);
-      },
-      onError: (
-        error: Error,
-        variables: OwnedVariables,
-        result: unknown,
-        context: Parameters<NonNullable<typeof options.onError>>[3],
-      ) => {
-        const captured = reservationOwners.get(variables);
-        if (captured && isCurrent(captured.owner))
-          options.onError?.(error, captured.input as Input, result, context);
-      },
-      onSettled: (
-        data: Reservation | undefined,
-        error: Error | null,
-        variables: OwnedVariables,
-        result: unknown,
-        context: Parameters<NonNullable<typeof options.onSettled>>[4],
-      ) => {
-        const captured = reservationOwners.get(variables);
-        if (captured && isCurrent(captured.owner))
-          options.onSettled?.(data, error, captured.input as Input, result, context);
-      },
-    };
-  const mutate: UseMutateFunction<Reservation, Error, Input> = (...args) => {
-    mutation.mutate(capture(args[0] as Input), callbacks(args[1]));
-  };
-  const mutateAsync: UseMutateAsyncFunction<Reservation, Error, Input> = async (...args) => {
-    const variables = capture(args[0] as Input);
-    const options = args[1];
+  const mutateAsync = async (input: Input): Promise<Reservation> => {
+    const variables = capture(input);
     if (!isCurrent(owner)) throw new Error('The active account changed');
     try {
-      const result = await mutation.mutateAsync(variables, callbacks(options));
+      const result = await mutation.mutateAsync(variables);
       if (!isCurrent(owner)) throw new Error('The active account changed');
       return result;
     } catch (error) {
@@ -193,31 +146,9 @@ function useOwnedReservationMutation<Input extends object>(id?: string): OwnedRe
       throw error;
     }
   };
-  const visible = !mutation.variables || Boolean(owner && mutation.variables.ownerKey === ownerKey);
   return {
-    ...mutation,
-    ...(!visible
-      ? {
-          data: undefined,
-          error: null,
-          failureCount: 0,
-          failureReason: null,
-          isError: false,
-          isIdle: true,
-          isPaused: false,
-          isPending: false,
-          isSuccess: false,
-          status: 'idle' as const,
-          submittedAt: 0,
-        }
-      : {}),
-    variables:
-      visible && mutation.variables
-        ? (reservationOwners.get(mutation.variables)?.input as Input | undefined)
-        : undefined,
-    mutate,
+    isPending: Boolean(owner && mutation.isPending && mutation.variables?.ownerKey === ownerKey),
     mutateAsync,
-    isOwnerReady: Boolean(owner),
   };
 }
 

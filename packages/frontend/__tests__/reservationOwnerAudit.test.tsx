@@ -325,7 +325,7 @@ it('suppresses a late A update after its request was sent', async () => {
     hook.rerender(undefined);
   });
   await waitFor(() => expect(outcome).toBe('error'));
-  expect(hook.result.current.data).toBeUndefined();
+  expect(hook.result.current.isPending).toBe(false);
   expect(requests).toContainEqual({
     owner: 'A',
     method: 'PATCH',
