@@ -7,6 +7,7 @@ let mockOrigin = '';
 jest.mock('@/config', () => ({ API_URL: mockOrigin }));
 let server: Server;
 let apiModule: typeof import('../utils/api');
+let unavailable = false;
 const envelope = {
   success: true,
   message: 'kept',
@@ -28,6 +29,11 @@ beforeAll(async () => {
       contentType: req.headers['content-type'],
     });
     res.setHeader('Content-Type', 'application/json');
+    if (req.url === '/private-outage' && unavailable) {
+      res.writeHead(503);
+      res.end('{"error":"service_unavailable"}');
+      return;
+    }
     if (req.url === '/denied') {
       res.writeHead(403);
       res.end('{"error":"Forbidden","details":{"reason":"fixture"}}');
@@ -84,4 +90,32 @@ it('preserves API multipart bodies and their generated boundary', async () => {
   expect(await apiModule.api.post('/upload', form)).toEqual({ data: envelope });
   expect(seen.at(-1)?.contentType).toMatch(/^multipart\/form-data; boundary=/);
   expect(seen.at(-1)?.body).toContain('fixture upload');
+});
+
+it('retains the same bearer when a protected request recovers from a 503', async () => {
+  const oxy = new OxyServices({ baseURL: mockOrigin });
+  const token = `h.${Buffer.from(JSON.stringify({ userId: 'fixture', sessionId: 'session-fixture', exp: 4102444800 })).toString('base64url')}.s`;
+  oxy.session.setAccessToken(token);
+  apiModule.bindApiToOxy(oxy);
+  unavailable = true;
+  try {
+    await expect(apiModule.api.get('/private-outage', { requireAuth: true })).rejects.toMatchObject(
+      {
+        status: 503,
+        response: { error: 'service_unavailable' },
+      },
+    );
+    expect(oxy.session.accessToken).toBe(token);
+    unavailable = false;
+    expect(await apiModule.api.get('/private-outage', { requireAuth: true })).toEqual({
+      data: envelope,
+    });
+    expect(seen.slice(-2).map((request) => request.bearer)).toEqual([
+      `Bearer ${token}`,
+      `Bearer ${token}`,
+    ]);
+  } finally {
+    unavailable = false;
+    oxy.dispose();
+  }
 });
