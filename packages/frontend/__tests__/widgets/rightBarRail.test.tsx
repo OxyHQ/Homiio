@@ -38,7 +38,7 @@ jest.mock('expo-router', () => ({
  * test about routing.
  */
 const mockWidgetManager = jest.fn();
-jest.mock('@/components/widgets', () => ({
+jest.mock('@/components/widgets/WidgetManager', () => ({
   WidgetManager: (props: Record<string, unknown>) => {
     mockWidgetManager(props);
     return null;
