@@ -287,10 +287,24 @@ it.each([false, true])('does not publish a late A save after B, ABA=%s', async (
   );
   fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
   await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+  const pending = mockSave.mock.results[0].value;
   switchTo('B', () => screen.rerender(wrap(<RoommatePreferencesPage />)));
-  if (aba) switchTo('A', () => screen.rerender(wrap(<RoommatePreferencesPage />)));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  if (aba) {
+    switchTo('A', () => screen.rerender(wrap(<RoommatePreferencesPage />)));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+      ).not.toBeDisabled(),
+    );
+  }
   await act(async () => {
     finish({});
+    await pending;
   });
   await waitFor(() =>
     expect(
