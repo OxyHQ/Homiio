@@ -23,6 +23,8 @@ const mockLease = {
   coTenants: [{ oxyUserId: 'co' }],
 };
 let mockProfileId = 'A';
+let mockRouteId = 'lease-1';
+const mockBack = jest.fn();
 const mockSign = { isPending: false, mutateAsync: jest.fn() };
 jest.mock('@oxy.so/services/ui/client', () => ({ useOxy: () => mockAuth }));
 jest.mock('@/config', () => ({ API_URL: 'https://example.invalid' }));
@@ -36,8 +38,8 @@ jest.mock('@/hooks/useLeaseQueries', () => {
   };
 });
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({ id: 'lease-1' }),
-  useRouter: () => ({ canGoBack: () => false, back: jest.fn() }),
+  useLocalSearchParams: () => ({ id: mockRouteId }),
+  useRouter: () => ({ canGoBack: () => false, back: mockBack }),
 }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -123,6 +125,7 @@ beforeEach(() => {
   oxy.session.setAccessToken(token('A'));
   mockLease.status = 'draft';
   mockProfileId = 'A';
+  mockRouteId = 'lease-1';
   mockAuth.isAuthenticated = true;
   mockAuth.user = { id: 'A' };
   mockAuth.activeSessionId = 'session-A';
@@ -241,3 +244,143 @@ it.each([
     expect(screen.queryByRole('button', { name: label })).toBeNull();
   },
 );
+
+const routeActions = [
+  ['sign', 'draft', 'Sign lease'],
+  ['terminate', 'pending_signatures', 'contracts.detail.terminate'],
+  ['delete', 'draft', 'contracts.detail.deleteDraft'],
+] as const;
+
+it.each(routeActions)(
+  'does not %s after the route changes and returns before confirmation',
+  async (_kind, status, label) => {
+    mockLease.status = status;
+    let answer!: (confirmed: boolean) => void;
+    jest.mocked(confirm).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const screen = render(tree());
+    await waitFor(() => expect(screen.getByRole('button', { name: label })).toBeEnabled());
+    fireEvent.press(screen.getByRole('button', { name: label }));
+    await waitFor(() => expect(confirm).toHaveBeenCalled());
+    await act(async () => {
+      mockRouteId = 'lease-2';
+      screen.rerender(tree());
+    });
+    await act(async () => {
+      mockRouteId = 'lease-1';
+      screen.rerender(tree());
+    });
+    await act(async () => {
+      answer(true);
+      await Promise.resolve();
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  },
+);
+
+it.each(routeActions)(
+  'does not %s when the screen unmounts before confirmation',
+  async (_kind, status, label) => {
+    mockLease.status = status;
+    let answer!: (confirmed: boolean) => void;
+    jest.mocked(confirm).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const screen = render(tree());
+    await waitFor(() => expect(screen.getByRole('button', { name: label })).toBeEnabled());
+    fireEvent.press(screen.getByRole('button', { name: label }));
+    await waitFor(() => expect(confirm).toHaveBeenCalled());
+    screen.unmount();
+    await act(async () => {
+      answer(true);
+      await Promise.resolve();
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  },
+);
+
+it.each(routeActions)(
+  'performs %s for the unchanged route and account',
+  async (kind, status, label) => {
+    mockLease.status = status;
+    jest.mocked(confirm).mockResolvedValueOnce(true);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ success: true, data: { id: 'lease-1' } }),
+    });
+    const screen = render(tree());
+    await waitFor(() => expect(screen.getByRole('button', { name: label })).toBeEnabled());
+    fireEvent.press(screen.getByRole('button', { name: label }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(String(mockFetch.mock.calls[0][0])).toContain(
+      kind === 'sign'
+        ? '/api/leases/lease-1/sign'
+        : kind === 'terminate'
+          ? '/api/leases/lease-1/terminate'
+          : '/api/leases/lease-1',
+    );
+    expect(mockBack).toHaveBeenCalledTimes(kind === 'delete' ? 1 : 0);
+  },
+);
+
+it.each(
+  routeActions.flatMap(([kind, status, label]) =>
+    (['change', 'return', 'unmount'] as const).map(
+      (transition) => [kind, status, label, transition] as const,
+    ),
+  ),
+)('does not show %s completion after route %s', async (_kind, status, label, transition) => {
+  mockLease.status = status;
+  jest.mocked(confirm).mockResolvedValueOnce(true);
+  let finish!: (value: unknown) => void;
+  mockFetch.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const screen = render(tree());
+  await waitFor(() => expect(screen.getByRole('button', { name: label })).toBeEnabled());
+  fireEvent.press(screen.getByRole('button', { name: label }));
+  await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+  if (transition === 'unmount') {
+    screen.unmount();
+  } else {
+    await act(async () => {
+      mockRouteId = 'lease-2';
+      screen.rerender(tree());
+    });
+    if (transition === 'return') {
+      await act(async () => {
+        mockRouteId = 'lease-1';
+        screen.rerender(tree());
+      });
+    }
+  }
+  await act(async () => {
+    finish({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ success: true, data: { id: 'lease-1' } }),
+    });
+  });
+  await waitFor(() => expect(client.getMutationCache().getAll()[0]?.state.status).toBe('success'));
+  expect(mockBack).not.toHaveBeenCalled();
+  expect(toast.success).not.toHaveBeenCalled();
+  expect(toast.error).not.toHaveBeenCalled();
+});
