@@ -3,10 +3,18 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
-  resolver-and-identity:
+  cross-package-diagnostic:
+    name: Cross-package diagnostic (${{ matrix.platform }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [web, android, ios]
+    env:
+      NODE_OPTIONS: '--max-old-space-size=4096'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -15,137 +23,104 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.3'
-      - name: Verify unchanged frozen package inputs
-        run: |
-          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
-          git diff --exit-code 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194 -- bun.lock package.json packages/frontend/package.json .github/scripts/bun-install.sh
-      - name: Install frozen dependencies
-        run: bash .github/scripts/bun-install.sh --frozen-lockfile
-      - name: Test scoping, symlinks, version and resolver delegation
-        run: node --test scripts/diagnostics/alia-chart-opt-in.test.cjs
-      - name: Install additive experimental exports into this runner only
-        run: node scripts/diagnostics/install-chart-fixture.cjs
-      - name: Typecheck experimental exports
-        run: bun run --cwd packages/frontend typecheck
-      - name: Compare actual chart component identities
-        run: bun run --cwd packages/frontend test --runInBand aliaGranularChartDiagnostic.test.tsx
-  context-identity:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.4.3'
-      - name: Verify unchanged frozen package inputs
-        run: |
-          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
-          git diff --exit-code 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194 -- bun.lock package.json packages/frontend/package.json .github/scripts/bun-install.sh
-      - name: Install frozen dependencies
-        run: bash .github/scripts/bun-install.sh --frozen-lockfile
-      - name: Compare Alia ask and runtime contexts
-        run: bun run --cwd packages/frontend test --runInBand aliaGranularContextDiagnostic.test.tsx
-  web-paired:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.4.3'
-      - name: Verify unchanged frozen package inputs
-        run: |
-          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
-          git diff --exit-code 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194 -- bun.lock package.json packages/frontend/package.json .github/scripts/bun-install.sh
-      - name: Install frozen dependencies
-        run: bash .github/scripts/bun-install.sh --frozen-lockfile
-      - name: Export the exact baseline
+      - name: Download and verify independently built Bloom candidate
         env:
-          NODE_OPTIONS: '--max-old-space-size=4096'
-          NODE_ENV: production
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          gh run download 41306714172 -R OxyHQ/Bloom -n chart-package-41306714172-1 -D "$RUNNER_TEMP/bloom"
+          node - <<'NODE'
+          const fs = require('node:fs'); const crypto = require('node:crypto'); const path = require('node:path');
+          const root = path.join(process.env.RUNNER_TEMP, 'bloom');
+          const m = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json')));
+          const expected = 'sha512-FGNijMTfxID/wceUq8XbizlI3L3ykZ8B/K+eAnw+0SiBqZ/uuDfUiRz9QLRHz6ET1QtartcKVHWi/Y/K/7ZrOA==';
+          const actual = 'sha512-' + crypto.createHash('sha512').update(fs.readFileSync(path.join(root,m.tarball))).digest('base64');
+          if (m.candidate !== 'af61ce26815fdcf3544791f95b72e476a3311cb9' || m.diagnosticHead !== 'd061f4a0f5952c6c3caf26193e1f4c15d75d716f' || m.integrity !== expected || actual !== expected) throw Error('Bloom artifact mismatch');
+          console.log(JSON.stringify(m));
+          NODE
+      - name: Install original frozen dependencies
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
+      - name: Capture baseline native selection
+        working-directory: packages/frontend
+        run: |
+          bunx expo-modules-autolinking resolve --platform android --json > "$RUNNER_TEMP/baseline-android.json"
+          bunx expo-modules-autolinking resolve --platform apple --json > "$RUNNER_TEMP/baseline-apple.json"
+      - name: Export baseline web
+        env:
+          NODE_ENV: production
+        if: matrix.platform == 'web'
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
           for file in packages/frontend/metro.config.js 'packages/frontend/app/(pages)/insights/index.tsx' packages/frontend/components/property/PriceRangeSection.tsx; do git show "0fab9c18ac2ddf20d1a7c7c6860523cb5411c194:$file" > "$file"; done
           bun run --cwd packages/frontend build --clear
-          mv packages/frontend/dist /tmp/homiio-optin-baseline
+          mv packages/frontend/dist "$RUNNER_TEMP/baseline-dist"
           git checkout HEAD -- packages/frontend/metro.config.js 'packages/frontend/app/(pages)/insights/index.tsx' packages/frontend/components/property/PriceRangeSection.tsx
-      - name: Install additive experimental exports into this runner only
-        run: node scripts/diagnostics/install-chart-fixture.cjs
-      - name: Export opt-in web
-        env:
-          NODE_OPTIONS: '--max-old-space-size=4096'
-          NODE_ENV: production
-        run: bun run --cwd packages/frontend build --clear
-      - name: Record production JS gzip metrics
+      - name: Resolve candidate published versions, record lock changes, and install frozen
         run: |
-          echo 'Baseline metrics:'
-          bun scripts/check-web-export-budget.mjs /tmp/homiio-optin-baseline || true
-          echo 'Opt-in web metrics:'
-          bun scripts/check-web-export-budget.mjs packages/frontend/dist || true
-      - name: Export opt-in web with diagnostic maps
-        working-directory: packages/frontend
-        env:
-          NODE_OPTIONS: '--max-old-space-size=4096'
-          NODE_ENV: production
-        run: bunx expo export --platform web --output-dir /tmp/homiio-optin-web --source-maps --clear
-      - name: Inspect web module identity
-        run: node scripts/diagnostics/inspect-opt-in-maps.cjs /tmp/homiio-optin-web
-  android-javascript:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.4.3'
-      - name: Verify unchanged frozen package inputs
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          for (const file of ['package.json', 'packages/frontend/package.json']) {
+            const p = JSON.parse(fs.readFileSync(file));
+            for (const section of ['dependencies', 'overrides']) if (p[section]?.['@oxy.so/bloom']) p[section]['@oxy.so/bloom'] = '15.90.1';
+            if (p.dependencies?.['@alia.onl/sdk']) p.dependencies['@alia.onl/sdk'] = '22.10.0';
+            fs.writeFileSync(file, JSON.stringify(p,null,2)+'\n');
+          }
+          NODE
+          bash .github/scripts/bun-install.sh --lockfile-only
+          git diff --stat -- package.json packages/frontend/package.json bun.lock
+          git diff -- package.json packages/frontend/package.json bun.lock > "$RUNNER_TEMP/lock-candidate.diff"
+          bash .github/scripts/bun-install.sh --frozen-lockfile
+      - name: Pack exact SDK draft and install both experimental packages in runner only
         run: |
-          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
-          git diff --exit-code 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194 -- bun.lock package.json packages/frontend/package.json .github/scripts/bun-install.sh
-      - name: Install frozen dependencies
-        run: bash .github/scripts/bun-install.sh --frozen-lockfile
-      - name: Install additive experimental exports into this runner only
-        run: node scripts/diagnostics/install-chart-fixture.cjs
-      - name: Export opt-in android JavaScript with maps
+          set -euo pipefail
+          git clone --quiet --no-checkout https://github.com/OxyHQ/Alia.git "$RUNNER_TEMP/alia"
+          git -C "$RUNNER_TEMP/alia" checkout --quiet 9890310c9
+          test "$(git -C "$RUNNER_TEMP/alia" rev-parse HEAD)" = 9890310c9533e1284b3d681274ffa1580d6818f5
+          mkdir "$RUNNER_TEMP/sdk-pack"
+          (cd "$RUNNER_TEMP/alia/packages/alia-chat" && npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP/sdk-pack" > "$RUNNER_TEMP/sdk-pack/manifest.json")
+          node - <<'NODE'
+          const fs = require('node:fs'); const path = require('node:path'); const {createRequire} = require('node:module'); const {execFileSync} = require('node:child_process');
+          const app = createRequire(path.resolve('packages/frontend/package.json'));
+          const work = fs.realpathSync(process.cwd());
+          const sdk = fs.realpathSync(path.dirname(app.resolve('@alia.onl/sdk/package.json')));
+          const bloom = fs.realpathSync(path.dirname(app.resolve('@oxy.so/bloom/package.json')));
+          const root = process.env.RUNNER_TEMP;
+          for (const dest of [sdk,bloom]) if (!dest.startsWith(work + path.sep)) throw Error('Refusing to modify installation outside workspace');
+          const entries = [[sdk,path.join(root,'sdk-pack',JSON.parse(fs.readFileSync(path.join(root,'sdk-pack/manifest.json')))[0].filename)], [bloom,path.join(root,'bloom',JSON.parse(fs.readFileSync(path.join(root,'bloom/manifest.json'))).tarball)]];
+          for (const [dest,tar] of entries) { fs.rmSync(dest,{recursive:true}); fs.mkdirSync(dest,{recursive:true}); execFileSync('tar',['-xzf',tar,'--strip-components=1','-C',dest]); }
+          console.log('Installed candidate tarballs into isolated runner paths:', sdk, bloom);
+          NODE
+      - name: Capture updated native selection
         working-directory: packages/frontend
-        env:
-          NODE_OPTIONS: '--max-old-space-size=4096'
-          NODE_ENV: production
-        run: bunx expo export --platform android --output-dir /tmp/homiio-optin-android --source-maps --clear
-      - name: Inspect android module identity
-        run: node scripts/diagnostics/inspect-opt-in-maps.cjs /tmp/homiio-optin-android
-  ios-javascript:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.4.3'
-      - name: Verify unchanged frozen package inputs
         run: |
-          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
-          git diff --exit-code 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194 -- bun.lock package.json packages/frontend/package.json .github/scripts/bun-install.sh
-      - name: Install frozen dependencies
-        run: bash .github/scripts/bun-install.sh --frozen-lockfile
-      - name: Install additive experimental exports into this runner only
-        run: node scripts/diagnostics/install-chart-fixture.cjs
-      - name: Export opt-in ios JavaScript with maps
-        working-directory: packages/frontend
+          bunx expo-modules-autolinking resolve --platform android --json > "$RUNNER_TEMP/candidate-android.json"
+          bunx expo-modules-autolinking resolve --platform apple --json > "$RUNNER_TEMP/candidate-apple.json"
+      - name: Export candidate JavaScript and inspect sources
         env:
-          NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
-        run: bunx expo export --platform ios --output-dir /tmp/homiio-optin-ios --source-maps --clear
-      - name: Inspect ios module identity
-        run: node scripts/diagnostics/inspect-opt-in-maps.cjs /tmp/homiio-optin-ios
+        working-directory: packages/frontend
+        run: bunx expo export --platform '${{ matrix.platform }}' --output-dir "$RUNNER_TEMP/candidate-dist" --source-maps --clear
+      - name: Inspect module identity
+        run: node scripts/diagnostics/inspect-opt-in-maps.cjs "$RUNNER_TEMP/candidate-dist"
+      - name: Measure web gzip
+        if: matrix.platform == 'web'
+        run: |
+          echo Baseline
+          bun scripts/check-web-export-budget.mjs "$RUNNER_TEMP/baseline-dist" || true
+          echo Candidate
+          bun scripts/check-web-export-budget.mjs "$RUNNER_TEMP/candidate-dist" || true
+      - name: Upload lock and native resolution evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: alia-bloom-crosspack-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/lock-candidate.diff
+            ${{ runner.temp }}/baseline-android.json
+            ${{ runner.temp }}/candidate-android.json
+            ${{ runner.temp }}/baseline-apple.json
+            ${{ runner.temp }}/candidate-apple.json
+          if-no-files-found: warn
+          retention-days: 2

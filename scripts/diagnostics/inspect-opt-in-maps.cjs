@@ -7,7 +7,7 @@ function visit(map) {
   for (const source of map.sources ?? []) {
     if (source.includes('@alia.onl/sdk/src/components/AliaAskCore.tsx')) counts.set('askCore', (counts.get('askCore') ?? 0) + 1);
     if (source.includes('@alia.onl/sdk/src/runtime/config.tsx')) counts.set('runtimeConfig', (counts.get('runtimeConfig') ?? 0) + 1);
-    if (source.includes('@alia.onl/sdk/src/__diagnostic_chart_adapter.ts')) counts.set('adapter', (counts.get('adapter') ?? 0) + 1);
+    if (source.includes('@alia.onl/sdk/src/metro/granular-charts.js')) counts.set('adapter', (counts.get('adapter') ?? 0) + 1);
     if (source.includes('@oxy.so/bloom/lib/module/chart-cards/index.js') || source.includes('@oxy.so/bloom/src/chart-cards/index.ts')) counts.set('legacyBarrel', (counts.get('legacyBarrel') ?? 0) + 1);
   }
 }
