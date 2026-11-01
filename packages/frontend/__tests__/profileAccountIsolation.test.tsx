@@ -3,7 +3,13 @@ import { StrictMode, type ReactNode } from 'react';
 import { createServer, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react-native';
-import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  dehydrate,
+  hydrate,
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
 import { OxyServices } from '@oxy.so/core';
 
 let mockOrigin = '';
@@ -545,4 +551,36 @@ it('retains the underlying failure on a superseded read without replacing the ne
     expect((error as Error & { cause?: unknown }).cause).toBeInstanceOf(Error);
   });
   expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
+});
+
+it('refetches a hydrated fresh marker when no bound profile exists', async () => {
+  const { useProfileOwner } = jest.requireActual<typeof import('../hooks/useProfileOwner')>(
+    '../hooks/useProfileOwner',
+  );
+  const ownerView = renderHook(() => useProfileOwner());
+  await waitFor(() => expect(ownerView.result.current).not.toBeNull());
+  const priorRevision = ownerView.result.current?.revision;
+  if (priorRevision === undefined) throw new Error('Expected a committed owner');
+  ownerView.unmount();
+  const donor = new QueryClient();
+  donor.setQueryData(['profile', 'me', 'provider-v2', 'session-A', priorRevision + 1], true);
+  hydrate(client, dehydrate(donor));
+  donor.clear();
+  const view = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() => expect(requests).toEqual(['A']));
+  await waitFor(() => expect(view.result.current.profile?.oxyUserId).toBe('A'));
+});
+
+it('keeps a bound same-session profile on an offline remount without another request', async () => {
+  const first = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() => expect(first.result.current.profile?.oxyUserId).toBe('A'));
+  first.unmount();
+  try {
+    onlineManager.setOnline(false);
+    const remounted = renderHook(() => useProfile(), { wrapper });
+    await waitFor(() => expect(remounted.result.current.profile?.oxyUserId).toBe('A'));
+    expect(requests).toEqual(['A']);
+  } finally {
+    onlineManager.setOnline(true);
+  }
 });
