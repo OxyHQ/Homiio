@@ -18,7 +18,7 @@ jobs:
       - name: Check out candidate
         uses: actions/checkout@v7
         with:
-          ref: b534d756e64a0560c203eccdb1bf1780799deebc
+          ref: c90836a95c088ceeaea58b9358b7a0f6adede7c7
           path: candidate
           persist-credentials: false
       - uses: actions/setup-node@v7
