@@ -7,9 +7,6 @@ jobs:
   chart-barrel-diagnostic:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    env:
-      NODE_OPTIONS: '--max-old-space-size=4096'
-      NODE_ENV: production
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -25,6 +22,9 @@ jobs:
       - name: Install frozen dependencies
         run: bash .github/scripts/bun-install.sh --frozen-lockfile
       - name: Export baseline
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
         run: |
           bun run --cwd packages/frontend build --clear
           mv packages/frontend/dist /tmp/homiio-chart-baseline
@@ -54,6 +54,9 @@ jobs:
           console.log(`Temporarily narrowed ${barrel}; no package is published`);
           JS
       - name: Export diagnostic candidate
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
         run: bun run --cwd packages/frontend build --clear
       - name: Compare the unchanged production budget on both exports
         run: |
