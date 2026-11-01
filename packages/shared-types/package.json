@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "@types/node": "^26.6.5"
+    "@types/node": "^26.6.6"
   },
   "files": [
     "dist/**/*"
