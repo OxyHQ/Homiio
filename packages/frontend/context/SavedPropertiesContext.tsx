@@ -86,6 +86,10 @@ interface SavedPropertiesProviderProps {
 }
 
 const propertyKey = (property: Pick<SavedProperty, 'id' | 'id'>): string | undefined => property.id;
+const ownerGroupKey = (owner: AccountOwner | null) => {
+  const identity = accountOwnerKey(owner);
+  return JSON.stringify([identity[0], identity[2], identity[3], identity[4]]);
+};
 
 export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = ({ children }) => {
   const queryClient = useQueryClient();
@@ -112,15 +116,17 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   const foldersKey = useMemo(() => savedKeys.folders(owner), [owner]);
   const propertiesKey = useMemo(() => savedKeys.properties(owner), [owner]);
   const ownerKey = JSON.stringify(propertiesKey);
+  const savingOwnerKey = ownerGroupKey(owner);
   const [savingState, setSavingState] = useState<{ key: string; ids: Set<string> }>({
-    key: ownerKey,
+    key: savingOwnerKey,
     ids: new Set(),
   });
   const [errorState, setErrorState] = useState<{ key: string; message: string | null }>({
     key: ownerKey,
     message: null,
   });
-  const _savingPropertyIds = savingState.key === ownerKey ? savingState.ids : new Set<string>();
+  const _savingPropertyIds =
+    savingState.key === savingOwnerKey ? savingState.ids : new Set<string>();
   const error = errorState.key === ownerKey ? errorState.message : null;
   const setError = useCallback(
     (message: string | null) => setErrorState({ key: ownerKey, message }),
@@ -129,10 +135,10 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   const setSavingPropertyIds = useCallback(
     (updater: (previous: Set<string>) => Set<string>) =>
       setSavingState((previous) => ({
-        key: ownerKey,
-        ids: updater(previous.key === ownerKey ? previous.ids : new Set()),
+        key: savingOwnerKey,
+        ids: updater(previous.key === savingOwnerKey ? previous.ids : new Set()),
       })),
-    [ownerKey],
+    [savingOwnerKey],
   );
   const isCurrentOwner = useCallback(
     (expected: AccountOwner | null) => {
@@ -147,8 +153,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
   );
   const beginPropertyChange = (propertyId: string) => {
     const captured = currentOwner(owner);
-    const identity = accountOwnerKey(captured);
-    const groupKey = JSON.stringify([identity[0], identity[2], identity[3], identity[4]]);
+    const groupKey = ownerGroupKey(captured);
     const changeKey = JSON.stringify([groupKey, propertyId]);
     const changeId = ++nextPropertyChange.current;
     latestPropertyChange.current.set(changeKey, changeId);
@@ -349,7 +354,7 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
       property?: Partial<SavedProperty>,
     ) => {
       const { captured, groupKey, changeKey, changeId } = beginPropertyChange(propertyId);
-      const savingKey = JSON.stringify([propertiesKey, propertyId]);
+      const savingKey = JSON.stringify([groupKey, propertyId]);
       let startedSaving = false;
       try {
         await queryClient.cancelQueries(
@@ -445,10 +450,10 @@ export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = (
           if (!active?.size) {
             activeSavingChanges.current.delete(savingKey);
             setSavingState((previous) => {
-              if (previous.key !== ownerKey) return previous;
+              if (previous.key !== groupKey) return previous;
               const ids = new Set(previous.ids);
               ids.delete(propertyId);
-              return { key: ownerKey, ids };
+              return { key: groupKey, ids };
             });
           }
         }

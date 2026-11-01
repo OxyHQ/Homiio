@@ -1213,3 +1213,81 @@ it('attempts folder and saved-home actions offline with Homiio offlineFirst defa
   expect(updateFolder).toHaveBeenCalledTimes(1);
   expect(client.getMutationCache().getAll()).toHaveLength(0);
 });
+
+it('keeps the saving indicator while the same owner recovers a session id', async () => {
+  mockAuth.activeSessionId = null;
+  getSaved.mockResolvedValue(properties('P'));
+  getFolders.mockResolvedValue(folders('folder'));
+  let finish!: (value: unknown) => void;
+  save.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+  let pending!: Promise<void>;
+  act(() => {
+    pending = view.result.current.savePropertyToFolder('P', null);
+  });
+  await waitFor(() => expect(view.result.current.isPropertySaving('P')).toBe(true));
+  act(() => {
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  expect(view.result.current.isPropertySaving('P')).toBe(true);
+  await act(async () => {
+    finish(undefined);
+    await pending;
+  });
+  await waitFor(() => expect(view.result.current.isPropertySaving('P')).toBe(false));
+});
+
+it('keeps the newer saving indicator when an earlier save finishes after session recovery', async () => {
+  mockAuth.activeSessionId = null;
+  getSaved.mockResolvedValue(properties('P'));
+  getFolders.mockResolvedValue(folders('folder'));
+  let finishFirst!: (value: unknown) => void;
+  let finishSecond!: (value: unknown) => void;
+  save
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishFirst = resolve;
+        }),
+    )
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSecond = resolve;
+        }),
+    );
+  const view = renderHook(() => useSavedPropertiesContext(), { wrapper });
+  await waitFor(() => expect(view.result.current.savedProperties[0]?.id).toBe('P'));
+  let earlier!: Promise<void>;
+  act(() => {
+    earlier = view.result.current.savePropertyToFolder('P', null);
+  });
+  const rejected = expect(earlier).rejects.toBeInstanceOf(SavedPropertyChangeSupersededError);
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  act(() => {
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  let later!: Promise<void>;
+  act(() => {
+    later = view.result.current.savePropertyToFolder('P', null);
+  });
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+  await act(async () => {
+    finishFirst(undefined);
+    await rejected;
+  });
+  expect(view.result.current.isPropertySaving('P')).toBe(true);
+  await act(async () => {
+    finishSecond(undefined);
+    await later;
+  });
+  await waitFor(() => expect(view.result.current.isPropertySaving('P')).toBe(false));
+});
