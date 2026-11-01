@@ -263,7 +263,7 @@ class SupersededSavedSearchRead extends Error {}
 const savedSearchRevisions = new WeakMap<object, number>();
 const savedSearchReadRevisions = new WeakMap<
   SavedSearch[],
-  { owner: AccountOwner; revision: number }
+  { owner: AccountOwner; query: object; revision: number }
 >();
 
 function hasVerifiedSavedSearches(client: QueryClient, owner: AccountOwner | null): boolean {
@@ -291,8 +291,10 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
       if (!Array.isArray(newData)) return newData;
       const query = client.getQueryCache().find({ queryKey, exact: true });
       const read = savedSearchReadRevisions.get(newData);
-      if (!query || !read) return newData;
+      if (!read) return newData;
       if (
+        !query ||
+        read.query !== query ||
         read.revision !== (savedSearchRevisions.get(query) ?? 0) ||
         !isBoundOxyInstance(read.owner.oxyServices) ||
         !isExactAccountProjection(read.owner)
@@ -316,7 +318,7 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
         const searches = extractSearchList(response.data).map((raw) => normalizeSearch(raw));
         assertAccountOwner(current);
         if (signal.aborted) throw new Error('Saved search read was cancelled');
-        if (query) savedSearchReadRevisions.set(searches, { owner: current, revision });
+        if (query) savedSearchReadRevisions.set(searches, { owner: current, query, revision });
         return searches;
       }),
   };

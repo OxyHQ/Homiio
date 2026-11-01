@@ -1164,3 +1164,49 @@ it('does not publish a reentrant read started while cancelling an earlier read',
   await waitFor(() => expect(client.getQueryState(key)!.status).toBe('success'));
   expect(view.result.current.error).toBeNull();
 });
+
+it('keeps an unavailable state if a superseded read has no prior cache data', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('A private watch'));
+  const query = loadedSavedSearchQuery()!;
+  const key = query.queryKey;
+  shouldHoldA = true;
+  allowPutA = true;
+  act(() => {
+    void client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  const firstRead = holdA!;
+  let started = false;
+  let reentrant: Promise<void> | undefined;
+  const stop = client.getQueryCache().subscribe((event) => {
+    if (!started && event.query === query && query.state.fetchStatus === 'idle') {
+      started = true;
+      reentrant = client.refetchQueries({ queryKey: key, exact: true });
+    }
+  });
+  await act(async () => {
+    expect(await view.result.current.updateSearch('watch-A', { name: 'Updated A' })).toBe(true);
+  });
+  await waitFor(() => expect(holdA).not.toBe(firstRead));
+  stop();
+  act(() => {
+    query.setState({ data: undefined });
+  });
+  await act(async () => {
+    holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    await reentrant;
+    firstRead.end(JSON.stringify({ data: [] }));
+  });
+  expect(client.getQueryData(key)).toBeUndefined();
+  await waitFor(() =>
+    expect(view.result.current.error).toBe('search.widgets.savedSearches.loadFailed'),
+  );
+  shouldHoldA = false;
+  nameA = 'Updated A';
+  await act(async () => {
+    await client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
+  expect(view.result.current.error).toBeNull();
+});
