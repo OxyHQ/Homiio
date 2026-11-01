@@ -11,7 +11,7 @@ interface ProfileContextType {
   hasProfile: boolean;
   canAccessRoommates: boolean;
   refreshProfile: () => Promise<Profile | null>;
-  isProfileOwnerCurrent: () => boolean;
+  isProfileProjectionCurrent: () => boolean;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -65,7 +65,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     queryClient.setQueryData(['profile', 'me', owner.sessionId, owner.revision], result);
     return result;
   }, [owner, queryClient]);
-  const isProfileOwnerCurrent = useCallback(() => Boolean(owner?.isCurrent()), [owner]);
+  const isProfileProjectionCurrent = useCallback(() => Boolean(owner?.isCurrent()), [owner]);
 
   const hasProfile = profile !== null;
 
@@ -75,8 +75,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   );
 
   const contextValue = useMemo(
-    () => ({ profile, hasProfile, canAccessRoommates, refreshProfile, isProfileOwnerCurrent }),
-    [profile, hasProfile, canAccessRoommates, refreshProfile, isProfileOwnerCurrent],
+    () => ({ profile, hasProfile, canAccessRoommates, refreshProfile, isProfileProjectionCurrent }),
+    [profile, hasProfile, canAccessRoommates, refreshProfile, isProfileProjectionCurrent],
   );
 
   return <ProfileContext.Provider value={contextValue}>{children}</ProfileContext.Provider>;

@@ -223,6 +223,17 @@ it('preserves sub-only bearer compatibility when the returned profile matches', 
   expect(requests).toEqual(['A']);
 });
 
+it('does not attest a bearer subject when only a sub-only token changes', async () => {
+  oxy.session.setAccessToken(subjectOnly('A'));
+  const view = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() => expect(view.result.current.profile?.oxyUserId).toBe('A'));
+  act(() => oxy.session.setAccessToken(subjectOnly('B')));
+  expect(oxy.session.userId).toBeNull();
+  expect(view.result.current.isProfileProjectionCurrent()).toBe(true);
+  expect(view.result.current.profile?.oxyUserId).toBe('A');
+  expect(requests).toEqual(['A']);
+});
+
 it('keeps an already loaded profile through same-session sub-only refresh while offline', async () => {
   oxy.session.setAccessToken(subjectOnly('A'));
   const view = renderHook(() => useProfile(), { wrapper });
