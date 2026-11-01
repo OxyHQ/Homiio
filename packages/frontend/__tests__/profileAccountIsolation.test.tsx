@@ -362,6 +362,10 @@ it('does not publish an older same-owner GET after a completed store update', as
   await act(async () => {
     oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-update' })}}`);
     await expect(first).rejects.toThrow('A newer profile request superseded this one');
+    await waitFor(() => {
+      const query = client.getQueryCache().find({ queryKey: ['profile', 'me', 'session-A'] });
+      expect(query?.state.fetchStatus).toBe('idle');
+    });
   });
   expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-2' }));
 });
