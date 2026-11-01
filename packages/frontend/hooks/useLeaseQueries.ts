@@ -102,81 +102,73 @@ export function useCreateLeaseFromApplication(): UseMutationResult<Lease, Error,
  * for why it travels and what the server does when it no longer matches.
  */
 type SignLeaseInput = { acceptTerms: boolean; termsSha256?: string };
-type OwnedSignVariables = { input: SignLeaseInput; leaseId: string };
-const signOwners = new WeakMap<OwnedSignVariables, AccountOwner | null>();
+type OwnedLeaseVariables<Input> = { input: Input; leaseId: string };
+const leaseMutationOwners = new WeakMap<object, AccountOwner | null>();
 
-export function useSignLease(id: string): Omit<
-  UseMutationResult<Lease, Error, SignLeaseInput>,
-  'variables'
-> & {
-  variables: SignLeaseInput | undefined;
+type OwnedLeaseResult<Data, Input> = Omit<UseMutationResult<Data, Error, Input>, 'variables'> & {
+  variables: Input | undefined;
   isOwnerReady: boolean;
-} {
-  const queryClient = useQueryClient();
+};
+
+function useOwnedLeaseMutation<Data, Input>(
+  id: string,
+  operation: (owner: AccountOwner, input: Input, leaseId: string) => Promise<Data>,
+  onCommitted: (data: Data, input: Input, leaseId: string, stillCurrent: () => boolean) => void,
+): OwnedLeaseResult<Data, Input> {
   const { owner, isCurrent } = useAccountOwnerGuard();
-  const mutation = useMutation<Lease, Error, OwnedSignVariables>({
+  const mutation = useMutation<Data, Error, OwnedLeaseVariables<Input>>({
     mutationFn: (variables) => {
-      const captured = signOwners.get(variables) ?? null;
+      const captured = leaseMutationOwners.get(variables) ?? null;
       if (!isCurrent(captured)) throw new Error('The active account changed');
       return withAccountOwner(captured, (current) =>
-        leaseService.signLease(
-          variables.leaseId,
-          variables.input.acceptTerms,
-          variables.input.termsSha256,
-          current,
-        ),
+        operation(current, variables.input, variables.leaseId),
       );
     },
-    onSuccess: (lease, variables) => {
-      if (!isCurrent(signOwners.get(variables) ?? null)) return;
-      queryClient.setQueryData(leaseKeys.detail(variables.leaseId), lease);
-      if (isCurrent(signOwners.get(variables) ?? null))
-        void queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
+    onSuccess: (data, variables) => {
+      const stillCurrent = () => isCurrent(leaseMutationOwners.get(variables) ?? null);
+      if (stillCurrent()) onCommitted(data, variables.input, variables.leaseId, stillCurrent);
     },
   });
-  const capture = (input: SignLeaseInput): OwnedSignVariables => {
+  const capture = (input: Input): OwnedLeaseVariables<Input> => {
     const variables = { input, leaseId: id };
-    signOwners.set(variables, owner);
+    leaseMutationOwners.set(variables, owner);
     return variables;
   };
-  const callbacks = (options?: MutateOptions<Lease, Error, SignLeaseInput>) =>
+  const callbacks = (options?: MutateOptions<Data, Error, Input>) =>
     options && {
       onSuccess: (
-        data: Lease,
-        variables: OwnedSignVariables,
+        data: Data,
+        variables: OwnedLeaseVariables<Input>,
         result: unknown,
         context: Parameters<NonNullable<typeof options.onSuccess>>[3],
       ) => {
-        if (isCurrent(signOwners.get(variables) ?? null))
+        if (isCurrent(leaseMutationOwners.get(variables) ?? null))
           options.onSuccess?.(data, variables.input, result, context);
       },
       onError: (
         error: Error,
-        variables: OwnedSignVariables,
+        variables: OwnedLeaseVariables<Input>,
         result: unknown,
         context: Parameters<NonNullable<typeof options.onError>>[3],
       ) => {
-        if (isCurrent(signOwners.get(variables) ?? null))
+        if (isCurrent(leaseMutationOwners.get(variables) ?? null))
           options.onError?.(error, variables.input, result, context);
       },
       onSettled: (
-        data: Lease | undefined,
+        data: Data | undefined,
         error: Error | null,
-        variables: OwnedSignVariables,
+        variables: OwnedLeaseVariables<Input>,
         result: unknown,
         context: Parameters<NonNullable<typeof options.onSettled>>[4],
       ) => {
-        if (isCurrent(signOwners.get(variables) ?? null))
+        if (isCurrent(leaseMutationOwners.get(variables) ?? null))
           options.onSettled?.(data, error, variables.input, result, context);
       },
     };
-  const mutate: UseMutateFunction<Lease, Error, SignLeaseInput> = (input, options) => {
+  const mutate: UseMutateFunction<Data, Error, Input> = (input, options) => {
     mutation.mutate(capture(input), callbacks(options));
   };
-  const mutateAsync: UseMutateAsyncFunction<Lease, Error, SignLeaseInput> = async (
-    input,
-    options,
-  ) => {
+  const mutateAsync: UseMutateAsyncFunction<Data, Error, Input> = async (input, options) => {
     const variables = capture(input);
     if (!isCurrent(owner)) throw new Error('The active account changed');
     try {
@@ -188,7 +180,8 @@ export function useSignLease(id: string): Omit<
       throw error;
     }
   };
-  const visible = !mutation.variables || isCurrent(signOwners.get(mutation.variables) ?? null);
+  const visible =
+    !mutation.variables || isCurrent(leaseMutationOwners.get(mutation.variables) ?? null);
   return {
     ...mutation,
     ...(!visible
@@ -213,15 +206,30 @@ export function useSignLease(id: string): Omit<
   };
 }
 
-export function useTerminateLease(id: string): UseMutationResult<Lease, Error, TerminateLeaseData> {
+export function useSignLease(id: string): OwnedLeaseResult<Lease, SignLeaseInput> {
   const queryClient = useQueryClient();
-  return useMutation<Lease, Error, TerminateLeaseData>({
-    mutationFn: (payload) => leaseService.terminateLease(id, payload),
-    onSuccess: (lease) => {
-      queryClient.setQueryData(leaseKeys.detail(id), lease);
-      queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
+  return useOwnedLeaseMutation(
+    id,
+    (owner, input: SignLeaseInput, leaseId) =>
+      leaseService.signLease(leaseId, input.acceptTerms, input.termsSha256, owner),
+    (lease, _input, leaseId, stillCurrent) => {
+      queryClient.setQueryData(leaseKeys.detail(leaseId), lease);
+      if (stillCurrent()) void queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
     },
-  });
+  );
+}
+
+export function useTerminateLease(id: string): OwnedLeaseResult<Lease, TerminateLeaseData> {
+  const queryClient = useQueryClient();
+  return useOwnedLeaseMutation(
+    id,
+    (owner, input: TerminateLeaseData, leaseId) =>
+      leaseService.terminateLease(leaseId, input, owner),
+    (lease, _input, leaseId, stillCurrent) => {
+      queryClient.setQueryData(leaseKeys.detail(leaseId), lease);
+      if (stillCurrent()) void queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
+    },
+  );
 }
 
 export function useUploadLeaseDocument(
@@ -236,13 +244,14 @@ export function useUploadLeaseDocument(
   });
 }
 
-export function useDeleteLease(): UseMutationResult<void, Error, string> {
+export function useDeleteLease(): OwnedLeaseResult<void, string> {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: (id) => leaseService.deleteLease(id),
-    onSuccess: (_data, id) => {
-      queryClient.removeQueries({ queryKey: leaseKeys.detail(id), exact: true });
-      queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
+  return useOwnedLeaseMutation(
+    '',
+    (owner, leaseId: string) => leaseService.deleteLease(leaseId, owner),
+    (_data, leaseId, _target, stillCurrent) => {
+      queryClient.removeQueries({ queryKey: leaseKeys.detail(leaseId), exact: true });
+      if (stillCurrent()) void queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
     },
-  });
+  );
 }

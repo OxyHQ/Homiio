@@ -933,7 +933,7 @@
       "emptyDocuments": "No documents attached.",
       "addShort": "Add",
       "signLease": "Sign lease",
-      "signAccountUnavailable": "Não foi possível verificar a conta para a assinatura. Reconecte sua conta e tente novamente.",
+      "signAccountUnavailable": "Não foi possível verificar a conta para esta ação. Reconecte sua conta e tente novamente.",
       "confirmSignExtended": "By signing you agree to the lease terms. Once both parties sign, the lease becomes active.",
       "confirmSignAction": "Sign",
       "confirmTerminateShortTitle": "Terminate lease?",

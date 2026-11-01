@@ -933,7 +933,7 @@
       "emptyDocuments": "No documents attached.",
       "addShort": "Add",
       "signLease": "Sign lease",
-      "signAccountUnavailable": "Kami tidak dapat memverifikasi akun untuk penandatanganan. Hubungkan kembali akun Anda dan coba lagi.",
+      "signAccountUnavailable": "Kami tidak dapat memverifikasi akun untuk tindakan ini. Hubungkan kembali akun Anda dan coba lagi.",
       "confirmSignExtended": "By signing you agree to the lease terms. Once both parties sign, the lease becomes active.",
       "confirmSignAction": "Sign",
       "confirmTerminateShortTitle": "Terminate lease?",

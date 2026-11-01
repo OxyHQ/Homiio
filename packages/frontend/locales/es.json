@@ -1298,7 +1298,7 @@
       "emptyDocuments": "No hay documentos adjuntos.",
       "addShort": "Añadir",
       "signLease": "Firmar contrato",
-      "signAccountUnavailable": "No podemos verificar la cuenta para firmar. Vuelve a conectar tu cuenta e inténtalo de nuevo.",
+      "signAccountUnavailable": "No podemos verificar la cuenta para esta acción. Vuelve a conectar tu cuenta e inténtalo de nuevo.",
       "confirmSignExtended": "Al firmar aceptas los términos del contrato. Cuando ambas partes firmen, el contrato quedará activo.",
       "confirmSignAction": "Firmar",
       "confirmTerminateShortTitle": "¿Terminar contrato?",
