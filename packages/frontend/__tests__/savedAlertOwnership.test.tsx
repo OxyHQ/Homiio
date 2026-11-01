@@ -396,6 +396,8 @@ it('does not restore an unknown owner binding from serialized paused variables',
   });
   expect(restored.getMutationCache().getAll()[0]?.state.status).toBe('error');
   expect(seen.filter((request) => request.method === 'POST')).toEqual([]);
+  await waitFor(() => expect(view.result.current.isLoading).toBe(false));
+  await waitFor(() => expect(view.result.current.isSaving).toBe(false));
   restored.clear();
 });
 

@@ -418,7 +418,7 @@ export const usePrimarySavedArea = (): PrimarySavedArea => {
     () =>
       primarySavedAreaOf(isAuthenticated, {
         isPending: valid
-          ? (!verified && !query.isError && !unavailable) || query.isPending
+          ? !unavailable && ((!verified && !query.isError) || query.isPending)
           : !unavailable,
         data: valid && verified ? query.data : undefined,
       }),
