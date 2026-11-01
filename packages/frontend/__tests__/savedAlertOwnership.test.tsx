@@ -285,7 +285,7 @@ it('rejects a retained A alert after an A to B to A transition', async () => {
 it('does not resume an A save with the B bearer or show it as B pending', async () => {
   const view = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
-  onlineManager.setOnline(false);
+  act(() => onlineManager.setOnline(false));
   let pending!: Promise<boolean>;
   act(() => {
     pending = view.result.current.saveSearch('new A', 'apartments');
@@ -366,7 +366,7 @@ it('saves successfully for the unchanged owner', async () => {
 it('does not restore an unknown owner binding from serialized paused variables', async () => {
   const view = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
-  onlineManager.setOnline(false);
+  act(() => onlineManager.setOnline(false));
   let pending!: Promise<boolean>;
   act(() => {
     pending = view.result.current.saveSearch('new A', 'apartments');
@@ -427,7 +427,7 @@ it('keeps private searches and paused mutation variables out of SDK account snap
   await persister.whenReady();
   const view = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
-  onlineManager.setOnline(false);
+  act(() => onlineManager.setOnline(false));
   let pending!: Promise<boolean>;
   act(() => {
     pending = view.result.current.saveSearch('private paused search', 'apartments');
@@ -568,7 +568,7 @@ it('uses the newly projected session result in the out-of-render reader', async 
 it('resumes a paused same-owner save with its in-memory payload', async () => {
   const view = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
-  onlineManager.setOnline(false);
+  act(() => onlineManager.setOnline(false));
   let pending!: Promise<boolean>;
   act(() => {
     pending = view.result.current.saveSearch('private name', 'private query');
@@ -699,7 +699,7 @@ it('keeps verified same-owner searches on an in-memory offline remount', async (
   const first = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
   first.unmount();
-  onlineManager.setOnline(false);
+  act(() => onlineManager.setOnline(false));
   const second = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(second.result.current.searches[0]?.id).toBe('watch-A'));
   expect(seen.filter((request) => request.method === 'GET')).toHaveLength(1);
@@ -721,7 +721,7 @@ it('reports a paused unbound hydration as unavailable and recovers on reconnect'
     },
   });
   hydrate(client, blob);
-  onlineManager.setOnline(false);
+  act(() => onlineManager.setOnline(false));
   const restored = renderHook(
     () => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }),
     { wrapper },
