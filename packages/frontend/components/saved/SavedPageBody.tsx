@@ -15,13 +15,12 @@
  */
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
 
-import savedPropertyFolderService from '@/services/savedPropertyFolderService';
-import savedPropertyService from '@/services/savedPropertyService';
+import { useSavedFoldersQuery, useSavedPropertiesQuery } from '@/hooks/useSavedQueries';
 
 import { SavedFoldersSection } from './SavedFoldersSection';
 import { SavedHomesSection } from './SavedHomesSection';
@@ -40,20 +39,8 @@ export function SavedPageBody({ enabled }: { enabled: boolean }) {
   // The same keys and fetchers `SavedPropertiesContext` reads, so this page,
   // the hearts on every card and the folder sheet share one cache. Read here
   // for their loading and error states, which the context does not expose.
-  const savedQuery = useQuery({
-    queryKey: ['savedProperties'],
-    queryFn: () => savedPropertyService.getSavedProperties(),
-    enabled,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
-  const foldersQuery = useQuery({
-    queryKey: ['savedFolders'],
-    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(),
-    enabled,
-    staleTime: 1000 * 60,
-    gcTime: 1000 * 60 * 10,
-  });
+  const savedQuery = useSavedPropertiesQuery(enabled);
+  const foldersQuery = useSavedFoldersQuery(enabled);
 
   const [columnWidth, setColumnWidth] = useState(0);
   const onColumnLayout = useCallback(
@@ -69,11 +56,11 @@ export function SavedPageBody({ enabled }: { enabled: boolean }) {
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['savedProperties'] }),
-      queryClient.invalidateQueries({ queryKey: ['savedFolders'] }),
+      savedQuery.refetch(),
+      foldersQuery.refetch(),
       queryClient.invalidateQueries({ queryKey: ['savedSearches'] }),
     ]);
-  }, [queryClient]);
+  }, [queryClient, savedQuery.refetch, foldersQuery.refetch]);
 
   const savedProperties = savedQuery.data?.properties ?? [];
   const folders = foldersQuery.data?.folders ?? [];

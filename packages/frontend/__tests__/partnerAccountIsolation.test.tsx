@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import { StrictMode, Suspense, startTransition, type ReactNode } from 'react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, render, renderHook, waitFor } from '@testing-library/react-native';
 import { OxyServices } from '@oxy.so/core';
 
 import { useEarnings, useJoinPartner, usePartnerMe, useReferrals } from '@/hooks/usePartner';
 import { partnerApi } from '@/services/partnerApi';
+import { useAccountOwner } from '@/hooks/useAccountOwner';
 
 const mockAuth = {
   isAuthenticated: true,
@@ -300,4 +301,138 @@ it('allows an accepted offline join to resume after unmount for the same session
   await expect(pending).resolves.toEqual(response('A'));
   expect(join).toHaveBeenCalledTimes(1);
   client.unmount();
+});
+
+it('rejects a retained join after an observed projection-only A to B to A transition', async () => {
+  const view = renderHook(() => useJoinPartner(), { wrapper });
+  const old = view.result.current.mutateAsync;
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  act(() => {
+    mockAuth.user = { id: 'A' };
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  await act(async () => {
+    await expect(old()).rejects.toThrow('The active account changed');
+  });
+  expect(join).not.toHaveBeenCalled();
+});
+
+it('keeps the committed A owner valid when a B render suspends and is abandoned', async () => {
+  join.mockResolvedValue(response('A'));
+  const active = renderHook(() => useJoinPartner(), { wrapper });
+  const retained = active.result.current.mutateAsync;
+  let resume!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  const attempted = jest.fn();
+  function Candidate({ suspend }: { suspend: boolean }) {
+    useAccountOwner();
+    if (suspend) attempted();
+    if (suspend) throw pending;
+    return null;
+  }
+  const candidate = render(
+    <Suspense fallback={null}>
+      <Candidate suspend={false} />
+    </Suspense>,
+  );
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    startTransition(() =>
+      candidate.rerender(
+        <Suspense fallback={null}>
+          <Candidate suspend />
+        </Suspense>,
+      ),
+    );
+  });
+  expect(attempted).toHaveBeenCalled();
+  mockAuth.user = { id: 'A' };
+  mockAuth.activeSessionId = 'session-A';
+  await act(async () => {
+    await expect(retained()).resolves.toEqual(response('A'));
+  });
+  candidate.unmount();
+  await act(async () => {
+    resume();
+    await pending;
+  });
+});
+
+it('keeps multiple subscribers in sync through committed changes under StrictMode', async () => {
+  getMe.mockResolvedValue(response('A'));
+  join.mockResolvedValue(response('A'));
+  const strictWrapper = ({ children }: { children: ReactNode }) => (
+    <StrictMode>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    </StrictMode>
+  );
+  const view = renderHook(
+    () => ({
+      first: useAccountOwner(),
+      second: useAccountOwner(),
+      me: usePartnerMe(),
+      join: useJoinPartner(),
+    }),
+    { wrapper: strictWrapper },
+  );
+  await waitFor(() => expect(view.result.current.me.data).toEqual(response('A')));
+  expect(view.result.current.first?.generation).toBe(view.result.current.second?.generation);
+  const old = view.result.current.join.mutateAsync;
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  act(() => {
+    mockAuth.user = { id: 'A' };
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  await act(async () => {
+    await expect(old()).rejects.toThrow('The active account changed');
+  });
+  expect(view.result.current.first?.generation).toBe(view.result.current.second?.generation);
+  await act(async () => {
+    await expect(view.result.current.join.mutateAsync()).resolves.toEqual(response('A'));
+  });
+});
+
+it('invalidates a captured owner when a mismatched projection commits without changing bearer', async () => {
+  const view = renderHook(() => useAccountOwner(), { wrapper });
+  const captured = view.result.current!;
+  const invalidated = jest.fn();
+  const unsubscribe = captured.subscribeInvalidation!(invalidated);
+  expect(captured.isCurrent!()).toBe(true);
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  expect(invalidated).toHaveBeenCalledTimes(1);
+  expect(captured.isCurrent!()).toBe(false);
+  expect(oxy.session.userId).toBe('A');
+  unsubscribe();
+});
+
+it('does not invalidate the owner when a session id arrives during recovery', () => {
+  mockAuth.activeSessionId = null;
+  const view = renderHook(() => useAccountOwner(), { wrapper });
+  const captured = view.result.current!;
+  const invalidated = jest.fn();
+  const unsubscribe = captured.subscribeInvalidation!(invalidated);
+  act(() => {
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  expect(invalidated).not.toHaveBeenCalled();
+  expect(captured.isCurrent!()).toBe(true);
+  unsubscribe();
 });

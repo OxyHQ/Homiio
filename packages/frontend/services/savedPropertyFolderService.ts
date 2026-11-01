@@ -1,4 +1,4 @@
-import { api } from '@/utils/api';
+import { api, type RequestOwner } from '@/utils/api';
 
 export interface SavedPropertyFolder {
   id: string;
@@ -18,8 +18,11 @@ export interface SavedPropertyFoldersResponse {
 }
 
 class SavedPropertyFolderService {
-  async getSavedPropertyFolders(): Promise<SavedPropertyFoldersResponse> {
-    const response = await api.get('/api/profiles/me/saved-property-folders');
+  async getSavedPropertyFolders(owner: RequestOwner): Promise<SavedPropertyFoldersResponse> {
+    const response = await api.get('/api/profiles/me/saved-property-folders', {
+      requireAuth: true,
+      owner,
+    });
 
     // The API returns { success: true, data: { folders: [...] }, message: "..." }
     // where response.data contains the wrapper and response.data.data contains { folders: [...] }
@@ -28,29 +31,40 @@ class SavedPropertyFolderService {
     };
   }
 
-  async createSavedPropertyFolder(folderData: {
-    name: string;
-    description?: string;
-    color?: string;
-    icon?: string;
-  }): Promise<SavedPropertyFolder> {
-    const response = await api.post('/api/profiles/me/saved-property-folders', folderData);
+  async createSavedPropertyFolder(
+    owner: RequestOwner,
+    folderData: {
+      name: string;
+      description?: string;
+      color?: string;
+      icon?: string;
+    },
+  ): Promise<SavedPropertyFolder> {
+    const response = await api.post('/api/profiles/me/saved-property-folders', folderData, {
+      requireAuth: true,
+      owner,
+    });
     return response.data.data;
   }
 
   async updateSavedPropertyFolder(
+    owner: RequestOwner,
     folderId: string,
     folderData: { name?: string; description?: string; color?: string; icon?: string },
   ): Promise<SavedPropertyFolder> {
     const response = await api.put(
       `/api/profiles/me/saved-property-folders/${folderId}`,
       folderData,
+      { requireAuth: true, owner },
     );
     return response.data.data;
   }
 
-  async deleteSavedPropertyFolder(folderId: string): Promise<void> {
-    await api.delete(`/api/profiles/me/saved-property-folders/${folderId}`);
+  async deleteSavedPropertyFolder(owner: RequestOwner, folderId: string): Promise<void> {
+    await api.delete(`/api/profiles/me/saved-property-folders/${folderId}`, {
+      requireAuth: true,
+      owner,
+    });
   }
 }
 

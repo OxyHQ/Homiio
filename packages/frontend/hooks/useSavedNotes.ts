@@ -1,49 +1,109 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from '@oxy.so/bloom/toast';
-import { api } from '@/utils/api';
+import {
+  useMutation,
+  useQueryClient,
+  type MutateOptions,
+  type UseMutateAsyncFunction,
+  type UseMutateFunction,
+} from '@tanstack/react-query';
+import { createSavedOperationId } from '@/utils/createSavedOperationId';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
+import { SavedPropertyChangeSupersededError } from '@/hooks/savedPropertyErrors';
 
 type UpdateNotesVars = { propertyId: string; notes: string };
+type CapturedVars = UpdateNotesVars & { operationId: string };
+type UpdateNotes = (propertyId: string, notes: string) => Promise<void>;
+const capturedOperations = new Map<string, { run: UpdateNotes; unsubscribe: () => void }>();
+function release(operationId: string) {
+  const operation = capturedOperations.get(operationId);
+  if (operation) {
+    capturedOperations.delete(operationId);
+    operation.unsubscribe();
+  }
+}
 
+/** Queue serializable variables while retaining the initiating account in memory. */
 export function useSavedNotesMutation() {
+  const { updateNotes } = useSavedPropertiesContext();
+  const { owner, isCurrent } = useAccountOwnerGuard();
   const queryClient = useQueryClient();
-
-  return useMutation({
+  const mutation = useMutation({
     mutationKey: ['updateSavedPropertyNotes'],
-    mutationFn: async ({ propertyId, notes }: UpdateNotesVars) => {
-      const res = await api.patch(`/me/saved-properties/${propertyId}/notes`, { notes });
-      return res;
+    mutationFn: async ({ operationId, propertyId, notes }: CapturedVars) => {
+      const captured = capturedOperations.get(operationId);
+      if (!captured) throw new Error('The account for this operation is no longer available');
+      await captured.run(propertyId, notes);
     },
-    // Optimistic update to the savedProperties query cache
-    onMutate: async ({ propertyId, notes }) => {
-      await queryClient.cancelQueries({ queryKey: ['savedProperties'] });
-
-      const previous = queryClient.getQueryData<any>(['savedProperties']);
-
-      if (previous && previous.properties && Array.isArray(previous.properties)) {
-        const next = {
-          ...previous,
-          properties: previous.properties.map((p: any) => {
-            const id = p.id;
-            if (id === propertyId) {
-              return { ...p, notes };
-            }
-            return p;
-          }),
-        };
-        queryClient.setQueryData(['savedProperties'], next);
-      }
-
-      return { previous } as { previous: any };
-    },
-    onError: (err: any, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(['savedProperties'], context.previous);
-      }
-      const msg = err?.message || 'Failed to update notes';
-      toast.error(msg);
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+    onSettled: (_data, _error, variables) => {
+      release(variables.operationId);
     },
   });
+  const capture = (variables: UpdateNotesVars): CapturedVars => {
+    const operationId = createSavedOperationId();
+    const unsubscribe = queryClient.getMutationCache().subscribe((event) => {
+      if (event.type !== 'removed') return;
+      const removed = event.mutation.state.variables as CapturedVars | undefined;
+      if (removed?.operationId === operationId) release(operationId);
+    });
+    capturedOperations.set(operationId, { run: updateNotes, unsubscribe });
+    return { ...variables, operationId };
+  };
+  const callbacks = (options?: MutateOptions<void, Error, UpdateNotesVars>) =>
+    options && {
+      onSuccess: (
+        data: void,
+        variables: CapturedVars,
+        result: unknown,
+        context: Parameters<NonNullable<typeof options.onSuccess>>[3],
+      ) =>
+        isCurrent(owner) &&
+        options.onSuccess?.(
+          data,
+          { propertyId: variables.propertyId, notes: variables.notes },
+          result,
+          context,
+        ),
+      onError: (
+        error: Error,
+        variables: CapturedVars,
+        result: unknown,
+        context: Parameters<NonNullable<typeof options.onError>>[3],
+      ) =>
+        isCurrent(owner) &&
+        !(error instanceof SavedPropertyChangeSupersededError) &&
+        options.onError?.(
+          error,
+          { propertyId: variables.propertyId, notes: variables.notes },
+          result,
+          context,
+        ),
+      onSettled: (
+        data: void | undefined,
+        error: Error | null,
+        variables: CapturedVars,
+        result: unknown,
+        context: Parameters<NonNullable<typeof options.onSettled>>[4],
+      ) =>
+        isCurrent(owner) &&
+        !(error instanceof SavedPropertyChangeSupersededError) &&
+        options.onSettled?.(
+          data,
+          error,
+          { propertyId: variables.propertyId, notes: variables.notes },
+          result,
+          context,
+        ),
+    };
+  const mutate: UseMutateFunction<void, Error, UpdateNotesVars> = (variables, options) => {
+    mutation.mutate(capture(variables), callbacks(options));
+  };
+  const mutateAsync: UseMutateAsyncFunction<void, Error, UpdateNotesVars> = async (
+    variables,
+    options,
+  ) => mutation.mutateAsync(capture(variables), callbacks(options));
+  const variables = mutation.variables && {
+    propertyId: mutation.variables.propertyId,
+    notes: mutation.variables.notes,
+  };
+  return { ...mutation, variables, mutate, mutateAsync };
 }

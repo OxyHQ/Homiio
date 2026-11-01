@@ -50,7 +50,13 @@ const toApiError = (error: unknown): ApiError => {
   return new ApiError('Request failed');
 };
 /** A locally captured owner for work that must not follow a later account switch. */
-export type RequestOwner = { oxyServices: OxyServices; userId: string; epoch: number };
+export type RequestOwner = {
+  oxyServices: OxyServices;
+  userId: string;
+  epoch: number;
+  isCurrent?: () => boolean;
+  subscribeInvalidation?: (listener: () => void) => () => void;
+};
 type Options = {
   requireAuth?: boolean;
   params?: Record<string, any>;
@@ -62,7 +68,8 @@ function assertRequestOwner(owner: RequestOwner | undefined): void {
     owner &&
     (boundOxy !== owner.oxyServices ||
       owner.oxyServices.session.userId !== owner.userId ||
-      owner.oxyServices.http.getSessionEpoch() !== owner.epoch)
+      owner.oxyServices.http.getSessionEpoch() !== owner.epoch ||
+      (owner.isCurrent && !owner.isCurrent()))
   ) {
     throw new ApiError('The active account changed');
   }
@@ -83,9 +90,12 @@ async function request<T>(
   const url = suffix ? `${endpoint}${endpoint.includes('?') ? '&' : '?'}${suffix}` : endpoint;
   const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
   const controller = new AbortController();
+  let unsubscribeOwner: (() => void) | undefined;
   // Preserve the linked client's prior default deadline, including body reads.
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
+    assertRequestOwner(options?.owner);
+    unsubscribeOwner = options?.owner?.subscribeInvalidation?.(() => controller.abort());
     assertRequestOwner(options?.owner);
     const client = getClient();
     const config: ResponseRequest = {
@@ -122,8 +132,10 @@ async function request<T>(
     }
     return { data: data as T };
   } catch (error) {
+    assertRequestOwner(options?.owner);
     throw toApiError(error);
   } finally {
+    unsubscribeOwner?.();
     clearTimeout(timer);
   }
 }

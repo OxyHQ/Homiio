@@ -8,8 +8,6 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useOxy } from '@oxy.so/services/ui/client';
 
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
@@ -25,8 +23,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
-import savedPropertyService from '@/services/savedPropertyService';
-import savedPropertyFolderService from '@/services/savedPropertyFolderService';
+import { useAccountOwner } from '@/hooks/useAccountOwner';
+import { useSavedFoldersQuery, useSavedPropertiesQuery } from '@/hooks/useSavedQueries';
 import { spacing } from '@/constants/styles';
 import { propertiesInFolder } from '@/utils/savedFolders';
 import type { Property } from '@homiio/shared-types';
@@ -34,26 +32,9 @@ import type { Property } from '@homiio/shared-types';
 export default function SavedFolderScreen() {
   const { t } = useTranslation();
   const { folderId } = useLocalSearchParams<{ folderId: string }>();
-  const { oxyServices, activeSessionId } = useOxy();
-  const queryClient = useQueryClient();
-
-  const isAuthed = Boolean(oxyServices && activeSessionId);
-
-  const savedQuery = useQuery({
-    queryKey: ['savedProperties'],
-    queryFn: () => savedPropertyService.getSavedProperties(),
-    enabled: isAuthed,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
-
-  const foldersQuery = useQuery({
-    queryKey: ['savedFolders'],
-    queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(),
-    enabled: isAuthed,
-    staleTime: 1000 * 60,
-    gcTime: 1000 * 60 * 10,
-  });
+  const isAuthed = Boolean(useAccountOwner());
+  const savedQuery = useSavedPropertiesQuery(isAuthed);
+  const foldersQuery = useSavedFoldersQuery(isAuthed);
 
   const savedProperties = savedQuery.data?.properties;
   const folders = foldersQuery.data?.folders;
@@ -68,11 +49,8 @@ export default function SavedFolderScreen() {
   );
 
   const handleRefresh = useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['savedProperties'] }),
-      queryClient.invalidateQueries({ queryKey: ['savedFolders'] }),
-    ]);
-  }, [queryClient]);
+    await Promise.all([savedQuery.refetch(), foldersQuery.refetch()]);
+  }, [savedQuery.refetch, foldersQuery.refetch]);
 
   // Map property id → saved note so the shared grid's footer slot can surface
   // the note (the grid receives plain `Property` objects, not `SavedProperty`).

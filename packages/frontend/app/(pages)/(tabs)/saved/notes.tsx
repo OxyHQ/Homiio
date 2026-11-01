@@ -37,7 +37,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { spacing } from '@/constants/styles';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { accountOwnerKey, useAccountOwner, useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
+import { SavedPropertyChangeSupersededError } from '@/hooks/savedPropertyErrors';
 import { logger } from '@/utils/logger';
 import {
   deleteNote,
@@ -67,7 +69,13 @@ interface FlatNote {
 }
 
 export default function NotesScreen() {
+  const owner = useAccountOwner();
+  return <NotesScreenContent key={JSON.stringify(accountOwnerKey(owner))} />;
+}
+
+function NotesScreenContent() {
   const { t } = useTranslation();
+  const { owner, isCurrent } = useAccountOwnerGuard();
   const formatting = useFormatting();
   const { browseMode } = useRentalMode();
   const { savedProperties, loadSavedProperties } = useSavedPropertiesContext();
@@ -138,13 +146,15 @@ export default function NotesScreen() {
 
   const persistNotes = useCallback(
     async (propertyId: string, mutator: (notes: PropertyNote[]) => PropertyNote[]) => {
+      if (!isCurrent(owner)) throw new Error('The active account changed');
       const property = savedProperties.find((p) => p.id === propertyId);
       if (!property) return;
       const updated = mutator(parseNotesString(property.notes));
       await updateNotesMutate({ propertyId, notes: serializeNotesArray(updated) });
+      if (!isCurrent(owner)) throw new Error('The active account changed');
       await loadSavedProperties();
     },
-    [savedProperties, updateNotesMutate, loadSavedProperties],
+    [savedProperties, updateNotesMutate, loadSavedProperties, owner, isCurrent],
   );
 
   const closeEditor = useCallback(() => {
@@ -153,24 +163,29 @@ export default function NotesScreen() {
   }, []);
 
   const handleSaveNote = useCallback(async () => {
-    if (!editing) return;
+    const captured = owner;
+    if (!editing || !isCurrent(captured)) return;
     setSaving(true);
     try {
       await persistNotes(editing.propertyId, (notes) =>
         upsertNote(notes, { id: editing.note.id, text }),
       );
+      if (!isCurrent(captured)) return;
       closeEditor();
       toast.success(t('saved.notes.saved'));
     } catch (error: unknown) {
+      if (!isCurrent(captured) || error instanceof SavedPropertyChangeSupersededError) return;
       logger.error('Failed to save note:', error);
       toast.error(t('saved.errors.updateNotesFailed'));
     } finally {
-      setSaving(false);
+      if (isCurrent(captured)) setSaving(false);
     }
-  }, [editing, text, persistNotes, closeEditor, t]);
+  }, [editing, text, persistNotes, closeEditor, t, owner, isCurrent]);
 
   const handleDeleteNote = useCallback(
     async (propertyId: string, noteId: string) => {
+      const captured = owner;
+      if (!isCurrent(captured)) return;
       const ok = await confirm({
         title: t('saved.notes.deleteTitle'),
         description: t('saved.notes.deleteMessage'),
@@ -178,30 +193,35 @@ export default function NotesScreen() {
         cancelLabel: t('common.cancel'),
         destructive: true,
       });
-      if (!ok) return;
+      if (!ok || !isCurrent(captured)) return;
       try {
         await persistNotes(propertyId, (notes) => deleteNote(notes, noteId));
+        if (!isCurrent(captured)) return;
         toast.success(t('saved.notes.deleted'));
       } catch (error: unknown) {
+        if (!isCurrent(captured) || error instanceof SavedPropertyChangeSupersededError) return;
         logger.error('Failed to delete note:', error);
         toast.error(t('saved.errors.updateNotesFailed'));
       }
     },
-    [persistNotes, t],
+    [persistNotes, t, owner, isCurrent],
   );
 
   const handleToggle = useCallback(
     async (propertyId: string, noteId: string, kind: 'pin' | 'archive') => {
+      const captured = owner;
+      if (!isCurrent(captured)) return;
       try {
         await persistNotes(propertyId, (notes) =>
           kind === 'pin' ? togglePin(notes, noteId) : toggleArchive(notes, noteId),
         );
       } catch (error: unknown) {
+        if (!isCurrent(captured) || error instanceof SavedPropertyChangeSupersededError) return;
         logger.error(`Failed to toggle note ${kind}:`, error);
         toast.error(t('saved.errors.updateNotesFailed'));
       }
     },
-    [persistNotes, t],
+    [persistNotes, t, owner, isCurrent],
   );
 
   return (
