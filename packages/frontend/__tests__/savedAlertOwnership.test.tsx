@@ -17,7 +17,8 @@ const mockAuth = {
 jest.mock('@/config', () => ({ API_URL: mockOrigin }));
 jest.mock('@oxy.so/services/ui/client', () => ({ useOxy: () => mockAuth }));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-jest.mock('@oxy.so/bloom/toast', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
+const mockToast = { success: jest.fn(), error: jest.fn() };
+jest.mock('@oxy.so/bloom/toast', () => ({ toast: mockToast }));
 
 const token = (id: string) =>
   `h.${Buffer.from(JSON.stringify({ userId: id, sessionId: `session-${id}`, exp: 4102444800 })).toString('base64url')}.s`;
@@ -35,6 +36,7 @@ let client: QueryClient;
 let seen: Array<{ method: string; owner: string; path: string }>;
 let holdB: ServerResponse | undefined;
 let shouldHoldB = false;
+let allowPutA = false;
 let useSavedSearches: typeof import('../hooks/useSavedSearches').useSavedSearches;
 let usePrimarySavedArea: typeof import('../hooks/useSavedSearches').usePrimarySavedArea;
 let savedSearchesReading: typeof import('../hooks/useSavedSearches').savedSearchesReading;
@@ -48,6 +50,10 @@ beforeAll(async () => {
     res.setHeader('Content-Type', 'application/json');
     if (req.method === 'GET' && owner === 'B' && shouldHoldB) {
       holdB = res;
+      return;
+    }
+    if (req.method === 'PUT' && owner === 'A' && allowPutA) {
+      res.end(JSON.stringify({ data: { id: 'watch-A', name: 'Updated A', query: 'A' } }));
       return;
     }
     if (req.method === 'PUT') {
@@ -83,6 +89,9 @@ beforeAll(async () => {
 beforeEach(() => {
   seen = [];
   shouldHoldB = false;
+  allowPutA = false;
+  mockToast.success.mockClear();
+  mockToast.error.mockClear();
   holdB = undefined;
   oxy = new OxyServices({ baseURL: mockOrigin });
   oxy.session.setAccessToken(token('A'));
@@ -259,4 +268,32 @@ it('does not treat an opaque bearer as an empty verified saved-search list', asy
   expect(view.result.current.saved.error).toBe('search.widgets.savedSearches.loadFailed');
   expect(view.result.current.saved.isLoading).toBe(false);
   expect(view.result.current.primary).toEqual({ selection: null, pending: false });
+});
+
+it('does not toast or report success when a cache subscriber switches the owner during publication', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  allowPutA = true;
+  let switched = false;
+  const off = client.getQueryCache().subscribe((event) => {
+    if (
+      !switched &&
+      event.type === 'updated' &&
+      event.action.type === 'success' &&
+      Array.isArray(event.query.state.data) &&
+      event.query.state.data.some((v) => v?.name === 'Updated A')
+    ) {
+      switched = true;
+      oxy.session.setAccessToken(token('B'));
+      mockAuth.user = { id: 'B' };
+      mockAuth.activeSessionId = 'session-B';
+      view.rerender(undefined);
+    }
+  });
+  await act(async () => {
+    expect(await view.result.current.updateSearch('watch-A', { name: 'Updated A' })).toBe(false);
+  });
+  expect(switched).toBe(true);
+  expect(mockToast.success).not.toHaveBeenCalled();
+  off();
 });
