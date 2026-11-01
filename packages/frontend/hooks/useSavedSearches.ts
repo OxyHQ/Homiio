@@ -258,6 +258,12 @@ const savedSearchOwners = new WeakMap<
   { owner: AccountOwner; data: SavedSearch[] | undefined }
 >();
 
+const savedSearchRevisions = new WeakMap<object, number>();
+const savedSearchReadRevisions = new WeakMap<
+  SavedSearch[],
+  { owner: AccountOwner; revision: number }
+>();
+
 function hasVerifiedSavedSearches(client: QueryClient, owner: AccountOwner | null): boolean {
   if (!owner) return false;
   const query = client.getQueryCache().find({ queryKey: savedSearchesKeyFor(owner), exact: true });
@@ -279,10 +285,22 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
     staleTime: verified ? 1000 * 30 : 0,
     ...(verified ? {} : { refetchOnMount: 'always' as const }),
     gcTime: 1000 * 60 * 10,
-    structuralSharing: false,
+    structuralSharing: (oldData: unknown, newData: unknown) => {
+      if (!Array.isArray(newData)) return newData;
+      const query = client.getQueryCache().find({ queryKey, exact: true });
+      const read = savedSearchReadRevisions.get(newData);
+      if (!query || !read) return newData;
+      if (read.revision !== (savedSearchRevisions.get(query) ?? 0)) {
+        if (Array.isArray(oldData)) return oldData;
+        throw new Error('Saved search read was superseded');
+      }
+      savedSearchOwners.set(query, { owner: read.owner, data: newData });
+      return newData;
+    },
     queryFn: ({ signal }: { signal: AbortSignal }) =>
       withAccountOwner(owner, async (current): Promise<SavedSearch[]> => {
         const query = client.getQueryCache().find({ queryKey, exact: true });
+        const revision = query ? (savedSearchRevisions.get(query) ?? 0) : 0;
         const previous = query && savedSearchOwners.get(query);
         if (query && (!previous || !isExactAccountProjection(previous.owner))) {
           savedSearchOwners.set(query, { owner: current, data: undefined });
@@ -293,7 +311,7 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
         const searches = extractSearchList(response.data).map((raw) => normalizeSearch(raw));
         assertAccountOwner(current);
         if (signal.aborted) throw new Error('Saved search read was cancelled');
-        if (query) savedSearchOwners.set(query, { owner: current, data: searches });
+        if (query) savedSearchReadRevisions.set(searches, { owner: current, revision });
         return searches;
       }),
   };
@@ -537,7 +555,10 @@ export const useSavedSearches = (): UseSavedSearches => {
         const result = [...list];
         if (index === -1) result.push(next);
         else result[index] = next;
-        if (query) savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        if (query) {
+          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
+          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        }
         return result;
       });
     },
@@ -557,7 +578,10 @@ export const useSavedSearches = (): UseSavedSearches => {
       }
       queryClient.setQueryData<SavedSearch[]>(queryKey, (prev) => {
         const result = (prev ?? []).filter((s) => s.id !== searchId);
-        if (query) savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        if (query) {
+          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
+          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        }
         return result;
       });
     },
