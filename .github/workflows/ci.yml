@@ -10,4 +10,4 @@ jobs:
         with:
           bun-version: 1.4.3
       - run: bun install --frozen-lockfile
-      - run: bun run --cwd packages/frontend test --runInBand --testPathPatterns=savedAlertOwnership --testNamePattern='earlier saved-search read' --forceExit
+      - run: bun run --cwd packages/frontend test --runInBand --testPathPatterns=savedAlertOwnership --testNamePattern='earlier saved-search read|successful create and delete' --forceExit

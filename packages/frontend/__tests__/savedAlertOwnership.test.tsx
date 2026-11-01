@@ -919,3 +919,34 @@ it('keeps a confirmed update after an earlier saved-search read finishes', async
   expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
   await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
 });
+
+it('keeps successful create and delete of different searches while an earlier read returns', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  shouldHoldA = true;
+  let reading: Promise<void> | undefined;
+  act(() => {
+    reading = client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  await act(async () => {
+    const results = await Promise.all([
+      view.result.current.saveSearch('new A', 'apartments'),
+      view.result.current.deleteSavedSearch('watch-A', 'A private watch'),
+    ]);
+    expect(results).toEqual([true, true]);
+  });
+  expect((client.getQueryData(key) as Array<{ id: string }>).map((item) => item.id)).toEqual([
+    'new-A',
+  ]);
+  await act(async () => {
+    const finished = new Promise<void>((resolve) => holdA!.once('finish', resolve));
+    holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    await finished;
+    await reading;
+  });
+  expect((client.getQueryData(key) as Array<{ id: string }>).map((item) => item.id)).toEqual([
+    'new-A',
+  ]);
+});
