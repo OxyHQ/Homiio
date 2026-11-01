@@ -7,13 +7,13 @@
  * `Alert.alert` with buttons it replaced — also works on web.
  */
 import type React from 'react';
+import { useRef } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services/ui/client';
 
-import { Admonition } from '@oxy.so/bloom/admonition';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Badge } from '@oxy.so/bloom/badge';
 import { Button } from '@oxy.so/bloom/button';
@@ -32,6 +32,14 @@ import { toast } from '@oxy.so/bloom/toast';
 import { H1, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { contentClamp, spacing } from '@/constants/styles';
+import {
+  accountOwnerKey,
+  type AccountOwner,
+  useAccountOwnerGuard,
+  withAccountOwner,
+} from '@/hooks/useAccountOwner';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { ProfileSkeleton } from '@/components/ui/skeletons/ProfileSkeleton';
 import type { Entitlements } from '@/store/subscriptionStore';
 import { api } from '@/utils/api';
 import { getFormatLocale } from '@/utils/dateLocale';
@@ -51,63 +59,71 @@ const DEFAULT_ENTITLEMENTS: Entitlements = {
 
 type EntitlementsResponse = { success: boolean; entitlements: Entitlements };
 
-/** Posts a billing action that answers with the account's new entitlements. */
-async function postForEntitlements(endpoint: string, body: object, failure: string) {
-  const { data } = await api.post<EntitlementsResponse>(endpoint, body);
+/** Posts a billing action bound to the account observed when it was started. */
+async function postForEntitlements(
+  endpoint: string,
+  body: object,
+  failure: string,
+  owner: AccountOwner,
+) {
+  const { data } = await api.post<EntitlementsResponse>(endpoint, body, { owner });
   if (!data?.success) throw new Error(failure);
   return data.entitlements || DEFAULT_ENTITLEMENTS;
 }
+
+type Product = 'plus' | 'file' | 'founder';
 
 export default function SubscriptionsScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors: theme } = useTheme();
-  const { oxyServices, activeSessionId } = useOxy();
-
+  const { openAccountDialog } = useOxy();
+  const { owner, isCurrent } = useAccountOwnerGuard();
   const queryClient = useQueryClient();
-
-  const entitlementsKey = ['profiles', 'me', 'entitlements', activeSessionId] as const;
+  const owners = useRef(new WeakMap<{ product: Product }, AccountOwner>());
+  const entitlementsKey = [
+    'profiles',
+    'me',
+    'entitlements',
+    'owned-v1',
+    ...accountOwnerKey(owner),
+  ] as const;
   const entitlementsQuery = useQuery({
     queryKey: entitlementsKey,
-    queryFn: async () => {
-      const { data } = await api.get<EntitlementsResponse>('/api/profiles/me/entitlements');
-      if (!data?.success) throw new Error('Failed to load entitlements');
-      return data.entitlements || DEFAULT_ENTITLEMENTS;
-    },
-    enabled: Boolean(oxyServices && activeSessionId),
+    queryFn: () =>
+      withAccountOwner(owner, async (current) => {
+        const { data } = await api.get<EntitlementsResponse>('/api/profiles/me/entitlements', {
+          owner: current,
+        });
+        if (!data?.success) throw new Error('Failed to load entitlements');
+        return data.entitlements || DEFAULT_ENTITLEMENTS;
+      }),
+    enabled: Boolean(owner?.sessionId),
   });
   const entitlements = entitlementsQuery.data ?? null;
 
   const checkoutMutation = useMutation({
-    mutationFn: async (product: 'plus' | 'file' | 'founder') => {
-      // Prevent a redundant purchase while Plus is active.
+    mutationFn: async (action: { product: Product }) => {
+      const captured = owners.current.get(action);
+      if (!captured || !isCurrent(captured)) throw new Error('The active account changed');
+      const { product } = action;
       if (product === 'plus' && entitlements?.plusActive) {
         throw new Error('You already have Homiio+ subscription');
       }
       if (product === 'file' && entitlements?.plusActive) {
         throw new Error('File uploads are included in your Homiio+ subscription');
       }
-      const { data } = await api.post<{ success: boolean; url: string }>('/api/billing/checkout', {
-        product,
+      return withAccountOwner(captured, async (current) => {
+        const { data } = await api.post<{ success: boolean; url: string }>(
+          '/api/billing/checkout',
+          { product },
+          { owner: current },
+        );
+        if (!data?.success) throw new Error('Failed to create checkout session');
+        return data.url;
       });
-      if (!data?.success) throw new Error('Failed to create checkout session');
-      await Linking.openURL(data.url);
     },
   });
-
-  const openCustomerPortal = async () => {
-    const subscriptionId = entitlements?.plusStripeSubscriptionId;
-    if (!subscriptionId) throw new Error('No subscription found to manage');
-    const { data } = await api.post<{
-      success: boolean;
-      url: string;
-      error?: { code: string; message: string };
-    }>('/api/billing/customer-portal', { subscriptionId });
-    if (!data?.success) {
-      throw new Error(data?.error?.message || 'Failed to create customer portal session');
-    }
-    await Linking.openURL(data.url);
-  };
 
   const plusActive = entitlements?.plusActive || false;
   const plusSince = entitlements?.plusSince;
@@ -116,84 +132,107 @@ export default function SubscriptionsScreen() {
   const lastPayment = entitlements?.lastPaymentAt;
   const checkoutBusy = checkoutMutation.isPending;
 
-  /** Runs `action` with a session, or explains why it cannot. */
-  const withSession = async (action: () => Promise<void>) => {
-    if (!oxyServices || !activeSessionId) {
-      toast.error(t('subscriptions.authRequired'));
-      return;
+  const handleStartCheckout = async (product: Product) => {
+    if (!owner || !isCurrent(owner)) return;
+    const action = { product };
+    owners.current.set(action, owner);
+    try {
+      const url = await checkoutMutation.mutateAsync(action);
+      if (!isCurrent(owner)) return;
+      await Linking.openURL(url);
+    } catch (error: unknown) {
+      if (!isCurrent(owner)) return;
+      logger.error('Failed to start checkout:', error);
+      toast.error(getErrorMessage(error, t('subscriptions.checkoutFailed')));
     }
-    await action();
   };
 
-  const handleStartCheckout = (product: 'plus' | 'file' | 'founder') =>
-    withSession(async () => {
-      try {
-        await checkoutMutation.mutateAsync(product);
-      } catch (checkoutError: unknown) {
-        logger.error('Failed to start checkout:', checkoutError);
-        toast.error(getErrorMessage(checkoutError, t('subscriptions.checkoutFailed')));
-      }
-    });
+  const handleManageSubscription = async () => {
+    if (!owner || !isCurrent(owner)) return;
+    try {
+      const subscriptionId = entitlements?.plusStripeSubscriptionId;
+      if (!subscriptionId) throw new Error('No subscription found to manage');
+      const { data } = await withAccountOwner(owner, (current) =>
+        api.post<{
+          success: boolean;
+          url: string;
+          error?: { code: string; message: string };
+        }>('/api/billing/customer-portal', { subscriptionId }, { owner: current }),
+      );
+      if (!isCurrent(owner)) return;
+      if (!data?.success)
+        throw new Error(data?.error?.message || 'Failed to create customer portal session');
+      await Linking.openURL(data.url);
+    } catch (error: unknown) {
+      if (!isCurrent(owner)) return;
+      logger.error('Failed to open subscription management:', error);
+      toast.error(getErrorMessage(error, t('subscriptions.portalFailed')));
+    }
+  };
 
-  const handleManageSubscription = () =>
-    withSession(async () => {
-      try {
-        await openCustomerPortal();
-      } catch (portalError: unknown) {
-        logger.error('Failed to open subscription management:', portalError);
-        toast.error(getErrorMessage(portalError, t('subscriptions.portalFailed')));
-      }
-    });
-
-  const handleSyncSubscription = () =>
-    withSession(async () => {
-      try {
-        const next = await postForEntitlements(
+  const handleSyncSubscription = async () => {
+    if (!owner || !isCurrent(owner)) return;
+    try {
+      const next = await withAccountOwner(owner, (current) =>
+        postForEntitlements(
           '/api/billing/sync-subscription',
           {},
           'Failed to sync subscription',
-        );
-        queryClient.setQueryData(entitlementsKey, next);
-        toast.success(t('subscriptions.syncSuccess'));
-      } catch (syncError: unknown) {
-        logger.error('Failed to sync subscription:', syncError);
-        toast.error(getErrorMessage(syncError, t('subscriptions.syncFailed')));
-      }
-    });
+          current,
+        ),
+      );
+      if (!isCurrent(owner)) return;
+      queryClient.setQueryData(entitlementsKey, next);
+      toast.success(t('subscriptions.syncSuccess'));
+    } catch (error: unknown) {
+      if (!isCurrent(owner)) return;
+      logger.error('Failed to sync subscription:', error);
+      toast.error(getErrorMessage(error, t('subscriptions.syncFailed')));
+    }
+  };
 
-  const handleCancelSubscription = (immediate: boolean) =>
-    withSession(async () => {
-      if (immediate) {
-        const ok = await confirm({
-          title: t('subscriptions.page.cancelImmediateTitle'),
-          description: t('subscriptions.page.cancelImmediateBody'),
-          confirmLabel: t('subscriptions.page.yesCancelNow'),
-          cancelLabel: t('subscriptions.page.no'),
-          destructive: true,
-        });
-        if (!ok) return;
-      }
-      try {
-        const next = await postForEntitlements(
+  const handleCancelSubscription = async (immediate: boolean) => {
+    if (!owner || !isCurrent(owner)) return;
+    if (immediate) {
+      const ok = await confirm({
+        title: t('subscriptions.page.cancelImmediateTitle'),
+        description: t('subscriptions.page.cancelImmediateBody'),
+        confirmLabel: t('subscriptions.page.yesCancelNow'),
+        cancelLabel: t('subscriptions.page.no'),
+        destructive: true,
+      });
+      if (!ok || !isCurrent(owner)) return;
+    }
+    try {
+      const next = await withAccountOwner(owner, (current) =>
+        postForEntitlements(
           '/api/billing/cancel-subscription',
           { immediate },
           'Failed to cancel subscription',
-        );
-        queryClient.setQueryData(entitlementsKey, next);
-        toast.success(
-          immediate
-            ? t('subscriptions.cancelImmediateSuccess')
-            : t('subscriptions.cancelEndOfPeriodSuccess'),
-        );
-      } catch (cancelError: unknown) {
-        logger.error('Failed to cancel subscription:', cancelError);
-        toast.error(getErrorMessage(cancelError, t('subscriptions.cancelFailed')));
-      }
-    });
+          current,
+        ),
+      );
+      if (!isCurrent(owner)) return;
+      queryClient.setQueryData(entitlementsKey, next);
+      toast.success(
+        immediate
+          ? t('subscriptions.cancelImmediateSuccess')
+          : t('subscriptions.cancelEndOfPeriodSuccess'),
+      );
+    } catch (error: unknown) {
+      if (!isCurrent(owner)) return;
+      logger.error('Failed to cancel subscription:', error);
+      toast.error(getErrorMessage(error, t('subscriptions.cancelFailed')));
+    }
+  };
 
   const handleDebugSubscription = async () => {
+    if (!owner || !isCurrent(owner)) return;
     try {
-      const response = await api.get('/api/billing/debug-subscription');
+      const response = await withAccountOwner(owner, (current) =>
+        api.get('/api/billing/debug-subscription', { owner: current }),
+      );
+      if (!isCurrent(owner)) return;
       if (response.data.success) {
         const info = response.data.debugInfo;
         toast.info('Debug Info', {
@@ -206,9 +245,10 @@ export default function SubscriptionsScreen() {
           duration: 10000,
         });
       }
-    } catch (debugError: unknown) {
-      logger.error('Failed to debug subscription:', debugError);
-      toast.error(getErrorMessage(debugError, t('subscriptions.debugFailed')));
+    } catch (error: unknown) {
+      if (!isCurrent(owner)) return;
+      logger.error('Failed to debug subscription:', error);
+      toast.error(getErrorMessage(error, t('subscriptions.debugFailed')));
     }
   };
 
@@ -226,6 +266,41 @@ export default function SubscriptionsScreen() {
     : plusCanceledAt
       ? t('subscriptions.page.plus.resubscribe')
       : t('subscriptions.page.plus.subscribeNow');
+
+  if (!owner?.sessionId) {
+    return (
+      <Screen documentScroll>
+        <ErrorState
+          title={t('contracts.detail.signAccountUnavailable')}
+          onRetry={() => openAccountDialog()}
+          retryLabel={t('settings.sections.account')}
+        />
+      </Screen>
+    );
+  }
+  if (
+    entitlementsQuery.isError ||
+    (entitlementsQuery.isPending && entitlementsQuery.fetchStatus === 'paused')
+  ) {
+    return (
+      <Screen documentScroll>
+        <ErrorState
+          title={t('profile.loadFailed')}
+          description={t('profile.loadFailedHint')}
+          onRetry={() => {
+            if (isCurrent(owner)) void entitlementsQuery.refetch();
+          }}
+          retryLabel={t('common.retry')}
+        />
+      </Screen>
+    );
+  }
+  if (entitlementsQuery.isPending)
+    return (
+      <Screen documentScroll>
+        <ProfileSkeleton />
+      </Screen>
+    );
 
   return (
     <Screen
@@ -251,10 +326,6 @@ export default function SubscriptionsScreen() {
             {t('subscriptions.page.introText')}
           </BloomText>
         </View>
-
-        {entitlementsQuery.isError ? (
-          <Admonition type="error">{entitlementsQuery.error.message}</Admonition>
-        ) : null}
 
         <ProductCard
           icon={RiFileTextLine}
