@@ -1129,8 +1129,10 @@ it('does not publish a reentrant read started while cancelling an earlier read',
   await waitFor(() => expect(holdA).toBeDefined());
   const firstRead = holdA!;
   let reentrant: Promise<void> | undefined;
+  let started = false;
   const stop = client.getQueryCache().subscribe((event) => {
-    if (!reentrant && event.query.queryKey === key && event.query.state.fetchStatus === 'idle') {
+    if (!started && event.query.queryKey === key && event.query.state.fetchStatus === 'idle') {
+      started = true;
       reentrant = client.refetchQueries({ queryKey: key, exact: true });
     }
   });
