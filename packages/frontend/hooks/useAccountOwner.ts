@@ -69,9 +69,8 @@ export function sameAccountProjection(
   );
 }
 
-/** Bind the projected account to the locally observed bearer and session epoch. */
-export function useAccountOwner(): AccountOwner | null {
-  const { isAuthenticated, user, activeSessionId, oxyServices } = useOxy();
+/** Observe the same primitive session snapshot without deciding owner policy. */
+export function useObservedSessionSnapshot(oxyServices: RequestOwner['oxyServices']): string {
   const subscribe = useCallback(
     (listener: () => void) => oxyServices.session.onChange(listener),
     [oxyServices],
@@ -85,7 +84,13 @@ export function useAccountOwner(): AccountOwner | null {
       ]),
     [oxyServices],
   );
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+/** Bind the projected account to the locally observed bearer and session epoch. */
+export function useAccountOwner(): AccountOwner | null {
+  const { isAuthenticated, user, activeSessionId, oxyServices } = useOxy();
+  const snapshot = useObservedSessionSnapshot(oxyServices);
   const userId = isAuthenticated ? (user?.id ?? null) : null;
   const [epoch, bearerUser, hasToken] = JSON.parse(snapshot) as [number, string | null, boolean];
   const projected: Projection | null =

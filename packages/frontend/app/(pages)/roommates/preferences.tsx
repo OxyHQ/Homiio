@@ -10,9 +10,9 @@
  * `DatePicker` move-in date (stored as `YYYY-MM-DD`, converted at the
  * boundary), `Chip` option rows, `Switch`, and a `toast` for the save outcome.
  */
-import React, { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
@@ -32,8 +32,14 @@ import { LeaseDuration } from '@homiio/shared-types/common';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
+import { ProfileRequestSupersededError } from '@/hooks/useProfileOwner';
+import {
+  accountOwnerKey,
+  type AccountOwner,
+  useAccountOwnerGuard,
+  withAccountOwner,
+} from '@/hooks/useAccountOwner';
 import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
-import { useProfileStore } from '@/store/profileStore';
 import { spacing } from '@/constants/styles';
 import { RiAccountCircleLine } from '@oxy.so/bloom/icons/RiAccountCircleLine';
 import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
@@ -138,11 +144,13 @@ function ChipRow<T extends string>({
   value,
   options,
   onChange,
+  disabled,
 }: {
   label: string;
   value: T;
   options: { value: T; labelKey: string }[];
   onChange: (next: T) => void;
+  disabled: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -156,6 +164,7 @@ function ChipRow<T extends string>({
               variant={selected ? 'solid' : 'outlined'}
               color={selected ? 'primary' : 'default'}
               selected={selected}
+              disabled={disabled}
               onPress={() => onChange(option.value)}
             >
               {t(option.labelKey)}
@@ -174,12 +183,14 @@ function RangeInputs({
   max,
   onMinChange,
   onMaxChange,
+  disabled,
 }: {
   label: string;
   min: string;
   max: string;
   onMinChange: (text: string) => void;
   onMaxChange: (text: string) => void;
+  disabled: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -189,6 +200,7 @@ function RangeInputs({
           <TextFieldInput
             label={t('roommates.preferencesPage.min')}
             keyboardType="numeric"
+            disabled={disabled}
             value={min}
             onChangeText={onMinChange}
           />
@@ -197,6 +209,7 @@ function RangeInputs({
           <TextFieldInput
             label={t('roommates.preferencesPage.max')}
             keyboardType="numeric"
+            disabled={disabled}
             value={max}
             onChangeText={onMaxChange}
           />
@@ -242,53 +255,126 @@ function toPreferences(form: FormState): RoommateMatchingPreferences {
 }
 
 export default function RoommatePreferencesPage() {
+  const { owner, isCurrent } = useAccountOwnerGuard();
+  if (!owner?.sessionId) return <UnavailablePreferences />;
+  return (
+    <OwnedPreferences
+      key={JSON.stringify(accountOwnerKey(owner))}
+      owner={owner}
+      isCurrent={isCurrent}
+    />
+  );
+}
+
+function UnavailablePreferences() {
+  const { t } = useTranslation();
+  return (
+    <Screen documentScroll>
+      <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
+        <BloomText accessibilityRole="alert">
+          {t('contracts.detail.signAccountUnavailable')}
+        </BloomText>
+      </ScreenScrollView>
+    </Screen>
+  );
+}
+
+function OwnedPreferences({
+  owner,
+  isCurrent,
+}: {
+  owner: AccountOwner;
+  isCurrent: (owner: AccountOwner | null) => boolean;
+}) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [roommateEnabled, setRoommateEnabled] = useState(false);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const { profile, hasProfile } = useProfile();
+  const [formDirty, setFormDirty] = useState(false);
+  const [matchingDirty, setMatchingDirty] = useState(false);
+  const [conflicted, setConflicted] = useState(false);
+  const { hasProfile, refreshProfile, isProfileProjectionCurrent } = useProfile();
+  const refreshOwners = useRef(
+    new WeakMap<object, { refresh: typeof refreshProfile; isCurrent: () => boolean }>(),
+  );
 
-  const profileSettingsKey = hasProfile ? profile : null;
-  const [prevProfileSettingsKey, setPrevProfileSettingsKey] = useState(profileSettingsKey);
-  if (profileSettingsKey !== prevProfileSettingsKey) {
-    setPrevProfileSettingsKey(profileSettingsKey);
-    const roommateSettings = profileSettingsKey?.personalProfile?.settings?.roommate;
-    if (roommateSettings) {
-      setRoommateEnabled(Boolean(roommateSettings.enabled));
-    }
-  }
-
-  const preferencesQuery = useQuery({
-    queryKey: ['roommates', 'preferences'],
-    queryFn: async () => roommateService.getMyRoommatePreferences(),
-    staleTime: 1000 * 60,
+  const ownerKey = accountOwnerKey(owner);
+  const settingsKey = ['roommates', 'preferences', ...ownerKey] as const;
+  const settingsQuery = useQuery({
+    queryKey: settingsKey,
+    queryFn: () =>
+      withAccountOwner(owner, async (current) => {
+        const [preferences, status] = await Promise.all([
+          roommateService.getMyRoommatePreferences(undefined, undefined, current),
+          roommateService.getMyRoommateStatus(undefined, undefined, current),
+        ]);
+        if (!status) throw new Error('Invalid roommate status response');
+        return { preferences, status };
+      }),
+    staleTime: 0,
+    refetchOnMount: 'always',
     gcTime: 1000 * 60 * 10,
   });
 
-  // Merge server-saved preferences into the form once the query resolves.
-  const preferencesData = preferencesQuery.data;
-  const [prevPreferencesData, setPrevPreferencesData] = useState(preferencesData);
-  if (preferencesData !== prevPreferencesData) {
-    setPrevPreferencesData(preferencesData);
-    if (preferencesData) {
-      setForm(seedForm(preferencesData));
+  const refetchSettings = settingsQuery.refetch;
+  useFocusEffect(
+    useCallback(() => {
+      if (isCurrent(owner)) void refetchSettings();
+    }, [owner, isCurrent, refetchSettings]),
+  );
+
+  const settings = settingsQuery.data;
+  const [previousSettings, setPreviousSettings] = useState<typeof settings>(undefined);
+  if (settings !== previousSettings) {
+    setPreviousSettings(settings);
+    if (settings) {
+      if (
+        previousSettings &&
+        ((formDirty && settings.preferences !== previousSettings.preferences) ||
+          (matchingDirty &&
+            settings.status.hasRoommateMatching !== previousSettings.status.hasRoommateMatching))
+      )
+        setConflicted(true);
+      if (!formDirty) setForm(settings.preferences ? seedForm(settings.preferences) : DEFAULT_FORM);
+      if (!matchingDirty) setRoommateEnabled(settings.status.hasRoommateMatching);
     }
   }
 
   const saveMutation = useMutation({
-    mutationKey: ['roommates', 'savePreferences'],
-    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) =>
-      roommateService.updateRoommatePreferences(vars.preferences, vars.enabled),
-    onSuccess: async () => {
-      await useProfileStore.getState().fetchProfile();
-      await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
-      await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'] });
-      toast.success(t('roommates.alert.preferencesSaved'));
+    mutationKey: ['roommates', 'savePreferences', ...ownerKey],
+    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) => {
+      if (!isCurrent(owner) || !refreshOwners.current.get(vars)?.isCurrent())
+        throw new Error('The active account changed');
+      return withAccountOwner(owner, (current) =>
+        roommateService.updateRoommatePreferences(vars.preferences, vars.enabled, current),
+      );
     },
-    onError: () => {
-      toast.error(t('roommates.alert.preferencesFailed'));
+    onSuccess: async (_result, variables) => {
+      const guard = refreshOwners.current.get(variables);
+      if (!isCurrent(owner) || !guard?.isCurrent()) return;
+      try {
+        try {
+          await guard.refresh();
+        } catch (error) {
+          if (!(error instanceof ProfileRequestSupersededError)) throw error;
+        }
+        if (!guard.isCurrent() || !isCurrent(owner)) return;
+        setFormDirty(false);
+        setMatchingDirty(false);
+        setConflicted(false);
+        await queryClient.invalidateQueries({ queryKey: settingsKey, exact: true });
+        if (!isCurrent(owner) || !guard.isCurrent()) return;
+        toast.success(t('roommates.alert.preferencesSaved'));
+      } catch {
+        if (isCurrent(owner) && guard.isCurrent())
+          toast.error(t('roommates.alert.preferencesFailed'));
+      }
+    },
+    onError: (_error, variables) => {
+      if (isCurrent(owner) && refreshOwners.current.get(variables)?.isCurrent())
+        toast.error(t('roommates.alert.preferencesFailed'));
     },
   });
 
@@ -299,14 +385,35 @@ export default function RoommatePreferencesPage() {
   });
 
   const handleSave = () => {
-    saveMutation.mutate({ preferences: toPreferences(form), enabled: roommateEnabled });
+    const query = queryClient.getQueryState(settingsKey);
+    if (
+      conflicted ||
+      !isCurrent(owner) ||
+      !settings ||
+      query?.status !== 'success' ||
+      query.fetchStatus !== 'idle' ||
+      queryClient.getQueryData(settingsKey) !== settings
+    )
+      return;
+    const variables = { preferences: toPreferences(form), enabled: roommateEnabled };
+    if (!isProfileProjectionCurrent()) return;
+    refreshOwners.current.set(variables, {
+      refresh: refreshProfile,
+      isCurrent: isProfileProjectionCurrent,
+    });
+    saveMutation.mutate(variables);
   };
 
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setFormDirty(true);
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const secondary = { color: theme.colors.textSecondary };
+  const paused = settingsQuery.fetchStatus === 'paused';
+  const verifying = settingsQuery.fetchStatus !== 'idle';
+  const unavailable = paused || settingsQuery.isError;
+  const readOnly = saveMutation.isPending || verifying || settingsQuery.isError;
 
   const header = (
     <PageHeader
@@ -335,6 +442,31 @@ export default function RoommatePreferencesPage() {
     );
   }
 
+  if (!settings) {
+    const failed = unavailable;
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
+          <BloomText accessibilityLiveRegion="polite" accessibilityRole={failed ? 'alert' : 'text'}>
+            {failed ? t('roommates.preferencesPage.refreshToSave') : t('common.loading')}
+          </BloomText>
+          {failed && (
+            <Button
+              size="md"
+              onPress={() => {
+                if (isCurrent(owner)) {
+                  void settingsQuery.refetch();
+                }
+              }}
+            >
+              {t('common.retry')}
+            </Button>
+          )}
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+
   return (
     <Screen documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
@@ -357,8 +489,12 @@ export default function RoommatePreferencesPage() {
               </BloomText>
             </View>
             <Switch
+              disabled={readOnly}
               checked={roommateEnabled}
-              onCheckedChange={setRoommateEnabled}
+              onCheckedChange={(value) => {
+                setMatchingDirty(true);
+                setRoommateEnabled(value);
+              }}
               accessibilityLabel={t('roommates.preferencesPage.enableTitle')}
             />
           </View>
@@ -367,6 +503,7 @@ export default function RoommatePreferencesPage() {
         <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.budgetTimeline')}</H3>
           <RangeInputs
+            disabled={readOnly}
             label={t('roommates.preferencesPage.monthlyBudget')}
             min={form.budgetMin}
             max={form.budgetMax}
@@ -375,6 +512,7 @@ export default function RoommatePreferencesPage() {
           />
           <Field label={t('roommates.preferencesPage.moveInDate')}>
             <DatePicker
+              disabled={readOnly}
               value={parseDay(form.moveInDate)}
               onChange={(date) => updateField('moveInDate', date ? formatDay(date) : '')}
               minDate={today}
@@ -384,6 +522,7 @@ export default function RoommatePreferencesPage() {
             />
           </Field>
           <ChipRow
+            disabled={readOnly}
             label={t('roommates.preferencesPage.leaseLength')}
             value={form.leaseDuration}
             options={LEASE_OPTIONS}
@@ -394,12 +533,14 @@ export default function RoommatePreferencesPage() {
         <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.roommateSection')}</H3>
           <ChipRow
+            disabled={readOnly}
             label={t('roommates.preferencesPage.preferredGender')}
             value={form.gender}
             options={GENDER_OPTIONS}
             onChange={(v) => updateField('gender', v)}
           />
           <RangeInputs
+            disabled={readOnly}
             label={t('roommates.preferencesPage.ageRange')}
             min={form.ageMin}
             max={form.ageMax}
@@ -411,30 +552,35 @@ export default function RoommatePreferencesPage() {
         <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.lifestyle')}</H3>
           <ChipRow
+            disabled={readOnly}
             label={t('roommates.preferencesPage.smoking')}
             value={form.smoking}
             options={LIFESTYLE_OPTIONS}
             onChange={(v) => updateField('smoking', v)}
           />
           <ChipRow
+            disabled={readOnly}
             label={t('roommates.preferencesPage.pets')}
             value={form.pets}
             options={LIFESTYLE_OPTIONS}
             onChange={(v) => updateField('pets', v)}
           />
           <ChipRow
+            disabled={readOnly}
             label={t('roommates.preferencesPage.partying')}
             value={form.partying}
             options={LIFESTYLE_OPTIONS}
             onChange={(v) => updateField('partying', v)}
           />
           <ChipRow
+            disabled={readOnly}
             label={t('roommates.preferencesPage.cleanliness')}
             value={form.cleanliness}
             options={CLEANLINESS_OPTIONS}
             onChange={(v) => updateField('cleanliness', v)}
           />
           <ChipRow
+            disabled={readOnly}
             label={t('roommates.preferencesPage.schedule')}
             value={form.schedule}
             options={SCHEDULE_OPTIONS}
@@ -442,11 +588,52 @@ export default function RoommatePreferencesPage() {
           />
         </Card>
 
+        {(verifying || settingsQuery.isError) && (
+          <BloomText accessibilityRole="alert" accessibilityLiveRegion="polite">
+            {t('roommates.preferencesPage.refreshToSave')}
+          </BloomText>
+        )}
+        {unavailable && (
+          <Button
+            size="md"
+            onPress={() => {
+              if (isCurrent(owner)) void settingsQuery.refetch();
+            }}
+          >
+            {t('common.retry')}
+          </Button>
+        )}
+        {conflicted && (
+          <>
+            <BloomText accessibilityRole="alert">
+              {t('roommates.preferencesPage.remoteConflict')}
+            </BloomText>
+            <Button
+              size="md"
+              disabled={readOnly}
+              onPress={() => {
+                if (!isCurrent(owner) || !settings) return;
+                setForm(settings.preferences ? seedForm(settings.preferences) : DEFAULT_FORM);
+                setRoommateEnabled(settings.status.hasRoommateMatching);
+                setFormDirty(false);
+                setMatchingDirty(false);
+                setConflicted(false);
+              }}
+            >
+              {t('roommates.preferencesPage.discardAndReload')}
+            </Button>
+          </>
+        )}
         <Button
           size="lg"
           onPress={handleSave}
+          accessibilityHint={
+            verifying || settingsQuery.isError
+              ? t('roommates.preferencesPage.refreshToSave')
+              : undefined
+          }
           loading={saveMutation.isPending}
-          disabled={saveMutation.isPending}
+          disabled={readOnly || conflicted}
           style={styles.saveButton}
           tone="accent"
           appearance="solid"
