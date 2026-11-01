@@ -18,7 +18,15 @@ const mockAuth = {
 };
 const token = (id: string, subOnly = false) =>
   `h.${Buffer.from(JSON.stringify({ ...(subOnly ? { sub: id } : { userId: id }), sessionId: `session-${id}`, exp: 4102444800 })).toString('base64url')}.s`;
-jest.mock('@/context/ProfileContext', () => ({ useProfile: () => ({ hasProfile: true }) }));
+jest.mock('@/context/ProfileContext', () => ({
+  useProfile: () => ({
+    hasProfile: true,
+    profile: {
+      oxyUserId: 'stale-A',
+      personalProfile: { settings: { roommate: { enabled: true } } },
+    },
+  }),
+}));
 jest.mock('@oxy.so/services/ui/client', () => ({ useOxy: () => mockAuth }));
 jest.mock('@/services/profileService', () => ({
   __esModule: true,
@@ -140,6 +148,9 @@ afterEach(async () => {
         .every((mutation) => mutation.state.status !== 'pending'),
     ).toBe(true),
   );
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  });
   cleanup();
   await waitFor(() =>
     expect(
@@ -184,6 +195,7 @@ it('loads each account before submitting its existing preferences', async () => 
   await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
   expect(mockSave.mock.calls[0][0].budget.min).toBe(5678);
   expect(mockSave.mock.calls[0][2].userId).toBe('B');
+  expect(mockSave.mock.calls[0][1]).toBe(false);
   await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
 });
 
