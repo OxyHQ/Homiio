@@ -909,9 +909,13 @@ it('keeps a confirmed update after an earlier saved-search read finishes', async
     expect(await view.result.current.updateSearch('watch-A', { name: 'Updated A' })).toBe(true);
   });
   await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  expect(seen.map(({ method }) => method)).toEqual(['GET', 'GET', 'PUT']);
   await act(async () => {
     holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
     await reading;
   });
+  expect(client.getQueryState(key)?.fetchStatus).toBe('idle');
+  expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
   await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
 });
