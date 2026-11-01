@@ -1115,6 +1115,9 @@
       "following": "{{count}} following"
     },
     "preferencesPage": {
+      "remoteConflict": "设置已在其他地方更改。您的编辑仍被保留；请放弃编辑以加载最新设置。",
+      "discardAndReload": "放弃编辑并重新加载",
+      "refreshToSave": "保存前请刷新设置。请检查网络连接并重试。",
       "title": "Roommate preferences",
       "eyebrow": "Sharing a place",
       "subtitle": "Let other Homiio users find you when their preferences and yours line up.",
