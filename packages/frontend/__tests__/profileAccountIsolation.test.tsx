@@ -7,7 +7,6 @@ import {
   dehydrate,
   hydrate,
   onlineManager,
-  useIsFetching,
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
@@ -213,30 +212,36 @@ it('does not clear B loading while B is still waiting after A fails late', async
     holdB = resolve;
   });
   const fetchProfile = jest.spyOn(useProfileStore.getState(), 'fetchProfile');
-  const view = renderHook(
-    () => ({
-      profile: useProfile(),
-      pendingA: useIsFetching({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'] }),
-    }),
-    { wrapper },
-  );
+  const view = renderHook(() => useProfile(), { wrapper });
   const responseA = await heldA;
   const pendingA = fetchProfile.mock.results[0].value.catch(() => undefined);
+  const queryA = client
+    .getQueryCache()
+    .find({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'], exact: false });
+  const queryPromiseA = queryA?.promise;
+  if (!queryPromiseA) throw new Error('Expected A query in flight');
+  queryPromiseA.catch(() => undefined);
   switchTo('B', () => view.rerender(undefined));
   const responseB = await heldB;
   const pendingB = fetchProfile.mock.results[1].value;
+  const queryB = client
+    .getQueryCache()
+    .find({ queryKey: ['profile', 'me', 'provider-v2', 'session-B'], exact: false });
+  const queryPromiseB = queryB?.promise;
+  if (!queryPromiseB) throw new Error('Expected B query in flight');
   await act(async () => {
     responseA.end(`${JSON.stringify({ oxyUserId: 'A' })}}`);
     await pendingA;
+    await queryPromiseA.catch(() => undefined);
   });
-  await waitFor(() => expect(view.result.current.pendingA).toBe(0));
   expect(useProfileStore.getState().isLoading).toBe(true);
   expect(useProfileStore.getState().profileRequest?.owner.userId).toBe('B');
   await act(async () => {
     responseB.end(`${JSON.stringify({ oxyUserId: 'B' })}}`);
     await pendingB;
+    await queryPromiseB;
   });
-  await waitFor(() => expect(view.result.current.profile.profile?.oxyUserId).toBe('B'));
+  await waitFor(() => expect(view.result.current.profile?.oxyUserId).toBe('B'));
   expect(useProfileStore.getState().isLoading).toBe(false);
 });
 
@@ -360,17 +365,16 @@ it('does not publish an older same-owner GET after a completed store update', as
       return promise;
     },
   });
-  const view = renderHook(
-    () => ({
-      profile: useProfile(),
-      pending: useIsFetching({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'] }),
-    }),
-    { wrapper },
-  );
+  renderHook(() => useProfile(), { wrapper });
   const oldResponse = await held;
-  await waitFor(() => expect(view.result.current.pending).toBe(1));
   expect(requestMethods).toEqual(['GET A']);
   expect(invocations).toHaveLength(1);
+  const query = client
+    .getQueryCache()
+    .find({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'], exact: false });
+  const queryPromise = query?.promise;
+  if (!queryPromise) throw new Error('Expected the profile query in flight');
+  queryPromise.catch(() => undefined);
   const first = invocations[0];
   first.catch(() => undefined);
   const owner = useProfileStore.getState().profileRequest?.owner;
@@ -383,8 +387,8 @@ it('does not publish an older same-owner GET after a completed store update', as
   await act(async () => {
     oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-update' })}}`);
     await expect(first).rejects.toThrow('A newer profile request superseded this one');
+    await expect(queryPromise).rejects.toThrow('A newer profile request superseded this one');
   });
-  await waitFor(() => expect(view.result.current.pending).toBe(0));
   expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-2' }));
 });
 
