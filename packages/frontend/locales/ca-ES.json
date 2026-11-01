@@ -2890,6 +2890,7 @@
   "subscriptions": {
     "title": "Subscripcions",
     "authRequired": "Autenticació requerida",
+    "loadFailed": "No s’ha pogut carregar la teva subscripció",
     "checkoutFailed": "No s'ha pogut iniciar el pagament",
     "portalFailed": "No s'ha pogut obrir la gestió de subscripcions",
     "syncSuccess": "Estat de subscripció sincronitzat des de Stripe",

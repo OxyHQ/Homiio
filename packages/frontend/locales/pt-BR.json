@@ -2843,6 +2843,7 @@
   "subscriptions": {
     "title": "Subscriptions",
     "authRequired": "Authentication required",
+    "loadFailed": "Não foi possível carregar sua assinatura",
     "checkoutFailed": "Failed to start checkout",
     "portalFailed": "Failed to open subscription management",
     "syncSuccess": "Subscription status synced from Stripe",
