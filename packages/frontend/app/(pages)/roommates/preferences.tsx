@@ -248,7 +248,7 @@ export default function RoommatePreferencesPage() {
   const queryClient = useQueryClient();
   const [roommateEnabled, setRoommateEnabled] = useState(false);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const { profile, hasProfile, refreshProfile, isProfileOwnerCurrent } = useProfile();
+  const { profile, hasProfile, refreshProfile, isProfileProjectionCurrent } = useProfile();
   const refreshOwners = useRef(
     new WeakMap<object, { refresh: typeof refreshProfile; isCurrent: () => boolean }>(),
   );
@@ -282,10 +282,8 @@ export default function RoommatePreferencesPage() {
 
   const saveMutation = useMutation({
     mutationKey: ['roommates', 'savePreferences'],
-    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) => {
-      if (!refreshOwners.current.get(vars)?.isCurrent()) throw new ProfileOwnerChangedError();
-      return roommateService.updateRoommatePreferences(vars.preferences, vars.enabled);
-    },
+    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) =>
+      roommateService.updateRoommatePreferences(vars.preferences, vars.enabled),
     onSuccess: async (_result, variables) => {
       const guard = refreshOwners.current.get(variables);
       if (!guard?.isCurrent()) return;
@@ -318,7 +316,7 @@ export default function RoommatePreferencesPage() {
     const variables = { preferences: toPreferences(form), enabled: roommateEnabled };
     refreshOwners.current.set(variables, {
       refresh: refreshProfile,
-      isCurrent: isProfileOwnerCurrent,
+      isCurrent: isProfileProjectionCurrent,
     });
     saveMutation.mutate(variables);
   };

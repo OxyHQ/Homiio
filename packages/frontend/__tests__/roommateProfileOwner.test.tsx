@@ -17,7 +17,7 @@ jest.mock('@/context/ProfileContext', () => ({
     profile: mockProfiles[mockAccount],
     hasProfile: true,
     refreshProfile: mockAccount === 'A' ? mockRefreshA : mockRefreshB,
-    isProfileOwnerCurrent: mockGuards[mockAccount],
+    isProfileProjectionCurrent: mockGuards[mockAccount],
   }),
 }));
 jest.mock('@oxy.so/services/ui/client', () => ({

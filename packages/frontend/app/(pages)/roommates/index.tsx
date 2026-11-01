@@ -74,7 +74,7 @@ export default function RoommatesPage() {
   // `['roommates', …]` lists below, which refetch themselves.
   const { sendRequest, acceptRequest, declineRequest, endRelationship } = useRoommate();
 
-  const { profile, hasProfile, refreshProfile, isProfileOwnerCurrent } = useProfile();
+  const { profile, hasProfile, refreshProfile, isProfileProjectionCurrent } = useProfile();
 
   // Each tab's list is a query that runs while its tab is open (the profile
   // itself is loaded once per session by `ProfileContext`). Keyed on the
@@ -148,7 +148,7 @@ export default function RoommatesPage() {
   );
 
   const handleToggleMatching = useCallback(async () => {
-    if (!oxyServices || !activeSessionId || !isProfileOwnerCurrent()) return;
+    if (!oxyServices || !activeSessionId) return;
     if (isToggling) return;
     setIsToggling(true);
     try {
@@ -158,9 +158,9 @@ export default function RoommatesPage() {
         oxyServices,
         activeSessionId,
       );
-      if (!isProfileOwnerCurrent()) return;
+      if (!isProfileProjectionCurrent()) return;
       await refreshProfile();
-      if (!isProfileOwnerCurrent()) return;
+      if (!isProfileProjectionCurrent()) return;
       queryClient.setQueryData(['roommates', 'status'], {
         hasRoommateMatching: result.enabled,
       });
@@ -168,7 +168,7 @@ export default function RoommatesPage() {
         // Newly visible to matching: the discover list changes with it.
         await queryClient.invalidateQueries({ queryKey: ['roommates', 'profiles'] });
       }
-      if (!isProfileOwnerCurrent()) return;
+      if (!isProfileProjectionCurrent()) return;
       toast.success(
         result.message ||
           (result.enabled
@@ -176,7 +176,7 @@ export default function RoommatesPage() {
             : t('roommates.screen.matchingDisabled')),
       );
     } catch (error) {
-      if (!isProfileOwnerCurrent() || error instanceof ProfileOwnerChangedError) return;
+      if (!isProfileProjectionCurrent() || error instanceof ProfileOwnerChangedError) return;
       toast.error(t('roommates.alert.toggleFailed'));
     } finally {
       setIsToggling(false);
@@ -188,7 +188,7 @@ export default function RoommatesPage() {
     hasRoommateMatching,
     queryClient,
     refreshProfile,
-    isProfileOwnerCurrent,
+    isProfileProjectionCurrent,
     t,
   ]);
 
