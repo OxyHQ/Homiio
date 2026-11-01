@@ -105,12 +105,15 @@ type SignLeaseInput = { acceptTerms: boolean; termsSha256?: string };
 type OwnedLeaseVariables<Input> = { input: Input; leaseId: string };
 const leaseMutationOwners = new WeakMap<object, AccountOwner | null>();
 
-type OwnedLeaseResult<Data, Input> = Omit<UseMutationResult<Data, Error, Input>, 'variables'> & {
+type OwnedLeaseResult<Data, Input extends string | object> = Omit<
+  UseMutationResult<Data, Error, Input>,
+  'variables'
+> & {
   variables: Input | undefined;
   isOwnerReady: boolean;
 };
 
-function useOwnedLeaseMutation<Data, Input>(
+function useOwnedLeaseMutation<Data, Input extends string | object>(
   id: string,
   operation: (owner: AccountOwner, input: Input, leaseId: string) => Promise<Data>,
   onCommitted: (data: Data, input: Input, leaseId: string, stillCurrent: () => boolean) => void,
@@ -165,11 +168,12 @@ function useOwnedLeaseMutation<Data, Input>(
           options.onSettled?.(data, error, variables.input, result, context);
       },
     };
-  const mutate: UseMutateFunction<Data, Error, Input> = (input, options) => {
-    mutation.mutate(capture(input), callbacks(options));
+  const mutate: UseMutateFunction<Data, Error, Input> = (...args) => {
+    mutation.mutate(capture(args[0] as Input), callbacks(args[1]));
   };
-  const mutateAsync: UseMutateAsyncFunction<Data, Error, Input> = async (input, options) => {
-    const variables = capture(input);
+  const mutateAsync: UseMutateAsyncFunction<Data, Error, Input> = async (...args) => {
+    const variables = capture(args[0] as Input);
+    const options = args[1];
     if (!isCurrent(owner)) throw new Error('The active account changed');
     try {
       const result = await mutation.mutateAsync(variables, callbacks(options));
