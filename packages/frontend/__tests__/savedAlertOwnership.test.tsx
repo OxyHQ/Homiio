@@ -1082,3 +1082,37 @@ it('keeps both concurrent writes when starting from an unverified cache', async 
   spy.mockRestore();
   expect((client.getQueryData(key) as Array<{ id: string }>).map((x) => x.id)).toEqual(['new-A']);
 });
+
+it('does not publish or toast when cancellation reenters an account switch', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  shouldHoldA = true;
+  allowPutA = true;
+  act(() => {
+    void client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  let switched = false;
+  const stop = client.getQueryCache().subscribe((event) => {
+    if (!switched && event.query.queryKey === key && event.query.state.fetchStatus === 'idle') {
+      switched = true;
+      oxy.session.setAccessToken(token('B'));
+      mockAuth.user = { id: 'B' };
+      mockAuth.activeSessionId = 'session-B';
+      view.rerender(undefined);
+    }
+  });
+  let success = true;
+  await act(async () => {
+    success = await view.result.current.updateSearch('watch-A', { name: 'Updated A' });
+  });
+  expect(switched).toBe(true);
+  expect(success).toBe(false);
+  expect(mockToast.success).not.toHaveBeenCalled();
+  expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('A private watch');
+  stop();
+  await act(async () => {
+    holdA!.end(JSON.stringify({ data: [] }));
+  });
+});
