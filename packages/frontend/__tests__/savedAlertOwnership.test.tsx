@@ -299,6 +299,8 @@ it('does not resume an A save with the B bearer or show it as B pending', async 
     expect(await pending).toBe(false);
   });
   expect(seen.filter((request) => request.method === 'POST')).toEqual([]);
+  await waitFor(() => expect(view.result.current.isLoading).toBe(false));
+  await waitFor(() => expect(view.result.current.isSaving).toBe(false));
 });
 
 it('does not treat an opaque bearer as an empty verified saved-search list', async () => {
@@ -476,13 +478,15 @@ it('keeps the out-of-render location observer waiting through an account switch'
   const view = renderHook(() => usePrimarySavedArea(), { wrapper });
   await waitFor(() => expect(view.result.current.selection).toEqual(location));
   const networkArea = { ...location, label: { primary: 'network area', kind: 'place' } };
-  client.setQueryData(APPROXIMATE_LOCATION_QUERY_KEY, {
-    status: 'resolved',
-    source: 'ip',
-    granularity: 'city',
-    selection: networkArea,
-    resolvedAt: '2026-01-01T00:00:00.000Z',
-    expiresAt: '2030-01-01T00:00:00.000Z',
+  act(() => {
+    client.setQueryData(APPROXIMATE_LOCATION_QUERY_KEY, {
+      status: 'resolved',
+      source: 'ip',
+      granularity: 'city',
+      selection: networkArea,
+      resolvedAt: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2030-01-01T00:00:00.000Z',
+    });
   });
   expect(useLocationScopeStore.getState().autoScope).toBeNull();
   shouldHoldB = true;
@@ -498,6 +502,7 @@ it('keeps the out-of-render location observer waiting through an account switch'
       selection: networkArea,
     }),
   );
+  await waitFor(() => expect(view.result.current.pending).toBe(false));
   stop();
 });
 
