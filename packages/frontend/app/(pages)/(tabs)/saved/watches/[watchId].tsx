@@ -43,7 +43,7 @@ import {
   HOUSING_ALERT_RULE_SPECS,
   HOUSING_ALERT_RULE_TYPES,
   WATCH_CADENCES,
-} from '@homiio/shared-types/watch';
+} from '@homiio/shared-types/watch-core';
 import type { HousingAlertRule, HousingAlertRuleType, WatchCadence } from '@homiio/shared-types';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { contentClamp, spacing } from '@/constants/styles';

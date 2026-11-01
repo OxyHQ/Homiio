@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services/ui/client';
 import { api, ApiError } from '@/utils/api';
-import { AVAILABLE_HOUSING_ALERT_RULE_TYPES } from '@homiio/shared-types/watch';
+import { AVAILABLE_HOUSING_ALERT_RULE_TYPES } from '@homiio/shared-types/watch-core';
 import type {
   AlertChannel,
   HousingAlertRule,
