@@ -799,7 +799,12 @@ it('settles a same-owner refetch with deeply equal data without a retry loop', a
   expect(query!.state.data).toEqual(original);
   expect(query!.state.data).not.toBe(original);
   expect(savedSearchesReading(client, 'A').data).toBe(query!.state.data);
-  expect(view.result.current.saved.searches[0]?.id).toBe('watch-A');
+  await waitFor(() => expect(view.result.current.saved.searches).toBe(query!.state.data));
+  await waitFor(() =>
+    expect(view.result.current.primary.selection).toBe(
+      view.result.current.saved.searches[0]?.location,
+    ),
+  );
   expect(view.result.current.primary.selection).toEqual(location);
   expect(seen.filter((request) => request.method === 'GET')).toHaveLength(2);
 });
