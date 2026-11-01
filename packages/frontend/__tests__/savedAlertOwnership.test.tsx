@@ -21,7 +21,10 @@ const mockAuth = {
   oxyServices: null as unknown as OxyServices,
 };
 jest.mock('@/config', () => ({ API_URL: mockOrigin }));
-jest.mock('@oxy.so/services/ui/client', () => ({ useOxy: () => mockAuth }));
+jest.mock('@oxy.so/services/ui/client', () => ({
+  useOxy: () => mockAuth,
+  useAuthStore: { getState: () => mockAuth, subscribe: () => () => {} },
+}));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 const mockToast = { success: jest.fn(), error: jest.fn() };
 jest.mock('@oxy.so/bloom/toast', () => ({ toast: mockToast }));
@@ -419,4 +422,44 @@ it('keeps private searches and paused mutation variables out of SDK account snap
   expect(seen.filter((request) => request.method === 'POST')).toEqual([]);
   view.unmount();
   persister.detach();
+});
+
+it('keeps the out-of-render location observer waiting through an account switch', async () => {
+  const { observeInferredScope } = jest.requireActual('../hooks/useLocationScope');
+  const { useLocationScopeStore } = jest.requireActual('../store/locationScopeStore');
+  const { APPROXIMATE_LOCATION_QUERY_KEY } = jest.requireActual('../hooks/useApproximateLocation');
+  useLocationScopeStore.setState({
+    sessionSelection: null,
+    explicitGlobal: false,
+    lastChosenArea: null,
+    deviceRequested: false,
+    autoScope: null,
+  });
+  const stop = observeInferredScope(client);
+  const view = renderHook(() => usePrimarySavedArea(), { wrapper });
+  await waitFor(() => expect(view.result.current.selection).toEqual(location));
+  const networkArea = { ...location, label: { primary: 'network area', kind: 'place' } };
+  client.setQueryData(APPROXIMATE_LOCATION_QUERY_KEY, {
+    status: 'resolved',
+    source: 'ip',
+    granularity: 'city',
+    selection: networkArea,
+    resolvedAt: '2026-01-01T00:00:00.000Z',
+    expiresAt: '2030-01-01T00:00:00.000Z',
+  });
+  expect(useLocationScopeStore.getState().autoScope).toBeNull();
+  shouldHoldB = true;
+  switchToB(() => view.rerender(undefined));
+  await waitFor(() => expect(holdB).toBeDefined());
+  expect(useLocationScopeStore.getState().autoScope).toBeNull();
+  await act(async () => {
+    holdB?.end(JSON.stringify({ data: [] }));
+  });
+  await waitFor(() =>
+    expect(useLocationScopeStore.getState().autoScope).toEqual({
+      source: 'ip',
+      selection: networkArea,
+    }),
+  );
+  stop();
 });
