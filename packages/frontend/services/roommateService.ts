@@ -1,4 +1,4 @@
-import { api } from '@/utils/api';
+import { api, type RequestOwner } from '@/utils/api';
 import type { OxyServices } from '@oxy.so/core';
 import type { Profile, PropertyPreferences, RoommatePreferences } from '@homiio/shared-types';
 
@@ -123,10 +123,21 @@ class RoommateService {
   async getMyRoommatePreferences(
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
+    owner?: RequestOwner,
   ): Promise<RoommateMatchingPreferences | null> {
     const response = await api.get<{ data?: RoommateMatchingPreferences | null }>(
       `${this.baseUrl}/preferences`,
+      owner ? { owner, requireAuth: true } : undefined,
     );
+    if (
+      owner &&
+      (!response.data ||
+        !Object.hasOwn(response.data, 'data') ||
+        (response.data.data !== null &&
+          (typeof response.data.data !== 'object' || Array.isArray(response.data.data))))
+    ) {
+      throw new Error('Invalid roommate preferences response');
+    }
     return response.data.data ?? null;
   }
 
@@ -134,11 +145,19 @@ class RoommateService {
   async getMyRoommateStatus(
     _oxyServices?: OxyServices,
     _activeSessionId?: string,
+    owner?: RequestOwner,
   ): Promise<{ hasRoommateMatching: boolean } | null> {
     try {
-      const response = await api.get(`${this.baseUrl}/status`);
+      const response = await api.get(
+        `${this.baseUrl}/status`,
+        owner ? { owner, requireAuth: true } : undefined,
+      );
+      if (owner && typeof response.data?.hasRoommateMatching !== 'boolean') {
+        throw new Error('Invalid roommate status response');
+      }
       return { hasRoommateMatching: Boolean(response.data.hasRoommateMatching) };
     } catch (error) {
+      if (owner) throw error;
       return null;
     }
   }
@@ -149,6 +168,7 @@ class RoommateService {
   async updateRoommatePreferences(
     preferences: RoommateMatchingPreferences,
     enabled?: boolean,
+    owner?: RequestOwner,
   ): Promise<RoommateMatchingPreferences | null> {
     const body: Record<string, unknown> = { ...preferences };
     if (typeof enabled === 'boolean') {
@@ -157,6 +177,7 @@ class RoommateService {
     const response = await api.put<{ data?: RoommateMatchingPreferences | null }>(
       `${this.baseUrl}/preferences`,
       body,
+      owner ? { owner, requireAuth: true } : undefined,
     );
     return response.data.data ?? null;
   }
