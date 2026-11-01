@@ -107,7 +107,7 @@ import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { exchangeSpansForProperty } from '@/utils/upcomingBookings';
 import { propertyService } from '@/services/propertyService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
-import { getFormatLocale } from '@/utils/formatLocale';
+import { getFormatLocale } from '@/utils/dateLocale';
 import { radius, spacing } from '@/constants/styles';
 
 type SpanKind = 'confirmed' | 'pending' | 'blocked' | 'exchangeConfirmed' | 'exchangePending';

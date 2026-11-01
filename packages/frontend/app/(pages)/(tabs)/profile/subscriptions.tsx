@@ -34,7 +34,7 @@ import { H1, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { contentClamp, spacing } from '@/constants/styles';
 import type { Entitlements } from '@/store/subscriptionStore';
 import { api } from '@/utils/api';
-import { getFormatLocale } from '@/utils/formatLocale';
+import { getFormatLocale } from '@/utils/dateLocale';
 import { logger } from '@/utils/logger';
 
 type IconComponent = React.ComponentType<{ width?: number; height?: number; fill?: string }>;
