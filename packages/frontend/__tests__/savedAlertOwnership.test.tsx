@@ -148,9 +148,11 @@ it('does not expose A watch or primary area after projection B', async () => {
   await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
   expect(view.result.current.primary.selection).toEqual(location);
   expect(savedSearchesReading(client, 'A').data?.[0]?.id).toBe('watch-A');
+  const retainedLookup = view.result.current.saved.getSearchById;
   act(() => {
     oxy.session.setAccessToken(token('B'));
     expect(savedSearchesReading(client, 'A').data).toBeUndefined();
+    expect(retainedLookup('watch-A')).toBeUndefined();
     mockAuth.user = { id: 'B' };
     mockAuth.activeSessionId = 'session-B';
     view.rerender(undefined);

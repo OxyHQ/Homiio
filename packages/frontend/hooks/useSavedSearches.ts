@@ -273,6 +273,15 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
   };
 }
 
+function ownerIsBound(owner: AccountOwner | null): boolean {
+  try {
+    assertAccountOwner(owner);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Locate a currently bound result for the out-of-React location observer. */
 export function savedSearchesReading(client: QueryClient, userId: string | undefined) {
   for (const query of client.getQueryCache().findAll({ queryKey: SAVED_SEARCHES_KEY })) {
@@ -753,18 +762,19 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   const searchExists = useCallback(
     (name: string, query?: string): boolean =>
+      ownerIsBound(owner) &&
       searches.some(
         (search) =>
           search.name.toLowerCase() === name.toLowerCase() ||
           (query !== undefined && search.query.toLowerCase() === query.toLowerCase()),
       ),
-    [searches],
+    [searches, owner],
   );
 
   const getSearchById = useCallback(
     (searchId: string): SavedSearch | undefined =>
-      searches.find((search) => search.id === searchId),
-    [searches],
+      ownerIsBound(owner) ? searches.find((search) => search.id === searchId) : undefined,
+    [searches, owner],
   );
 
   const unavailable = isAuthenticated && !owner && isBoundSubjectUnavailable();
