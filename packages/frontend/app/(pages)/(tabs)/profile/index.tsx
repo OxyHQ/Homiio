@@ -41,7 +41,7 @@ import { logger } from '@/utils/logger';
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { logout, user } = useOxy();
+  const { logout, user, openAccountDialog } = useOxy();
 
   const profileQuery = useProfileQuery();
   const applicationsQuery = useMyApplications();
@@ -49,7 +49,8 @@ export default function ProfileScreen() {
   const { savedProperties } = useSavedPropertiesContext();
 
   const profile = profileQuery.data ?? null;
-  const isLoading = profileQuery.isLoading;
+  const isLoading = profileQuery.isPending;
+  const isPaused = profileQuery.isPending && profileQuery.fetchStatus === 'paused';
   const isError = profileQuery.isError;
 
   const totalApplications = applicationsQuery.data?.data?.length ?? 0;
@@ -89,6 +90,35 @@ export default function ProfileScreen() {
       leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
     />
   );
+
+  if (!profileQuery.ownerReady) {
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
+          <ErrorState
+            title={t('contracts.detail.signAccountUnavailable')}
+            onRetry={() => openAccountDialog()}
+            retryLabel={t('settings.sections.account')}
+          />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+
+  if (isPaused) {
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
+          <ErrorState
+            title={t('profile.loadFailed')}
+            description={t('profile.loadFailedHint')}
+            onRetry={() => void profileQuery.refetch()}
+            retryLabel={t('common.retry')}
+          />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
 
   if (isLoading) {
     return (

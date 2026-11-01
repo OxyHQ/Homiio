@@ -1,4 +1,4 @@
-import { api } from '@/utils/api';
+import { api, type RequestOwner } from '@/utils/api';
 import type { Profile, UpdateProfileData } from '@homiio/shared-types';
 import {
   EmploymentStatus,
@@ -23,13 +23,13 @@ export {
 class ProfileService {
   private baseUrl = '/api/profiles';
 
-  async getOrCreateProfile(): Promise<Profile | null> {
-    const response = await api.get(`${this.baseUrl}/me`);
+  async getOrCreateProfile(owner?: RequestOwner): Promise<Profile | null> {
+    const response = await api.get(`${this.baseUrl}/me`, { owner });
     return response.data.data;
   }
 
-  async updateMyProfile(updateData: UpdateProfileData): Promise<Profile> {
-    const response = await api.put(`${this.baseUrl}/me`, updateData);
+  async updateMyProfile(updateData: UpdateProfileData, owner?: RequestOwner): Promise<Profile> {
+    const response = await api.put(`${this.baseUrl}/me`, updateData, { owner });
     return response.data.data;
   }
 
