@@ -27,26 +27,26 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
         run: bun run --cwd packages/frontend build --source-maps
-      - name: Inventory source bytes (not bundle savings)
+      - name: Inventory resolved modules (not bundle size)
         run: |
           node - <<'NODE'
-          const fs = require('fs'), path = require('path'), zlib = require('zlib');
+          const fs = require('fs'), path = require('path');
           const root = 'packages/frontend/dist';
           const walk = (dir) => fs.readdirSync(dir, {withFileTypes:true}).flatMap((e) => e.isDirectory() ? walk(path.join(dir,e.name)) : [path.join(dir,e.name)]);
           const maps = walk(root).filter((f) => f.endsWith('.js.map'));
           if (!maps.length) throw Error('No JavaScript source map');
           const groups = new Map();
+          const sample = [];
           for (const file of maps) {
             const map = JSON.parse(fs.readFileSync(file, 'utf8'));
-            if (!map.sourcesContent || map.sources.length !== map.sourcesContent.length) throw Error('No aligned source content');
-            map.sources.forEach((name,i) => {
-              const content=map.sourcesContent[i]; if (typeof content !== 'string') return;
+            if (!Array.isArray(map.sources)) throw Error('No source names');
+            for (const name of map.sources) {
+              if (sample.length < 8) sample.push(name);
               const pkg=name.match(/node_modules\/(?:\.bun\/[^/]+\/node_modules\/)?(@[^/]+\/[^/]+|[^/]+)/)?.[1] ?? '(app)';
-              const group=groups.get(pkg) ?? {size:0,count:0,content:[]};
-              group.size += Buffer.byteLength(content); group.count++; group.content.push(content); groups.set(pkg,group);
-            });
+              groups.set(pkg,(groups.get(pkg) ?? 0) + 1);
+            }
           }
-          const result=[...groups].map(([name,v]) => ({name,files:v.count,sourceBytes:v.size,gzipSourceBytes:zlib.gzipSync(v.content.join('\n')).length})).sort((a,b)=>b.sourceBytes-a.sourceBytes).slice(0,60);
-          console.log('Source bytes prioritize investigation only; neither column measures actual bundle contribution or removal savings.');
-          console.log(JSON.stringify(result,null,2));
+          console.log('Module counts only; they do not measure bundle contribution or removal savings.');
+          console.log('Sample source names',JSON.stringify(sample));
+          console.log(JSON.stringify([...groups].map(([name,count]) => ({name,count})).sort((a,b)=>b.count-a.count).slice(0,100),null,2));
           NODE
