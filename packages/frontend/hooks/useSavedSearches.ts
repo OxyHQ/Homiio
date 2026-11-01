@@ -545,9 +545,9 @@ export const useSavedSearches = (): UseSavedSearches => {
     [owner, verified, listQuery.data],
   );
 
-  /** Replace a single search in the cached list by id, or append if new. */
-  const upsertCachedSearch = useCallback(
-    async (next: SavedSearch, capturedOwner: AccountOwner) => {
+  /** Apply one confirmed search change to the verified cache. */
+  const applyCachedSearchChange = useCallback(
+    async (capturedOwner: AccountOwner, change: SavedSearch | string) => {
       const queryKey = savedSearchesKeyFor(capturedOwner);
       await queryClient.cancelQueries({ queryKey, exact: true }, { revert: false });
       if (!isCurrent(capturedOwner)) return;
@@ -558,37 +558,17 @@ export const useSavedSearches = (): UseSavedSearches => {
       }
       queryClient.setQueryData<SavedSearch[]>(queryKey, (prev) => {
         const list = prev ?? [];
-        const index = list.findIndex((s) => s.id === next.id);
-        const result = [...list];
-        if (index === -1) result.push(next);
-        else result[index] = next;
-        if (query) {
-          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
-          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        let result: SavedSearch[];
+        if (typeof change === 'string') {
+          result = list.filter((item) => item.id !== change);
+        } else {
+          const index = list.findIndex((item) => item.id === change.id);
+          result = [...list];
+          if (index === -1) result.push(change);
+          else result[index] = change;
         }
-        return result;
-      });
-    },
-    [queryClient, isCurrent],
-  );
-
-  /** Remove a single search from the cached list by id. */
-  const removeCachedSearch = useCallback(
-    async (searchId: string, capturedOwner: AccountOwner) => {
-      const queryKey = savedSearchesKeyFor(capturedOwner);
-      await queryClient.cancelQueries({ queryKey, exact: true }, { revert: false });
-      if (!isCurrent(capturedOwner)) return;
-      const query = queryClient.getQueryCache().find({ queryKey, exact: true });
-      if (!query || !hasVerifiedSavedSearches(queryClient, capturedOwner)) {
-        void queryClient.invalidateQueries({ queryKey, exact: true });
-        return;
-      }
-      queryClient.setQueryData<SavedSearch[]>(queryKey, (prev) => {
-        const result = (prev ?? []).filter((s) => s.id !== searchId);
-        if (query) {
-          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
-          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
-        }
+        savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
+        savedSearchOwners.set(query, { owner: capturedOwner, data: result });
         return result;
       });
     },
@@ -622,7 +602,7 @@ export const useSavedSearches = (): UseSavedSearches => {
     onSuccess: async (saved, vars) => {
       const current = currentFor(vars);
       if (!current) return;
-      await upsertCachedSearch(saved, current);
+      await applyCachedSearchChange(current, saved);
       if (!isCurrent(current)) return;
       toast.success(t('search.widgets.savedSearches.saveSuccess', { name: saved.name }));
     },
@@ -663,7 +643,7 @@ export const useSavedSearches = (): UseSavedSearches => {
     onSuccess: async (updated, vars) => {
       const current = currentFor(vars);
       if (!current) return;
-      await upsertCachedSearch(updated, current);
+      await applyCachedSearchChange(current, updated);
       if (!isCurrent(current)) return;
       toast.success(t('search.widgets.savedSearches.updateSuccess'));
     },
@@ -683,7 +663,7 @@ export const useSavedSearches = (): UseSavedSearches => {
       const current = currentFor(vars);
       if (!current) return;
       const { input } = captured<DeleteSearchInput>(vars);
-      await removeCachedSearch(input.searchId, current);
+      await applyCachedSearchChange(current, input.searchId);
       if (!isCurrent(current)) return;
       toast.success(
         input.searchName
@@ -810,7 +790,7 @@ export const useSavedSearches = (): UseSavedSearches => {
     },
     onSuccess: async (updated, vars) => {
       const current = currentFor(vars);
-      if (current) await upsertCachedSearch(updated, current);
+      if (current) await applyCachedSearchChange(current, updated);
     },
     onError: (error: unknown, vars) => {
       if (!currentFor(vars)) return;
