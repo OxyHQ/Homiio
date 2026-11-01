@@ -583,3 +583,24 @@ it('keeps a bound same-session profile on an offline remount without another req
     onlineManager.setOnline(true);
   }
 });
+
+it('observes stable session snapshots independently for multiple consumers', async () => {
+  const { useObservedSessionSnapshot } = jest.requireActual('../hooks/useAccountOwner');
+  const first = renderHook(() => useObservedSessionSnapshot(oxy));
+  const second = renderHook(() => useObservedSessionSnapshot(oxy));
+  const initial = first.result.current;
+  expect(second.result.current).toBe(initial);
+  first.rerender(undefined);
+  second.rerender(undefined);
+  expect(first.result.current).toBe(initial);
+  expect(second.result.current).toBe(initial);
+
+  act(() => oxy.session.setAccessToken(token('B')));
+  await waitFor(() => expect(JSON.parse(first.result.current)[1]).toBe('B'));
+  expect(second.result.current).toBe(first.result.current);
+
+  first.unmount();
+  act(() => oxy.session.setAccessToken(token('A')));
+  await waitFor(() => expect(JSON.parse(second.result.current)[1]).toBe('A'));
+  second.unmount();
+});
