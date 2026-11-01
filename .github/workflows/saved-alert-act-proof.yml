@@ -1,0 +1,19 @@
+name: Saved alert act proof
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - run: bash .github/scripts/bun-install.sh --frozen-lockfile
+      - name: Repeat focused test
+        run: |
+          for iteration in 1 2 3; do
+            bun run --cwd packages/frontend test -- --runInBand __tests__/savedAlertOwnership.test.tsx
+          done
