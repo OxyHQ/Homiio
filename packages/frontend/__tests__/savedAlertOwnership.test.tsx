@@ -53,6 +53,7 @@ let allowPutA = false;
 let holdPost: ServerResponse | undefined;
 let shouldHoldPost = false;
 let deletedA = false;
+let createdA = false;
 let useSavedSearches: typeof import('../hooks/useSavedSearches').useSavedSearches;
 let usePrimarySavedArea: typeof import('../hooks/useSavedSearches').usePrimarySavedArea;
 let savedSearchesReading: typeof import('../hooks/useSavedSearches').savedSearchesReading;
@@ -94,7 +95,11 @@ beforeAll(async () => {
       return;
     }
     if (req.method === 'GET' && owner === 'A' && deletedA) {
-      res.end(JSON.stringify({ data: [] }));
+      res.end(
+        JSON.stringify({
+          data: createdA ? [{ id: 'new-A', name: 'new A', query: 'apartments' }] : [],
+        }),
+      );
       return;
     }
     if (req.method === 'PUT' && owner === 'A' && allowPutA) {
@@ -144,6 +149,7 @@ beforeEach(() => {
   holdPost = undefined;
   shouldHoldPost = false;
   deletedA = false;
+  createdA = false;
   mockToast.success.mockClear();
   mockToast.error.mockClear();
   holdB = undefined;
@@ -1032,11 +1038,14 @@ it('keeps both concurrent writes when starting from an unverified cache', async 
     creating = view.result.current.saveSearch('new A', 'apartments');
   });
   await waitFor(() => expect(holdPost).toBeDefined());
-  shouldHoldA = false;
   await act(async () => {
     expect(await view.result.current.deleteSavedSearch('watch-A')).toBe(true);
   });
   await waitFor(() => expect(deletedA).toBe(true));
+  await waitFor(() => expect(holdA).not.toBe(stale));
+  const staleAfterDelete = holdA!;
+  shouldHoldA = false;
+  createdA = true;
   await act(async () => {
     holdPost!.end(JSON.stringify({ data: { id: 'new-A', name: 'new A', query: 'apartments' } }));
     expect(await creating).toBe(true);
@@ -1044,6 +1053,7 @@ it('keeps both concurrent writes when starting from an unverified cache', async 
   await waitFor(() => expect(view.result.current.searches.map((x) => x.id)).toEqual(['new-A']));
   await act(async () => {
     stale.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    staleAfterDelete.end(JSON.stringify({ data: [] }));
   });
   expect((client.getQueryData(key) as Array<{ id: string }>).map((x) => x.id)).toEqual(['new-A']);
 });
