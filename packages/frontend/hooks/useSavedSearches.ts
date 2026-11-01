@@ -399,25 +399,45 @@ export function primarySavedAreaOf(
   return { selection: primaryAreaOf(query.data ?? []), pending: false };
 }
 
+type SavedSearchAction = { ownerKey: string };
+type SaveSearchInput = {
+  name: string;
+  query: string;
+  filters?: SavedSearchFilters;
+  notificationsEnabled?: boolean;
+  location?: LocationSelection | null;
+};
+type UpdateSearchInput = {
+  searchId: string;
+  updates: {
+    name?: string;
+    query?: string;
+    filters?: SavedSearchFilters;
+    notificationsEnabled?: boolean;
+  };
+};
+type DeleteSearchInput = { searchId: string; searchName?: string };
+type AlertSettingsInput = { searchId: string; settings: WatchAlertSettingsInput };
+
 export const useSavedSearches = (): UseSavedSearches => {
   const { t } = useTranslation();
   const { isAuthenticated } = useOxy();
   const { owner, isCurrent } = useAccountOwnerGuard();
   const queryClient = useQueryClient();
-  const owners = useRef(new WeakMap<object, AccountOwner>());
-  function capture<T extends object>(variables: T): T & { ownerKey: string } {
+  const bindings = useRef(new WeakMap<object, { owner: AccountOwner; input: unknown }>());
+  function capture(input: object): SavedSearchAction {
     if (!owner || !isCurrent(owner)) throw new Error('The active account changed');
-    const action = { ...variables, ownerKey: mutationOwnerKey(owner) };
-    owners.current.set(action, owner);
+    const action = { ownerKey: mutationOwnerKey(owner) };
+    bindings.current.set(action, { owner, input });
     return action;
   }
-  function captured(variables: object): AccountOwner {
-    const current = owners.current.get(variables);
-    if (!current || !isCurrent(current)) throw new Error('The active account changed');
-    return current;
+  function captured<T>(variables: SavedSearchAction): { owner: AccountOwner; input: T } {
+    const binding = bindings.current.get(variables);
+    if (!binding || !isCurrent(binding.owner)) throw new Error('The active account changed');
+    return binding as { owner: AccountOwner; input: T };
   }
-  function currentFor(variables: object): AccountOwner | null {
-    const current = owners.current.get(variables);
+  function currentFor(variables: SavedSearchAction): AccountOwner | null {
+    const current = bindings.current.get(variables)?.owner;
     return current && isCurrent(current) ? current : null;
   }
 
@@ -465,35 +485,26 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   const saveSearchMutation = useMutation({
     mutationKey: ['saveSearch'],
-    mutationFn: async (vars: {
-      name: string;
-      query: string;
-      filters?: SavedSearchFilters;
-      notificationsEnabled?: boolean;
-      location?: LocationSelection | null;
-      ownerKey: string;
-    }): Promise<SavedSearch> => {
+    mutationFn: async (vars: SavedSearchAction): Promise<SavedSearch> => {
+      const { owner: current, input } = captured<SaveSearchInput>(vars);
       const response = await api.post<SavedSearchPayload>(
         '/api/profiles/me/saved-searches',
         {
-          name: vars.name,
-          query: vars.query,
-          filters: vars.filters,
-          notificationsEnabled: Boolean(vars.notificationsEnabled),
-          // Stored so reopening resolves by IDENTITY. Omitted rather than sent as
-          // null when absent, so a row written by an older client and one written
-          // deliberately without a place are the same thing to the backend.
-          ...(vars.location ? { location: vars.location } : {}),
+          name: input.name,
+          query: input.query,
+          filters: input.filters,
+          notificationsEnabled: Boolean(input.notificationsEnabled),
+          ...(input.location ? { location: input.location } : {}),
         },
-        { owner: captured(vars) },
+        { owner: current },
       );
 
       const payload = response.data;
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
       return normalizeSearch(raw, {
-        name: vars.name,
-        query: vars.query,
-        filters: vars.filters,
+        name: input.name,
+        query: input.query,
+        filters: input.filters,
       });
     },
     onSuccess: (saved, vars) => {
@@ -521,27 +532,20 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   const updateSearchMutation = useMutation({
     mutationKey: ['updateSearch'],
-    mutationFn: async (vars: {
-      searchId: string;
-      updates: {
-        name?: string;
-        query?: string;
-        filters?: SavedSearchFilters;
-        notificationsEnabled?: boolean;
-      };
-    }): Promise<SavedSearch> => {
+    mutationFn: async (vars: SavedSearchAction): Promise<SavedSearch> => {
+      const { owner: current, input } = captured<UpdateSearchInput>(vars);
       const response = await api.put<SavedSearchPayload>(
-        `/api/profiles/me/saved-searches/${vars.searchId}`,
-        vars.updates,
-        { owner: captured(vars) },
+        `/api/profiles/me/saved-searches/${input.searchId}`,
+        input.updates,
+        { owner: current },
       );
       const payload = response.data;
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
       return normalizeSearch(raw, {
-        id: vars.searchId,
-        name: vars.updates.name,
-        query: vars.updates.query,
-        filters: vars.updates.filters,
+        id: input.searchId,
+        name: input.updates.name,
+        query: input.updates.query,
+        filters: input.updates.filters,
       });
     },
     onSuccess: (updated, vars) => {
@@ -559,19 +563,19 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   const deleteSearchMutation = useMutation({
     mutationKey: ['deleteSearch'],
-    mutationFn: async (vars: { searchId: string; searchName?: string }): Promise<void> => {
-      await api.delete(`/api/profiles/me/saved-searches/${vars.searchId}`, {
-        owner: captured(vars),
-      });
+    mutationFn: async (vars: SavedSearchAction): Promise<void> => {
+      const { owner: current, input } = captured<DeleteSearchInput>(vars);
+      await api.delete(`/api/profiles/me/saved-searches/${input.searchId}`, { owner: current });
     },
     onSuccess: (_result, vars) => {
       const current = currentFor(vars);
       if (!current) return;
-      removeCachedSearch(vars.searchId, current);
+      const { input } = captured<DeleteSearchInput>(vars);
+      removeCachedSearch(input.searchId, current);
       if (!isCurrent(current)) return;
       toast.success(
-        vars.searchName
-          ? t('search.widgets.savedSearches.deleteSuccessNamed', { name: vars.searchName })
+        input.searchName
+          ? t('search.widgets.savedSearches.deleteSuccessNamed', { name: input.searchName })
           : t('search.widgets.savedSearches.deleteSuccess'),
       );
     },
@@ -681,18 +685,16 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   const alertSettingsMutation = useMutation({
     mutationKey: ['updateWatchAlertSettings'],
-    mutationFn: async (vars: {
-      searchId: string;
-      settings: WatchAlertSettingsInput;
-    }): Promise<SavedSearch> => {
+    mutationFn: async (vars: SavedSearchAction): Promise<SavedSearch> => {
+      const { owner: current, input } = captured<AlertSettingsInput>(vars);
       const response = await api.put<SavedSearchPayload>(
-        `/api/profiles/me/saved-searches/${vars.searchId}`,
-        vars.settings,
-        { owner: captured(vars) },
+        `/api/profiles/me/saved-searches/${input.searchId}`,
+        input.settings,
+        { owner: current },
       );
       const payload = response.data;
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
-      return normalizeSearch(raw, { id: vars.searchId });
+      return normalizeSearch(raw, { id: input.searchId });
     },
     onSuccess: (updated, vars) => {
       const current = currentFor(vars);

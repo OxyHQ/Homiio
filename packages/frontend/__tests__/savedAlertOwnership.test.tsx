@@ -43,6 +43,7 @@ let server: Server;
 let oxy: OxyServices;
 let client: QueryClient;
 let seen: Array<{ method: string; owner: string; path: string }>;
+let postBodies: string[];
 let holdB: ServerResponse | undefined;
 let shouldHoldB = false;
 let nameA = 'A private watch';
@@ -63,7 +64,15 @@ beforeAll(async () => {
       return;
     }
     if (req.method === 'POST') {
-      res.end(JSON.stringify({ data: { id: 'new-A', name: 'new A', query: 'apartments' } }));
+      let body = '';
+      req.setEncoding('utf8');
+      req.on('data', (part: string) => {
+        body += part;
+      });
+      req.on('end', () => {
+        postBodies.push(body);
+        res.end(JSON.stringify({ data: { id: 'new-A', name: 'new A', query: 'apartments' } }));
+      });
       return;
     }
     if (req.method === 'PUT' && owner === 'A' && allowPutA) {
@@ -102,6 +111,7 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   seen = [];
+  postBodies = [];
   shouldHoldB = false;
   nameA = 'A private watch';
   allowPutA = false;
@@ -356,6 +366,8 @@ it('does not restore an unknown owner binding from serialized paused variables',
   );
   expect(serialized).not.toContain(token('A'));
   expect(serialized).not.toContain('session-A');
+  expect(serialized).not.toContain('new A');
+  expect(serialized).not.toContain('apartments');
   const restored = new QueryClient();
   restored.setMutationDefaults(['saveSearch'], { mutationFn: paused!.options.mutationFn });
   hydrate(restored, JSON.parse(serialized));
@@ -521,4 +533,26 @@ it('uses the newly projected session result in the out-of-render reader', async 
   await waitFor(() =>
     expect(savedSearchesReading(client, 'A').data?.[0]?.name).toBe('Fresh A watch'),
   );
+});
+
+it('resumes a paused same-owner save with its in-memory payload', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  onlineManager.setOnline(false);
+  let pending!: Promise<boolean>;
+  act(() => {
+    pending = view.result.current.saveSearch('private name', 'private query');
+  });
+  await waitFor(() => expect(view.result.current.isSaving).toBe(true));
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await client.resumePausedMutations();
+    expect(await pending).toBe(true);
+  });
+  expect(seen).toContainEqual({
+    method: 'POST',
+    owner: 'A',
+    path: '/api/profiles/me/saved-searches',
+  });
+  expect(JSON.parse(postBodies[0])).toMatchObject({ name: 'private name', query: 'private query' });
 });
