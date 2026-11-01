@@ -1119,9 +1119,9 @@
       "following": "{{count}} following"
     },
     "preferencesPage": {
-      "remoteConflict": "Настройки изменились в другом месте. Ваши правки сохранены здесь; отмените их, чтобы загрузить текущие значения.",
+      "remoteConflict": "Настройки изменились в другом месте. Ваши правки сохранены.",
       "discardAndReload": "Отменить правки и обновить",
-      "refreshToSave": "Обновите настройки перед сохранением. Проверьте подключение и попробуйте снова.",
+      "refreshToSave": "Обновите настройки перед сохранением. Проверьте подключение.",
       "title": "Roommate preferences",
       "eyebrow": "Sharing a place",
       "subtitle": "Let other Homiio users find you when their preferences and yours line up.",

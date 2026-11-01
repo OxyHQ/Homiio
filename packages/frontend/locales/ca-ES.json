@@ -1549,9 +1549,9 @@
       "following": "{{count}} following"
     },
     "preferencesPage": {
-      "remoteConflict": "Les preferències han canviat en un altre lloc. Conservem els canvis; descarta’ls per carregar els valors actuals.",
+      "remoteConflict": "Les preferències han canviat en un altre lloc. Conservem els canvis.",
       "discardAndReload": "Descarta els canvis i actualitza",
-      "refreshToSave": "Actualitza les preferències abans de desar. Comprova la connexió i torna-ho a provar.",
+      "refreshToSave": "Actualitza per desar. Comprova la connexió.",
       "title": "Preferències de company",
       "eyebrow": "Sharing a place",
       "subtitle": "Let other Homiio users find you when their preferences and yours line up.",

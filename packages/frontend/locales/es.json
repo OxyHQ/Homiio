@@ -1528,9 +1528,9 @@
       "following": "{{count}} siguiendo"
     },
     "preferencesPage": {
-      "remoteConflict": "Las preferencias cambiaron en otro lugar. Conservamos tus cambios; descártalos para cargar los valores actuales.",
+      "remoteConflict": "Las preferencias cambiaron en otro lugar. Conservamos tus cambios.",
       "discardAndReload": "Descartar cambios y actualizar",
-      "refreshToSave": "Actualiza tus preferencias antes de guardar. Comprueba tu conexión e inténtalo de nuevo.",
+      "refreshToSave": "Actualiza para guardar. Comprueba tu conexión.",
       "title": "Preferencias de compañero",
       "eyebrow": "Compartir piso",
       "subtitle": "Permite que otros usuarios de Homiio te encuentren cuando vuestras preferencias coincidan.",

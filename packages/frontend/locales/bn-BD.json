@@ -1115,9 +1115,9 @@
       "following": "{{count}} following"
     },
     "preferencesPage": {
-      "remoteConflict": "অন্য কোথাও সেটিংস বদলেছে। আপনার পরিবর্তন রাখা আছে; নতুন মান লোড করতে সেগুলো বাদ দিন।",
+      "remoteConflict": "অন্য কোথাও সেটিংস বদলেছে। আপনার পরিবর্তন রাখা আছে।",
       "discardAndReload": "পরিবর্তন বাদ দিয়ে রিলোড করুন",
-      "refreshToSave": "সংরক্ষণের আগে সেটিংস রিফ্রেশ করুন। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",
+      "refreshToSave": "সংরক্ষণের আগে রিফ্রেশ করুন ও সংযোগ পরীক্ষা করুন।",
       "title": "Roommate preferences",
       "eyebrow": "Sharing a place",
       "subtitle": "Let other Homiio users find you when their preferences and yours line up.",
