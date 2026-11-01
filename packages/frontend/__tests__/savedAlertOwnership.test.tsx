@@ -360,3 +360,61 @@ it('does not restore an unknown owner binding from serialized paused variables',
   expect(seen.filter((request) => request.method === 'POST')).toEqual([]);
   restored.clear();
 });
+
+it('keeps private searches and paused mutation variables out of SDK account snapshots', async () => {
+  const packageRoot = dirname(require.resolve('@oxy.so/services/package.json'));
+  const { createAccountQueryPersistence } = jest.requireActual(
+    join(packageRoot, 'lib/commonjs/ui/hooks/accountQueryPersistence.js'),
+  );
+  const writes: string[] = [];
+  const persister = createAccountQueryPersistence(client, {
+    roots: [],
+    memoryOnlyRoots: ['savedSearches'],
+  });
+  persister.setStorage({
+    getItem: async () => null,
+    setItem: async (_key: string, value: string) => {
+      writes.push(value);
+    },
+    removeItem: async () => {},
+  });
+  persister.attach();
+  persister.activate('A');
+  await persister.whenReady();
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  onlineManager.setOnline(false);
+  let pending!: Promise<boolean>;
+  act(() => {
+    pending = view.result.current.saveSearch('private paused search', 'apartments');
+  });
+  await waitFor(() => expect(view.result.current.isSaving).toBe(true));
+  const paused = client
+    .getMutationCache()
+    .getAll()
+    .find((mutation) => mutation.state.isPaused);
+  expect(paused).toBeDefined();
+  act(() => {
+    oxy.session.setAccessToken(token('B'));
+    persister.activate('B');
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  await persister.whenReady();
+  expect(client.getMutationCache().getAll()).toContain(paused);
+  expect(writes.length).toBeGreaterThan(0);
+  const serialized = writes.join(' ');
+  expect(serialized).not.toContain('watch-A');
+  expect(serialized).not.toContain('private paused search');
+  expect(serialized).not.toContain('session-A');
+  expect(serialized).not.toContain(token('A'));
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await client.resumePausedMutations();
+    expect(await pending).toBe(false);
+  });
+  expect(seen.filter((request) => request.method === 'POST')).toEqual([]);
+  view.unmount();
+  persister.detach();
+});
