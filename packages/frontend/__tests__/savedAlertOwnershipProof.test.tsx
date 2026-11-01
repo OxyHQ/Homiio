@@ -1,6 +1,7 @@
 /** @jest-environment ./test/http-environment.cjs */
 import type { ReactNode } from 'react';
-import { createServer, type Server } from 'node:http';
+import { createServer, type Server, type ServerResponse } from 'node:http';
+import { dirname, join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -32,6 +33,8 @@ let server: Server;
 let oxy: OxyServices;
 let client: QueryClient;
 let seen: Array<{ method: string; owner: string; path: string }>;
+let holdB: ServerResponse | undefined;
+let shouldHoldB = false;
 let useSavedSearches: typeof import('../hooks/useSavedSearches').useSavedSearches;
 let usePrimarySavedArea: typeof import('../hooks/useSavedSearches').usePrimarySavedArea;
 let bind: typeof import('../utils/api').bindApiToOxy;
@@ -42,6 +45,10 @@ beforeAll(async () => {
     const owner = req.headers.authorization === `Bearer ${token('A')}` ? 'A' : 'B';
     seen.push({ method: req.method ?? '', owner, path: req.url ?? '' });
     res.setHeader('Content-Type', 'application/json');
+    if (req.method === 'GET' && owner === 'B' && shouldHoldB) {
+      holdB = res;
+      return;
+    }
     if (req.method === 'PUT') {
       res.writeHead(404);
       res.end(JSON.stringify({ message: 'Not found' }));
@@ -72,6 +79,8 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   seen = [];
+  shouldHoldB = false;
+  holdB = undefined;
   oxy = new OxyServices({ baseURL: mockOrigin });
   oxy.session.setAccessToken(token('A'));
   Object.assign(mockAuth, {
@@ -132,3 +141,53 @@ it('diagnostic: retained A watch callback sends under B after projection changes
     path: '/api/profiles/me/saved-searches/watch-A',
   });
 });
+
+it.each([false, true])(
+  'diagnostic: SDK account persistence transition, memory-only=%s',
+  async (memoryOnly) => {
+    const packageRoot = dirname(require.resolve('@oxy.so/services/package.json'));
+    const { createAccountQueryPersistence } = jest.requireActual(
+      join(packageRoot, 'lib/commonjs/ui/hooks/accountQueryPersistence.js'),
+    );
+    const persister = createAccountQueryPersistence(
+      client,
+      memoryOnly ? { memoryOnlyRoots: ['savedSearches'] } : undefined,
+    );
+    persister.setStorage({
+      getItem: async () => null,
+      setItem: async () => {},
+      removeItem: async () => {},
+    });
+    persister.attach();
+    persister.activate('A');
+    await persister.whenReady();
+    const view = renderHook(() => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }), {
+      wrapper,
+    });
+    await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
+    shouldHoldB = true;
+    let invalidating!: Promise<void>;
+    act(() => {
+      oxy.session.setAccessToken(token('B'));
+      persister.activate('B');
+      invalidating = client.invalidateQueries();
+      mockAuth.user = { id: 'B' };
+      mockAuth.activeSessionId = 'session-B';
+      view.rerender(undefined);
+    });
+    await waitFor(() => expect(holdB).toBeDefined());
+    if (memoryOnly) {
+      expect(view.result.current.saved.searches).toEqual([]);
+    } else {
+      expect(view.result.current.saved.searches[0]?.id).toBe('watch-A');
+      expect(view.result.current.primary.selection).toEqual(location);
+    }
+    await act(async () => {
+      holdB?.end(JSON.stringify({ data: [] }));
+      await invalidating;
+    });
+    await waitFor(() => expect(view.result.current.saved.searches).toEqual([]));
+    view.unmount();
+    persister.detach();
+  },
+);
