@@ -6,7 +6,7 @@
  * minted now is Alia's from the start (`hooks/useSindiChat.ts`).
  */
 
-import { aliaSharedConversationUrl } from '@alia.onl/sdk';
+import { aliaSharedConversationUrl } from '@alia.onl/sdk/runtime';
 import { Loading } from '@oxy.so/bloom/loading';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Head from 'expo-router/head';

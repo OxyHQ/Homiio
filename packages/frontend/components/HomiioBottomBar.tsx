@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useAskAgent } from '@alia.onl/sdk';
+import { useAskAgent } from '@alia.onl/sdk/ask/eager';
 import { AliaAvatarIcon } from '@alia.onl/sdk/avatar';
 import { BottomBar } from '@oxy.so/bloom/bottom-bar';
 import { Fab } from '@oxy.so/bloom/fab';

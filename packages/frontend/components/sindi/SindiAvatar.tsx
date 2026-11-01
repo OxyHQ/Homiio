@@ -10,7 +10,7 @@
 import type React from 'react';
 import { AgentAvatar } from '@oxy.so/bloom/agent-avatar';
 import { RiSparkling2Line } from '@oxy.so/bloom/icons/RiSparkling2Line';
-import { readAgentCharacter } from '@alia.onl/sdk';
+import { readAgentCharacter } from '@alia.onl/sdk/character';
 import { useAgentProfile } from '@alia.onl/sdk/runtime';
 
 import { SINDI_AGENT_ID } from '@/components/sindi/sindiAgent';

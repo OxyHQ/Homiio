@@ -12,7 +12,7 @@
  */
 
 import type { AliaChatLabels, AliaConversationShare } from '@alia.onl/sdk';
-import { VOICE_ERROR_MESSAGES, type VoiceErrorCode } from '@alia.onl/sdk';
+import { VOICE_ERROR_MESSAGES, type VoiceErrorCode } from '@alia.onl/sdk/voice/messages';
 import { toast } from '@oxy.so/bloom/toast';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
