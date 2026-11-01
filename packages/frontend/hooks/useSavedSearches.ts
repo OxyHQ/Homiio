@@ -258,7 +258,7 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
   const queryKey = savedSearchesKeyFor(owner);
   return {
     queryKey,
-    enabled: Boolean(owner?.sessionId),
+    enabled: Boolean(owner),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
     queryFn: () =>
@@ -286,7 +286,7 @@ function ownerIsBound(owner: AccountOwner | null): boolean {
 export function savedSearchesReading(client: QueryClient, userId: string | undefined) {
   for (const query of client.getQueryCache().findAll({ queryKey: SAVED_SEARCHES_KEY })) {
     const owner = savedSearchOwners.get(query);
-    if (!owner?.sessionId || owner.userId !== userId) continue;
+    if (!owner || owner.userId !== userId) continue;
     try {
       assertAccountOwner(owner);
       return {
@@ -372,7 +372,7 @@ export const usePrimarySavedArea = (): PrimarySavedArea => {
   const { owner } = useAccountOwnerGuard();
   const client = useQueryClient();
   const query = useQuery(savedSearchesQueryOptions(owner, client));
-  const valid = Boolean(owner?.sessionId);
+  const valid = Boolean(owner);
   const unavailable = isBoundSubjectUnavailable();
   return useMemo(
     () =>
@@ -410,7 +410,7 @@ export const useSavedSearches = (): UseSavedSearches => {
   const queryClient = useQueryClient();
   const owners = useRef(new WeakMap<object, AccountOwner>());
   function capture<T extends object>(variables: T): T & { ownerKey: string } {
-    if (!owner?.sessionId || !isCurrent(owner)) throw new Error('The active account changed');
+    if (!owner || !isCurrent(owner)) throw new Error('The active account changed');
     const action = { ...variables, ownerKey: mutationOwnerKey(owner) };
     owners.current.set(action, owner);
     return action;
@@ -438,7 +438,7 @@ export const useSavedSearches = (): UseSavedSearches => {
   // query data so consumers' `useCallback`/`useMemo` deps stay referentially
   // stable across renders where the data is unchanged.
   const searches = useMemo<SavedSearch[]>(
-    () => (owner?.sessionId ? (listQuery.data ?? EMPTY_SEARCHES) : EMPTY_SEARCHES),
+    () => (owner ? (listQuery.data ?? EMPTY_SEARCHES) : EMPTY_SEARCHES),
     [owner, listQuery.data],
   );
 
@@ -786,7 +786,7 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   return {
     searches,
-    isLoading: !unavailable && ((isAuthenticated && !owner?.sessionId) || listQuery.isLoading),
+    isLoading: !unavailable && ((isAuthenticated && !owner) || listQuery.isLoading),
     isSaving: Boolean(
       saveSearchMutation.isPending &&
         saveSearchMutation.variables &&

@@ -17,7 +17,7 @@ let mockOrigin = '';
 const mockAuth = {
   isAuthenticated: true,
   user: { id: 'A' },
-  activeSessionId: 'session-A',
+  activeSessionId: 'session-A' as string | null,
   oxyServices: null as unknown as OxyServices,
 };
 jest.mock('@/config', () => ({ API_URL: mockOrigin }));
@@ -486,4 +486,21 @@ it('does not show a verified empty list while bearer B precedes the projected us
   });
   await waitFor(() => expect(view.result.current.saved.isLoading).toBe(false));
   expect(view.result.current.saved.searches).toEqual([]);
+});
+
+it('allows a known-subject legacy bearer while its projected session id is absent', async () => {
+  mockAuth.activeSessionId = null;
+  const view = renderHook(() => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }), {
+    wrapper,
+  });
+  await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
+  expect(view.result.current.primary.selection).toEqual(location);
+  await act(async () => {
+    expect(await view.result.current.saved.saveSearch('new A', 'apartments')).toBe(true);
+  });
+  expect(seen).toContainEqual({
+    method: 'POST',
+    owner: 'A',
+    path: '/api/profiles/me/saved-searches',
+  });
 });
