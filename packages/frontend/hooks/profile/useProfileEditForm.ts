@@ -3,6 +3,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
 import type { Profile, UpdateProfileData } from '@/services/profileService';
 import { useProfileQuery, useUpdateProfileMutation } from '@/hooks/query/useProfiles';
+import type { AccountOwner } from '@/hooks/useAccountOwner';
 import { logger } from '@/utils/logger';
 import {
   buildPersonalUpdateData,
@@ -149,9 +150,19 @@ function seedRentalHistory(profile: Profile['personalProfile']): RentalHistoryFo
   }));
 }
 
-export function useProfileEditForm() {
-  const { data: activeProfile, isLoading: profileLoading } = useProfileQuery();
-  const { mutateAsync: updateProfile } = useUpdateProfileMutation();
+export function useProfileEditForm(
+  owner: AccountOwner,
+  isCurrent: (owner: AccountOwner | null) => boolean,
+) {
+  const query = useProfileQuery(owner);
+  const activeProfile = query.data;
+  const profileLoading = query.isPending;
+  const profilePaused = query.isPending && query.fetchStatus === 'paused';
+  const profileError = query.isError;
+  const retryProfile = () => {
+    if (isCurrent(owner)) void query.refetch();
+  };
+  const { mutateAsync: updateProfile } = useUpdateProfileMutation(owner, isCurrent);
 
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -183,60 +194,90 @@ export function useProfileEditForm() {
     }
   }
 
-  const updatePersonalInfo = useCallback((updates: Partial<PersonalInfoForm>) => {
-    setPersonalInfo((prev) => ({ ...prev, ...updates }));
-    setHasUnsavedChanges(true);
-  }, []);
+  const updatePersonalInfo = useCallback(
+    (updates: Partial<PersonalInfoForm>) => {
+      if (!isCurrent(owner)) return;
+      setPersonalInfo((prev) => ({ ...prev, ...updates }));
+      setHasUnsavedChanges(true);
+    },
+    [owner, isCurrent],
+  );
 
-  const updatePreferences = useCallback((updates: Partial<PreferencesForm>) => {
-    setPreferences((prev) => ({ ...prev, ...updates }));
-    setHasUnsavedChanges(true);
-  }, []);
+  const updatePreferences = useCallback(
+    (updates: Partial<PreferencesForm>) => {
+      if (!isCurrent(owner)) return;
+      setPreferences((prev) => ({ ...prev, ...updates }));
+      setHasUnsavedChanges(true);
+    },
+    [owner, isCurrent],
+  );
 
-  const updateSettings = useCallback((updates: Partial<SettingsForm>) => {
-    setSettings((prev) => ({ ...prev, ...updates }));
-    setHasUnsavedChanges(true);
-  }, []);
+  const updateSettings = useCallback(
+    (updates: Partial<SettingsForm>) => {
+      if (!isCurrent(owner)) return;
+      setSettings((prev) => ({ ...prev, ...updates }));
+      setHasUnsavedChanges(true);
+    },
+    [owner, isCurrent],
+  );
 
-  const toggleAmenity = useCallback((amenity: string) => {
-    setPreferences((prev) => ({
-      ...prev,
-      preferredAmenities: prev.preferredAmenities.includes(amenity)
-        ? prev.preferredAmenities.filter((a) => a !== amenity)
-        : [...prev.preferredAmenities, amenity],
-    }));
-    setHasUnsavedChanges(true);
-  }, []);
+  const toggleAmenity = useCallback(
+    (amenity: string) => {
+      if (!isCurrent(owner)) return;
+      setPreferences((prev) => ({
+        ...prev,
+        preferredAmenities: prev.preferredAmenities.includes(amenity)
+          ? prev.preferredAmenities.filter((a) => a !== amenity)
+          : [...prev.preferredAmenities, amenity],
+      }));
+      setHasUnsavedChanges(true);
+    },
+    [owner, isCurrent],
+  );
 
-  const togglePropertyType = useCallback((propertyType: string) => {
-    setPreferences((prev) => ({
-      ...prev,
-      propertyTypes: prev.propertyTypes.includes(propertyType)
-        ? prev.propertyTypes.filter((t) => t !== propertyType)
-        : [...prev.propertyTypes, propertyType],
-    }));
-    setHasUnsavedChanges(true);
-  }, []);
+  const togglePropertyType = useCallback(
+    (propertyType: string) => {
+      if (!isCurrent(owner)) return;
+      setPreferences((prev) => ({
+        ...prev,
+        propertyTypes: prev.propertyTypes.includes(propertyType)
+          ? prev.propertyTypes.filter((t) => t !== propertyType)
+          : [...prev.propertyTypes, propertyType],
+      }));
+      setHasUnsavedChanges(true);
+    },
+    [owner, isCurrent],
+  );
 
   const addReference = useCallback(() => {
+    if (!isCurrent(owner)) return;
     setReferences((prev) => [
       ...prev,
       { name: '', relationship: 'personal', phone: '', email: '', verified: false },
     ]);
     setHasUnsavedChanges(true);
-  }, []);
+  }, [owner, isCurrent]);
 
-  const updateReference = useCallback((index: number, updates: Partial<ReferenceForm>) => {
-    setReferences((prev) => prev.map((ref, i) => (i === index ? { ...ref, ...updates } : ref)));
-    setHasUnsavedChanges(true);
-  }, []);
+  const updateReference = useCallback(
+    (index: number, updates: Partial<ReferenceForm>) => {
+      if (!isCurrent(owner)) return;
+      setReferences((prev) => prev.map((ref, i) => (i === index ? { ...ref, ...updates } : ref)));
+      setHasUnsavedChanges(true);
+    },
+    [owner, isCurrent],
+  );
 
-  const removeReference = useCallback((index: number) => {
-    setReferences((prev) => prev.filter((_, i) => i !== index));
-    setHasUnsavedChanges(true);
-  }, []);
+  const removeReference = useCallback(
+    (index: number) => {
+      if (!isCurrent(owner)) return;
+      setReferences((prev) => prev.filter((_, i) => i !== index));
+      setHasUnsavedChanges(true);
+    },
+    [owner, isCurrent],
+  );
 
   const addRentalHistory = useCallback(() => {
+    if (!isCurrent(owner)) return;
     setRentalHistory((prev) => [
       ...prev,
       {
@@ -250,21 +291,30 @@ export function useProfileEditForm() {
       },
     ]);
     setHasUnsavedChanges(true);
-  }, []);
+  }, [owner, isCurrent]);
 
-  const updateRentalHistory = useCallback((index: number, updates: Partial<RentalHistoryForm>) => {
-    setRentalHistory((prev) =>
-      prev.map((entry, i) => (i === index ? { ...entry, ...updates } : entry)),
-    );
-    setHasUnsavedChanges(true);
-  }, []);
+  const updateRentalHistory = useCallback(
+    (index: number, updates: Partial<RentalHistoryForm>) => {
+      if (!isCurrent(owner)) return;
+      setRentalHistory((prev) =>
+        prev.map((entry, i) => (i === index ? { ...entry, ...updates } : entry)),
+      );
+      setHasUnsavedChanges(true);
+    },
+    [owner, isCurrent],
+  );
 
-  const removeRentalHistory = useCallback((index: number) => {
-    setRentalHistory((prev) => prev.filter((_, i) => i !== index));
-    setHasUnsavedChanges(true);
-  }, []);
+  const removeRentalHistory = useCallback(
+    (index: number) => {
+      if (!isCurrent(owner)) return;
+      setRentalHistory((prev) => prev.filter((_, i) => i !== index));
+      setHasUnsavedChanges(true);
+    },
+    [owner, isCurrent],
+  );
 
   const handleSave = useCallback(async () => {
+    if (!isCurrent(owner)) return;
     if (!activeProfile) {
       toast.error(i18next.t('profile.edit.noProfile'));
       return;
@@ -297,17 +347,21 @@ export function useProfileEditForm() {
       });
 
       await updateProfile(updateData);
+      if (!isCurrent(owner)) return;
       setHasUnsavedChanges(false);
       toast.success(i18next.t('profile.edit.updateSuccess'));
     } catch (error) {
+      if (!isCurrent(owner)) return;
       logger.error('Error saving profile', error);
       const message = error instanceof Error ? error.message : 'Failed to update profile.';
       toast.error(message);
     } finally {
-      setIsSaving(false);
+      if (isCurrent(owner)) setIsSaving(false);
     }
   }, [
     activeProfile,
+    owner,
+    isCurrent,
     personalInfo,
     preferences,
     references,
@@ -319,6 +373,9 @@ export function useProfileEditForm() {
   return {
     activeProfile,
     profileLoading,
+    profilePaused,
+    profileError,
+    retryProfile,
     isFormInitialized,
     isSaving,
     hasUnsavedChanges,
