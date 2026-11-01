@@ -55,6 +55,38 @@ jobs:
           (cd base && bun scripts/check-web-export-budget.mjs packages/frontend/dist) || true
           echo Candidate
           (cd candidate && bun scripts/check-web-export-budget.mjs packages/frontend/dist) || true
+      - name: Smoke production web boot in headless Chrome
+        run: |
+          set -euo pipefail
+          export CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs base/packages/frontend/dist
+          node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs candidate/packages/frontend/dist
+      - name: Verify changed caller delegates during a frozen production build
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
+        run: |
+          set -euo pipefail
+          cp candidate/packages/frontend/scripts/reanimated-production-web-resolver.cjs "$RUNNER_TEMP/resolver.cjs"
+          node - <<'NODE'
+          const fs=require('fs'); const file='candidate/packages/frontend/scripts/reanimated-production-web-resolver.cjs';
+          const before=fs.readFileSync(file,'utf8'); const hash='05a665936b82cf8a930ee92fd83e17b4da4362eb13339b2ddeb20443b5b13bc0';
+          if(!before.includes(hash)) throw Error('expected hash absent');
+          fs.writeFileSync(file,before.replace(hash,'0'.repeat(64)));
+          NODE
+          (cd candidate && bun run --cwd packages/frontend build --clear)
+          echo Mismatch
+          (cd candidate && bun scripts/check-web-export-budget.mjs packages/frontend/dist) || true
+          cp "$RUNNER_TEMP/resolver.cjs" candidate/packages/frontend/scripts/reanimated-production-web-resolver.cjs
+      - name: Export native JS bundles without changing resolver behavior
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
+        run: |
+          set -euo pipefail
+          cd candidate/packages/frontend
+          bunx expo export --platform ios --output-dir "$RUNNER_TEMP/ios-export"
+          bunx expo export --platform android --output-dir "$RUNNER_TEMP/android-export"
       - name: Verify candidate module graph from a separate source-map export
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
