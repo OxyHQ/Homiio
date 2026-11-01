@@ -40,6 +40,7 @@ export function LocationStep({
   const { location } = formData;
 
   const availableFromDate = useMemo(() => {
+    if (!location.availableFrom) return null;
     return parseCalendarDate(location.availableFrom);
   }, [location.availableFrom]);
 
