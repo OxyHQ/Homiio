@@ -10,7 +10,7 @@
  * `DatePicker` move-in date (stored as `YYYY-MM-DD`, converted at the
  * boundary), `Chip` option rows, `Switch`, and a `toast` for the save outcome.
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -33,7 +33,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
 import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
-import { useProfileStore } from '@/store/profileStore';
+import { ProfileRequestSupersededError } from '@/hooks/useProfileOwner';
 import { spacing } from '@/constants/styles';
 import { RiAccountCircleLine } from '@oxy.so/bloom/icons/RiAccountCircleLine';
 import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
@@ -248,7 +248,10 @@ export default function RoommatePreferencesPage() {
   const queryClient = useQueryClient();
   const [roommateEnabled, setRoommateEnabled] = useState(false);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const { profile, hasProfile } = useProfile();
+  const { profile, hasProfile, refreshProfile, isProfileProjectionCurrent } = useProfile();
+  const refreshOwners = useRef(
+    new WeakMap<object, { refresh: typeof refreshProfile; isCurrent: () => boolean }>(),
+  );
 
   const profileSettingsKey = hasProfile ? profile : null;
   const [prevProfileSettingsKey, setPrevProfileSettingsKey] = useState(profileSettingsKey);
@@ -281,14 +284,23 @@ export default function RoommatePreferencesPage() {
     mutationKey: ['roommates', 'savePreferences'],
     mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) =>
       roommateService.updateRoommatePreferences(vars.preferences, vars.enabled),
-    onSuccess: async () => {
-      await useProfileStore.getState().fetchProfile();
+    onSuccess: async (_result, variables) => {
+      const captured = refreshOwners.current.get(variables);
+      if (!captured?.isCurrent()) return;
+      try {
+        await captured.refresh();
+      } catch (error) {
+        if (!(error instanceof ProfileRequestSupersededError)) throw error;
+      }
+      if (!captured.isCurrent()) return;
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
+      if (!captured.isCurrent()) return;
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'] });
-      toast.success(t('roommates.alert.preferencesSaved'));
+      if (captured.isCurrent()) toast.success(t('roommates.alert.preferencesSaved'));
     },
-    onError: () => {
-      toast.error(t('roommates.alert.preferencesFailed'));
+    onError: (_error, variables) => {
+      if (refreshOwners.current.get(variables)?.isCurrent())
+        toast.error(t('roommates.alert.preferencesFailed'));
     },
   });
 
@@ -299,7 +311,13 @@ export default function RoommatePreferencesPage() {
   });
 
   const handleSave = () => {
-    saveMutation.mutate({ preferences: toPreferences(form), enabled: roommateEnabled });
+    if (!isProfileProjectionCurrent()) return;
+    const variables = { preferences: toPreferences(form), enabled: roommateEnabled };
+    refreshOwners.current.set(variables, {
+      refresh: refreshProfile,
+      isCurrent: isProfileProjectionCurrent,
+    });
+    saveMutation.mutate(variables);
   };
 
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
