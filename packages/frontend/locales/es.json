@@ -2869,6 +2869,7 @@
   "subscriptions": {
     "title": "Suscripciones",
     "authRequired": "Autenticación requerida",
+    "loadFailed": "No se pudo cargar tu suscripción",
     "checkoutFailed": "No se pudo iniciar el pago",
     "portalFailed": "No se pudo abrir la gestión de suscripciones",
     "syncSuccess": "Estado de suscripción sincronizado desde Stripe",

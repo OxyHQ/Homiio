@@ -2868,6 +2868,7 @@
   "subscriptions": {
     "title": "Abbonamenti",
     "authRequired": "Autenticazione richiesta",
+    "loadFailed": "Impossibile caricare il tuo abbonamento",
     "checkoutFailed": "Impossibile avviare il pagamento",
     "portalFailed": "Impossibile aprire la gestione abbonamenti",
     "syncSuccess": "Stato abbonamento sincronizzato da Stripe",
