@@ -1028,6 +1028,29 @@ it('keeps both concurrent writes when starting from an unverified cache', async 
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
   });
   hydrate(client, blob);
+  const { api } = jest.requireActual('../utils/api') as typeof import('../utils/api');
+  const originalGet = api.get;
+  let readIndex = 0;
+  const resolveReads: Array<() => void> = [];
+  const delivered = [0, 1].map(
+    (i) =>
+      new Promise<void>((resolve) => {
+        resolveReads[i] = resolve;
+      }),
+  );
+  const spy = jest.spyOn(api, 'get').mockImplementation(((...args: Parameters<typeof api.get>) => {
+    const index = readIndex++;
+    return originalGet(...args).then(
+      (value) => {
+        resolveReads[index]?.();
+        return value;
+      },
+      (error) => {
+        resolveReads[index]?.();
+        throw error;
+      },
+    );
+  }) as typeof api.get);
   shouldHoldA = true;
   shouldHoldPost = true;
   const view = renderHook(() => useSavedSearches(), { wrapper });
@@ -1054,6 +1077,8 @@ it('keeps both concurrent writes when starting from an unverified cache', async 
   await act(async () => {
     stale.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
     staleAfterDelete.end(JSON.stringify({ data: [] }));
+    await Promise.all(delivered);
   });
+  spy.mockRestore();
   expect((client.getQueryData(key) as Array<{ id: string }>).map((x) => x.id)).toEqual(['new-A']);
 });
