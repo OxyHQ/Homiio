@@ -1154,4 +1154,13 @@ it('does not publish a reentrant read started while cancelling an earlier read',
   clock.mockRestore();
   expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
   expect(client.getQueryState(key)!.dataUpdatedAt).toBe(mutationTimestamp);
+  expect(client.getQueryState(key)!.status).toBe('error');
+  await waitFor(() => expect(view.result.current.error).toBeNull());
+  shouldHoldA = false;
+  nameA = 'Updated A';
+  await act(async () => {
+    await client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(client.getQueryState(key)!.status).toBe('success'));
+  expect(view.result.current.error).toBeNull();
 });

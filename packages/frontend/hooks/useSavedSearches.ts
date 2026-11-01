@@ -258,6 +258,8 @@ const savedSearchOwners = new WeakMap<
   { owner: AccountOwner; data: SavedSearch[] | undefined }
 >();
 
+class SupersededSavedSearchRead extends Error {}
+
 const savedSearchRevisions = new WeakMap<object, number>();
 const savedSearchReadRevisions = new WeakMap<
   SavedSearch[],
@@ -295,8 +297,7 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
         !isBoundOxyInstance(read.owner.oxyServices) ||
         !isExactAccountProjection(read.owner)
       ) {
-        if (Array.isArray(oldData)) return oldData;
-        throw new Error('Saved search read was superseded');
+        throw new SupersededSavedSearchRead('Saved search read was superseded');
       }
       savedSearchOwners.set(query, { owner: read.owner, data: newData });
       return newData;
@@ -889,7 +890,7 @@ export const useSavedSearches = (): UseSavedSearches => {
     ((!owner && isBoundSubjectUnavailable()) || (!verified && listQuery.fetchStatus === 'paused'));
   const error = unavailable
     ? t('search.widgets.savedSearches.loadFailed')
-    : listQuery.error
+    : listQuery.error && !(verified && listQuery.error instanceof SupersededSavedSearchRead)
       ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
       : null;
 
