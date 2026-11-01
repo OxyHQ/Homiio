@@ -10,8 +10,6 @@ import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns/format';
-import { isValid } from 'date-fns/isValid';
-import { parse } from 'date-fns/parse';
 
 import { DatePicker } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
@@ -24,23 +22,17 @@ import { TextFieldInput } from '@oxy.so/bloom/text-field';
 
 import type { StepProps } from '@/components/reviews/write/types';
 import { spacing } from '@/constants/styles';
+import { parseCalendarDate } from '@/utils/parseCalendarDate';
 
 const CURRENCIES = ['EUR', 'USD', 'GBP', 'CAD'] as const;
 const DAY_FORMAT = 'yyyy-MM-dd';
-
-/** `YYYY-MM-DD` → local-midnight Date, or null when empty / unparseable. */
-const toDate = (value: string): Date | null => {
-  if (!value.trim()) return null;
-  const parsed = parse(value, DAY_FORMAT, new Date());
-  return isValid(parsed) ? parsed : null;
-};
 
 const toDay = (date: Date | null): string => (date ? format(date, DAY_FORMAT) : '');
 
 export const StepPriceDates: React.FC<StepProps> = ({ data, update }) => {
   const { t } = useTranslation();
-  const livedFrom = toDate(data.livedFrom);
-  const livedTo = toDate(data.livedTo);
+  const livedFrom = parseCalendarDate(data.livedFrom);
+  const livedTo = parseCalendarDate(data.livedTo);
   const currencyLabel = t('reviews.write.fields.currency');
 
   return (

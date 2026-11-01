@@ -2,8 +2,6 @@ import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns/format';
-import { isValid } from 'date-fns/isValid';
-import { parse } from 'date-fns/parse';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
 import { DatePicker } from '@oxy.so/bloom/date-picker';
@@ -13,6 +11,7 @@ import { RiEyeLine } from '@oxy.so/bloom/icons/RiEyeLine';
 import { RiEyeOffLine } from '@oxy.so/bloom/icons/RiEyeOffLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { AddressPickerMap } from '@/components/map/AddressPickerMap';
+import { parseCalendarDate } from '@/utils/parseCalendarDate';
 import { COUNTRY_OPTIONS, STATE_OPTIONS, MAP_HEIGHT } from './constants';
 import { WizardSelect, WizardTextField } from './fields';
 import { createPropertyStyles as styles } from './styles';
@@ -42,8 +41,7 @@ export function LocationStep({
 
   const availableFromDate = useMemo(() => {
     if (!location.availableFrom) return null;
-    const parsed = parse(location.availableFrom, DAY_FORMAT, new Date());
-    return isValid(parsed) ? parsed : null;
+    return parseCalendarDate(location.availableFrom);
   }, [location.availableFrom]);
 
   const handleAvailableFrom = useCallback(
