@@ -859,7 +859,9 @@ it('does not infer a network area while an unbound saved area is paused and reco
     resolvedAt: '2026-01-01T00:00:00.000Z',
     expiresAt: '2030-01-01T00:00:00.000Z',
   });
-  act(() => onlineManager.setOnline(false));
+  await act(async () => {
+    onlineManager.setOnline(false);
+  });
   const stop = observeInferredScope(client);
   const view = renderHook(() => ({ scope: useLocationScope(), primary: usePrimarySavedArea() }), {
     wrapper,
@@ -875,13 +877,19 @@ it('does not infer a network area while an unbound saved area is paused and reco
   expect(view.result.current.scope.savedAreaUnavailable).toBe(true);
   expect(useLocationScopeStore.getState().autoScope).toBeNull();
   const explicitArea = { ...location, label: { primary: 'explicit choice', kind: 'place' } };
-  act(() => view.result.current.scope.choose(explicitArea));
+  await act(async () => {
+    view.result.current.scope.choose(explicitArea);
+  });
   await waitFor(() => expect(view.result.current.scope.selection).toEqual(explicitArea));
   expect(view.result.current.scope.source).toBe('session');
-  act(() => useLocationScopeStore.setState({ sessionSelection: null }));
-  await act(async () => onlineManager.setOnline(true));
+  await act(async () => {
+    useLocationScopeStore.setState({ sessionSelection: null });
+  });
+  await act(async () => {
+    onlineManager.setOnline(true);
+  });
   await waitFor(() => expect(view.result.current.primary.selection).toEqual(location));
-  expect(view.result.current.scope.source).toBe('saved_area');
+  await waitFor(() => expect(view.result.current.scope.source).toBe('saved_area'));
   expect(useLocationScopeStore.getState().autoScope).toBeNull();
   view.unmount();
   stop();
