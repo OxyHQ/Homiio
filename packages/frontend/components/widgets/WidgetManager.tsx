@@ -1,5 +1,6 @@
 import React, { type ReactNode, useMemo } from 'react';
 import { View } from 'react-native';
+// Preserve the former barrel's initialization order for shared widget dependencies.
 import './BaseWidget';
 import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
 import { NeighbourSupportWidget } from './NeighbourSupportWidget';
