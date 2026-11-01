@@ -4,9 +4,9 @@ on:
 permissions:
   contents: read
 jobs:
-  granular-chart-opt-in-diagnostic:
+  resolver-and-identity:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -23,6 +23,48 @@ jobs:
         run: bash .github/scripts/bun-install.sh --frozen-lockfile
       - name: Test scoping, symlinks, version and resolver delegation
         run: node --test scripts/diagnostics/alia-chart-opt-in.test.cjs
+      - name: Install additive experimental exports into this runner only
+        run: node scripts/diagnostics/install-chart-fixture.cjs
+      - name: Typecheck experimental exports
+        run: bun run --cwd packages/frontend typecheck
+      - name: Compare actual chart component identities
+        run: bun run --cwd packages/frontend test --runInBand aliaGranularChartDiagnostic.test.tsx
+  context-identity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.3'
+      - name: Verify unchanged frozen package inputs
+        run: |
+          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
+          git diff --exit-code 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194 -- bun.lock package.json packages/frontend/package.json .github/scripts/bun-install.sh
+      - name: Install frozen dependencies
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
+      - name: Compare Alia ask and runtime contexts
+        run: bun run --cwd packages/frontend test --runInBand aliaGranularContextDiagnostic.test.tsx
+  web-paired:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.3'
+      - name: Verify unchanged frozen package inputs
+        run: |
+          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
+          git diff --exit-code 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194 -- bun.lock package.json packages/frontend/package.json .github/scripts/bun-install.sh
+      - name: Install frozen dependencies
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
       - name: Export the exact baseline
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
@@ -32,12 +74,8 @@ jobs:
           bun run --cwd packages/frontend build --clear
           mv packages/frontend/dist /tmp/homiio-optin-baseline
           git checkout HEAD -- packages/frontend/metro.config.js 'packages/frontend/app/(pages)/insights/index.tsx' packages/frontend/components/property/PriceRangeSection.tsx
-      - name: Install additive experimental exports into the runner only
+      - name: Install additive experimental exports into this runner only
         run: node scripts/diagnostics/install-chart-fixture.cjs
-      - name: Typecheck against the experimental exports
-        run: bun run --cwd packages/frontend typecheck
-      - name: Check same exported chart objects and shared ask hook
-        run: bun run --cwd packages/frontend test --runInBand aliaGranularChartDiagnostic.test.tsx
       - name: Export opt-in web
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
@@ -57,19 +95,57 @@ jobs:
         run: bunx expo export --platform web --output-dir /tmp/homiio-optin-web --source-maps --clear
       - name: Inspect web module identity
         run: node scripts/diagnostics/inspect-opt-in-maps.cjs /tmp/homiio-optin-web
-      - name: Export opt-in Android JavaScript with maps
+  android-javascript:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.3'
+      - name: Verify unchanged frozen package inputs
+        run: |
+          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
+          git diff --exit-code 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194 -- bun.lock package.json packages/frontend/package.json .github/scripts/bun-install.sh
+      - name: Install frozen dependencies
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
+      - name: Install additive experimental exports into this runner only
+        run: node scripts/diagnostics/install-chart-fixture.cjs
+      - name: Export opt-in android JavaScript with maps
         working-directory: packages/frontend
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
         run: bunx expo export --platform android --output-dir /tmp/homiio-optin-android --source-maps --clear
-      - name: Inspect Android module identity
+      - name: Inspect android module identity
         run: node scripts/diagnostics/inspect-opt-in-maps.cjs /tmp/homiio-optin-android
-      - name: Export opt-in iOS JavaScript with maps
+  ios-javascript:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.3'
+      - name: Verify unchanged frozen package inputs
+        run: |
+          git fetch --no-tags --depth=1 origin 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
+          git diff --exit-code 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194 -- bun.lock package.json packages/frontend/package.json .github/scripts/bun-install.sh
+      - name: Install frozen dependencies
+        run: bash .github/scripts/bun-install.sh --frozen-lockfile
+      - name: Install additive experimental exports into this runner only
+        run: node scripts/diagnostics/install-chart-fixture.cjs
+      - name: Export opt-in ios JavaScript with maps
         working-directory: packages/frontend
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
         run: bunx expo export --platform ios --output-dir /tmp/homiio-optin-ios --source-maps --clear
-      - name: Inspect iOS module identity
+      - name: Inspect ios module identity
         run: node scripts/diagnostics/inspect-opt-in-maps.cjs /tmp/homiio-optin-ios
