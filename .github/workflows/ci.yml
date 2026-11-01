@@ -16,6 +16,10 @@ jobs:
         with:
           ref: 869658524c9700829f178217c870005ebbe21e42
           path: candidate
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: driver
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -59,3 +63,18 @@ jobs:
           echo Candidate
           cd candidate
           bun scripts/check-web-export-budget.mjs packages/frontend/dist
+      - name: Instrument widget initialization in CI-local copies
+        run: node driver/scripts/diagnostics/compare-widget-init.cjs instrument
+      - name: Export instrumented web builds with source maps
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
+        run: |
+          set -euo pipefail
+          (cd base && bun run --cwd packages/frontend build --clear --source-maps)
+          (cd candidate && bun run --cwd packages/frontend build --clear --source-maps)
+      - name: Compare source sets and browser initialization order
+        run: |
+          set -euo pipefail
+          export CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          node driver/scripts/diagnostics/compare-widget-init.cjs verify
