@@ -23,7 +23,7 @@
     "@oxy.so/utils": "^1.3.0"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "@types/node": "^26.6.5"
   },
   "files": [
