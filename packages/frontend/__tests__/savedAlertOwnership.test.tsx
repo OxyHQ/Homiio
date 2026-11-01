@@ -762,3 +762,23 @@ it('does not read an old instance cache when the linked API is rebound', async (
   });
   replacement.dispose();
 });
+
+it('settles a same-owner refetch with deeply equal data without a retry loop', async () => {
+  const view = renderHook(() => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }), {
+    wrapper,
+  });
+  await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
+  const query = client.getQueryCache().find({ queryKey: ['savedSearches'], exact: false });
+  expect(query).toBeDefined();
+  const original = query!.state.data;
+  await act(async () => {
+    await client.refetchQueries({ queryKey: query!.queryKey, exact: true });
+  });
+  await waitFor(() => expect(query!.state.fetchStatus).toBe('idle'));
+  expect(query!.state.data).toEqual(original);
+  expect(query!.state.data).not.toBe(original);
+  expect(savedSearchesReading(client, 'A').data).toBe(query!.state.data);
+  expect(view.result.current.saved.searches[0]?.id).toBe('watch-A');
+  expect(view.result.current.primary.selection).toEqual(location);
+  expect(seen.filter((request) => request.method === 'GET')).toHaveLength(2);
+});
