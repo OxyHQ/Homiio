@@ -1,14 +1,16 @@
 import React, { type ReactNode, useMemo } from 'react';
 import { View } from 'react-native';
+// Preserve the former barrel's initialization order for shared widget dependencies.
+import './BaseWidget';
 import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
 import { NeighbourSupportWidget } from './NeighbourSupportWidget';
+import { MissionWidget } from './MissionWidget';
 import { SavedSearchesWidget } from './SavedSearchesWidget';
 import { PropertyAlertWidget } from './PropertyAlertWidget';
 import { NeighborhoodRatingWidget } from './NeighborhoodRatingWidget';
 import { RecentlyViewedWidget } from './RecentlyViewedWidget';
 import { PropertyPreviewWidget } from './PropertyPreviewWidget';
 import { PropertyBookingWidget } from './PropertyBookingWidget';
-import { MissionWidget } from './MissionWidget';
 import type { ScreenId } from './screenIds';
 
 // Feature flag: controls whether the Neighborhood widget is rendered.
