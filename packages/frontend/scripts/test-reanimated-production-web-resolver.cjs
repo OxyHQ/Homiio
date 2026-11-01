@@ -15,6 +15,13 @@ assert.equal(run(false, 'ios'), fallback);
 assert.equal(run(false, 'android'), fallback);
 assert.equal(run(false, 'web', './unrelated'), fallback);
 assert.equal(run(false, 'web', request, __filename), fallback);
+const originalRead = fs.readFileSync;
+try {
+  fs.readFileSync = (file, ...args) => file === origin ? Buffer.from('modified caller') : originalRead(file, ...args);
+  assert.equal(run(false, 'web'), fallback);
+} finally {
+  fs.readFileSync = originalRead;
+}
 assert.throws(() => require('./reanimated-dev-assert-stub.cjs').assertWorkletsVersion(), /Unexpected production call/);
 
 // Exercise the same wrapper with Metro's resolver and actual installed files.
