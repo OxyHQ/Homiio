@@ -39,7 +39,7 @@ import { RoommateRequestComponent } from '@/components/RoommateRequest';
 import { RoommateRelationshipComponent } from '@/components/RoommateRelationship';
 import { RoomList } from '@/components/RoomList';
 import { useProfile } from '@/context/ProfileContext';
-import { ProfileOwnerChangedError } from '@/hooks/useProfileOwner';
+import { ProfileOwnerChangedError, ProfileRequestSupersededError } from '@/hooks/useProfileOwner';
 import { useRoomsFeed } from '@/hooks/useRoomsFeed';
 import {
   useRoommate,
@@ -159,11 +159,21 @@ export default function RoommatesPage() {
         activeSessionId,
       );
       if (!isProfileProjectionCurrent()) return;
-      await refreshProfile();
+      let superseded = false;
+      try {
+        await refreshProfile();
+      } catch (error) {
+        if (!(error instanceof ProfileRequestSupersededError)) throw error;
+        superseded = true;
+      }
       if (!isProfileProjectionCurrent()) return;
-      queryClient.setQueryData(['roommates', 'status'], {
-        hasRoommateMatching: result.enabled,
-      });
+      if (superseded) {
+        await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'], exact: true });
+      } else {
+        queryClient.setQueryData(['roommates', 'status'], {
+          hasRoommateMatching: result.enabled,
+        });
+      }
       if (result.enabled) {
         // Newly visible to matching: the discover list changes with it.
         await queryClient.invalidateQueries({ queryKey: ['roommates', 'profiles'] });

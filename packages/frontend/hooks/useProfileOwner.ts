@@ -12,6 +12,14 @@ export type ProfileOwner = {
   isCurrent: () => boolean;
 };
 
+/** A later profile operation owns publication of the observed profile. */
+export class ProfileRequestSupersededError extends Error {
+  constructor() {
+    super('A newer profile request superseded this one');
+    this.name = 'ProfileRequestSupersededError';
+  }
+}
+
 export class ProfileOwnerChangedError extends Error {
   constructor() {
     super('The active account changed');

@@ -102,7 +102,7 @@ jest.mock('@/components/ui/SectionEyebrow', () => ({
 }));
 
 import RoommatePreferencesPage from '@/app/(pages)/roommates/preferences';
-import { ProfileProvider } from '@/context/ProfileContext';
+import { ProfileProvider, useProfile } from '@/context/ProfileContext';
 import { useProfileStore } from '@/store/profileStore';
 import { toast } from '@oxy.so/bloom/toast';
 
@@ -115,6 +115,7 @@ beforeEach(() => {
     profileBinding: null,
     profileUpdatedAt: 0,
     profileRequest: null,
+    latestProfileRequest: null,
     isLoading: false,
     error: null,
   });
@@ -250,3 +251,54 @@ it('does not publish an old binding when the profile context has none', async ()
   expect(useProfileStore.getState().profileBinding).toBeNull();
   expect(mockSave).not.toHaveBeenCalled();
 });
+
+it.each(['success', 'failure'] as const)(
+  'finishes a saved preferences action when its profile refresh is superseded and the newer refresh has %s',
+  async (newer) => {
+    let refresh!: () => Promise<unknown>;
+    function CaptureRefresh() {
+      refresh = useProfile().refreshProfile;
+      return null;
+    }
+    const screen = render(
+      wrap(
+        <>
+          <CaptureRefresh />
+          <RoommatePreferencesPage />
+        </>,
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+      ).not.toBeDisabled(),
+    );
+    let finish!: (value: unknown) => void;
+    mockProfile.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    if (newer === 'success') mockProfile.mockResolvedValueOnce({ oxyUserId: 'A', note: 'newer' });
+    else mockProfile.mockRejectedValueOnce(new Error('temporary outage'));
+    fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
+    await waitFor(() => expect(mockProfile).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      if (newer === 'success') await refresh();
+      else await expect(refresh()).rejects.toThrow('temporary outage');
+    });
+    await act(async () => {
+      finish({ oxyUserId: 'A', note: 'superseded' });
+    });
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(useProfileStore.getState().profile).not.toEqual(
+      expect.objectContaining({ note: 'superseded' }),
+    );
+    if (newer === 'success')
+      expect(useProfileStore.getState().profile).toEqual(
+        expect.objectContaining({ note: 'newer' }),
+      );
+  },
+);

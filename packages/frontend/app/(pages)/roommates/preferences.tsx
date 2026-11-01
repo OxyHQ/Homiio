@@ -32,6 +32,7 @@ import { LeaseDuration } from '@homiio/shared-types/common';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
+import { ProfileRequestSupersededError } from '@/hooks/useProfileOwner';
 import {
   accountOwnerKey,
   type AccountOwner,
@@ -354,7 +355,11 @@ function OwnedPreferences({
       const guard = refreshOwners.current.get(variables);
       if (!isCurrent(owner) || !guard?.isCurrent()) return;
       try {
-        await guard.refresh();
+        try {
+          await guard.refresh();
+        } catch (error) {
+          if (!(error instanceof ProfileRequestSupersededError)) throw error;
+        }
         if (!guard.isCurrent() || !isCurrent(owner)) return;
         setFormDirty(false);
         setMatchingDirty(false);

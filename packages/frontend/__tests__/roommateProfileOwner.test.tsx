@@ -113,6 +113,7 @@ jest.mock('@/components/ui/SectionEyebrow', () => ({
 import RoommatesPage from '@/app/(pages)/roommates/index';
 import RoommatePreferencesPage from '@/app/(pages)/roommates/preferences';
 import { toast } from '@oxy.so/bloom/toast';
+import { ProfileRequestSupersededError } from '@/hooks/useProfileOwner';
 
 let client: QueryClient;
 beforeEach(() => {
@@ -239,3 +240,14 @@ it.each(['success', 'failure'] as const)(
     expect(toast.error).not.toHaveBeenCalled();
   },
 );
+
+it('confirms an accepted matching update and refetches status when its profile refresh was superseded', async () => {
+  const invalidate = jest.spyOn(client, 'invalidateQueries');
+  mockToggle.mockResolvedValue({ enabled: true });
+  mockRefreshA.mockRejectedValueOnce(new ProfileRequestSupersededError());
+  const screen = render(wrap(<RoommatesPage />));
+  fireEvent.press(await screen.findByRole('button', { name: 'roommates.screen.enableMatching' }));
+  await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
+  expect(toast.error).not.toHaveBeenCalled();
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['roommates', 'status'], exact: true });
+});

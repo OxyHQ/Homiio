@@ -28,9 +28,12 @@ let ProfileProvider: typeof import('../context/ProfileContext').ProfileProvider;
 let useProfileStore: typeof import('../store/profileStore').useProfileStore;
 let bindApiToOxy: typeof import('../utils/api').bindApiToOxy;
 let requests: string[] = [];
+let requestMethods: string[] = [];
+let realFetchProfile: ReturnType<typeof useProfileStore.getState>['fetchProfile'];
 let holdA: ((response: ServerResponse) => void) | null = null;
 let holdB: ((response: ServerResponse) => void) | null = null;
 let statusA = 200;
+let immediateAStatus = 200;
 
 beforeAll(async () => {
   Object.assign(globalThis, Reflect.get(globalThis, '__realHttp'));
@@ -45,8 +48,11 @@ beforeAll(async () => {
           ? 'B'
           : 'unknown';
     requests.push(who);
+    requestMethods.push(`${req.method} ${who}`);
     const ordinal = requests.filter((value) => value === who).length;
-    res.writeHead(who === 'A' && holdA ? statusA : 200, { 'Content-Type': 'application/json' });
+    res.writeHead(who === 'A' ? (holdA ? statusA : immediateAStatus) : 200, {
+      'Content-Type': 'application/json',
+    });
     if (who === 'A' && holdA) {
       res.write('{"success":true,"data":');
       holdA(res);
@@ -66,13 +72,16 @@ beforeAll(async () => {
   ({ bindApiToOxy } = jest.requireActual('../utils/api'));
   ({ ProfileProvider, useProfile } = jest.requireActual('../context/ProfileContext'));
   ({ useProfileStore } = jest.requireActual('../store/profileStore'));
+  realFetchProfile = useProfileStore.getState().fetchProfile;
 });
 
 beforeEach(() => {
   requests = [];
+  requestMethods = [];
   holdA = null;
   holdB = null;
   statusA = 200;
+  immediateAStatus = 200;
   client = new QueryClient({
     defaultOptions: {
       queries: {
@@ -93,10 +102,12 @@ beforeEach(() => {
   mockAuth.oxyServices = oxy;
   bindApiToOxy(oxy);
   useProfileStore.setState({
+    fetchProfile: realFetchProfile,
     profile: null,
     profileBinding: null,
     profileUpdatedAt: 0,
     profileRequest: null,
+    latestProfileRequest: null,
     isLoading: false,
     error: null,
   });
@@ -323,4 +334,84 @@ it('does not write after the provider unmounts or retain a loading owner', async
     await pendingA;
   });
   expect(useProfileStore.getState().profile).toBeNull();
+});
+
+it('does not publish an older same-owner GET after a completed store update', async () => {
+  const held = heldRequest();
+  const invocations: Promise<unknown>[] = [];
+  useProfileStore.setState({
+    fetchProfile: (owner) => {
+      const promise = realFetchProfile(owner);
+      invocations.push(promise);
+      return promise;
+    },
+  });
+  renderHook(() => useProfile(), { wrapper });
+  const oldResponse = await held;
+  expect(requestMethods).toEqual(['GET A']);
+  expect(invocations).toHaveLength(1);
+  const first = invocations[0];
+  first.catch(() => undefined);
+  const owner = useProfileStore.getState().profileRequest?.owner;
+  if (!owner) throw new Error('Expected the pending owner');
+  await act(async () => {
+    await useProfileStore.getState().updateProfile({}, owner);
+  });
+  expect(requestMethods).toEqual(['GET A', 'PUT A']);
+  expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-2' }));
+  await act(async () => {
+    oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-update' })}}`);
+    await expect(first).rejects.toThrow('A newer profile request superseded this one');
+  });
+  expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-2' }));
+});
+
+it('does not publish the older of two same-owner refreshes', async () => {
+  const view = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() =>
+    expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' })),
+  );
+  const held = heldRequest();
+  expect(requestMethods).toEqual(['GET A']);
+  let older!: Promise<unknown>;
+  act(() => {
+    older = view.result.current.refreshProfile();
+    older.catch(() => undefined);
+  });
+  const oldResponse = await held;
+  expect(requestMethods).toEqual(['GET A', 'GET A']);
+  await act(async () => {
+    await view.result.current.refreshProfile();
+  });
+  expect(requestMethods).toEqual(['GET A', 'GET A', 'GET A']);
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
+  await act(async () => {
+    oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-refresh' })}}`);
+    await expect(older).rejects.toThrow('A newer profile request superseded this one');
+  });
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
+});
+
+it('does not publish an older success when the newer refresh failed', async () => {
+  const view = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() =>
+    expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' })),
+  );
+  const held = heldRequest();
+  let older!: Promise<unknown>;
+  act(() => {
+    older = view.result.current.refreshProfile();
+    older.catch(() => undefined);
+  });
+  const oldResponse = await held;
+  immediateAStatus = 503;
+  await act(async () => {
+    await expect(view.result.current.refreshProfile()).rejects.toThrow();
+  });
+  await act(async () => {
+    oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-after-error' })}}`);
+    await expect(older).rejects.toThrow('A newer profile request superseded this one');
+  });
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' }));
+  expect(useProfileStore.getState().error).not.toBeNull();
 });

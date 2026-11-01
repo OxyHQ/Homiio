@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 import profileService from '@/services/profileService';
 import type { Profile, UpdateProfileData } from '@homiio/shared-types';
-import { ProfileOwnerChangedError, type ProfileOwner } from '@/hooks/useProfileOwner';
+import {
+  ProfileOwnerChangedError,
+  ProfileRequestSupersededError,
+  type ProfileOwner,
+} from '@/hooks/useProfileOwner';
 
 function assertCurrent(owner: ProfileOwner): void {
   if (!owner.isCurrent()) throw new ProfileOwnerChangedError();
@@ -16,6 +20,7 @@ interface ProfileState {
   profileBinding: { userId: string; sessionId: string } | null;
   profileUpdatedAt: number;
   profileRequest: { owner: ProfileOwner } | null;
+  latestProfileRequest: { owner: ProfileOwner } | null;
   isLoading: boolean;
   error: string | null;
   landlordProfile: Profile | null;
@@ -35,11 +40,12 @@ interface ProfileState {
   releaseProfileOwner: (owner: ProfileOwner) => void;
 }
 
-export const useProfileStore = create<ProfileState>((set) => ({
+export const useProfileStore = create<ProfileState>((set, get) => ({
   profile: null,
   profileBinding: null,
   profileUpdatedAt: 0,
   profileRequest: null,
+  latestProfileRequest: null,
   isLoading: false,
   error: null,
   landlordProfile: null,
@@ -57,19 +63,22 @@ export const useProfileStore = create<ProfileState>((set) => ({
     assertCurrent(owner);
     const request = { owner };
     try {
-      set({ isLoading: true, error: null, profileRequest: request });
+      set({ isLoading: true, error: null, profileRequest: request, latestProfileRequest: request });
       const profile = await profileService.getOrCreateProfile();
       assertCurrent(owner);
       assertProfileSubject(profile, owner);
+      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
       set((state) => ({
         profile,
         profileBinding: { userId: owner.userId, sessionId: owner.sessionId },
         profileUpdatedAt: Date.now(),
         ...(state.profileRequest === request ? { isLoading: false, profileRequest: null } : {}),
       }));
+      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
       return profile;
     } catch (error: unknown) {
       if (!owner.isCurrent()) throw new ProfileOwnerChangedError();
+      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch profile';
       set((state) =>
         state.profileRequest === request
@@ -102,19 +111,22 @@ export const useProfileStore = create<ProfileState>((set) => ({
     assertCurrent(owner);
     const request = { owner };
     try {
-      set({ isLoading: true, error: null, profileRequest: request });
+      set({ isLoading: true, error: null, profileRequest: request, latestProfileRequest: request });
       const updatedProfile = await profileService.updateMyProfile(updateData);
       assertCurrent(owner);
       assertProfileSubject(updatedProfile, owner);
+      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
       set((state) => ({
         profile: updatedProfile,
         profileBinding: { userId: owner.userId, sessionId: owner.sessionId },
         profileUpdatedAt: Date.now(),
         ...(state.profileRequest === request ? { isLoading: false, profileRequest: null } : {}),
       }));
+      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
       return updatedProfile;
     } catch (error: unknown) {
       if (!owner.isCurrent()) throw new ProfileOwnerChangedError();
+      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
       const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
       set((state) =>
         state.profileRequest === request
@@ -125,7 +137,8 @@ export const useProfileStore = create<ProfileState>((set) => ({
     }
   },
   releaseProfileOwner: (owner) =>
-    set((state) =>
-      state.profileRequest?.owner === owner ? { isLoading: false, profileRequest: null } : {},
-    ),
+    set((state) => ({
+      ...(state.profileRequest?.owner === owner ? { isLoading: false, profileRequest: null } : {}),
+      ...(state.latestProfileRequest?.owner === owner ? { latestProfileRequest: null } : {}),
+    })),
 }));
