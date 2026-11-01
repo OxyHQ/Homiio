@@ -258,6 +258,14 @@ const savedSearchOwners = new WeakMap<
   { owner: AccountOwner; data: SavedSearch[] | undefined }
 >();
 
+class SupersededSavedSearchRead extends Error {}
+
+const savedSearchRevisions = new WeakMap<object, number>();
+const savedSearchReadRevisions = new WeakMap<
+  SavedSearch[],
+  { owner: AccountOwner; query: object; revision: number }
+>();
+
 function hasVerifiedSavedSearches(client: QueryClient, owner: AccountOwner | null): boolean {
   if (!owner) return false;
   const query = client.getQueryCache().find({ queryKey: savedSearchesKeyFor(owner), exact: true });
@@ -279,10 +287,27 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
     staleTime: verified ? 1000 * 30 : 0,
     ...(verified ? {} : { refetchOnMount: 'always' as const }),
     gcTime: 1000 * 60 * 10,
-    structuralSharing: false,
-    queryFn: () =>
+    structuralSharing: (_oldData: unknown, newData: unknown) => {
+      if (!Array.isArray(newData)) return newData;
+      const query = client.getQueryCache().find({ queryKey, exact: true });
+      const read = savedSearchReadRevisions.get(newData);
+      if (!read) return newData;
+      if (
+        !query ||
+        read.query !== query ||
+        read.revision !== (savedSearchRevisions.get(query) ?? 0) ||
+        !isBoundOxyInstance(read.owner.oxyServices) ||
+        !isExactAccountProjection(read.owner)
+      ) {
+        throw new SupersededSavedSearchRead('Saved search read was superseded');
+      }
+      savedSearchOwners.set(query, { owner: read.owner, data: newData });
+      return newData;
+    },
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
       withAccountOwner(owner, async (current): Promise<SavedSearch[]> => {
         const query = client.getQueryCache().find({ queryKey, exact: true });
+        const revision = query ? (savedSearchRevisions.get(query) ?? 0) : 0;
         const previous = query && savedSearchOwners.get(query);
         if (query && (!previous || !isExactAccountProjection(previous.owner))) {
           savedSearchOwners.set(query, { owner: current, data: undefined });
@@ -292,7 +317,8 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
         });
         const searches = extractSearchList(response.data).map((raw) => normalizeSearch(raw));
         assertAccountOwner(current);
-        if (query) savedSearchOwners.set(query, { owner: current, data: searches });
+        if (signal.aborted) throw new Error('Saved search read was cancelled');
+        if (query) savedSearchReadRevisions.set(searches, { owner: current, query, revision });
         return searches;
       }),
   };
@@ -521,8 +547,10 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   /** Replace a single search in the cached list by id, or append if new. */
   const upsertCachedSearch = useCallback(
-    (next: SavedSearch, capturedOwner: AccountOwner) => {
+    async (next: SavedSearch, capturedOwner: AccountOwner) => {
       const queryKey = savedSearchesKeyFor(capturedOwner);
+      await queryClient.cancelQueries({ queryKey, exact: true }, { revert: false });
+      if (!isCurrent(capturedOwner)) return;
       const query = queryClient.getQueryCache().find({ queryKey, exact: true });
       if (!query || !hasVerifiedSavedSearches(queryClient, capturedOwner)) {
         void queryClient.invalidateQueries({ queryKey, exact: true });
@@ -534,17 +562,22 @@ export const useSavedSearches = (): UseSavedSearches => {
         const result = [...list];
         if (index === -1) result.push(next);
         else result[index] = next;
-        if (query) savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        if (query) {
+          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
+          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        }
         return result;
       });
     },
-    [queryClient],
+    [queryClient, isCurrent],
   );
 
   /** Remove a single search from the cached list by id. */
   const removeCachedSearch = useCallback(
-    (searchId: string, capturedOwner: AccountOwner) => {
+    async (searchId: string, capturedOwner: AccountOwner) => {
       const queryKey = savedSearchesKeyFor(capturedOwner);
+      await queryClient.cancelQueries({ queryKey, exact: true }, { revert: false });
+      if (!isCurrent(capturedOwner)) return;
       const query = queryClient.getQueryCache().find({ queryKey, exact: true });
       if (!query || !hasVerifiedSavedSearches(queryClient, capturedOwner)) {
         void queryClient.invalidateQueries({ queryKey, exact: true });
@@ -552,11 +585,14 @@ export const useSavedSearches = (): UseSavedSearches => {
       }
       queryClient.setQueryData<SavedSearch[]>(queryKey, (prev) => {
         const result = (prev ?? []).filter((s) => s.id !== searchId);
-        if (query) savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        if (query) {
+          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
+          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        }
         return result;
       });
     },
-    [queryClient],
+    [queryClient, isCurrent],
   );
 
   const saveSearchMutation = useMutation({
@@ -583,10 +619,10 @@ export const useSavedSearches = (): UseSavedSearches => {
         filters: input.filters,
       });
     },
-    onSuccess: (saved, vars) => {
+    onSuccess: async (saved, vars) => {
       const current = currentFor(vars);
       if (!current) return;
-      upsertCachedSearch(saved, current);
+      await upsertCachedSearch(saved, current);
       if (!isCurrent(current)) return;
       toast.success(t('search.widgets.savedSearches.saveSuccess', { name: saved.name }));
     },
@@ -624,10 +660,10 @@ export const useSavedSearches = (): UseSavedSearches => {
         filters: input.updates.filters,
       });
     },
-    onSuccess: (updated, vars) => {
+    onSuccess: async (updated, vars) => {
       const current = currentFor(vars);
       if (!current) return;
-      upsertCachedSearch(updated, current);
+      await upsertCachedSearch(updated, current);
       if (!isCurrent(current)) return;
       toast.success(t('search.widgets.savedSearches.updateSuccess'));
     },
@@ -643,11 +679,11 @@ export const useSavedSearches = (): UseSavedSearches => {
       const { owner: current, input } = captured<DeleteSearchInput>(vars);
       await api.delete(`/api/profiles/me/saved-searches/${input.searchId}`, { owner: current });
     },
-    onSuccess: (_result, vars) => {
+    onSuccess: async (_result, vars) => {
       const current = currentFor(vars);
       if (!current) return;
       const { input } = captured<DeleteSearchInput>(vars);
-      removeCachedSearch(input.searchId, current);
+      await removeCachedSearch(input.searchId, current);
       if (!isCurrent(current)) return;
       toast.success(
         input.searchName
@@ -772,9 +808,9 @@ export const useSavedSearches = (): UseSavedSearches => {
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
       return normalizeSearch(raw, { id: input.searchId });
     },
-    onSuccess: (updated, vars) => {
+    onSuccess: async (updated, vars) => {
       const current = currentFor(vars);
-      if (current) upsertCachedSearch(updated, current);
+      if (current) await upsertCachedSearch(updated, current);
     },
     onError: (error: unknown, vars) => {
       if (!currentFor(vars)) return;
@@ -856,9 +892,13 @@ export const useSavedSearches = (): UseSavedSearches => {
     ((!owner && isBoundSubjectUnavailable()) || (!verified && listQuery.fetchStatus === 'paused'));
   const error = unavailable
     ? t('search.widgets.savedSearches.loadFailed')
-    : listQuery.error
-      ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
-      : null;
+    : listQuery.error instanceof SupersededSavedSearchRead
+      ? verified
+        ? null
+        : t('search.widgets.savedSearches.loadFailed')
+      : listQuery.error
+        ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
+        : null;
 
   return {
     searches,

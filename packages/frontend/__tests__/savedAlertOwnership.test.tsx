@@ -51,6 +51,10 @@ let shouldHoldB = false;
 let nameA = 'A private watch';
 let allowPutA = false;
 let unavailableA = false;
+let holdPost: ServerResponse | undefined;
+let shouldHoldPost = false;
+let deletedA = false;
+let createdA = false;
 let useSavedSearches: typeof import('../hooks/useSavedSearches').useSavedSearches;
 let usePrimarySavedArea: typeof import('../hooks/useSavedSearches').usePrimarySavedArea;
 let savedSearchesReading: typeof import('../hooks/useSavedSearches').savedSearchesReading;
@@ -83,8 +87,25 @@ beforeAll(async () => {
       });
       req.on('end', () => {
         postBodies.push(body);
+        if (shouldHoldPost) {
+          holdPost = res;
+          return;
+        }
         res.end(JSON.stringify({ data: { id: 'new-A', name: 'new A', query: 'apartments' } }));
       });
+      return;
+    }
+    if (req.method === 'DELETE' && owner === 'A') {
+      deletedA = true;
+      res.end('{}');
+      return;
+    }
+    if (req.method === 'GET' && owner === 'A' && deletedA) {
+      res.end(
+        JSON.stringify({
+          data: createdA ? [{ id: 'new-A', name: 'new A', query: 'apartments' }] : [],
+        }),
+      );
       return;
     }
     if (req.method === 'PUT' && owner === 'A' && allowPutA) {
@@ -132,6 +153,10 @@ beforeEach(() => {
   nameA = 'A private watch';
   allowPutA = false;
   unavailableA = false;
+  holdPost = undefined;
+  shouldHoldPost = false;
+  deletedA = false;
+  createdA = false;
   mockToast.success.mockClear();
   mockToast.error.mockClear();
   holdB = undefined;
@@ -942,4 +967,295 @@ it('holds automatic inference when the saved-area request returns 503 and recove
   expect(useLocationScopeStore.getState().autoScope).toBeNull();
   view.unmount();
   stop();
+});
+
+it('keeps a confirmed update after an earlier saved-search read finishes', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('A private watch'));
+  const { api } = jest.requireActual('../utils/api') as typeof import('../utils/api');
+  const originalGet = api.get;
+  let finishRead!: () => void;
+  const readDelivered = new Promise<void>((resolve) => {
+    finishRead = resolve;
+  });
+  const spy = jest.spyOn(api, 'get').mockImplementation(((...args: Parameters<typeof api.get>) =>
+    originalGet(...args).then(
+      (response) => {
+        finishRead();
+        return response;
+      },
+      (error) => {
+        finishRead();
+        throw error;
+      },
+    )) as typeof api.get);
+  shouldHoldA = true;
+  allowPutA = true;
+  let reading: Promise<void> | undefined;
+  act(() => {
+    reading = client.refetchQueries({ queryKey: loadedSavedSearchQuery()!.queryKey, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  await act(async () => {
+    expect(await view.result.current.updateSearch('watch-A', { name: 'Updated A' })).toBe(true);
+  });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  expect(seen.map(({ method }) => method)).toEqual(['GET', 'GET', 'PUT']);
+  await act(async () => {
+    holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    await reading;
+    await readDelivered;
+  });
+  spy.mockRestore();
+  expect(client.getQueryState(key)?.fetchStatus).toBe('idle');
+  expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
+});
+
+it('keeps successful create and delete of different searches while an earlier read returns', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  const { api } = jest.requireActual('../utils/api') as typeof import('../utils/api');
+  const originalGet = api.get;
+  let finishRead!: () => void;
+  const readDelivered = new Promise<void>((resolve) => {
+    finishRead = resolve;
+  });
+  const spy = jest.spyOn(api, 'get').mockImplementation(((...args: Parameters<typeof api.get>) =>
+    originalGet(...args).then(
+      (response) => {
+        finishRead();
+        return response;
+      },
+      (error) => {
+        finishRead();
+        throw error;
+      },
+    )) as typeof api.get);
+  shouldHoldA = true;
+  let reading: Promise<void> | undefined;
+  act(() => {
+    reading = client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  await act(async () => {
+    const results = await Promise.all([
+      view.result.current.saveSearch('new A', 'apartments'),
+      view.result.current.deleteSavedSearch('watch-A', 'A private watch'),
+    ]);
+    expect(results).toEqual([true, true]);
+  });
+  expect((client.getQueryData(key) as Array<{ id: string }>).map((item) => item.id)).toEqual([
+    'new-A',
+  ]);
+  await act(async () => {
+    const finished = new Promise<void>((resolve) => holdA!.once('finish', resolve));
+    holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    await finished;
+    await reading;
+    await readDelivered;
+  });
+  spy.mockRestore();
+  expect((client.getQueryData(key) as Array<{ id: string }>).map((item) => item.id)).toEqual([
+    'new-A',
+  ]);
+});
+
+it('keeps both concurrent writes when starting from an unverified cache', async () => {
+  const first = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  first.unmount();
+  client.clear();
+  const source = new QueryClient();
+  source.setQueryData(key, [{ id: 'unverified', name: 'unverified' }]);
+  const blob = JSON.parse(JSON.stringify(dehydrate(source)));
+  source.clear();
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
+  });
+  hydrate(client, blob);
+  const { api } = jest.requireActual('../utils/api') as typeof import('../utils/api');
+  const originalGet = api.get;
+  let readIndex = 0;
+  const resolveReads: Array<() => void> = [];
+  const delivered = [0, 1].map(
+    (i) =>
+      new Promise<void>((resolve) => {
+        resolveReads[i] = resolve;
+      }),
+  );
+  const spy = jest.spyOn(api, 'get').mockImplementation(((...args: Parameters<typeof api.get>) => {
+    const index = readIndex++;
+    return originalGet(...args).then(
+      (value) => {
+        resolveReads[index]?.();
+        return value;
+      },
+      (error) => {
+        resolveReads[index]?.();
+        throw error;
+      },
+    );
+  }) as typeof api.get);
+  shouldHoldA = true;
+  shouldHoldPost = true;
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(holdA).toBeDefined());
+  const stale = holdA!;
+  let creating: Promise<boolean> | undefined;
+  act(() => {
+    creating = view.result.current.saveSearch('new A', 'apartments');
+  });
+  await waitFor(() => expect(holdPost).toBeDefined());
+  await act(async () => {
+    expect(await view.result.current.deleteSavedSearch('watch-A')).toBe(true);
+  });
+  await waitFor(() => expect(deletedA).toBe(true));
+  await waitFor(() => expect(holdA).not.toBe(stale));
+  const staleAfterDelete = holdA!;
+  shouldHoldA = false;
+  createdA = true;
+  await act(async () => {
+    holdPost!.end(JSON.stringify({ data: { id: 'new-A', name: 'new A', query: 'apartments' } }));
+    expect(await creating).toBe(true);
+  });
+  await waitFor(() => expect(view.result.current.searches.map((x) => x.id)).toEqual(['new-A']));
+  await act(async () => {
+    stale.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    staleAfterDelete.end(JSON.stringify({ data: [] }));
+    await Promise.all(delivered);
+  });
+  spy.mockRestore();
+  expect((client.getQueryData(key) as Array<{ id: string }>).map((x) => x.id)).toEqual(['new-A']);
+});
+
+it('does not publish or toast when cancellation reenters an account switch', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  shouldHoldA = true;
+  allowPutA = true;
+  act(() => {
+    void client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  let switched = false;
+  const stop = client.getQueryCache().subscribe((event) => {
+    if (!switched && event.query.queryKey === key && event.query.state.fetchStatus === 'idle') {
+      switched = true;
+      oxy.session.setAccessToken(token('B'));
+      mockAuth.user = { id: 'B' };
+      mockAuth.activeSessionId = 'session-B';
+      view.rerender(undefined);
+    }
+  });
+  let success = true;
+  await act(async () => {
+    success = await view.result.current.updateSearch('watch-A', { name: 'Updated A' });
+  });
+  expect(switched).toBe(true);
+  expect(success).toBe(false);
+  expect(mockToast.success).not.toHaveBeenCalled();
+  expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('A private watch');
+  stop();
+  await act(async () => {
+    holdA!.end(JSON.stringify({ data: [] }));
+  });
+});
+
+it('does not publish a reentrant read started while cancelling an earlier read', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('A private watch'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  shouldHoldA = true;
+  allowPutA = true;
+  act(() => {
+    void client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  const firstRead = holdA!;
+  let reentrant: Promise<void> | undefined;
+  let started = false;
+  const stop = client.getQueryCache().subscribe((event) => {
+    if (!started && event.query.queryKey === key && event.query.state.fetchStatus === 'idle') {
+      started = true;
+      reentrant = client.refetchQueries({ queryKey: key, exact: true });
+    }
+  });
+  await act(async () => {
+    expect(await view.result.current.updateSearch('watch-A', { name: 'Updated A' })).toBe(true);
+  });
+  await waitFor(() => expect(holdA).not.toBe(firstRead));
+  expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
+  stop();
+  const mutationTimestamp = client.getQueryState(key)!.dataUpdatedAt;
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(mutationTimestamp + 60000);
+  await act(async () => {
+    holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    await reentrant;
+    firstRead.end(
+      JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }),
+    );
+  });
+  clock.mockRestore();
+  expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
+  expect(client.getQueryState(key)!.dataUpdatedAt).toBe(mutationTimestamp);
+  expect(client.getQueryState(key)!.status).toBe('error');
+  await waitFor(() => expect(view.result.current.error).toBeNull());
+  shouldHoldA = false;
+  nameA = 'Updated A';
+  await act(async () => {
+    await client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(client.getQueryState(key)!.status).toBe('success'));
+  expect(view.result.current.error).toBeNull();
+});
+
+it('keeps an unavailable state if a superseded read has no prior cache data', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('A private watch'));
+  const query = loadedSavedSearchQuery()!;
+  const key = query.queryKey;
+  shouldHoldA = true;
+  allowPutA = true;
+  act(() => {
+    void client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  const firstRead = holdA!;
+  let started = false;
+  let reentrant: Promise<void> | undefined;
+  const stop = client.getQueryCache().subscribe((event) => {
+    if (!started && event.query === query && query.state.fetchStatus === 'idle') {
+      started = true;
+      reentrant = client.refetchQueries({ queryKey: key, exact: true });
+    }
+  });
+  await act(async () => {
+    expect(await view.result.current.updateSearch('watch-A', { name: 'Updated A' })).toBe(true);
+  });
+  await waitFor(() => expect(holdA).not.toBe(firstRead));
+  stop();
+  act(() => {
+    query.setState({ data: undefined });
+  });
+  await act(async () => {
+    holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    await reentrant;
+    firstRead.end(JSON.stringify({ data: [] }));
+  });
+  expect(client.getQueryData(key)).toBeUndefined();
+  await waitFor(() =>
+    expect(view.result.current.error).toBe('search.widgets.savedSearches.loadFailed'),
+  );
+  shouldHoldA = false;
+  nameA = 'Updated A';
+  await act(async () => {
+    await client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
+  expect(view.result.current.error).toBeNull();
 });
