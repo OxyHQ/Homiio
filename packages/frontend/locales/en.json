@@ -933,7 +933,7 @@
       "emptyDocuments": "No documents attached.",
       "addShort": "Add",
       "signLease": "Sign lease",
-      "signAccountUnavailable": "We can't verify the account for signing. Reconnect your account and try again.",
+      "signAccountUnavailable": "We can't verify the account for this action. Reconnect your account and try again.",
       "confirmSignExtended": "By signing you agree to the lease terms. Once both parties sign, the lease becomes active.",
       "confirmSignAction": "Sign",
       "confirmTerminateShortTitle": "Terminate lease?",

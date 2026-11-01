@@ -19,7 +19,7 @@
  * Backend remains the source of truth for every transition; the UI only
  * surfaces actions the backend would accept.
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -85,7 +85,19 @@ export default function ContractDetailScreen() {
   const { profile } = useProfile();
   const { property: fetchedProperty } = useProperty(lease?.propertyId ?? '');
 
-  const { owner: signOwner, isCurrent: isSignOwnerCurrent } = useAccountOwnerGuard();
+  const { owner: actionOwner, isCurrent: isActionOwnerCurrent } = useAccountOwnerGuard();
+  const routeInstance = useMemo(() => ({}), [id]);
+  const committedRoute = useRef<object | null>(null);
+  useLayoutEffect(() => {
+    committedRoute.current = routeInstance;
+    return () => {
+      if (committedRoute.current === routeInstance) committedRoute.current = null;
+    };
+  }, [routeInstance]);
+  const isActionCurrent = useCallback(
+    () => committedRoute.current === routeInstance && isActionOwnerCurrent(actionOwner),
+    [routeInstance, isActionOwnerCurrent, actionOwner],
+  );
   const signMutation = useSignLease(id ?? '');
   const terminateMutation = useTerminateLease(id ?? '');
   const deleteMutation = useDeleteLease();
@@ -123,38 +135,44 @@ export default function ContractDetailScreen() {
    * in a column no read could return.
    */
   const handleSign = useCallback(async () => {
-    if (!id || !isSignOwnerCurrent(signOwner)) return;
+    if (!id || !isActionCurrent()) return;
     try {
       await signMutation.mutateAsync({ acceptTerms: true, termsSha256: shownTermsSha256 });
-      if (isSignOwnerCurrent(signOwner)) toast.success(t('contracts.detail.toastSigned'));
+      if (isActionCurrent()) toast.success(t('contracts.detail.toastSigned'));
     } catch (error) {
-      if (isSignOwnerCurrent(signOwner))
+      if (isActionCurrent())
         toast.error(error instanceof Error ? error.message : t('contracts.detail.toastSignFailed'));
     }
-  }, [id, shownTermsSha256, signMutation, signOwner, isSignOwnerCurrent, t]);
+  }, [id, shownTermsSha256, signMutation, isActionCurrent, t]);
 
   const handleTerminate = useCallback(async () => {
-    if (!id) return;
+    if (!id || !isActionCurrent()) return;
     try {
       await terminateMutation.mutateAsync({});
-      toast.success(t('contracts.detail.toastTerminated'));
+      if (isActionCurrent()) toast.success(t('contracts.detail.toastTerminated'));
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t('contracts.detail.toastTerminateFailed'),
-      );
+      if (isActionCurrent())
+        toast.error(
+          error instanceof Error ? error.message : t('contracts.detail.toastTerminateFailed'),
+        );
     }
-  }, [id, terminateMutation, t]);
+  }, [id, terminateMutation, isActionCurrent, t]);
 
   const handleDelete = useCallback(async () => {
-    if (!id) return;
+    if (!id || !isActionCurrent()) return;
     try {
       await deleteMutation.mutateAsync(id);
-      toast.success(t('contracts.detail.toastDeleted'));
-      router.back();
+      if (isActionCurrent()) {
+        toast.success(t('contracts.detail.toastDeleted'));
+        router.back();
+      }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('contracts.detail.toastDeleteFailed'));
+      if (isActionCurrent())
+        toast.error(
+          error instanceof Error ? error.message : t('contracts.detail.toastDeleteFailed'),
+        );
     }
-  }, [id, deleteMutation, router, t]);
+  }, [id, deleteMutation, router, isActionCurrent, t]);
 
   const confirmAction = useCallback(
     async (action: 'sign' | 'terminate' | 'delete') => {
@@ -189,11 +207,11 @@ export default function ContractDetailScreen() {
         },
       }[action];
       const { run, ...prompt } = options;
-      if (await confirm({ ...prompt, cancelLabel: t('common.cancel') })) {
+      if ((await confirm({ ...prompt, cancelLabel: t('common.cancel') })) && isActionCurrent()) {
         await run();
       }
     },
-    [format, handleSign, handleTerminate, handleDelete, lease, t],
+    [format, handleSign, handleTerminate, handleDelete, isActionCurrent, lease, t],
   );
 
   /**
@@ -343,16 +361,13 @@ export default function ContractDetailScreen() {
             >
               {t('contracts.detail.signLease')}
             </Button>
-            {!signMutation.isOwnerReady ? (
-              <P accessibilityLiveRegion="polite">{t('contracts.detail.signAccountUnavailable')}</P>
-            ) : null}
           </>
         ) : null}
         {canTerminate ? (
           <Button
             size="sm"
             onPress={() => void confirmAction('terminate')}
-            disabled={busy}
+            disabled={busy || !terminateMutation.isOwnerReady}
             tone="neutral"
             appearance="outline"
           >
@@ -363,12 +378,15 @@ export default function ContractDetailScreen() {
           <Button
             size="sm"
             onPress={() => void confirmAction('delete')}
-            disabled={busy}
+            disabled={busy || !deleteMutation.isOwnerReady}
             tone="accent"
             appearance="subtle"
           >
             {t('contracts.detail.deleteDraft')}
           </Button>
+        ) : null}
+        {!signMutation.isOwnerReady ? (
+          <P accessibilityLiveRegion="polite">{t('contracts.detail.signAccountUnavailable')}</P>
         ) : null}
       </>
     ) : undefined;

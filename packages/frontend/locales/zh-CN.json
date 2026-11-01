@@ -933,7 +933,7 @@
       "emptyDocuments": "No documents attached.",
       "addShort": "Add",
       "signLease": "Sign lease",
-      "signAccountUnavailable": "无法验证用于签署的账户。请重新连接账户后再试。",
+      "signAccountUnavailable": "无法验证执行此操作的账户。请重新连接账户后再试。",
       "confirmSignExtended": "By signing you agree to the lease terms. Once both parties sign, the lease becomes active.",
       "confirmSignAction": "Sign",
       "confirmTerminateShortTitle": "Terminate lease?",

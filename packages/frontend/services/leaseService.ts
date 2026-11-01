@@ -81,8 +81,8 @@ class LeaseService {
     return response.data.data;
   }
 
-  async deleteLease(leaseId: string): Promise<void> {
-    await api.delete(`${LEASE_BASE}/${leaseId}`);
+  async deleteLease(leaseId: string, owner?: RequestOwner): Promise<void> {
+    await api.delete(`${LEASE_BASE}/${leaseId}`, { requireAuth: true, owner });
   }
 
   /**
@@ -115,8 +115,16 @@ class LeaseService {
     return response.data.data;
   }
 
-  async terminateLease(leaseId: string, data: TerminateLeaseData): Promise<Lease> {
-    const response = await api.post<ApiResponse<Lease>>(`${LEASE_BASE}/${leaseId}/terminate`, data);
+  async terminateLease(
+    leaseId: string,
+    data: TerminateLeaseData,
+    owner?: RequestOwner,
+  ): Promise<Lease> {
+    const response = await api.post<ApiResponse<Lease>>(
+      `${LEASE_BASE}/${leaseId}/terminate`,
+      data,
+      { requireAuth: true, owner },
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease termination failed');
     }

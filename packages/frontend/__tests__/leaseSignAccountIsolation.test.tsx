@@ -181,3 +181,100 @@ it('keeps the original lease target when the hook changes lease while signing', 
   expect(client.getQueryData(leaseKeys.detail('lease-1'))).toEqual(response.data);
   expect(client.getQueryData(leaseKeys.detail('lease-2'))).toBeUndefined();
 });
+
+it.each(['terminate', 'delete'] as const)(
+  'does not send a retained %s action after the account changes',
+  async (kind) => {
+    const { useTerminateLease, useDeleteLease } = jest.requireActual<
+      typeof import('../hooks/useLeaseQueries')
+    >('../hooks/useLeaseQueries');
+    const view = renderHook(
+      () => ({ terminate: useTerminateLease('lease-1'), remove: useDeleteLease() }),
+      { wrapper },
+    );
+    await waitFor(() => expect(view.result.current.terminate.isOwnerReady).toBe(true));
+    const terminate = view.result.current.terminate.mutateAsync;
+    const remove = view.result.current.remove.mutateAsync;
+    switchToB(() => view.rerender(undefined));
+    await act(async () => {
+      const attempt = kind === 'terminate' ? terminate({}) : remove('lease-1');
+      await expect(attempt).rejects.toThrow('The active account changed');
+    });
+    expect(seen).toEqual([]);
+  },
+);
+
+it.each(['terminate', 'delete'] as const)(
+  'suppresses late %s results after switching from A to B',
+  async (kind) => {
+    const { useTerminateLease, useDeleteLease } = jest.requireActual<
+      typeof import('../hooks/useLeaseQueries')
+    >('../hooks/useLeaseQueries');
+    let started!: (res: ServerResponse) => void;
+    const request = new Promise<ServerResponse>((resolve) => {
+      started = resolve;
+    });
+    hold = started;
+    const view = renderHook(
+      () => ({ terminate: useTerminateLease('lease-1'), remove: useDeleteLease() }),
+      { wrapper },
+    );
+    await waitFor(() => expect(view.result.current.terminate.isOwnerReady).toBe(true));
+    const onSuccess = jest.fn();
+    const onError = jest.fn();
+    let pending!: Promise<unknown>;
+    act(() => {
+      pending = (
+        kind === 'terminate'
+          ? view.result.current.terminate.mutateAsync({}, { onSuccess, onError })
+          : view.result.current.remove.mutateAsync('lease-1', { onSuccess, onError })
+      ).catch((error) => error);
+    });
+    const res = await request;
+    switchToB(() => view.rerender(undefined));
+    client.setQueryData(leaseKeys.detail('lease-1'), { id: 'lease-1', note: 'B fixture' });
+    await act(async () => {
+      res.end(JSON.stringify(response));
+      expect(await pending).toEqual(
+        expect.objectContaining({ message: 'The active account changed' }),
+      );
+    });
+    expect(seen).toHaveLength(1);
+    expect(seen[0].bearer).toBe(`Bearer ${token('A')}`);
+    expect(client.getQueryData(leaseKeys.detail('lease-1'))).toEqual({
+      id: 'lease-1',
+      note: 'B fixture',
+    });
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+  },
+);
+
+it.each(['terminate', 'delete'] as const)(
+  'performs %s normally for the same account',
+  async (kind) => {
+    const { useTerminateLease, useDeleteLease } = jest.requireActual<
+      typeof import('../hooks/useLeaseQueries')
+    >('../hooks/useLeaseQueries');
+    const view = renderHook(
+      () => ({ terminate: useTerminateLease('lease-1'), remove: useDeleteLease() }),
+      { wrapper },
+    );
+    await waitFor(() => expect(view.result.current.terminate.isOwnerReady).toBe(true));
+    client.setQueryData(leaseKeys.detail('lease-1'), { id: 'lease-1', note: 'before' });
+    await act(async () => {
+      if (kind === 'terminate')
+        await expect(view.result.current.terminate.mutateAsync({})).resolves.toEqual(response.data);
+      else await expect(view.result.current.remove.mutateAsync('lease-1')).resolves.toBeUndefined();
+    });
+    expect(seen).toHaveLength(1);
+    expect(seen[0].method).toBe(kind === 'terminate' ? 'POST' : 'DELETE');
+    expect(seen[0].url).toBe(
+      kind === 'terminate' ? '/api/leases/lease-1/terminate' : '/api/leases/lease-1',
+    );
+    expect(seen[0].bearer).toBe(`Bearer ${token('A')}`);
+    expect(client.getQueryData(leaseKeys.detail('lease-1'))).toEqual(
+      kind === 'terminate' ? response.data : undefined,
+    );
+  },
+);
