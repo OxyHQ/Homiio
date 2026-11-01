@@ -25,4 +25,8 @@ const config = withGoWayMaps(
 // every non-ASCII character into a six-byte Unicode escape.
 config.transformer.minifierConfig.output.ascii_only = false;
 
-module.exports = config;
+// Diagnostic only: the opt-in helper owns the import scope and delegates all other requests.
+const { withAliaChartOptIn } = require('../../scripts/diagnostics/alia-chart-opt-in.cjs');
+const path = require('node:path');
+const sdkRoot = path.dirname(require.resolve('@alia.onl/sdk/package.json'));
+module.exports = withAliaChartOptIn(config, [sdkRoot]);

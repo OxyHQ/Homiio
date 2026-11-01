@@ -7,12 +7,10 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { StatCards, type StatCardsItem } from '@oxy.so/bloom/stat-cards';
-import {
-  BarListCard,
-  ChartCardSurface,
-  ChartHeadline,
-  ChartStatTiles,
-} from '@oxy.so/bloom/chart-cards';
+import { BarListCard } from '@oxy.so/bloom/chart-cards/bar-list';
+import { ChartCardSurface } from '@oxy.so/bloom/chart-cards/surface';
+import { ChartHeadline } from '@oxy.so/bloom/chart-cards/header';
+import { ChartStatTiles } from '@oxy.so/bloom/chart-cards/stat-tiles';
 import { RiBookmarkLine } from '@oxy.so/bloom/icons/RiBookmarkLine';
 import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
 import { RiGroupLine } from '@oxy.so/bloom/icons/RiGroupLine';
