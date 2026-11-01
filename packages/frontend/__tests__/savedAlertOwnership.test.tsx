@@ -465,3 +465,25 @@ it('keeps the out-of-render location observer waiting through an account switch'
   );
   stop();
 });
+
+it('does not show a verified empty list while bearer B precedes the projected user', async () => {
+  const view = renderHook(() => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }), {
+    wrapper,
+  });
+  await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
+  act(() => {
+    oxy.session.setAccessToken(token('B'));
+    view.rerender(undefined);
+  });
+  expect(view.result.current.saved.searches).toEqual([]);
+  expect(view.result.current.saved.isLoading).toBe(true);
+  expect(view.result.current.saved.error).toBeNull();
+  expect(view.result.current.primary).toEqual({ selection: null, pending: true });
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  await waitFor(() => expect(view.result.current.saved.isLoading).toBe(false));
+  expect(view.result.current.saved.searches).toEqual([]);
+});
