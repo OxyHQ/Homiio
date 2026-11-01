@@ -894,3 +894,24 @@ it('does not infer a network area while an unbound saved area is paused and reco
   view.unmount();
   stop();
 });
+
+it('keeps a confirmed update after an earlier saved-search read finishes', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('A private watch'));
+  shouldHoldA = true;
+  allowPutA = true;
+  let reading: Promise<void> | undefined;
+  await act(async () => {
+    reading = client.refetchQueries({ queryKey: loadedSavedSearchQuery()!.queryKey, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  await act(async () => {
+    expect(await view.result.current.updateSearch('watch-A', { name: 'Updated A' })).toBe(true);
+  });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
+  await act(async () => {
+    holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    await reading;
+  });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
+});
