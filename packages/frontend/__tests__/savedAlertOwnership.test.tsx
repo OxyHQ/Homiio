@@ -1116,3 +1116,36 @@ it('does not publish or toast when cancellation reenters an account switch', asy
     holdA!.end(JSON.stringify({ data: [] }));
   });
 });
+
+it('does not publish a reentrant read started while cancelling an earlier read', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('A private watch'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  shouldHoldA = true;
+  allowPutA = true;
+  act(() => {
+    void client.refetchQueries({ queryKey: key, exact: true });
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  const firstRead = holdA!;
+  let reentrant: Promise<void> | undefined;
+  const stop = client.getQueryCache().subscribe((event) => {
+    if (!reentrant && event.query.queryKey === key && event.query.state.fetchStatus === 'idle') {
+      reentrant = client.refetchQueries({ queryKey: key, exact: true });
+    }
+  });
+  await act(async () => {
+    expect(await view.result.current.updateSearch('watch-A', { name: 'Updated A' })).toBe(true);
+  });
+  await waitFor(() => expect(holdA).not.toBe(firstRead));
+  expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
+  stop();
+  await act(async () => {
+    holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+    await reentrant;
+    firstRead.end(
+      JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }),
+    );
+  });
+  expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
+});
