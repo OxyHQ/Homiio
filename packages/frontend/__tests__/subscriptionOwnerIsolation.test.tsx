@@ -23,7 +23,13 @@ jest.mock('@/config', () => ({ API_URL: mockOrigin }));
 jest.mock('@oxy.so/services/ui/client', () => ({ useOxy: () => mockAuth }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ canGoBack: () => false }) }));
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+  useTranslation: () => ({
+    t: (key: string) =>
+      key === 'subscriptions.loadFailed'
+        ? require('@/locales/en.json').subscriptions.loadFailed
+        : key,
+    i18n: { language: 'en' },
+  }),
 }));
 jest.mock('@oxy.so/bloom/toast', () => ({ toast: mockToast }));
 jest.mock('@oxy.so/bloom/surfaces', () => ({
@@ -80,9 +86,24 @@ jest.mock('@oxy.so/bloom/settings-list', () => ({
   },
 }));
 jest.mock('@/components/ui/ErrorState', () => ({
-  ErrorState: ({ title }: { title: string }) => {
-    const { Text } = require('react-native');
-    return <Text>{title}</Text>;
+  ErrorState: ({
+    title,
+    retryLabel,
+    onRetry,
+  }: {
+    title: string;
+    retryLabel: string;
+    onRetry: () => void;
+  }) => {
+    const { Text, Pressable } = require('react-native');
+    return (
+      <>
+        <Text>{title}</Text>
+        <Pressable accessibilityRole="button" onPress={onRetry}>
+          <Text>{retryLabel}</Text>
+        </Pressable>
+      </>
+    );
   },
 }));
 jest.mock('@/components/ui/skeletons/ProfileSkeleton', () => ({ ProfileSkeleton: () => null }));
@@ -99,6 +120,8 @@ let mockPost: jest.SpyInstance;
 let requests: Array<{ owner: string; path: string; method: string }> = [];
 let held: ServerResponse | undefined;
 let holdPath = '';
+let failEntitlements = false;
+let entitlementsOverride: object | undefined;
 function respond(res: ServerResponse, data: object) {
   if (!res.destroyed) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -115,6 +138,15 @@ beforeAll(async () => {
           ? 'B'
           : 'unknown';
     requests.push({ owner, path: req.url ?? '', method: req.method ?? '' });
+    if (req.url === '/api/profiles/me/entitlements' && failEntitlements) {
+      res.writeHead(503);
+      res.end();
+      return;
+    }
+    if (req.url === '/api/profiles/me/entitlements' && entitlementsOverride) {
+      respond(res, entitlementsOverride);
+      return;
+    }
     if (req.url === holdPath) {
       held = res;
       return;
@@ -126,6 +158,7 @@ beforeAll(async () => {
           plusActive: true,
           plusStripeSubscriptionId: `sub-${owner}`,
           fileCredits: 0,
+          founderSupporter: false,
           processedSessions: [],
         },
       });
@@ -148,6 +181,8 @@ beforeEach(() => {
   requests = [];
   held = undefined;
   holdPath = '';
+  failEntitlements = false;
+  entitlementsOverride = undefined;
   mockOpen.mockClear();
   mockPost.mockClear();
   mockConfirmStarted.mockClear();
@@ -333,7 +368,57 @@ it('does not open checkout or report an old error after an account change', asyn
 it('does not present purchase actions while the first entitlements query is offline', async () => {
   onlineManager.setOnline(false);
   const screen = render(view());
-  await waitFor(() => expect(screen.getByText('profile.loadFailed')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('Could not load your subscription')).toBeTruthy());
   expect(screen.queryByText('subscriptions.page.founder.becomeSupporter')).toBeNull();
   expect(requests.filter((r) => r.path === '/api/profiles/me/entitlements')).toEqual([]);
+});
+
+it('describes an entitlements failure as a subscription error and retries', async () => {
+  failEntitlements = true;
+  const screen = render(view());
+  await waitFor(() => expect(screen.getByText('Could not load your subscription')).toBeTruthy());
+  expect(screen.queryByText('subscriptions.page.founder.becomeSupporter')).toBeNull();
+  failEntitlements = false;
+  fireEvent.press(screen.getByText('common.retry'));
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.founder.becomeSupporter')).toBeTruthy(),
+  );
+  expect(requests.filter((r) => r.path === '/api/profiles/me/entitlements')).toHaveLength(2);
+});
+
+it.each([
+  ['missing', { success: true }],
+  ['null', { success: true, entitlements: null }],
+  [
+    'malformed',
+    {
+      success: true,
+      entitlements: {
+        plusActive: false,
+        fileCredits: 0,
+        founderSupporter: false,
+        processedSessions: [42],
+      },
+    },
+  ],
+])('rejects %s entitlements without presenting a free plan', async (_label, body) => {
+  entitlementsOverride = body;
+  const screen = render(view());
+  await waitFor(() => expect(screen.getByText('Could not load your subscription')).toBeTruthy());
+  expect(screen.queryByText('subscriptions.page.plus.subscribeNow')).toBeNull();
+});
+it('accepts the zeroed free entitlement shape returned by the backend', async () => {
+  entitlementsOverride = {
+    success: true,
+    entitlements: {
+      plusActive: false,
+      fileCredits: 0,
+      founderSupporter: false,
+      processedSessions: [],
+    },
+  };
+  const screen = render(view());
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.plus.subscribeNow')).toBeTruthy(),
+  );
 });

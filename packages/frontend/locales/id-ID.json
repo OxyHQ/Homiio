@@ -2843,6 +2843,7 @@
   "subscriptions": {
     "title": "Subscriptions",
     "authRequired": "Authentication required",
+    "loadFailed": "Langganan Anda tidak dapat dimuat",
     "checkoutFailed": "Failed to start checkout",
     "portalFailed": "Failed to open subscription management",
     "syncSuccess": "Subscription status synced from Stripe",

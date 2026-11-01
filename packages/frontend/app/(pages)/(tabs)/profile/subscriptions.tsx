@@ -59,6 +59,35 @@ const DEFAULT_ENTITLEMENTS: Entitlements = {
 
 type EntitlementsResponse = { success: boolean; entitlements: Entitlements };
 
+/** Validate the required fields guaranteed by the profile entitlements GET. */
+function parseEntitlements(value: unknown): Entitlements {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Invalid entitlements');
+  const data = value as Record<string, unknown>;
+  if (
+    typeof data.plusActive !== 'boolean' ||
+    typeof data.fileCredits !== 'number' ||
+    !Number.isSafeInteger(data.fileCredits) ||
+    typeof data.founderSupporter !== 'boolean' ||
+    !Array.isArray(data.processedSessions) ||
+    !data.processedSessions.every((session) => typeof session === 'string')
+  ) {
+    throw new Error('Invalid entitlements');
+  }
+  for (const field of [
+    'plusSince',
+    'plusCanceledAt',
+    'plusStripeSubscriptionId',
+    'lastPaymentAt',
+    'founderSince',
+  ]) {
+    if (data[field] != null && typeof data[field] !== 'string') {
+      throw new Error('Invalid entitlements');
+    }
+  }
+  return value as Entitlements;
+}
+
 /** Posts a billing action bound to the account observed when it was started. */
 async function postForEntitlements(
   endpoint: string,
@@ -92,11 +121,14 @@ export default function SubscriptionsScreen() {
     queryKey: entitlementsKey,
     queryFn: () =>
       withAccountOwner(owner, async (current) => {
-        const { data } = await api.get<EntitlementsResponse>('/api/profiles/me/entitlements', {
-          owner: current,
-        });
-        if (!data?.success) throw new Error('Failed to load entitlements');
-        return data.entitlements || DEFAULT_ENTITLEMENTS;
+        const { data } = await api.get<{ success: boolean; entitlements: unknown }>(
+          '/api/profiles/me/entitlements',
+          {
+            owner: current,
+          },
+        );
+        if (data?.success !== true) throw new Error('Failed to load entitlements');
+        return parseEntitlements(data.entitlements);
       }),
     enabled: Boolean(owner?.sessionId),
   });
@@ -285,7 +317,7 @@ export default function SubscriptionsScreen() {
     return (
       <Screen documentScroll>
         <ErrorState
-          title={t('profile.loadFailed')}
+          title={t('subscriptions.loadFailed')}
           description={t('profile.loadFailedHint')}
           onRetry={() => {
             if (isCurrent(owner)) void entitlementsQuery.refetch();

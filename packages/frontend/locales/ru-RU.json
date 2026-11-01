@@ -2857,6 +2857,7 @@
   "subscriptions": {
     "title": "Subscriptions",
     "authRequired": "Authentication required",
+    "loadFailed": "Не удалось загрузить вашу подписку",
     "checkoutFailed": "Failed to start checkout",
     "portalFailed": "Failed to open subscription management",
     "syncSuccess": "Subscription status synced from Stripe",
