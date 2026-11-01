@@ -255,12 +255,11 @@ function mutationOwnerKey(owner: AccountOwner): string {
 
 const savedSearchOwners = new WeakMap<
   object,
-  { owner: AccountOwner; data: SavedSearch[] | undefined }
+  { owner: AccountOwner; data: SavedSearch[] | undefined; revision: number }
 >();
 
 class SupersededSavedSearchRead extends Error {}
 
-const savedSearchRevisions = new WeakMap<object, number>();
 const savedSearchReadRevisions = new WeakMap<
   SavedSearch[],
   { owner: AccountOwner; query: object; revision: number }
@@ -295,22 +294,22 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
       if (
         !query ||
         read.query !== query ||
-        read.revision !== (savedSearchRevisions.get(query) ?? 0) ||
+        read.revision !== (savedSearchOwners.get(query)?.revision ?? 0) ||
         !isBoundOxyInstance(read.owner.oxyServices) ||
         !isExactAccountProjection(read.owner)
       ) {
         throw new SupersededSavedSearchRead('Saved search read was superseded');
       }
-      savedSearchOwners.set(query, { owner: read.owner, data: newData });
+      savedSearchOwners.set(query, { owner: read.owner, data: newData, revision: read.revision });
       return newData;
     },
     queryFn: ({ signal }: { signal: AbortSignal }) =>
       withAccountOwner(owner, async (current): Promise<SavedSearch[]> => {
         const query = client.getQueryCache().find({ queryKey, exact: true });
-        const revision = query ? (savedSearchRevisions.get(query) ?? 0) : 0;
         const previous = query && savedSearchOwners.get(query);
+        const revision = previous?.revision ?? 0;
         if (query && (!previous || !isExactAccountProjection(previous.owner))) {
-          savedSearchOwners.set(query, { owner: current, data: undefined });
+          savedSearchOwners.set(query, { owner: current, data: undefined, revision });
         }
         const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches', {
           owner: current,
@@ -563,8 +562,11 @@ export const useSavedSearches = (): UseSavedSearches => {
         if (index === -1) result.push(next);
         else result[index] = next;
         if (query) {
-          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
-          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+          savedSearchOwners.set(query, {
+            owner: capturedOwner,
+            data: result,
+            revision: (savedSearchOwners.get(query)?.revision ?? 0) + 1,
+          });
         }
         return result;
       });
@@ -586,8 +588,11 @@ export const useSavedSearches = (): UseSavedSearches => {
       queryClient.setQueryData<SavedSearch[]>(queryKey, (prev) => {
         const result = (prev ?? []).filter((s) => s.id !== searchId);
         if (query) {
-          savedSearchRevisions.set(query, (savedSearchRevisions.get(query) ?? 0) + 1);
-          savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+          savedSearchOwners.set(query, {
+            owner: capturedOwner,
+            data: result,
+            revision: (savedSearchOwners.get(query)?.revision ?? 0) + 1,
+          });
         }
         return result;
       });
