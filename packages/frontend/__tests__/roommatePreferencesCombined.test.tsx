@@ -371,8 +371,9 @@ it('keeps profile data out of the query cache when a write settles before query 
   }
   render(wrap(<Capture />));
   await waitFor(() => expect(mockProfile).toHaveBeenCalledTimes(1));
-  const owner = useProfileStore.getState().latestProfileRequest?.owner;
-  if (!owner) throw new Error('Expected a pending profile owner');
+  const request = useProfileStore.getState().latestProfileRequest;
+  if (!request) throw new Error('Expected a pending profile owner');
+  const owner = request.owner;
   let resolveWrite!: () => void;
   let rejectWrite!: (error: unknown) => void;
   const written = new Promise<void>((resolve, reject) => {

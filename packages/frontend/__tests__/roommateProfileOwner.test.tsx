@@ -283,6 +283,9 @@ it('does not invalidate profiles or toast for A after switching during supersede
     finish();
     await held;
   });
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'roommates.screen.enableMatching' })).toBeTruthy(),
+  );
   expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['roommates', 'profiles'] });
   expect(toast.success).not.toHaveBeenCalled();
   expect(toast.error).not.toHaveBeenCalled();
