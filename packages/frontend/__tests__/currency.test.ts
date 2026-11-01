@@ -45,5 +45,12 @@ describe('currency utils', () => {
     it('shows nothing for a code the table cannot convert', () => {
       expect(getExchangeRateDisplay('ZZZ', 'USD', 'en-US', FALLBACK_RATES)).toBe('');
     });
+
+    it('does not present an overflowing rate as zero', () => {
+      // Simulates a malformed upstream rate; it is not a real market quote.
+      expect(getExchangeRateDisplay('EUR', 'USD', 'en-US', { USD: 1, EUR: Number.MIN_VALUE })).toBe(
+        '',
+      );
+    });
   });
 });
