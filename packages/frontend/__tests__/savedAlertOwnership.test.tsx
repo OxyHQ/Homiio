@@ -21,7 +21,10 @@ const mockAuth = {
   oxyServices: null as unknown as OxyServices,
 };
 jest.mock('@/config', () => ({ API_URL: mockOrigin }));
-jest.mock('@oxy.so/services/ui/client', () => ({ useOxy: () => mockAuth }));
+jest.mock('@oxy.so/services/ui/client', () => ({
+  useOxy: () => mockAuth,
+  useAuthStore: { getState: () => mockAuth, subscribe: () => () => {} },
+}));
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 const mockToast = { success: jest.fn(), error: jest.fn() };
 jest.mock('@oxy.so/bloom/toast', () => ({ toast: mockToast }));
@@ -145,9 +148,11 @@ it('does not expose A watch or primary area after projection B', async () => {
   await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
   expect(view.result.current.primary.selection).toEqual(location);
   expect(savedSearchesReading(client, 'A').data?.[0]?.id).toBe('watch-A');
+  const retainedLookup = view.result.current.saved.getSearchById;
   act(() => {
     oxy.session.setAccessToken(token('B'));
     expect(savedSearchesReading(client, 'A').data).toBeUndefined();
+    expect(retainedLookup('watch-A')).toBeUndefined();
     mockAuth.user = { id: 'B' };
     mockAuth.activeSessionId = 'session-B';
     view.rerender(undefined);
@@ -419,4 +424,66 @@ it('keeps private searches and paused mutation variables out of SDK account snap
   expect(seen.filter((request) => request.method === 'POST')).toEqual([]);
   view.unmount();
   persister.detach();
+});
+
+it('keeps the out-of-render location observer waiting through an account switch', async () => {
+  const { observeInferredScope } = jest.requireActual('../hooks/useLocationScope');
+  const { useLocationScopeStore } = jest.requireActual('../store/locationScopeStore');
+  const { APPROXIMATE_LOCATION_QUERY_KEY } = jest.requireActual('../hooks/useApproximateLocation');
+  useLocationScopeStore.setState({
+    sessionSelection: null,
+    explicitGlobal: false,
+    lastChosenArea: null,
+    deviceRequested: false,
+    autoScope: null,
+  });
+  const stop = observeInferredScope(client);
+  const view = renderHook(() => usePrimarySavedArea(), { wrapper });
+  await waitFor(() => expect(view.result.current.selection).toEqual(location));
+  const networkArea = { ...location, label: { primary: 'network area', kind: 'place' } };
+  client.setQueryData(APPROXIMATE_LOCATION_QUERY_KEY, {
+    status: 'resolved',
+    source: 'ip',
+    granularity: 'city',
+    selection: networkArea,
+    resolvedAt: '2026-01-01T00:00:00.000Z',
+    expiresAt: '2030-01-01T00:00:00.000Z',
+  });
+  expect(useLocationScopeStore.getState().autoScope).toBeNull();
+  shouldHoldB = true;
+  switchToB(() => view.rerender(undefined));
+  await waitFor(() => expect(holdB).toBeDefined());
+  expect(useLocationScopeStore.getState().autoScope).toBeNull();
+  await act(async () => {
+    holdB?.end(JSON.stringify({ data: [] }));
+  });
+  await waitFor(() =>
+    expect(useLocationScopeStore.getState().autoScope).toEqual({
+      source: 'ip',
+      selection: networkArea,
+    }),
+  );
+  stop();
+});
+
+it('does not show a verified empty list while bearer B precedes the projected user', async () => {
+  const view = renderHook(() => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }), {
+    wrapper,
+  });
+  await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
+  act(() => {
+    oxy.session.setAccessToken(token('B'));
+    view.rerender(undefined);
+  });
+  expect(view.result.current.saved.searches).toEqual([]);
+  expect(view.result.current.saved.isLoading).toBe(true);
+  expect(view.result.current.saved.error).toBeNull();
+  expect(view.result.current.primary).toEqual({ selection: null, pending: true });
+  act(() => {
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    view.rerender(undefined);
+  });
+  await waitFor(() => expect(view.result.current.saved.isLoading).toBe(false));
+  expect(view.result.current.saved.searches).toEqual([]);
 });
