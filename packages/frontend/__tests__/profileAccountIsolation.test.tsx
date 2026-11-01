@@ -390,6 +390,9 @@ it('does not publish the older of two same-owner refreshes', async () => {
     await expect(older).rejects.toThrow('A newer profile request superseded this one');
   });
   expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
+  const cached = client.getQueryCache().findAll({ queryKey: ['profile', 'me', 'session-A'] });
+  expect(cached).toHaveLength(1);
+  expect(cached[0].state.data).toEqual(expect.objectContaining({ note: 'A-3' }));
 });
 
 it('does not publish an older success when the newer refresh failed', async () => {
@@ -413,5 +416,8 @@ it('does not publish an older success when the newer refresh failed', async () =
     await expect(older).rejects.toThrow('A newer profile request superseded this one');
   });
   expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' }));
+  const cached = client.getQueryCache().findAll({ queryKey: ['profile', 'me', 'session-A'] });
+  expect(cached).toHaveLength(1);
+  expect(cached[0].state.data).toEqual(expect.objectContaining({ note: 'A-1' }));
   expect(useProfileStore.getState().error).not.toBeNull();
 });
