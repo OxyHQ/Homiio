@@ -324,3 +324,38 @@ it('does not write after the provider unmounts or retain a loading owner', async
   });
   expect(useProfileStore.getState().profile).toBeNull();
 });
+
+it('DIAGNOSTIC reproduces an older same-owner GET overwriting a completed profile update', async () => {
+  const held = heldRequest();
+  const spy = jest.spyOn(useProfileStore.getState(), 'fetchProfile');
+  const view = renderHook(() => useProfile(), { wrapper });
+  const oldResponse = await held;
+  const first = spy.mock.results[0].value;
+  const owner = useProfileStore.getState().profileRequest?.owner;
+  expect(owner).toBeDefined();
+  await act(async () => {
+    await useProfileStore.getState().updateProfile({}, owner!);
+  });
+  expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-2' }));
+  await act(async () => {
+    oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-update' })}}`);
+    await first;
+  });
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'old-before-update' }));
+});
+
+it('DIAGNOSTIC reproduces reverse completion of two same-owner refreshes', async () => {
+  const view = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() => expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' })));
+  const held = heldRequest();
+  let older!: Promise<unknown>;
+  act(() => { older = view.result.current.refreshProfile(); });
+  const oldResponse = await held;
+  await act(async () => { await view.result.current.refreshProfile(); });
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
+  await act(async () => {
+    oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-refresh' })}}`);
+    await older;
+  });
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'old-before-refresh' }));
+});
