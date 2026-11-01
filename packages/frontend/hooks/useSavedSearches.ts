@@ -1,10 +1,17 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type { SavedSearch, SavedSearchFilters } from '@/store/savedSearchesStore';
 import { toast } from '@oxy.so/bloom/toast';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services/ui/client';
-import { api, ApiError } from '@/utils/api';
+import { api, ApiError, isBoundSubjectUnavailable } from '@/utils/api';
+import {
+  accountOwnerKey,
+  assertAccountOwner,
+  useAccountOwnerGuard,
+  withAccountOwner,
+  type AccountOwner,
+} from '@/hooks/useAccountOwner';
 import { AVAILABLE_HOUSING_ALERT_RULE_TYPES } from '@homiio/shared-types/watch';
 import type {
   AlertChannel,
@@ -236,20 +243,47 @@ export interface UseSavedSearches {
  * learned something the other did not, which is the worst version of this: one
  * consumer silently reading a shape the other stopped producing.
  */
-function savedSearchesQueryOptions(isAuthenticated: boolean) {
+export const savedSearchesKeyFor = (owner: AccountOwner | null) =>
+  [...SAVED_SEARCHES_KEY, ...accountOwnerKey(owner)] as const;
+
+const savedSearchOwners = new WeakMap<object, AccountOwner>();
+
+function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClient) {
+  const queryKey = savedSearchesKeyFor(owner);
   return {
-    queryKey: SAVED_SEARCHES_KEY,
-    // Gated so a logged-out client never fires the request (the route sits
-    // behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
-    // when there is no token, which would otherwise 401-spam).
-    enabled: isAuthenticated,
+    queryKey,
+    enabled: Boolean(owner?.sessionId),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
-    queryFn: async (): Promise<SavedSearch[]> => {
-      const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches');
-      return extractSearchList(response.data).map((raw) => normalizeSearch(raw));
-    },
+    queryFn: () =>
+      withAccountOwner(owner, async (current): Promise<SavedSearch[]> => {
+        const query = client.getQueryCache().find({ queryKey, exact: true });
+        if (query) savedSearchOwners.set(query, current);
+        const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches', {
+          owner: current,
+        });
+        return extractSearchList(response.data).map((raw) => normalizeSearch(raw));
+      }),
   };
+}
+
+/** Locate a currently bound result for the out-of-React location observer. */
+export function savedSearchesReading(client: QueryClient, userId: string | undefined) {
+  for (const query of client.getQueryCache().findAll({ queryKey: SAVED_SEARCHES_KEY })) {
+    const owner = savedSearchOwners.get(query);
+    if (!owner?.sessionId || owner.userId !== userId) continue;
+    try {
+      assertAccountOwner(owner);
+      return {
+        data: query.state.data as SavedSearch[] | undefined,
+        isPending: query.state.status === 'pending',
+        isFetching: query.state.fetchStatus === 'fetching',
+      };
+    } catch {
+      // Another projection owns the cache now.
+    }
+  }
+  return { data: undefined, isPending: true, isFetching: false };
 }
 
 /**
@@ -320,11 +354,18 @@ export interface PrimarySavedArea {
  */
 export const usePrimarySavedArea = (): PrimarySavedArea => {
   const { isAuthenticated } = useOxy();
-  const query = useQuery(savedSearchesQueryOptions(isAuthenticated));
-
+  const { owner } = useAccountOwnerGuard();
+  const client = useQueryClient();
+  const query = useQuery(savedSearchesQueryOptions(owner, client));
+  const valid = Boolean(owner?.sessionId);
+  const unavailable = isBoundSubjectUnavailable();
   return useMemo(
-    () => primarySavedAreaOf(isAuthenticated, { isPending: query.isPending, data: query.data }),
-    [isAuthenticated, query.isPending, query.data],
+    () =>
+      primarySavedAreaOf(isAuthenticated, {
+        isPending: valid ? query.isPending : !unavailable,
+        data: valid ? query.data : undefined,
+      }),
+    [isAuthenticated, valid, unavailable, query.isPending, query.data],
   );
 };
 
@@ -350,7 +391,24 @@ export function primarySavedAreaOf(
 export const useSavedSearches = (): UseSavedSearches => {
   const { t } = useTranslation();
   const { isAuthenticated } = useOxy();
+  const { owner, isCurrent } = useAccountOwnerGuard();
   const queryClient = useQueryClient();
+  const owners = useRef(new WeakMap<object, AccountOwner>());
+  function capture<T extends object>(variables: T): T & { ownerKey: string } {
+    if (!owner?.sessionId || !isCurrent(owner)) throw new Error('The active account changed');
+    const action = { ...variables, ownerKey: JSON.stringify(accountOwnerKey(owner)) };
+    owners.current.set(action, owner);
+    return action;
+  }
+  function captured(variables: object): AccountOwner {
+    const current = owners.current.get(variables);
+    if (!current || !isCurrent(current)) throw new Error('The active account changed');
+    return current;
+  }
+  function currentFor(variables: object): AccountOwner | null {
+    const current = owners.current.get(variables);
+    return current && isCurrent(current) ? current : null;
+  }
 
   /**
    * The single source of truth for the user's saved searches. Gated on
@@ -358,18 +416,21 @@ export const useSavedSearches = (): UseSavedSearches => {
    * sits behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
    * when there is no token, which would otherwise 401-spam).
    */
-  const listQuery = useQuery(savedSearchesQueryOptions(isAuthenticated));
+  const listQuery = useQuery(savedSearchesQueryOptions(owner, queryClient));
 
   // When logged out the query is disabled and never resolves, so fall back to a
   // stable empty list rather than leaving `searches` undefined. Memoised on the
   // query data so consumers' `useCallback`/`useMemo` deps stay referentially
   // stable across renders where the data is unchanged.
-  const searches = useMemo<SavedSearch[]>(() => listQuery.data ?? EMPTY_SEARCHES, [listQuery.data]);
+  const searches = useMemo<SavedSearch[]>(
+    () => (owner?.sessionId ? (listQuery.data ?? EMPTY_SEARCHES) : EMPTY_SEARCHES),
+    [owner, listQuery.data],
+  );
 
   /** Replace a single search in the cached list by id, or append if new. */
   const upsertCachedSearch = useCallback(
-    (next: SavedSearch) => {
-      queryClient.setQueryData<SavedSearch[]>(SAVED_SEARCHES_KEY, (prev) => {
+    (next: SavedSearch, capturedOwner: AccountOwner) => {
+      queryClient.setQueryData<SavedSearch[]>(savedSearchesKeyFor(capturedOwner), (prev) => {
         const list = prev ?? [];
         const index = list.findIndex((s) => s.id === next.id);
         if (index === -1) return [...list, next];
@@ -383,8 +444,8 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   /** Remove a single search from the cached list by id. */
   const removeCachedSearch = useCallback(
-    (searchId: string) => {
-      queryClient.setQueryData<SavedSearch[]>(SAVED_SEARCHES_KEY, (prev) =>
+    (searchId: string, capturedOwner: AccountOwner) => {
+      queryClient.setQueryData<SavedSearch[]>(savedSearchesKeyFor(capturedOwner), (prev) =>
         (prev ?? []).filter((s) => s.id !== searchId),
       );
     },
@@ -399,17 +460,22 @@ export const useSavedSearches = (): UseSavedSearches => {
       filters?: SavedSearchFilters;
       notificationsEnabled?: boolean;
       location?: LocationSelection | null;
+      ownerKey: string;
     }): Promise<SavedSearch> => {
-      const response = await api.post<SavedSearchPayload>('/api/profiles/me/saved-searches', {
-        name: vars.name,
-        query: vars.query,
-        filters: vars.filters,
-        notificationsEnabled: Boolean(vars.notificationsEnabled),
-        // Stored so reopening resolves by IDENTITY. Omitted rather than sent as
-        // null when absent, so a row written by an older client and one written
-        // deliberately without a place are the same thing to the backend.
-        ...(vars.location ? { location: vars.location } : {}),
-      });
+      const response = await api.post<SavedSearchPayload>(
+        '/api/profiles/me/saved-searches',
+        {
+          name: vars.name,
+          query: vars.query,
+          filters: vars.filters,
+          notificationsEnabled: Boolean(vars.notificationsEnabled),
+          // Stored so reopening resolves by IDENTITY. Omitted rather than sent as
+          // null when absent, so a row written by an older client and one written
+          // deliberately without a place are the same thing to the backend.
+          ...(vars.location ? { location: vars.location } : {}),
+        },
+        { owner: captured(vars) },
+      );
 
       const payload = response.data;
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
@@ -419,11 +485,14 @@ export const useSavedSearches = (): UseSavedSearches => {
         filters: vars.filters,
       });
     },
-    onSuccess: (saved) => {
-      upsertCachedSearch(saved);
+    onSuccess: (saved, vars) => {
+      const current = currentFor(vars);
+      if (!current) return;
+      upsertCachedSearch(saved, current);
       toast.success(t('search.widgets.savedSearches.saveSuccess', { name: saved.name }));
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, vars) => {
+      if (!currentFor(vars)) return;
       if (isApiError(error) && error.status === 409) {
         const response =
           error.response && typeof error.response === 'object'
@@ -452,6 +521,7 @@ export const useSavedSearches = (): UseSavedSearches => {
       const response = await api.put<SavedSearchPayload>(
         `/api/profiles/me/saved-searches/${vars.searchId}`,
         vars.updates,
+        { owner: captured(vars) },
       );
       const payload = response.data;
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
@@ -462,11 +532,14 @@ export const useSavedSearches = (): UseSavedSearches => {
         filters: vars.updates.filters,
       });
     },
-    onSuccess: (updated) => {
-      upsertCachedSearch(updated);
+    onSuccess: (updated, vars) => {
+      const current = currentFor(vars);
+      if (!current) return;
+      upsertCachedSearch(updated, current);
       toast.success(t('search.widgets.savedSearches.updateSuccess'));
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, vars) => {
+      if (!currentFor(vars)) return;
       toast.error(getErrorMessage(error, t('search.widgets.savedSearches.updateFailed')));
     },
   });
@@ -474,17 +547,22 @@ export const useSavedSearches = (): UseSavedSearches => {
   const deleteSearchMutation = useMutation({
     mutationKey: ['deleteSearch'],
     mutationFn: async (vars: { searchId: string; searchName?: string }): Promise<void> => {
-      await api.delete(`/api/profiles/me/saved-searches/${vars.searchId}`);
+      await api.delete(`/api/profiles/me/saved-searches/${vars.searchId}`, {
+        owner: captured(vars),
+      });
     },
     onSuccess: (_result, vars) => {
-      removeCachedSearch(vars.searchId);
+      const current = currentFor(vars);
+      if (!current) return;
+      removeCachedSearch(vars.searchId, current);
       toast.success(
         vars.searchName
           ? t('search.widgets.savedSearches.deleteSuccessNamed', { name: vars.searchName })
           : t('search.widgets.savedSearches.deleteSuccess'),
       );
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, vars) => {
+      if (!currentFor(vars)) return;
       toast.error(getErrorMessage(error, t('search.widgets.savedSearches.deleteFailed')));
     },
   });
@@ -497,6 +575,7 @@ export const useSavedSearches = (): UseSavedSearches => {
       notificationsEnabled: boolean = false,
       location: LocationSelection | null = null,
     ): Promise<boolean> => {
+      if (!owner || !isCurrent(owner)) return false;
       // A name, and SOMETHING to search — a place, free text, or both. It used
       // to require a non-empty `query`, which held the location's LABEL; now
       // that `query` is the free-text dimension and is normally empty for a
@@ -536,32 +615,34 @@ export const useSavedSearches = (): UseSavedSearches => {
       }
 
       try {
-        await saveSearchMutation.mutateAsync({
-          name: normalizedName,
-          query: normalizedQuery,
-          filters,
-          notificationsEnabled,
-          location,
-        });
-        return true;
+        await saveSearchMutation.mutateAsync(
+          capture({
+            name: normalizedName,
+            query: normalizedQuery,
+            filters,
+            notificationsEnabled,
+            location,
+          }),
+        );
+        return isCurrent(owner);
       } catch {
         // onError surfaces the toast; the boolean tells the caller it failed.
         return false;
       }
     },
-    [searches, t, saveSearchMutation],
+    [searches, t, saveSearchMutation, owner, isCurrent, capture],
   );
 
   const deleteSavedSearch = useCallback(
     async (searchId: string, searchName?: string): Promise<boolean> => {
       try {
-        await deleteSearchMutation.mutateAsync({ searchId, searchName });
-        return true;
+        await deleteSearchMutation.mutateAsync(capture({ searchId, searchName }));
+        return isCurrent(owner);
       } catch {
         return false;
       }
     },
-    [deleteSearchMutation],
+    [deleteSearchMutation, owner, isCurrent, capture],
   );
 
   const updateSearch = useCallback(
@@ -575,13 +656,13 @@ export const useSavedSearches = (): UseSavedSearches => {
       },
     ): Promise<boolean> => {
       try {
-        await updateSearchMutation.mutateAsync({ searchId, updates });
-        return true;
+        await updateSearchMutation.mutateAsync(capture({ searchId, updates }));
+        return isCurrent(owner);
       } catch {
         return false;
       }
     },
-    [updateSearchMutation],
+    [updateSearchMutation, owner, isCurrent, capture],
   );
 
   const alertSettingsMutation = useMutation({
@@ -593,15 +674,18 @@ export const useSavedSearches = (): UseSavedSearches => {
       const response = await api.put<SavedSearchPayload>(
         `/api/profiles/me/saved-searches/${vars.searchId}`,
         vars.settings,
+        { owner: captured(vars) },
       );
       const payload = response.data;
       const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
       return normalizeSearch(raw, { id: vars.searchId });
     },
-    onSuccess: (updated) => {
-      upsertCachedSearch(updated);
+    onSuccess: (updated, vars) => {
+      const current = currentFor(vars);
+      if (current) upsertCachedSearch(updated, current);
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, vars) => {
+      if (!currentFor(vars)) return;
       // The server refuses a rule it cannot evaluate rather than storing a dead
       // switch, so this path is reachable by design and needs its own message —
       // "update failed" would leave the user re-trying something that will
@@ -623,34 +707,39 @@ export const useSavedSearches = (): UseSavedSearches => {
   const updateAlertSettings = useCallback(
     async (searchId: string, settings: WatchAlertSettingsInput): Promise<boolean> => {
       try {
-        await alertSettingsMutation.mutateAsync({ searchId, settings });
+        await alertSettingsMutation.mutateAsync(capture({ searchId, settings }));
+        if (!isCurrent(owner)) return false;
         toast.success(t('alerts.settings.updated'));
         return true;
       } catch {
         return false;
       }
     },
-    [alertSettingsMutation, t],
+    [alertSettingsMutation, t, owner, isCurrent, capture],
   );
 
   const setPrimaryArea = useCallback(
     async (searchId: string): Promise<boolean> => {
       try {
-        await alertSettingsMutation.mutateAsync({ searchId, settings: { isPrimaryArea: true } });
+        await alertSettingsMutation.mutateAsync(
+          capture({ searchId, settings: { isPrimaryArea: true } }),
+        );
+        if (!isCurrent(owner)) return false;
         // The server clears whichever watch previously held the flag, in the
         // same transaction. The local cache cannot know WHICH one that was
         // without re-reading, so the whole list is invalidated rather than
         // patched — a patched cache would show two primary areas until the next
         // refetch, which is precisely the state the partial unique index makes
         // impossible on the server.
-        await queryClient.invalidateQueries({ queryKey: SAVED_SEARCHES_KEY });
+        await queryClient.invalidateQueries({ queryKey: savedSearchesKeyFor(owner), exact: true });
+        if (!isCurrent(owner)) return false;
         toast.success(t('alerts.settings.primaryAreaSet'));
         return true;
       } catch {
         return false;
       }
     },
-    [alertSettingsMutation, queryClient, t],
+    [alertSettingsMutation, queryClient, t, owner, isCurrent, capture],
   );
 
   const searchExists = useCallback(
@@ -669,14 +758,22 @@ export const useSavedSearches = (): UseSavedSearches => {
     [searches],
   );
 
-  const error = listQuery.error
-    ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
-    : null;
+  const unavailable = isAuthenticated && !owner && isBoundSubjectUnavailable();
+  const error = unavailable
+    ? t('search.widgets.savedSearches.loadFailed')
+    : listQuery.error
+      ? getErrorMessage(listQuery.error, t('search.widgets.savedSearches.loadFailed'))
+      : null;
 
   return {
     searches,
-    isLoading: listQuery.isLoading,
-    isSaving: saveSearchMutation.isPending,
+    isLoading: unavailable ? false : listQuery.isLoading,
+    isSaving: Boolean(
+      saveSearchMutation.isPending &&
+        saveSearchMutation.variables &&
+        owner &&
+        saveSearchMutation.variables.ownerKey === JSON.stringify(accountOwnerKey(owner)),
+    ),
     error,
     saveSearch,
     deleteSavedSearch,

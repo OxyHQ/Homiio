@@ -64,11 +64,11 @@ import { KEY_COORD_DECIMALS } from '@homiio/shared-types/location';
 import type { ApproximateLocation, GeoPlace, LocationSelection } from '@homiio/shared-types';
 
 import { reversePlace } from '@/services/geoService';
+import { isBoundSubjectUnavailable } from '@/utils/api';
 import { useLocationScopeStore } from '@/store/locationScopeStore';
-import type { SavedSearch } from '@/store/savedSearchesStore';
 import {
   primarySavedAreaOf,
-  SAVED_SEARCHES_KEY,
+  savedSearchesReading,
   usePrimarySavedArea,
   type PrimarySavedArea,
 } from './useSavedSearches';
@@ -608,7 +608,9 @@ export function observeInferredScope(queryClient: QueryClient): () => void {
         // The session `usePrimarySavedArea` reads through `useOxy`, read here
         // through the SDK's out-of-render surface for it.
         useAuthStore.getState().isAuthenticated,
-        cachedReading<SavedSearch[]>(queryClient, SAVED_SEARCHES_KEY),
+        isBoundSubjectUnavailable()
+          ? { data: undefined, isPending: false, isFetching: false }
+          : savedSearchesReading(queryClient, useAuthStore.getState().user?.id),
       ),
       fix: cachedReading(queryClient, deviceFixQueryKey(false)),
       approximate: cachedReading(queryClient, APPROXIMATE_LOCATION_QUERY_KEY),
