@@ -246,6 +246,12 @@ export interface UseSavedSearches {
 export const savedSearchesKeyFor = (owner: AccountOwner | null) =>
   [...SAVED_SEARCHES_KEY, ...accountOwnerKey(owner)] as const;
 
+/** Non-secret, process-local identity for comparing paused mutation owners. */
+function mutationOwnerKey(owner: AccountOwner): string {
+  const [, , epoch, instance, generation] = accountOwnerKey(owner);
+  return JSON.stringify([epoch, instance, generation]);
+}
+
 const savedSearchOwners = new WeakMap<object, AccountOwner>();
 
 function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClient) {
@@ -396,7 +402,7 @@ export const useSavedSearches = (): UseSavedSearches => {
   const owners = useRef(new WeakMap<object, AccountOwner>());
   function capture<T extends object>(variables: T): T & { ownerKey: string } {
     if (!owner?.sessionId || !isCurrent(owner)) throw new Error('The active account changed');
-    const action = { ...variables, ownerKey: JSON.stringify(accountOwnerKey(owner)) };
+    const action = { ...variables, ownerKey: mutationOwnerKey(owner) };
     owners.current.set(action, owner);
     return action;
   }
@@ -775,7 +781,7 @@ export const useSavedSearches = (): UseSavedSearches => {
       saveSearchMutation.isPending &&
         saveSearchMutation.variables &&
         owner &&
-        saveSearchMutation.variables.ownerKey === JSON.stringify(accountOwnerKey(owner)),
+        saveSearchMutation.variables.ownerKey === mutationOwnerKey(owner),
     ),
     error,
     saveSearch,
