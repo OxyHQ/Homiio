@@ -609,7 +609,7 @@ it('does not let a paused checkout from A disable checkout for B', async () => {
   ]);
 });
 
-it('does not persist account identifiers or bearer in the shared paused-mutation blob', async () => {
+it('omits identity from the shared paused-mutation blob and does not replay after restore', async () => {
   const path = require('node:path');
   const servicesRoot = path.dirname(require.resolve('@oxy.so/services/package.json'));
   const { attachQueryPersistence } = require(
@@ -650,11 +650,47 @@ it('does not persist account identifiers or bearer in the shared paused-mutation
   try {
     await waitFor(() => expect(stored).not.toBeNull(), { timeout: 4000 });
     const payload = JSON.parse(stored ?? '');
+    const query = client
+      .getQueryCache()
+      .find({ queryKey: ['profiles', 'me', 'entitlements'], exact: false });
+    expect(query?.state.status).toBe('success');
+    expect(JSON.stringify(query?.queryKey)).toContain(sentinel);
+    expect(JSON.stringify(query?.queryKey)).toContain('PRIVATE_SESSION_SENTINEL');
+    expect(JSON.stringify(query?.state.data)).toContain('sub-unknown');
     expect(payload.clientState.mutations.length).toBeGreaterThan(0);
+    expect(payload.clientState.queries).toEqual([]);
     expect(payload.clientState.mutations[0].state.variables.ownerKey).toMatch(/^\[\d+,\d+,\d+\]$/);
     expect(stored).not.toContain(sentinel);
     expect(stored).not.toContain('PRIVATE_SESSION_SENTINEL');
     expect(stored).not.toContain(token(sentinel));
+    expect(stored).not.toContain('sub-unknown');
+    const snapshot = stored;
+    await act(async () => {
+      screen.unmount();
+      oxy.session.setAccessToken(token('B'));
+      mockAuth.user = { id: 'B' };
+      mockAuth.activeSessionId = 'session-B';
+    });
+    const restoredClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false, gcTime: Infinity } },
+    });
+    const restored = attachQueryPersistence(restoredClient, {
+      ...storage,
+      getItem: async () => snapshot,
+    });
+    try {
+      await restored.restored;
+      expect(restoredClient.getMutationCache().getAll()).toHaveLength(1);
+      await act(async () => {
+        onlineManager.setOnline(true);
+        await restoredClient.resumePausedMutations();
+      });
+      expect(mockPost.mock.calls.map((call) => call[0])).not.toContain('/api/billing/checkout');
+      expect(restoredClient.getMutationCache().getAll()[0].state.status).toBe('error');
+    } finally {
+      restored.unsubscribe();
+      restoredClient.clear();
+    }
   } finally {
     persistence.unsubscribe();
   }
