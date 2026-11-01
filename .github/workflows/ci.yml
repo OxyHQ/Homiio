@@ -37,6 +37,7 @@ jobs:
           if (!maps.length) throw Error('No JavaScript source map');
           const groups = new Map();
           const sample = [];
+          const appFiles = [];
           let missing = 0;
           function visit(map) {
             if (Array.isArray(map.sections)) for (const section of map.sections) section.map ? visit(section.map) : missing++;
@@ -49,8 +50,11 @@ jobs:
               const item=groups.get(key) ?? {count:0,sourceBytes:0,unresolved:0};
               item.count++;
               const filename=path.resolve(process.cwd(), `.${name}`);
-              if (filename.startsWith(process.cwd()+path.sep) && fs.existsSync(filename) && fs.statSync(filename).isFile()) item.sourceBytes+=fs.statSync(filename).size;
-              else item.unresolved++;
+              if (filename.startsWith(process.cwd()+path.sep) && fs.existsSync(filename) && fs.statSync(filename).isFile()) {
+                const size=fs.statSync(filename).size;
+                item.sourceBytes+=size;
+                if (name.startsWith('/packages/frontend/')) appFiles.push({name,size});
+              } else item.unresolved++;
               groups.set(key,item);
             }
           }
@@ -59,5 +63,6 @@ jobs:
           console.log('Sections without embedded source names:', missing);
           console.log('Module counts and on-disk source bytes only; neither measures bundle contribution or removal savings.');
           console.log('Sample source names',JSON.stringify(sample));
+          console.log('Largest local sources (not bundle savings)',JSON.stringify(appFiles.sort((a,b)=>b.size-a.size).slice(0,45)));
           console.log(JSON.stringify([...groups].map(([name,data]) => ({name,...data})).sort((a,b)=>b.sourceBytes-a.sourceBytes).slice(0,100),null,2));
           NODE
