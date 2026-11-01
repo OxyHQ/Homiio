@@ -118,6 +118,10 @@ beforeAll(async () => {
   ({ bindApiToOxy: bind } = jest.requireActual('../utils/api'));
 });
 beforeEach(() => {
+  const originalError = console.error;
+  jest.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+    originalError('PROOF CURRENT TEST:', expect.getState().currentTestName, ...args);
+  });
   seen = [];
   postBodies = [];
   shouldHoldB = false;
@@ -146,6 +150,7 @@ afterEach(() => {
   client.clear();
   oxy.dispose();
   onlineManager.setOnline(true);
+  jest.restoreAllMocks();
 });
 afterAll(async () => {
   server.closeAllConnections();
