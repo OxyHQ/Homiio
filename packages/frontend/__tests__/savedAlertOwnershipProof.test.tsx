@@ -21,9 +21,12 @@ jest.mock('@oxy.so/bloom/toast', () => ({ toast: { success: jest.fn(), error: je
 const token = (id: string) =>
   `h.${Buffer.from(JSON.stringify({ userId: id, sessionId: `session-${id}`, exp: 4102444800 })).toString('base64url')}.s`;
 const location = {
-  kind: 'place', source: { kind: 'homiio', entity: 'city', id: 'city-A' },
-  placeType: 'city', label: { primary: 'A private area', kind: 'place' },
-  center: { longitude: 2, latitude: 41 }, precision: 'centroid',
+  kind: 'place',
+  source: { kind: 'homiio', entity: 'city', id: 'city-A' },
+  placeType: 'city',
+  label: { primary: 'A private area', kind: 'place' },
+  center: { longitude: 2, latitude: 41 },
+  precision: 'centroid',
 };
 let server: Server;
 let oxy: OxyServices;
@@ -44,10 +47,23 @@ beforeAll(async () => {
       res.end(JSON.stringify({ message: 'Not found' }));
       return;
     }
-    res.end(JSON.stringify({ data: owner === 'A' ? [{
-      id: 'watch-A', name: 'A private watch', query: 'A', location,
-      locationStatus: 'resolved', isPrimaryArea: true,
-    }] : [] }));
+    res.end(
+      JSON.stringify({
+        data:
+          owner === 'A'
+            ? [
+                {
+                  id: 'watch-A',
+                  name: 'A private watch',
+                  query: 'A',
+                  location,
+                  locationStatus: 'resolved',
+                  isPrimaryArea: true,
+                },
+              ]
+            : [],
+      }),
+    );
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   mockOrigin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -58,12 +74,26 @@ beforeEach(() => {
   seen = [];
   oxy = new OxyServices({ baseURL: mockOrigin });
   oxy.session.setAccessToken(token('A'));
-  Object.assign(mockAuth, { isAuthenticated: true, user: { id: 'A' }, activeSessionId: 'session-A', oxyServices: oxy });
-  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
+  Object.assign(mockAuth, {
+    isAuthenticated: true,
+    user: { id: 'A' },
+    activeSessionId: 'session-A',
+    oxyServices: oxy,
+  });
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
+  });
   bind(oxy);
 });
-afterEach(() => { cleanup(); client.clear(); oxy.dispose(); });
-afterAll(async () => { server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); });
+afterEach(() => {
+  cleanup();
+  client.clear();
+  oxy.dispose();
+});
+afterAll(async () => {
+  server.closeAllConnections();
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+});
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
@@ -77,12 +107,14 @@ function switchToB(rerender: () => void) {
 }
 
 it('diagnostic: same cache returns A watch and primary area after projection B', async () => {
-  const view = renderHook(() => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }), { wrapper });
+  const view = renderHook(() => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }), {
+    wrapper,
+  });
   await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
-  expect(view.result.current.primary.selection?.label.primary).toBe('A private area');
+  expect(view.result.current.primary.selection).toEqual(location);
   switchToB(() => view.rerender(undefined));
   expect(view.result.current.saved.searches[0]?.id).toBe('watch-A');
-  expect(view.result.current.primary.selection?.label.primary).toBe('A private area');
+  expect(view.result.current.primary.selection).toEqual(location);
   expect(seen).toEqual([{ method: 'GET', owner: 'A', path: '/api/profiles/me/saved-searches' }]);
 });
 
@@ -91,6 +123,12 @@ it('diagnostic: retained A watch callback sends under B after projection changes
   await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
   const update = view.result.current.updateAlertSettings;
   switchToB(() => view.rerender(undefined));
-  await act(async () => { await update('watch-A', { cadence: 'off' }); });
-  expect(seen).toContainEqual({ method: 'PUT', owner: 'B', path: '/api/profiles/me/saved-searches/watch-A' });
+  await act(async () => {
+    await update('watch-A', { cadence: 'off' });
+  });
+  expect(seen).toContainEqual({
+    method: 'PUT',
+    owner: 'B',
+    path: '/api/profiles/me/saved-searches/watch-A',
+  });
 });
