@@ -39,6 +39,7 @@ import { RoommateRequestComponent } from '@/components/RoommateRequest';
 import { RoommateRelationshipComponent } from '@/components/RoommateRelationship';
 import { RoomList } from '@/components/RoomList';
 import { useProfile } from '@/context/ProfileContext';
+import { ProfileOwnerChangedError } from '@/hooks/useProfileOwner';
 import { useRoomsFeed } from '@/hooks/useRoomsFeed';
 import {
   useRoommate,
@@ -48,7 +49,6 @@ import {
 } from '@/hooks/useRoommate';
 import { roommateService } from '@/services/roommateService';
 import type { PropertyFilters } from '@/services/propertyService';
-import { useProfileStore } from '@/store/profileStore';
 import { spacing } from '@/constants/styles';
 
 type Tab = 'discover' | 'requests' | 'relationships' | 'rooms';
@@ -74,7 +74,7 @@ export default function RoommatesPage() {
   // `['roommates', …]` lists below, which refetch themselves.
   const { sendRequest, acceptRequest, declineRequest, endRelationship } = useRoommate();
 
-  const { profile, hasProfile } = useProfile();
+  const { profile, hasProfile, refreshProfile, isProfileProjectionCurrent } = useProfile();
 
   // Each tab's list is a query that runs while its tab is open (the profile
   // itself is loaded once per session by `ProfileContext`). Keyed on the
@@ -158,7 +158,9 @@ export default function RoommatesPage() {
         oxyServices,
         activeSessionId,
       );
-      await useProfileStore.getState().fetchProfile();
+      if (!isProfileProjectionCurrent()) return;
+      await refreshProfile();
+      if (!isProfileProjectionCurrent()) return;
       queryClient.setQueryData(['roommates', 'status'], {
         hasRoommateMatching: result.enabled,
       });
@@ -166,18 +168,29 @@ export default function RoommatesPage() {
         // Newly visible to matching: the discover list changes with it.
         await queryClient.invalidateQueries({ queryKey: ['roommates', 'profiles'] });
       }
+      if (!isProfileProjectionCurrent()) return;
       toast.success(
         result.message ||
           (result.enabled
             ? t('roommates.screen.matchingEnabled')
             : t('roommates.screen.matchingDisabled')),
       );
-    } catch {
+    } catch (error) {
+      if (!isProfileProjectionCurrent() || error instanceof ProfileOwnerChangedError) return;
       toast.error(t('roommates.alert.toggleFailed'));
     } finally {
       setIsToggling(false);
     }
-  }, [oxyServices, activeSessionId, isToggling, hasRoommateMatching, queryClient, t]);
+  }, [
+    oxyServices,
+    activeSessionId,
+    isToggling,
+    hasRoommateMatching,
+    queryClient,
+    refreshProfile,
+    isProfileProjectionCurrent,
+    t,
+  ]);
 
   const handleViewProfile = (profileId: string) => {
     router.push(`/roommates/${profileId}`);
