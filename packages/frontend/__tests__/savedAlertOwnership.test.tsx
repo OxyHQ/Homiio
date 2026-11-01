@@ -1142,6 +1142,8 @@ it('does not publish a reentrant read started while cancelling an earlier read',
   await waitFor(() => expect(holdA).not.toBe(firstRead));
   expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
   stop();
+  const mutationTimestamp = client.getQueryState(key)!.dataUpdatedAt;
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(mutationTimestamp + 60000);
   await act(async () => {
     holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
     await reentrant;
@@ -1149,5 +1151,7 @@ it('does not publish a reentrant read started while cancelling an earlier read',
       JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }),
     );
   });
+  clock.mockRestore();
   expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
+  expect(client.getQueryState(key)!.dataUpdatedAt).toBe(mutationTimestamp);
 });
