@@ -556,3 +556,53 @@ it('resumes a paused same-owner save with its in-memory payload', async () => {
   });
   expect(JSON.parse(postBodies[0])).toMatchObject({ name: 'private name', query: 'private query' });
 });
+
+it.each(['save', 'update', 'delete', 'alert', 'primary'] as const)(
+  'does not send a retained %s action after switching accounts',
+  async (kind) => {
+    const view = renderHook(() => useSavedSearches(), { wrapper });
+    await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+    const actions = view.result.current;
+    const run = {
+      save: () => actions.saveSearch('private', 'apartments'),
+      update: () => actions.updateSearch('watch-A', { name: 'private' }),
+      delete: () => actions.deleteSavedSearch('watch-A'),
+      alert: () => actions.updateAlertSettings('watch-A', { cadence: 'off' }),
+      primary: () => actions.setPrimaryArea('watch-A'),
+    }[kind];
+    switchToB(() => view.rerender(undefined));
+    await act(async () => {
+      expect(await run()).toBe(false);
+    });
+    expect(seen.filter((request) => request.method !== 'GET')).toEqual([]);
+  },
+);
+
+it('updates alert settings for the unchanged owner', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  allowPutA = true;
+  await act(async () => {
+    expect(await view.result.current.updateAlertSettings('watch-A', { cadence: 'off' })).toBe(true);
+  });
+  expect(seen).toContainEqual({
+    method: 'PUT',
+    owner: 'A',
+    path: '/api/profiles/me/saved-searches/watch-A',
+  });
+  await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
+});
+
+it('deletes a saved search for the unchanged owner', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  await act(async () => {
+    expect(await view.result.current.deleteSavedSearch('watch-A', 'A private watch')).toBe(true);
+  });
+  expect(seen).toContainEqual({
+    method: 'DELETE',
+    owner: 'A',
+    path: '/api/profiles/me/saved-searches/watch-A',
+  });
+  await waitFor(() => expect(view.result.current.searches).toEqual([]));
+});
