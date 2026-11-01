@@ -898,6 +898,23 @@ it('does not infer a network area while an unbound saved area is paused and reco
 it('keeps a confirmed update after an earlier saved-search read finishes', async () => {
   const view = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('A private watch'));
+  const { api } = jest.requireActual('../utils/api') as typeof import('../utils/api');
+  const originalGet = api.get;
+  let finishRead!: () => void;
+  const readDelivered = new Promise<void>((resolve) => {
+    finishRead = resolve;
+  });
+  const spy = jest.spyOn(api, 'get').mockImplementation(((...args: Parameters<typeof api.get>) =>
+    originalGet(...args).then(
+      (response) => {
+        finishRead();
+        return response;
+      },
+      (error) => {
+        finishRead();
+        throw error;
+      },
+    )) as typeof api.get);
   shouldHoldA = true;
   allowPutA = true;
   let reading: Promise<void> | undefined;
@@ -914,7 +931,9 @@ it('keeps a confirmed update after an earlier saved-search read finishes', async
   await act(async () => {
     holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
     await reading;
+    await readDelivered;
   });
+  spy.mockRestore();
   expect(client.getQueryState(key)?.fetchStatus).toBe('idle');
   expect((client.getQueryData(key) as Array<{ name: string }>)[0]?.name).toBe('Updated A');
   await waitFor(() => expect(view.result.current.searches[0]?.name).toBe('Updated A'));
@@ -924,6 +943,23 @@ it('keeps successful create and delete of different searches while an earlier re
   const view = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
   const key = loadedSavedSearchQuery()!.queryKey;
+  const { api } = jest.requireActual('../utils/api') as typeof import('../utils/api');
+  const originalGet = api.get;
+  let finishRead!: () => void;
+  const readDelivered = new Promise<void>((resolve) => {
+    finishRead = resolve;
+  });
+  const spy = jest.spyOn(api, 'get').mockImplementation(((...args: Parameters<typeof api.get>) =>
+    originalGet(...args).then(
+      (response) => {
+        finishRead();
+        return response;
+      },
+      (error) => {
+        finishRead();
+        throw error;
+      },
+    )) as typeof api.get);
   shouldHoldA = true;
   let reading: Promise<void> | undefined;
   act(() => {
@@ -945,7 +981,9 @@ it('keeps successful create and delete of different searches while an earlier re
     holdA!.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
     await finished;
     await reading;
+    await readDelivered;
   });
+  spy.mockRestore();
   expect((client.getQueryData(key) as Array<{ id: string }>).map((item) => item.id)).toEqual([
     'new-A',
   ]);
