@@ -169,6 +169,7 @@ export default function RoommatesPage() {
       if (!isProfileProjectionCurrent()) return;
       if (superseded) {
         await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'], exact: true });
+        if (!isProfileProjectionCurrent()) return;
       } else {
         queryClient.setQueryData(['roommates', 'status'], {
           hasRoommateMatching: result.enabled,

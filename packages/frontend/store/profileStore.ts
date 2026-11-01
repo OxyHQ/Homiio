@@ -78,7 +78,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       return profile;
     } catch (error: unknown) {
       if (!owner.isCurrent()) throw new ProfileOwnerChangedError();
-      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
+      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError(error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch profile';
       set((state) =>
         state.profileRequest === request
@@ -115,18 +115,17 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       const updatedProfile = await profileService.updateMyProfile(updateData);
       assertCurrent(owner);
       assertProfileSubject(updatedProfile, owner);
-      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
       set((state) => ({
+        // A successful write must supersede reads that could have observed the old value.
+        latestProfileRequest: request,
         profile: updatedProfile,
         profileBinding: { userId: owner.userId, sessionId: owner.sessionId },
         profileUpdatedAt: Date.now(),
         ...(state.profileRequest === request ? { isLoading: false, profileRequest: null } : {}),
       }));
-      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
       return updatedProfile;
     } catch (error: unknown) {
       if (!owner.isCurrent()) throw new ProfileOwnerChangedError();
-      if (get().latestProfileRequest !== request) throw new ProfileRequestSupersededError();
       const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
       set((state) =>
         state.profileRequest === request

@@ -251,3 +251,34 @@ it('confirms an accepted matching update and refetches status when its profile r
   expect(toast.error).not.toHaveBeenCalled();
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ['roommates', 'status'], exact: true });
 });
+
+it('does not invalidate profiles or toast for A after switching during superseded status refresh', async () => {
+  let finish!: () => void;
+  const held = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const invalidate = jest.spyOn(client, 'invalidateQueries');
+  invalidate.mockImplementation((filters) => {
+    if (JSON.stringify(filters?.queryKey) === JSON.stringify(['roommates', 'status'])) return held;
+    return Promise.resolve();
+  });
+  mockToggle.mockResolvedValue({ enabled: true });
+  mockRefreshA.mockRejectedValueOnce(new ProfileRequestSupersededError());
+  const screen = render(wrap(<RoommatesPage />));
+  fireEvent.press(await screen.findByRole('button', { name: 'roommates.screen.enableMatching' }));
+  await waitFor(() =>
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['roommates', 'status'], exact: true }),
+  );
+  act(() => {
+    mockAccount = 'B';
+    mockOxy.session.setAccessToken(mockToken('B'));
+    screen.rerender(wrap(<RoommatesPage />));
+  });
+  await act(async () => {
+    finish();
+    await held;
+  });
+  expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['roommates', 'profiles'] });
+  expect(toast.success).not.toHaveBeenCalled();
+  expect(toast.error).not.toHaveBeenCalled();
+});

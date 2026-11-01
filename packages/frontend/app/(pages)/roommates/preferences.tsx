@@ -365,14 +365,16 @@ function OwnedPreferences({
         setMatchingDirty(false);
         setConflicted(false);
         await queryClient.invalidateQueries({ queryKey: settingsKey, exact: true });
-        if (!isCurrent(owner)) return;
+        if (!isCurrent(owner) || !guard.isCurrent()) return;
         toast.success(t('roommates.alert.preferencesSaved'));
       } catch {
-        if (isCurrent(owner)) toast.error(t('roommates.alert.preferencesFailed'));
+        if (isCurrent(owner) && guard.isCurrent())
+          toast.error(t('roommates.alert.preferencesFailed'));
       }
     },
-    onError: () => {
-      if (isCurrent(owner)) toast.error(t('roommates.alert.preferencesFailed'));
+    onError: (_error, variables) => {
+      if (isCurrent(owner) && refreshOwners.current.get(variables)?.isCurrent())
+        toast.error(t('roommates.alert.preferencesFailed'));
     },
   });
 

@@ -302,3 +302,43 @@ it.each(['success', 'failure'] as const)(
       );
   },
 );
+
+it('does not toast for an accepted A save after switching during settings invalidation', async () => {
+  let finish!: () => void;
+  const held = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const original = client.invalidateQueries.bind(client);
+  const invalidate = jest
+    .spyOn(client, 'invalidateQueries')
+    .mockImplementation((filters, options) => {
+      if (filters?.queryKey?.[0] === 'roommates' && filters.queryKey[1] === 'preferences')
+        return held;
+      return original(filters, options);
+    });
+  const screen = render(wrap(<RoommatePreferencesPage />));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
+  await waitFor(() => expect(invalidate).toHaveBeenCalled());
+  switchTo('B', () => screen.rerender(wrap(<RoommatePreferencesPage />)));
+  await waitFor(() => expect(useProfileStore.getState().profile?.oxyUserId).toBe('B'));
+  await act(async () => {
+    finish();
+    await held;
+  });
+  await waitFor(() =>
+    expect(
+      client
+        .getMutationCache()
+        .getAll()
+        .every((mutation) => mutation.state.status !== 'pending'),
+    ).toBe(true),
+  );
+  expect(toast.success).not.toHaveBeenCalled();
+  expect(toast.error).not.toHaveBeenCalled();
+  invalidate.mockRestore();
+});

@@ -14,9 +14,11 @@ export type ProfileOwner = {
 
 /** A later profile operation owns publication of the observed profile. */
 export class ProfileRequestSupersededError extends Error {
-  constructor() {
+  readonly cause?: unknown;
+  constructor(cause?: unknown) {
     super('A newer profile request superseded this one');
     this.name = 'ProfileRequestSupersededError';
+    this.cause = cause;
   }
 }
 

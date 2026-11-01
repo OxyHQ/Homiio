@@ -425,3 +425,117 @@ it('does not publish an older success when the newer refresh failed', async () =
   expect(cached[0].state.data).toEqual(expect.objectContaining({ note: 'A-1' }));
   expect(useProfileStore.getState().error).not.toBeNull();
 });
+
+it('keeps an accepted write when a later-started read completed before the write response', async () => {
+  const view = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() =>
+    expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' })),
+  );
+  const owner = useProfileStore.getState().latestProfileRequest?.owner;
+  if (!owner) throw new Error('Expected a current owner');
+  const heldWrite = heldRequest();
+  let write!: Promise<unknown>;
+  act(() => {
+    write = useProfileStore.getState().updateProfile({}, owner);
+  });
+  const writeResponse = await heldWrite;
+  expect(requestMethods).toEqual(['GET A', 'PUT A']);
+  await act(async () => {
+    await view.result.current.refreshProfile();
+  });
+  expect(requestMethods).toEqual(['GET A', 'PUT A', 'GET A']);
+  expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-3' }));
+  await act(async () => {
+    writeResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'accepted-write' })}}`);
+    await write;
+  });
+  expect(useProfileStore.getState().profile).toEqual(
+    expect.objectContaining({ note: 'accepted-write' }),
+  );
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'accepted-write' }));
+});
+
+it('discards a later-started read that completes after an accepted write', async () => {
+  const view = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() =>
+    expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' })),
+  );
+  const owner = useProfileStore.getState().latestProfileRequest?.owner;
+  if (!owner) throw new Error('Expected a current owner');
+  const heldWrite = heldRequest();
+  let write!: Promise<unknown>;
+  act(() => {
+    write = useProfileStore.getState().updateProfile({}, owner);
+  });
+  const writeResponse = await heldWrite;
+  const heldRead = heldRequest();
+  let read!: Promise<unknown>;
+  act(() => {
+    read = view.result.current.refreshProfile();
+    read.catch(() => undefined);
+  });
+  const readResponse = await heldRead;
+  expect(requestMethods).toEqual(['GET A', 'PUT A', 'GET A']);
+  await act(async () => {
+    writeResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'accepted-write' })}}`);
+    await write;
+  });
+  await act(async () => {
+    readResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-write' })}}`);
+    await expect(read).rejects.toThrow('A newer profile request superseded this one');
+  });
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'accepted-write' }));
+});
+
+it('keeps the actual write error when a later read completes first', async () => {
+  const view = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() =>
+    expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' })),
+  );
+  const owner = useProfileStore.getState().latestProfileRequest?.owner;
+  if (!owner) throw new Error('Expected a current owner');
+  statusA = 503;
+  const heldWrite = heldRequest();
+  let write!: Promise<unknown>;
+  act(() => {
+    write = useProfileStore.getState().updateProfile({}, owner);
+    write.catch(() => undefined);
+  });
+  const writeResponse = await heldWrite;
+  await act(async () => {
+    await view.result.current.refreshProfile();
+  });
+  expect(requestMethods).toEqual(['GET A', 'PUT A', 'GET A']);
+  await act(async () => {
+    writeResponse.end(`${JSON.stringify({ oxyUserId: 'A' })}}`);
+    const error = await write.catch((reason) => reason);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).not.toContain('superseded');
+  });
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
+});
+
+it('retains the underlying failure on a superseded read without replacing the newer data', async () => {
+  const view = renderHook(() => useProfile(), { wrapper });
+  await waitFor(() =>
+    expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' })),
+  );
+  statusA = 503;
+  const held = heldRequest();
+  let old!: Promise<unknown>;
+  act(() => {
+    old = view.result.current.refreshProfile();
+    old.catch(() => undefined);
+  });
+  const oldResponse = await held;
+  await act(async () => {
+    await view.result.current.refreshProfile();
+  });
+  await act(async () => {
+    oldResponse.end(`${JSON.stringify({ oxyUserId: 'A' })}}`);
+    const error = await old.catch((reason) => reason);
+    expect(error.message).toBe('A newer profile request superseded this one');
+    expect(error.cause).toBeInstanceOf(Error);
+  });
+  expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
+});
