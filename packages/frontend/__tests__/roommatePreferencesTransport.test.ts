@@ -98,3 +98,66 @@ it('rejects malformed owned reads rather than overwriting existing settings', as
   body = { data: null };
   await expect(service.getMyRoommatePreferences(undefined, undefined, owner())).resolves.toBeNull();
 });
+
+it('aborts an owned write if projection changes during auth preflight', async () => {
+  let enter!: () => void;
+  let release!: () => void;
+  let complete!: () => void;
+  const entered = new Promise<void>((resolve) => {
+    enter = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const completed = new Promise<void>((resolve) => {
+    complete = resolve;
+  });
+  const prototype = Object.getPrototypeOf(oxy.http) as {
+    getAuthHeader: () => Promise<string | null>;
+  };
+  const original = prototype.getAuthHeader;
+  const spy = jest.spyOn(prototype, 'getAuthHeader').mockImplementation(function (
+    this: typeof prototype,
+  ) {
+    enter();
+    return gate.then(async () => {
+      try {
+        return await original.call(this);
+      } finally {
+        complete();
+      }
+    });
+  });
+  let valid = true;
+  const listeners = new Set<() => void>();
+  const current = {
+    ...owner(),
+    isCurrent: () => valid,
+    subscribeInvalidation: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+  try {
+    const pending = service.updateRoommatePreferences(
+      { budget: { min: 1, max: 2 } },
+      true,
+      current,
+    );
+    const rejected = expect(pending).rejects.toThrow('The active account changed');
+    await entered;
+    valid = false;
+    listeners.forEach((listener) => listener());
+    await rejected;
+    release();
+    await completed;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(seen).toEqual([]);
+    expect(listeners.size).toBe(0);
+  } finally {
+    release();
+    spy.mockRestore();
+  }
+});
