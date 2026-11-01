@@ -813,3 +813,28 @@ it('settles a same-owner refetch with deeply equal data without a retry loop', a
   expect(view.result.current.primary.selection).toEqual(location);
   expect(seen.filter((request) => request.method === 'GET')).toHaveLength(2);
 });
+
+it('diagnostic: paused unknown saved area still selects cached network inference', async () => {
+  const first = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  first.unmount();
+  client.clear();
+  const source = new QueryClient();
+  source.setQueryData(key, [{ id: 'unattributed', name: 'unknown' }]);
+  const blob = JSON.parse(JSON.stringify(dehydrate(source)));
+  source.clear();
+  client = new QueryClient({ defaultOptions: { queries: { networkMode: 'online', staleTime: 300000, retry: false, gcTime: Infinity } } });
+  hydrate(client, blob);
+  const { useLocationScope } = jest.requireActual('../hooks/useLocationScope');
+  const { useLocationScopeStore } = jest.requireActual('../store/locationScopeStore');
+  const { APPROXIMATE_LOCATION_QUERY_KEY } = jest.requireActual('../hooks/useApproximateLocation');
+  useLocationScopeStore.setState({ sessionSelection: null, explicitGlobal: false, lastChosenArea: null, deviceRequested: false, autoScope: null });
+  const networkArea = { ...location, label: { primary: 'network area', kind: 'place' } };
+  client.setQueryData(APPROXIMATE_LOCATION_QUERY_KEY, { status: 'resolved', source: 'ip', granularity: 'city', selection: networkArea, resolvedAt: '2026-01-01T00:00:00.000Z', expiresAt: '2030-01-01T00:00:00.000Z' });
+  act(() => onlineManager.setOnline(false));
+  const view = renderHook(() => ({ scope: useLocationScope(), primary: usePrimarySavedArea() }), { wrapper });
+  await waitFor(() => expect(view.result.current.primary).toEqual({ selection: null, pending: false }));
+  await waitFor(() => expect(view.result.current.scope.source).toBe('ip'));
+  expect(view.result.current.scope.selection).toEqual(networkArea);
+});
