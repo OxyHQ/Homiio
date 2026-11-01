@@ -28,6 +28,7 @@ import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as DocumentPicker from 'expo-document-picker';
 import { toast } from '@oxy.so/bloom/toast';
+import { P } from '@oxy.so/bloom/typography';
 
 import { Button } from '@oxy.so/bloom/button';
 import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
@@ -332,15 +333,20 @@ export default function ContractDetailScreen() {
     canSign || canTerminate || canDelete ? (
       <>
         {canSign ? (
-          <Button
-            size="sm"
-            onPress={() => void confirmAction('sign')}
-            disabled={busy || !signMutation.isOwnerReady}
-            tone="accent"
-            appearance="solid"
-          >
-            {t('contracts.detail.signLease')}
-          </Button>
+          <>
+            <Button
+              size="sm"
+              onPress={() => void confirmAction('sign')}
+              disabled={busy || !signMutation.isOwnerReady}
+              tone="accent"
+              appearance="solid"
+            >
+              {t('contracts.detail.signLease')}
+            </Button>
+            {!signMutation.isOwnerReady ? (
+              <P accessibilityLiveRegion="polite">{t('contracts.detail.signAccountUnavailable')}</P>
+            ) : null}
+          </>
         ) : null}
         {canTerminate ? (
           <Button

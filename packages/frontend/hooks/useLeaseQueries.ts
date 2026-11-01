@@ -105,9 +105,13 @@ type SignLeaseInput = { acceptTerms: boolean; termsSha256?: string };
 type OwnedSignVariables = { input: SignLeaseInput; leaseId: string };
 const signOwners = new WeakMap<OwnedSignVariables, AccountOwner | null>();
 
-export function useSignLease(
-  id: string,
-): UseMutationResult<Lease, Error, SignLeaseInput> & { isOwnerReady: boolean } {
+export function useSignLease(id: string): Omit<
+  UseMutationResult<Lease, Error, SignLeaseInput>,
+  'variables'
+> & {
+  variables: SignLeaseInput | undefined;
+  isOwnerReady: boolean;
+} {
   const queryClient = useQueryClient();
   const { owner, isCurrent } = useAccountOwnerGuard();
   const mutation = useMutation<Lease, Error, OwnedSignVariables>({
