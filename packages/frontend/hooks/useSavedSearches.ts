@@ -8,6 +8,7 @@ import { api, ApiError, isBoundSubjectUnavailable } from '@/utils/api';
 import {
   accountOwnerKey,
   assertAccountOwner,
+  isExactAccountProjection,
   useAccountOwnerGuard,
   withAccountOwner,
   type AccountOwner,
@@ -286,17 +287,12 @@ function ownerIsBound(owner: AccountOwner | null): boolean {
 export function savedSearchesReading(client: QueryClient, userId: string | undefined) {
   for (const query of client.getQueryCache().findAll({ queryKey: SAVED_SEARCHES_KEY })) {
     const owner = savedSearchOwners.get(query);
-    if (!owner || owner.userId !== userId) continue;
-    try {
-      assertAccountOwner(owner);
-      return {
-        data: query.state.data as SavedSearch[] | undefined,
-        isPending: query.state.status === 'pending',
-        isFetching: query.state.fetchStatus === 'fetching',
-      };
-    } catch {
-      // Another projection owns the cache now.
-    }
+    if (!owner || owner.userId !== userId || !isExactAccountProjection(owner)) continue;
+    return {
+      data: query.state.data as SavedSearch[] | undefined,
+      isPending: query.state.status === 'pending',
+      isFetching: query.state.fetchStatus === 'fetching',
+    };
   }
   return { data: undefined, isPending: true, isFetching: false };
 }

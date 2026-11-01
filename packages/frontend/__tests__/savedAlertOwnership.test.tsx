@@ -45,6 +45,7 @@ let client: QueryClient;
 let seen: Array<{ method: string; owner: string; path: string }>;
 let holdB: ServerResponse | undefined;
 let shouldHoldB = false;
+let nameA = 'A private watch';
 let allowPutA = false;
 let useSavedSearches: typeof import('../hooks/useSavedSearches').useSavedSearches;
 let usePrimarySavedArea: typeof import('../hooks/useSavedSearches').usePrimarySavedArea;
@@ -81,7 +82,7 @@ beforeAll(async () => {
             ? [
                 {
                   id: 'watch-A',
-                  name: 'A private watch',
+                  name: nameA,
                   query: 'A',
                   location,
                   locationStatus: 'resolved',
@@ -102,6 +103,7 @@ beforeAll(async () => {
 beforeEach(() => {
   seen = [];
   shouldHoldB = false;
+  nameA = 'A private watch';
   allowPutA = false;
   mockToast.success.mockClear();
   mockToast.error.mockClear();
@@ -503,4 +505,20 @@ it('allows a known-subject legacy bearer while its projected session id is absen
     owner: 'A',
     path: '/api/profiles/me/saved-searches',
   });
+});
+
+it('uses the newly projected session result in the out-of-render reader', async () => {
+  mockAuth.activeSessionId = null;
+  const view = renderHook(() => usePrimarySavedArea(), { wrapper });
+  await waitFor(() =>
+    expect(savedSearchesReading(client, 'A').data?.[0]?.name).toBe('A private watch'),
+  );
+  nameA = 'Fresh A watch';
+  act(() => {
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  await waitFor(() =>
+    expect(savedSearchesReading(client, 'A').data?.[0]?.name).toBe('Fresh A watch'),
+  );
 });

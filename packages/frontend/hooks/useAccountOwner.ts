@@ -145,6 +145,22 @@ export function assertAccountOwner(owner: AccountOwner | null): asserts owner is
   }
 }
 
+/** Compare the committed session exactly for out-of-render cache selection. */
+export function isExactAccountProjection(owner: AccountOwner): boolean {
+  try {
+    assertAccountOwner(owner);
+    const projection = observedProjections.get(owner.oxyServices)?.projection;
+    return Boolean(
+      projection &&
+        projection.userId === owner.userId &&
+        projection.epoch === owner.epoch &&
+        projection.sessionId === owner.sessionId,
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function withAccountOwner<T>(
   owner: AccountOwner | null,
   operation: (owner: AccountOwner) => Promise<T>,
