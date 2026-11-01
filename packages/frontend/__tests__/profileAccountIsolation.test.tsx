@@ -7,6 +7,7 @@ import {
   dehydrate,
   hydrate,
   onlineManager,
+  useIsFetching,
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
@@ -212,7 +213,13 @@ it('does not clear B loading while B is still waiting after A fails late', async
     holdB = resolve;
   });
   const fetchProfile = jest.spyOn(useProfileStore.getState(), 'fetchProfile');
-  const view = renderHook(() => useProfile(), { wrapper });
+  const view = renderHook(
+    () => ({
+      profile: useProfile(),
+      pendingA: useIsFetching({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'] }),
+    }),
+    { wrapper },
+  );
   const responseA = await heldA;
   const pendingA = fetchProfile.mock.results[0].value.catch(() => undefined);
   switchTo('B', () => view.rerender(undefined));
@@ -222,13 +229,14 @@ it('does not clear B loading while B is still waiting after A fails late', async
     responseA.end(`${JSON.stringify({ oxyUserId: 'A' })}}`);
     await pendingA;
   });
+  await waitFor(() => expect(view.result.current.pendingA).toBe(0));
   expect(useProfileStore.getState().isLoading).toBe(true);
   expect(useProfileStore.getState().profileRequest?.owner.userId).toBe('B');
   await act(async () => {
     responseB.end(`${JSON.stringify({ oxyUserId: 'B' })}}`);
     await pendingB;
   });
-  await waitFor(() => expect(view.result.current.profile?.oxyUserId).toBe('B'));
+  await waitFor(() => expect(view.result.current.profile.profile?.oxyUserId).toBe('B'));
   expect(useProfileStore.getState().isLoading).toBe(false);
 });
 
@@ -352,8 +360,15 @@ it('does not publish an older same-owner GET after a completed store update', as
       return promise;
     },
   });
-  renderHook(() => useProfile(), { wrapper });
+  const view = renderHook(
+    () => ({
+      profile: useProfile(),
+      pending: useIsFetching({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'] }),
+    }),
+    { wrapper },
+  );
   const oldResponse = await held;
+  await waitFor(() => expect(view.result.current.pending).toBe(1));
   expect(requestMethods).toEqual(['GET A']);
   expect(invocations).toHaveLength(1);
   const first = invocations[0];
@@ -368,13 +383,8 @@ it('does not publish an older same-owner GET after a completed store update', as
   await act(async () => {
     oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-update' })}}`);
     await expect(first).rejects.toThrow('A newer profile request superseded this one');
-    await waitFor(() => {
-      const query = client
-        .getQueryCache()
-        .find({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'], exact: false });
-      expect(query?.state.fetchStatus).toBe('idle');
-    });
   });
+  await waitFor(() => expect(view.result.current.pending).toBe(0));
   expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-2' }));
 });
 

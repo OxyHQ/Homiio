@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+  useIsFetching,
+} from '@tanstack/react-query';
 import { OxyServices } from '@oxy.so/core';
 
 let mockAccount: 'A' | 'B' = 'A';
@@ -360,12 +365,15 @@ it('keeps profile data out of the query cache when a write settles before query 
     if (event.type === 'updated' && event.query.state.status === 'success')
       events.push('query-success');
   });
+  let pending = -1;
   function Capture() {
     useProfile();
+    pending = useIsFetching({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'] });
     return null;
   }
   render(wrap(<Capture />));
   await waitFor(() => expect(mockProfile).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(pending).toBe(1));
   const request = useProfileStore.getState().latestProfileRequest;
   if (!request) throw new Error('Expected a pending profile owner');
   const owner = request.owner;
@@ -396,6 +404,7 @@ it('keeps profile data out of the query cache when a write settles before query 
     await written;
     await waitFor(() => expect(events).toContain('query-success'));
   });
+  await waitFor(() => expect(pending).toBe(0));
   expect(events.indexOf('write-start')).toBeLessThan(events.indexOf('write-accepted'));
   expect(events.indexOf('write-accepted')).toBeLessThan(events.indexOf('query-success'));
   expect(useProfileStore.getState().profile).toEqual(
