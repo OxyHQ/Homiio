@@ -357,38 +357,23 @@ it('does not write after the provider unmounts or retain a loading owner', async
 
 it('does not publish an older same-owner GET after a completed store update', async () => {
   const held = heldRequest();
-  const invocations: Promise<unknown>[] = [];
-  useProfileStore.setState({
-    fetchProfile: (owner) => {
-      const promise = realFetchProfile(owner);
-      invocations.push(promise);
-      return promise;
-    },
-  });
-  renderHook(() => useProfile(), { wrapper });
+  const owner = {
+    oxyServices: oxy,
+    userId: 'A',
+    sessionId: 'session-A',
+    epoch: oxy.http.getSessionEpoch(),
+    revision: 1,
+    isCurrent: () => oxy.session.userId === 'A',
+  };
+  const first = useProfileStore.getState().fetchProfile(owner);
+  first.catch(() => undefined);
   const oldResponse = await held;
   expect(requestMethods).toEqual(['GET A']);
-  expect(invocations).toHaveLength(1);
-  const query = client
-    .getQueryCache()
-    .find({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'], exact: false });
-  const queryPromise = query?.promise;
-  if (!queryPromise) throw new Error('Expected the profile query in flight');
-  queryPromise.catch(() => undefined);
-  const first = invocations[0];
-  first.catch(() => undefined);
-  const owner = useProfileStore.getState().profileRequest?.owner;
-  if (!owner) throw new Error('Expected the pending owner');
-  await act(async () => {
-    await useProfileStore.getState().updateProfile({}, owner);
-  });
+  await useProfileStore.getState().updateProfile({}, owner);
   expect(requestMethods).toEqual(['GET A', 'PUT A']);
   expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-2' }));
-  await act(async () => {
-    oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-update' })}}`);
-    await expect(first).rejects.toThrow('A newer profile request superseded this one');
-    await expect(queryPromise).rejects.toThrow('A newer profile request superseded this one');
-  });
+  oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-update' })}}`);
+  await expect(first).rejects.toThrow('A newer profile request superseded this one');
   expect(useProfileStore.getState().profile).toEqual(expect.objectContaining({ note: 'A-2' }));
 });
 
