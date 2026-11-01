@@ -51,7 +51,7 @@ it('uses the captured owner for preference and status reads and the save', async
   await expect(service.getMyRoommateStatus(undefined, undefined, current)).resolves.toEqual({
     hasRoommateMatching: true,
   });
-  await service.updateRoommatePreferences({ budget: { min: 1234 } }, true, current);
+  await service.updateRoommatePreferences({ budget: { min: 1234, max: 2345 } }, true, current);
   expect(seen.map((value) => value.split(' Bearer ')[0])).toEqual([
     'GET /api/roommates/preferences',
     'GET /api/roommates/status',
@@ -66,7 +66,7 @@ it('rejects all three operations after the bearer changes before sending', async
   await expect(service.getMyRoommatePreferences(undefined, undefined, current)).rejects.toThrow();
   await expect(service.getMyRoommateStatus(undefined, undefined, current)).rejects.toThrow();
   await expect(
-    service.updateRoommatePreferences({ budget: { min: 1 } }, true, current),
+    service.updateRoommatePreferences({ budget: { min: 1, max: 2 } }, true, current),
   ).rejects.toThrow();
   expect(seen).toEqual([]);
 });
