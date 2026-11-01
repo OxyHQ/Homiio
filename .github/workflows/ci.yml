@@ -16,6 +16,9 @@ jobs:
         with:
           ref: 9e0c137fa51b002604a46ea595fae00a5ff0e121
           path: candidate
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.3'
@@ -45,8 +48,8 @@ jobs:
           NODE_ENV: production
         run: |
           set -euo pipefail
-          (cd base && bun run --cwd packages/frontend build --clear)
-          (cd candidate && bun run --cwd packages/frontend build --clear)
+          (cd base && bun run --cwd packages/frontend build)
+          (cd candidate && bun run --cwd packages/frontend build)
       - name: Compare budgets and enforce candidate
         run: |
           echo 'Baseline (failure is expected)'
