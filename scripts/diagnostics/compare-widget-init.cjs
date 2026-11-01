@@ -25,7 +25,7 @@ function sources(dir) {
     }
     for (const name of map.sources ?? []) if (name.includes('/components/widgets/')) result.add(name.slice(name.indexOf('/components/widgets/') + 1));
   }
-  const maps = walk(dir).filter((file) => file.endsWith('.js.map'));
+  const maps = walk(dir).filter((file) => file.endsWith('.js.map') || file.endsWith('.hbc.map'));
   assert.ok(maps.length, `No source maps in ${dir}`);
   for (const file of maps) visit(JSON.parse(fs.readFileSync(file, 'utf8')));
   return result;
@@ -71,8 +71,9 @@ async function render(dir) {
   }
 }
 (async () => {
-  const base = sources('base/packages/frontend/dist');
-  const candidate = sources('candidate/packages/frontend/dist');
+  const base = sources(process.argv[3] || 'base/packages/frontend/dist');
+  const candidate = sources(process.argv[4] || 'candidate/packages/frontend/dist');
+  assert.ok(base.size && candidate.size, 'No widget sources in map');
   const difference = (a,b) => [...a].filter((item) => !b.has(item)).sort();
   const removed = difference(base,candidate);
   const added = difference(candidate,base);
@@ -80,6 +81,7 @@ async function render(dir) {
   console.log('Widget source map added:', JSON.stringify(added));
   assert.deepEqual(added, []);
   for (const item of removed) assert.ok(/\/widgets\/(index|screenIds)\.ts$/.test(item), `Unexpected removed source ${item}`);
+  if (process.argv[2] === 'sources') return;
   const baseOrder = await render('base/packages/frontend/dist');
   const candidateOrder = await render('candidate/packages/frontend/dist');
   const shared = (order) => order.filter((item) => entries.some((name) => item === `${name}.tsx`));

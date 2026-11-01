@@ -1,4 +1,4 @@
-name: Right rail focused import paired diagnostic
+name: Right rail native JS graph diagnostic
 on:
   workflow_dispatch:
 permissions:
@@ -26,55 +26,29 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.4.3'
-      - name: Verify exact inputs and the isolated source change
+      - name: Verify exact sources and frozen inputs
         run: |
           set -euo pipefail
           test "$(git -C base rev-parse HEAD)" = 72399aaa47fd890b853e8ad76175c8f2af14452c
           test "$(git -C candidate rev-parse HEAD)" = bdc35dfd77b3af40f0361e373d06af66032c52fb
-          git -C candidate fetch --no-tags --depth=1 origin 72399aaa47fd890b853e8ad76175c8f2af14452c
-          git -C candidate diff --name-only 72399aaa47fd890b853e8ad76175c8f2af14452c HEAD > "$RUNNER_TEMP/changed.txt"
-          printf '%s\n' packages/frontend/__tests__/widgets/rightBarRail.test.tsx packages/frontend/components/RightBar.tsx packages/frontend/components/widgets/WidgetManager.tsx > "$RUNNER_TEMP/expected.txt"
-          cmp "$RUNNER_TEMP/expected.txt" "$RUNNER_TEMP/changed.txt"
-          git -C candidate diff --exit-code 72399aaa47fd890b853e8ad76175c8f2af14452c HEAD -- bun.lock performance-budgets.json packages/frontend/package.json package.json
-      - name: Install frozen dependencies in both trees
-        run: |
-          set -euo pipefail
+          cmp base/bun.lock candidate/bun.lock
           (cd base && bash .github/scripts/bun-install.sh --frozen-lockfile)
           (cd candidate && bash .github/scripts/bun-install.sh --frozen-lockfile)
-      - name: Test full frontend and types without forced exit
-        run: |
-          set -euo pipefail
-          cd candidate
-          bun run --cwd packages/frontend test -- --json --outputFile="$RUNNER_TEMP/frontend-tests.json"
-          bun .github/scripts/assert-test-floor.mjs "$RUNNER_TEMP/frontend-tests.json" packages/frontend 110
-          bun run --cwd packages/frontend typecheck
-      - name: Export both production web builds
+      - name: Export iOS JavaScript and compare widget source graph
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
         run: |
           set -euo pipefail
-          (cd base && bun run --cwd packages/frontend build)
-          (cd candidate && bun run --cwd packages/frontend build)
-      - name: Compare budgets and enforce candidate
-        run: |
-          echo 'Baseline (failure is expected)'
-          (cd base && bun scripts/check-web-export-budget.mjs packages/frontend/dist) || true
-          echo Candidate
-          cd candidate
-          bun scripts/check-web-export-budget.mjs packages/frontend/dist
-      - name: Instrument widget initialization in CI-local copies
-        run: node driver/scripts/diagnostics/compare-widget-init.cjs instrument
-      - name: Export instrumented web builds with source maps
+          (cd base/packages/frontend && bunx expo export --platform ios --source-maps --output-dir "$RUNNER_TEMP/base-ios")
+          (cd candidate/packages/frontend && bunx expo export --platform ios --source-maps --output-dir "$RUNNER_TEMP/candidate-ios")
+          node driver/scripts/diagnostics/compare-widget-init.cjs sources "$RUNNER_TEMP/base-ios" "$RUNNER_TEMP/candidate-ios"
+      - name: Export Android JavaScript and compare widget source graph
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
         run: |
           set -euo pipefail
-          (cd base && bun run --cwd packages/frontend build --clear --source-maps)
-          (cd candidate && bun run --cwd packages/frontend build --clear --source-maps)
-      - name: Compare source sets and browser initialization order
-        run: |
-          set -euo pipefail
-          export CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          node driver/scripts/diagnostics/compare-widget-init.cjs verify
+          (cd base/packages/frontend && bunx expo export --platform android --source-maps --output-dir "$RUNNER_TEMP/base-android")
+          (cd candidate/packages/frontend && bunx expo export --platform android --source-maps --output-dir "$RUNNER_TEMP/candidate-android")
+          node driver/scripts/diagnostics/compare-widget-init.cjs sources "$RUNNER_TEMP/base-android" "$RUNNER_TEMP/candidate-android"
