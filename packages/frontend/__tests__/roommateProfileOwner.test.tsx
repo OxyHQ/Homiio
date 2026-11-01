@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { OxyServices } from '@oxy.so/core';
 
 let mockAccount: 'A' | 'B' = 'A';
+let mockOxy: OxyServices;
+const mockToken = (id: string) =>
+  `h.${Buffer.from(JSON.stringify({ userId: id, sessionId: `session-${id}`, exp: 4102444800 })).toString('base64url')}.s`;
 const mockGuards = { A: () => mockAccount === 'A', B: () => mockAccount === 'B' };
 const mockRefreshA = jest.fn();
 const mockRefreshB = jest.fn();
@@ -21,7 +25,12 @@ jest.mock('@/context/ProfileContext', () => ({
   }),
 }));
 jest.mock('@oxy.so/services/ui/client', () => ({
-  useOxy: () => ({ oxyServices: {}, activeSessionId: `session-${mockAccount}` }),
+  useOxy: () => ({
+    oxyServices: mockOxy,
+    activeSessionId: `session-${mockAccount}`,
+    user: { id: mockAccount },
+    isAuthenticated: true,
+  }),
 }));
 jest.mock('@/services/roommateService', () => ({
   roommateService: {
@@ -108,6 +117,8 @@ let client: QueryClient;
 beforeEach(() => {
   jest.clearAllMocks();
   mockAccount = 'A';
+  mockOxy = new OxyServices({ baseURL: 'https://example.invalid' });
+  mockOxy.session.setAccessToken(mockToken('A'));
   client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: Infinity },
@@ -136,6 +147,7 @@ afterEach(async () => {
     ).toBe(true),
   );
   client.clear();
+  mockOxy.dispose();
 });
 function wrap(children: ReactNode) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
@@ -152,7 +164,7 @@ it('refreshes and confirms a matching change for the current owner', async () =>
 it('refreshes and confirms saved preferences for the current owner', async () => {
   mockSave.mockResolvedValue({});
   const screen = render(wrap(<RoommatePreferencesPage />));
-  fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
+  fireEvent.press(await screen.findByRole('button', { name: 'roommates.preferencesPage.save' }));
   await waitFor(() => expect(mockRefreshA).toHaveBeenCalledTimes(1));
   await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
 });
@@ -173,6 +185,7 @@ it.each(['success', 'failure'] as const)(
     await waitFor(() => expect(mockToggle).toHaveBeenCalledTimes(1));
     await act(async () => {
       mockAccount = 'B';
+      mockOxy.session.setAccessToken(mockToken('B'));
       screen.rerender(wrap(<RoommatesPage />));
     });
     expect(await screen.findByRole('button', { name: 'roommates.screen.enabling' })).toBeTruthy();
@@ -202,13 +215,16 @@ it.each(['success', 'failure'] as const)(
       }),
     );
     const screen = render(wrap(<RoommatePreferencesPage />));
-    fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'roommates.preferencesPage.save' }));
     await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
     await act(async () => {
       mockAccount = 'B';
+      mockOxy.session.setAccessToken(mockToken('B'));
       screen.rerender(wrap(<RoommatePreferencesPage />));
     });
-    expect(screen.getByRole('button', { name: 'roommates.preferencesPage.saving' })).toBeDisabled();
+    expect(
+      await screen.findByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled();
     await act(async () => {
       if (outcome === 'success') finish({});
       else fail(new Error('A failed'));

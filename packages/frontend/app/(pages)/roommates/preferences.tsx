@@ -32,7 +32,12 @@ import { LeaseDuration } from '@homiio/shared-types/common';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
-import { ProfileOwnerChangedError } from '@/hooks/useProfileOwner';
+import {
+  accountOwnerKey,
+  type AccountOwner,
+  useAccountOwnerGuard,
+  withAccountOwner,
+} from '@/hooks/useAccountOwner';
 import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
 import { spacing } from '@/constants/styles';
 import { RiAccountCircleLine } from '@oxy.so/bloom/icons/RiAccountCircleLine';
@@ -242,67 +247,111 @@ function toPreferences(form: FormState): RoommateMatchingPreferences {
 }
 
 export default function RoommatePreferencesPage() {
+  const { owner, isCurrent } = useAccountOwnerGuard();
+  if (!owner?.sessionId) return <UnavailablePreferences />;
+  return (
+    <OwnedPreferences
+      key={JSON.stringify(accountOwnerKey(owner))}
+      owner={owner}
+      isCurrent={isCurrent}
+    />
+  );
+}
+
+function UnavailablePreferences() {
+  const { t } = useTranslation();
+  return (
+    <Screen documentScroll>
+      <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
+        <BloomText accessibilityRole="alert">
+          {t('contracts.detail.signAccountUnavailable')}
+        </BloomText>
+      </ScreenScrollView>
+    </Screen>
+  );
+}
+
+function OwnedPreferences({
+  owner,
+  isCurrent,
+}: {
+  owner: AccountOwner;
+  isCurrent: (owner: AccountOwner | null) => boolean;
+}) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [roommateEnabled, setRoommateEnabled] = useState(false);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const { profile, hasProfile, refreshProfile, isProfileProjectionCurrent } = useProfile();
+  const { hasProfile, refreshProfile, isProfileProjectionCurrent } = useProfile();
   const refreshOwners = useRef(
     new WeakMap<object, { refresh: typeof refreshProfile; isCurrent: () => boolean }>(),
   );
 
-  const profileSettingsKey = hasProfile ? profile : null;
-  const [prevProfileSettingsKey, setPrevProfileSettingsKey] = useState(profileSettingsKey);
-  if (profileSettingsKey !== prevProfileSettingsKey) {
-    setPrevProfileSettingsKey(profileSettingsKey);
-    const roommateSettings = profileSettingsKey?.personalProfile?.settings?.roommate;
-    if (roommateSettings) {
-      setRoommateEnabled(Boolean(roommateSettings.enabled));
-    }
-  }
-
+  const ownerKey = accountOwnerKey(owner);
+  const preferencesKey = ['roommates', 'preferences', ...ownerKey] as const;
+  const statusKey = ['roommates', 'status', ...ownerKey] as const;
   const preferencesQuery = useQuery({
-    queryKey: ['roommates', 'preferences'],
-    queryFn: async () => roommateService.getMyRoommatePreferences(),
+    queryKey: preferencesKey,
+    queryFn: () =>
+      withAccountOwner(owner, (current) =>
+        roommateService.getMyRoommatePreferences(undefined, undefined, current),
+      ),
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 10,
+  });
+  const statusQuery = useQuery({
+    queryKey: statusKey,
+    queryFn: () =>
+      withAccountOwner(owner, (current) =>
+        roommateService.getMyRoommateStatus(undefined, undefined, current),
+      ),
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
   });
 
-  // Merge server-saved preferences into the form once the query resolves.
   const preferencesData = preferencesQuery.data;
-  const [prevPreferencesData, setPrevPreferencesData] = useState(preferencesData);
+  const [prevPreferencesData, setPrevPreferencesData] = useState<typeof preferencesData>(undefined);
   if (preferencesData !== prevPreferencesData) {
     setPrevPreferencesData(preferencesData);
-    if (preferencesData) {
-      setForm(seedForm(preferencesData));
-    }
+    setForm(preferencesData ? seedForm(preferencesData) : DEFAULT_FORM);
+  }
+  const statusData = statusQuery.data;
+  const [prevStatusData, setPrevStatusData] = useState<typeof statusData>(undefined);
+  if (statusData !== prevStatusData) {
+    setPrevStatusData(statusData);
+    if (statusData) setRoommateEnabled(statusData.hasRoommateMatching);
   }
 
   const saveMutation = useMutation({
-    mutationKey: ['roommates', 'savePreferences'],
-    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) =>
-      roommateService.updateRoommatePreferences(vars.preferences, vars.enabled),
+    mutationKey: ['roommates', 'savePreferences', ...ownerKey],
+    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) => {
+      if (!isCurrent(owner) || !refreshOwners.current.get(vars)?.isCurrent()) {
+        throw new Error('The active account changed');
+      }
+      return withAccountOwner(owner, (current) =>
+        roommateService.updateRoommatePreferences(vars.preferences, vars.enabled, current),
+      );
+    },
     onSuccess: async (_result, variables) => {
       const guard = refreshOwners.current.get(variables);
-      if (!guard?.isCurrent()) return;
+      if (!isCurrent(owner) || !guard?.isCurrent()) return;
       try {
         await guard.refresh();
-      } catch (error) {
-        if (error instanceof ProfileOwnerChangedError) return;
-        throw error;
+        if (!guard.isCurrent()) return;
+        if (!isCurrent(owner)) return;
+        await queryClient.invalidateQueries({ queryKey: preferencesKey, exact: true });
+        if (!isCurrent(owner)) return;
+        await queryClient.invalidateQueries({ queryKey: statusKey, exact: true });
+        if (!isCurrent(owner)) return;
+        toast.success(t('roommates.alert.preferencesSaved'));
+      } catch {
+        if (isCurrent(owner)) toast.error(t('roommates.alert.preferencesFailed'));
       }
-      if (!guard.isCurrent()) return;
-      await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
-      if (!guard.isCurrent()) return;
-      await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'] });
-      if (!guard.isCurrent()) return;
-      toast.success(t('roommates.alert.preferencesSaved'));
     },
-    onError: (_error, variables) => {
-      if (!refreshOwners.current.get(variables)?.isCurrent()) return;
-      toast.error(t('roommates.alert.preferencesFailed'));
+    onError: () => {
+      if (isCurrent(owner)) toast.error(t('roommates.alert.preferencesFailed'));
     },
   });
 
@@ -313,7 +362,9 @@ export default function RoommatePreferencesPage() {
   });
 
   const handleSave = () => {
+    if (!isCurrent(owner) || preferencesData === undefined || !statusData) return;
     const variables = { preferences: toPreferences(form), enabled: roommateEnabled };
+    if (!isProfileProjectionCurrent()) return;
     refreshOwners.current.set(variables, {
       refresh: refreshProfile,
       isCurrent: isProfileProjectionCurrent,
@@ -349,6 +400,32 @@ export default function RoommatePreferencesPage() {
             actionIcon={RiAccountCircleLine}
             onAction={() => router.push('/profile')}
           />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+
+  if (preferencesData === undefined || !statusData) {
+    const failed = preferencesQuery.isError || statusQuery.isError;
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
+          <BloomText accessibilityLiveRegion="polite" accessibilityRole={failed ? 'alert' : 'text'}>
+            {failed ? t('roommates.screen.loadError') : t('common.loading')}
+          </BloomText>
+          {failed && (
+            <Button
+              size="md"
+              onPress={() => {
+                if (isCurrent(owner)) {
+                  void preferencesQuery.refetch();
+                  void statusQuery.refetch();
+                }
+              }}
+            >
+              {t('common.retry')}
+            </Button>
+          )}
         </ScreenScrollView>
       </Screen>
     );
@@ -465,7 +542,7 @@ export default function RoommatePreferencesPage() {
           size="lg"
           onPress={handleSave}
           loading={saveMutation.isPending}
-          disabled={saveMutation.isPending}
+          disabled={saveMutation.isPending || preferencesData === undefined || !statusData}
           style={styles.saveButton}
           tone="accent"
           appearance="solid"
