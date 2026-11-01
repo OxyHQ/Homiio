@@ -563,6 +563,10 @@ it('resumes a paused same-owner save with its in-memory payload', async () => {
     path: '/api/profiles/me/saved-searches',
   });
   expect(JSON.parse(postBodies[0])).toMatchObject({ name: 'private name', query: 'private query' });
+  await waitFor(() => expect(view.result.current.isSaving).toBe(false));
+  await waitFor(() =>
+    expect(view.result.current.searches.map((item) => item.id)).toContain('new-A'),
+  );
 });
 
 it.each(['save', 'update', 'delete', 'alert', 'primary'] as const)(
