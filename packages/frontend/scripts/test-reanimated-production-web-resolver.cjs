@@ -1,0 +1,18 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { withProductionWebReanimatedGuard } = require('./reanimated-production-web-resolver.cjs');
+const root = path.dirname(require.resolve('react-native-reanimated/package.json'));
+const origin = fs.realpathSync(path.join(root, 'lib/module/ReanimatedModule/js-reanimated/JSReanimated.js'));
+const request = '../../platform-specific/workletsVersion.js';
+const fallback = { type: 'sourceFile', filePath: '/sentinel' };
+const config = { resolver: { resolveRequest: () => fallback } };
+withProductionWebReanimatedGuard(config, __dirname);
+const run = (dev, platform, name = request, from = origin) => config.resolver.resolveRequest({ dev, originModulePath: from }, name, platform);
+assert.equal(run(false, 'web').filePath, path.join(__dirname, 'reanimated-dev-assert-stub.cjs'));
+assert.equal(run(true, 'web'), fallback);
+assert.equal(run(false, 'ios'), fallback);
+assert.equal(run(false, 'android'), fallback);
+assert.equal(run(false, 'web', './unrelated'), fallback);
+assert.equal(run(false, 'web', request, __filename), fallback);
+assert.throws(() => require('./reanimated-dev-assert-stub.cjs').assertWorkletsVersion(), /Unexpected production call/);

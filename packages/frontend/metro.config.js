@@ -1,5 +1,6 @@
 const { createOxyMetroConfig } = require('@oxy.so/app-preset/metro');
 const { withGoWayMaps } = require('@goway.to/maps/metro');
+const { withProductionWebReanimatedGuard } = require('./scripts/reanimated-production-web-resolver.cjs');
 
 // Web fetches the active locale from `public/locales/` instead of bundling all
 // twelve; publish this checkout's `locales/` there before Metro serves `public/`.
@@ -25,4 +26,4 @@ const config = withGoWayMaps(
 // every non-ASCII character into a six-byte Unicode escape.
 config.transformer.minifierConfig.output.ascii_only = false;
 
-module.exports = config;
+module.exports = withProductionWebReanimatedGuard(config, __dirname);
