@@ -668,3 +668,47 @@ it('does not expose an externally hydrated fresh query without an in-memory bind
   await waitFor(() => expect(restored.result.current.saved.searches[0]?.id).toBe('watch-A'));
   expect(restored.result.current.primary.selection).toEqual(location);
 });
+
+it('keeps verified same-owner searches on an in-memory offline remount', async () => {
+  const first = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
+  first.unmount();
+  onlineManager.setOnline(false);
+  const second = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(second.result.current.searches[0]?.id).toBe('watch-A'));
+  expect(seen.filter((request) => request.method === 'GET')).toHaveLength(1);
+});
+
+it('reports a paused unbound hydration as unavailable and recovers on reconnect', async () => {
+  const first = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
+  const key = client.getQueryCache().find({ queryKey: ['savedSearches'] })!.queryKey;
+  first.unmount();
+  client.clear();
+  const source = new QueryClient();
+  source.setQueryData(key, [{ id: 'unattributed', name: 'private unknown' }]);
+  const blob = JSON.parse(JSON.stringify(dehydrate(source)));
+  source.clear();
+  client = new QueryClient({
+    defaultOptions: {
+      queries: { networkMode: 'online', staleTime: 300000, retry: false, gcTime: Infinity },
+    },
+  });
+  hydrate(client, blob);
+  onlineManager.setOnline(false);
+  const restored = renderHook(
+    () => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }),
+    { wrapper },
+  );
+  await waitFor(() =>
+    expect(restored.result.current.saved.error).toBe('search.widgets.savedSearches.loadFailed'),
+  );
+  expect(restored.result.current.saved.searches).toEqual([]);
+  expect(restored.result.current.saved.isLoading).toBe(false);
+  expect(restored.result.current.primary).toEqual({ selection: null, pending: false });
+  await act(async () => {
+    onlineManager.setOnline(true);
+  });
+  await waitFor(() => expect(restored.result.current.saved.searches[0]?.id).toBe('watch-A'));
+  expect(restored.result.current.saved.error).toBeNull();
+});
