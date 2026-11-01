@@ -26,7 +26,8 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { AvailabilityWindow } from '@homiio/shared-types';
 import { AvailabilityWindowStatus } from '@homiio/shared-types/common';
 import { useTheme } from '@oxy.so/bloom/theme';
-import { formatLocalized, getFormatLocale } from '@/utils/dateLocale';
+import { formatLocalized } from '@/utils/dateLocale';
+import { getFormatLocale } from '@/utils/formatLocale';
 
 type AvailabilityCalendarMode = 'inline' | 'modal';
 

@@ -20,7 +20,7 @@ import { DEFAULT_AREA_UNIT_LABELS } from '@homiio/shared-types/format/units';
 import { DEFAULT_PRICE_UNIT_LABELS } from '@homiio/shared-types/format/money';
 import type { AreaUnitLabels, PriceUnitLabels } from '@homiio/shared-types';
 
-import { getFormatLocale } from '@/utils/dateLocale';
+import { getFormatLocale } from '@/utils/formatLocale';
 
 /**
  * Per-frequency price wording for the reader's language.

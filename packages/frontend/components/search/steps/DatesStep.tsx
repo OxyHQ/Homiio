@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 import { RangeCalendar, type DateRange } from '@oxy.so/bloom/date-picker';
 
-import { getFormatLocale } from '@/utils/dateLocale';
+import { getFormatLocale } from '@/utils/formatLocale';
 import type { SearchDateRange } from '../types';
 
 /** Format a Date as a local `YYYY-MM-DD` ISO date (no timezone shift). */

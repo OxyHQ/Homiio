@@ -17,7 +17,7 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import type { RoommateRelationship, RoommateProfile } from '@/hooks/useRoommate';
-import { getFormatLocale } from '@/utils/dateLocale';
+import { getFormatLocale } from '@/utils/formatLocale';
 import { spacing } from '@/constants/styles';
 
 interface RoommateRelationshipProps {
