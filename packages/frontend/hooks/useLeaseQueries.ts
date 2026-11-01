@@ -3,6 +3,9 @@ import {
   useQuery,
   useQueryClient,
   type UseMutationResult,
+  type MutateOptions,
+  type UseMutateFunction,
+  type UseMutateAsyncFunction,
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services/ui/client';
@@ -15,6 +18,7 @@ import {
   leaseService,
 } from '@/services/leaseService';
 import { propertyService } from '@/services/propertyService';
+import { type AccountOwner, useAccountOwnerGuard, withAccountOwner } from '@/hooks/useAccountOwner';
 
 const LEASE_LIST_KEY = 'leases';
 const LEASE_DETAIL_KEY = 'lease';
@@ -97,18 +101,112 @@ export function useCreateLeaseFromApplication(): UseMutationResult<Lease, Error,
  * `termsSha256` is the version the screen rendered; see `leaseService.signLease`
  * for why it travels and what the server does when it no longer matches.
  */
+type SignLeaseInput = { acceptTerms: boolean; termsSha256?: string };
+type OwnedSignVariables = { input: SignLeaseInput; leaseId: string };
+const signOwners = new WeakMap<OwnedSignVariables, AccountOwner | null>();
+
 export function useSignLease(
   id: string,
-): UseMutationResult<Lease, Error, { acceptTerms: boolean; termsSha256?: string }> {
+): UseMutationResult<Lease, Error, SignLeaseInput> & { isOwnerReady: boolean } {
   const queryClient = useQueryClient();
-  return useMutation<Lease, Error, { acceptTerms: boolean; termsSha256?: string }>({
-    mutationFn: ({ acceptTerms, termsSha256 }) =>
-      leaseService.signLease(id, acceptTerms, termsSha256),
-    onSuccess: (lease) => {
-      queryClient.setQueryData(leaseKeys.detail(id), lease);
-      queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
+  const { owner, isCurrent } = useAccountOwnerGuard();
+  const mutation = useMutation<Lease, Error, OwnedSignVariables>({
+    mutationFn: (variables) => {
+      const captured = signOwners.get(variables) ?? null;
+      if (!isCurrent(captured)) throw new Error('The active account changed');
+      return withAccountOwner(captured, (current) =>
+        leaseService.signLease(
+          variables.leaseId,
+          variables.input.acceptTerms,
+          variables.input.termsSha256,
+          current,
+        ),
+      );
+    },
+    onSuccess: (lease, variables) => {
+      if (!isCurrent(signOwners.get(variables) ?? null)) return;
+      queryClient.setQueryData(leaseKeys.detail(variables.leaseId), lease);
+      if (isCurrent(signOwners.get(variables) ?? null))
+        void queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
     },
   });
+  const capture = (input: SignLeaseInput): OwnedSignVariables => {
+    const variables = { input, leaseId: id };
+    signOwners.set(variables, owner);
+    return variables;
+  };
+  const callbacks = (options?: MutateOptions<Lease, Error, SignLeaseInput>) =>
+    options && {
+      onSuccess: (
+        data: Lease,
+        variables: OwnedSignVariables,
+        result: unknown,
+        context: Parameters<NonNullable<typeof options.onSuccess>>[3],
+      ) => {
+        if (isCurrent(signOwners.get(variables) ?? null))
+          options.onSuccess?.(data, variables.input, result, context);
+      },
+      onError: (
+        error: Error,
+        variables: OwnedSignVariables,
+        result: unknown,
+        context: Parameters<NonNullable<typeof options.onError>>[3],
+      ) => {
+        if (isCurrent(signOwners.get(variables) ?? null))
+          options.onError?.(error, variables.input, result, context);
+      },
+      onSettled: (
+        data: Lease | undefined,
+        error: Error | null,
+        variables: OwnedSignVariables,
+        result: unknown,
+        context: Parameters<NonNullable<typeof options.onSettled>>[4],
+      ) => {
+        if (isCurrent(signOwners.get(variables) ?? null))
+          options.onSettled?.(data, error, variables.input, result, context);
+      },
+    };
+  const mutate: UseMutateFunction<Lease, Error, SignLeaseInput> = (input, options) => {
+    mutation.mutate(capture(input), callbacks(options));
+  };
+  const mutateAsync: UseMutateAsyncFunction<Lease, Error, SignLeaseInput> = async (
+    input,
+    options,
+  ) => {
+    const variables = capture(input);
+    if (!isCurrent(owner)) throw new Error('The active account changed');
+    try {
+      const result = await mutation.mutateAsync(variables, callbacks(options));
+      if (!isCurrent(owner)) throw new Error('The active account changed');
+      return result;
+    } catch (error) {
+      if (!isCurrent(owner)) throw new Error('The active account changed');
+      throw error;
+    }
+  };
+  const visible = !mutation.variables || isCurrent(signOwners.get(mutation.variables) ?? null);
+  return {
+    ...mutation,
+    ...(!visible
+      ? {
+          data: undefined,
+          error: null,
+          failureCount: 0,
+          failureReason: null,
+          isError: false,
+          isIdle: true,
+          isPaused: false,
+          isPending: false,
+          isSuccess: false,
+          status: 'idle' as const,
+          submittedAt: 0,
+        }
+      : {}),
+    variables: visible ? mutation.variables?.input : undefined,
+    mutate,
+    mutateAsync,
+    isOwnerReady: Boolean(owner),
+  };
 }
 
 export function useTerminateLease(id: string): UseMutationResult<Lease, Error, TerminateLeaseData> {
