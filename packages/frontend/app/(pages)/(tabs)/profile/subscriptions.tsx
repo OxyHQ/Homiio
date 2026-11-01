@@ -67,7 +67,7 @@ function parseEntitlements(value: unknown): Entitlements {
   if (
     typeof data.plusActive !== 'boolean' ||
     typeof data.fileCredits !== 'number' ||
-    !Number.isSafeInteger(data.fileCredits) ||
+    !Number.isFinite(data.fileCredits) ||
     typeof data.founderSupporter !== 'boolean' ||
     !Array.isArray(data.processedSessions) ||
     !data.processedSessions.every((session) => typeof session === 'string')

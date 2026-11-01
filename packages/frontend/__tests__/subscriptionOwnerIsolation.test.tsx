@@ -422,3 +422,19 @@ it('accepts the zeroed free entitlement shape returned by the backend', async ()
     expect(screen.getByText('subscriptions.page.plus.subscribeNow')).toBeTruthy(),
   );
 });
+
+it('accepts a finite credit count outside JavaScript safe integer precision', async () => {
+  entitlementsOverride = {
+    success: true,
+    entitlements: {
+      plusActive: false,
+      fileCredits: 9007199254740992,
+      founderSupporter: false,
+      processedSessions: [],
+    },
+  };
+  const screen = render(view());
+  await waitFor(() =>
+    expect(screen.getByText('subscriptions.page.plus.subscribeNow')).toBeTruthy(),
+  );
+});
