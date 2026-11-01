@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import profileService from '@/services/profileService';
-import type { Profile, UpdateProfileData } from '@homiio/shared-types';
+import type { Profile } from '@homiio/shared-types';
 import { ProfileOwnerChangedError, type ProfileOwner } from '@/hooks/useProfileOwner';
 
 function assertCurrent(owner: ProfileOwner): void {
@@ -22,16 +22,8 @@ interface ProfileState {
   landlordProfileLoading: boolean;
   landlordProfileError: string | null;
 
-  setProfile: (profile: Profile | null) => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  setLandlordProfile: (profile: Profile | null) => void;
-  setLandlordProfileLoading: (loading: boolean) => void;
-  setLandlordProfileError: (error: string | null) => void;
-
   fetchProfile: (owner: ProfileOwner) => Promise<Profile | null>;
   fetchLandlordProfileByOxyUserId: (oxyUserId: string) => Promise<Profile | null>;
-  updateProfile: (updateData: UpdateProfileData, owner: ProfileOwner) => Promise<Profile>;
   releaseProfileOwner: (owner: ProfileOwner) => void;
 }
 
@@ -45,13 +37,6 @@ export const useProfileStore = create<ProfileState>((set) => ({
   landlordProfile: null,
   landlordProfileLoading: false,
   landlordProfileError: null,
-
-  setProfile: (profile) => set({ profile, profileBinding: null, profileUpdatedAt: 0 }),
-  setLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
-  setLandlordProfile: (landlordProfile) => set({ landlordProfile }),
-  setLandlordProfileLoading: (landlordProfileLoading) => set({ landlordProfileLoading }),
-  setLandlordProfileError: (landlordProfileError) => set({ landlordProfileError }),
 
   fetchProfile: async (owner) => {
     assertCurrent(owner);
@@ -98,32 +83,6 @@ export const useProfileStore = create<ProfileState>((set) => ({
     }
   },
 
-  updateProfile: async (updateData, owner) => {
-    assertCurrent(owner);
-    const request = { owner };
-    try {
-      set({ isLoading: true, error: null, profileRequest: request });
-      const updatedProfile = await profileService.updateMyProfile(updateData);
-      assertCurrent(owner);
-      assertProfileSubject(updatedProfile, owner);
-      set((state) => ({
-        profile: updatedProfile,
-        profileBinding: { userId: owner.userId, sessionId: owner.sessionId },
-        profileUpdatedAt: Date.now(),
-        ...(state.profileRequest === request ? { isLoading: false, profileRequest: null } : {}),
-      }));
-      return updatedProfile;
-    } catch (error: unknown) {
-      if (!owner.isCurrent()) throw new ProfileOwnerChangedError();
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
-      set((state) =>
-        state.profileRequest === request
-          ? { error: errorMessage, isLoading: false, profileRequest: null }
-          : {},
-      );
-      throw error;
-    }
-  },
   releaseProfileOwner: (owner) =>
     set((state) =>
       state.profileRequest?.owner === owner ? { isLoading: false, profileRequest: null } : {},
