@@ -152,6 +152,15 @@ afterAll(async () => {
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
+function loadedSavedSearchQuery() {
+  return client
+    .getQueryCache()
+    .findAll({ queryKey: ['savedSearches'] })
+    .find(
+      (query) =>
+        Array.isArray(query.state.data) && query.state.data.some((item) => item?.id === 'watch-A'),
+    );
+}
 function switchToB(rerender: () => void) {
   act(() => {
     oxy.session.setAccessToken(token('B'));
@@ -622,7 +631,7 @@ it('deletes a saved search for the unchanged owner', async () => {
 it('does not expose an externally hydrated fresh query without an in-memory binding', async () => {
   const first = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
-  const query = client.getQueryCache().find({ queryKey: ['savedSearches'], exact: false });
+  const query = loadedSavedSearchQuery();
   expect(query).toBeDefined();
   const key = query!.queryKey;
   first.unmount();
@@ -686,7 +695,7 @@ it('keeps verified same-owner searches on an in-memory offline remount', async (
 it('reports a paused unbound hydration as unavailable and recovers on reconnect', async () => {
   const first = renderHook(() => useSavedSearches(), { wrapper });
   await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
-  const key = client.getQueryCache().find({ queryKey: ['savedSearches'], exact: false })!.queryKey;
+  const key = loadedSavedSearchQuery()!.queryKey;
   first.unmount();
   client.clear();
   const source = new QueryClient();
@@ -722,7 +731,7 @@ it('recovers from a cache publication that does not match the verified object', 
     wrapper,
   });
   await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
-  const query = client.getQueryCache().find({ queryKey: ['savedSearches'], exact: false });
+  const query = loadedSavedSearchQuery();
   expect(query).toBeDefined();
   shouldHoldA = true;
   act(() => {
@@ -772,7 +781,7 @@ it('settles a same-owner refetch with deeply equal data without a retry loop', a
     wrapper,
   });
   await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
-  const query = client.getQueryCache().find({ queryKey: ['savedSearches'], exact: false });
+  const query = loadedSavedSearchQuery();
   expect(query).toBeDefined();
   const original = query!.state.data;
   await act(async () => {
