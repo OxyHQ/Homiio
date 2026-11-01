@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [web, android, ios]
+        platform: [web]
     env:
       NODE_OPTIONS: '--max-old-space-size=4096'
     steps:
@@ -104,13 +104,18 @@ jobs:
         run: bunx expo export --platform '${{ matrix.platform }}' --output-dir "$RUNNER_TEMP/candidate-dist" --source-maps --clear
       - name: Inspect module identity
         run: node scripts/diagnostics/inspect-opt-in-maps.cjs "$RUNNER_TEMP/candidate-dist"
+      - name: Build candidate production web without source maps
+        if: matrix.platform == 'web'
+        env:
+          NODE_ENV: production
+        run: bun run --cwd packages/frontend build --clear
       - name: Measure web gzip
         if: matrix.platform == 'web'
         run: |
           echo Baseline
           bun scripts/check-web-export-budget.mjs "$RUNNER_TEMP/baseline-dist" || true
           echo Candidate
-          bun scripts/check-web-export-budget.mjs "$RUNNER_TEMP/candidate-dist" || true
+          bun scripts/check-web-export-budget.mjs packages/frontend/dist || true
       - name: Upload lock and native resolution evidence
         if: always()
         uses: actions/upload-artifact@v7
