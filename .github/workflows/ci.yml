@@ -1,4 +1,4 @@
-name: Saved search cache deduplication paired diagnostic
+name: Right rail focused import paired diagnostic
 on:
   workflow_dispatch:
 permissions:
@@ -14,7 +14,7 @@ jobs:
           path: base
       - uses: actions/checkout@v7
         with:
-          ref: 9e0c137fa51b002604a46ea595fae00a5ff0e121
+          ref: c0e88c039a034bf8b3f628cc388199f5fae0a9a2
           path: candidate
       - uses: actions/setup-node@v7
         with:
@@ -26,9 +26,11 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C base rev-parse HEAD)" = 72399aaa47fd890b853e8ad76175c8f2af14452c
-          test "$(git -C candidate rev-parse HEAD)" = 9e0c137fa51b002604a46ea595fae00a5ff0e121
+          test "$(git -C candidate rev-parse HEAD)" = c0e88c039a034bf8b3f628cc388199f5fae0a9a2
           git -C candidate fetch --no-tags --depth=1 origin 72399aaa47fd890b853e8ad76175c8f2af14452c
-          test "$(git -C candidate diff --name-only 72399aaa47fd890b853e8ad76175c8f2af14452c HEAD)" = packages/frontend/hooks/useSavedSearches.ts
+          git -C candidate diff --name-only 72399aaa47fd890b853e8ad76175c8f2af14452c HEAD > "$RUNNER_TEMP/changed.txt"
+          printf '%s\n' packages/frontend/__tests__/widgets/rightBarRail.test.tsx packages/frontend/components/RightBar.tsx > "$RUNNER_TEMP/expected.txt"
+          cmp "$RUNNER_TEMP/expected.txt" "$RUNNER_TEMP/changed.txt"
           git -C candidate diff --exit-code 72399aaa47fd890b853e8ad76175c8f2af14452c HEAD -- bun.lock performance-budgets.json packages/frontend/package.json package.json
       - name: Install frozen dependencies in both trees
         run: |
