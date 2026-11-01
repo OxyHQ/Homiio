@@ -30,6 +30,23 @@ jest.mock('@oxy.so/services/ui/client', () => ({
   },
 }));
 
+// These ladder tests supply a synthetic cache reading; owner binding is tested
+// with the real hooks and SDK persister in savedAlertOwnership.test.tsx.
+jest.mock('@/hooks/useSavedSearches', () => {
+  const actual = jest.requireActual('@/hooks/useSavedSearches');
+  return {
+    ...actual,
+    savedSearchesReading: (client: QueryClient) => {
+      const state = client.getQueryState(actual.SAVED_SEARCHES_KEY);
+      return {
+        data: state?.data,
+        isPending: state === undefined || state.status === 'pending',
+        isFetching: state?.fetchStatus === 'fetching',
+      };
+    },
+  };
+});
+
 /** The key the device-fix query uses when the user has not pressed the button. */
 const FIX_KEY = ['locationScope', 'deviceFix', false] as const;
 

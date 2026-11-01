@@ -26,6 +26,14 @@ let linked: { oxy: OxyServices; handle: LinkedHttpClient } | null = null;
 export function bindApiToOxy(oxy: OxyServices): void {
   boundOxy = oxy;
 }
+/** Whether this instance currently owns the app's linked API client. */
+export function isBoundOxyInstance(oxy: OxyServices): boolean {
+  return boundOxy === oxy;
+}
+/** Whether a bearer exists but its subject cannot be observed locally. */
+export function isBoundSubjectUnavailable(): boolean {
+  return Boolean(boundOxy?.session.accessToken) && boundOxy?.session.userId === null;
+}
 const getClient = (): LinkedHttpClient['client'] => {
   if (!boundOxy) throw new ApiError('The Homiio API was called before OxyProvider mounted');
   if (!linked || linked.oxy !== boundOxy) {

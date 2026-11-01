@@ -348,6 +348,7 @@ export default function RootLayout() {
                     baseURL={OXY_BASE_URL}
                     clientId={OXY_CLIENT_ID}
                     queryClient={queryClient}
+                    accountQueries={{ roots: [], memoryOnlyRoots: ['savedSearches'] }}
                     language={{
                       supportedLocales: SUPPORTED_LANGUAGE_CODES,
                       fallbackLocale: 'en-US',
