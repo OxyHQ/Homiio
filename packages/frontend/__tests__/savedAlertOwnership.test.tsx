@@ -901,7 +901,7 @@ it('keeps a confirmed update after an earlier saved-search read finishes', async
   shouldHoldA = true;
   allowPutA = true;
   let reading: Promise<void> | undefined;
-  await act(async () => {
+  act(() => {
     reading = client.refetchQueries({ queryKey: loadedSavedSearchQuery()!.queryKey, exact: true });
   });
   await waitFor(() => expect(holdA).toBeDefined());

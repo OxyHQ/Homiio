@@ -3,10 +3,11 @@ on: [workflow_dispatch]
 jobs:
   proof:
     runs-on: ubuntu-latest
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.3
       - run: bun install --frozen-lockfile
-      - run: bun run --cwd packages/frontend test --runInBand --testPathPatterns=savedAlertOwnership --testNamePattern='earlier saved-search read'
+      - run: bun run --cwd packages/frontend test --runInBand --testPathPatterns=savedAlertOwnership --testNamePattern='earlier saved-search read' --forceExit
