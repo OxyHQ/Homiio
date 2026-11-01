@@ -41,7 +41,7 @@
     "ajv": "^8.20.0",
     "ajv-keywords": "^5.1.0",
     "tailwindcss": "4.3.3",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "@oxy.so/protocol": "1.5.1"
   },
   "engines": {
@@ -72,6 +72,6 @@
   "dependencies": {
     "@oxy.so/core": "7.10.5",
     "@oxy.so/bloom": "15.53.0",
-    "zod": "3.25.76"
+    "zod": "4.6.7"
   }
 }
