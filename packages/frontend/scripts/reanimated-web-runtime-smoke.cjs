@@ -15,6 +15,7 @@ const server = http.createServer((req, res) => {
   let body = fs.readFileSync(file);
   if (file.endsWith('.html')) {
     const hook = `<script>
+      ${process.env.SMOKE_NODE_DEBUG ? "window.process={env:{NODE_ENV:'production',NODE_DEBUG:'semver'}};const originalError=console.error.bind(console);console.error=(...args)=>{if(args[0]==='SEMVER')document.documentElement.dataset.semverDebug='1';originalError(...args)};" : ''}
       window.addEventListener('error', e => { document.documentElement.dataset.smokeError = '1'; console.error('SMOKE_ERROR', e.message || e.target?.src || 'resource'); }, true);
       window.addEventListener('unhandledrejection', e => { document.documentElement.dataset.smokeError = '1'; console.error('SMOKE_REJECTION', String(e.reason)); });
       window.addEventListener('load', () => setTimeout(() => { document.documentElement.dataset.smokeMounted = String(Boolean(document.getElementById('root')?.firstElementChild)); }, 5000));
@@ -36,6 +37,7 @@ server.listen(0, '127.0.0.1', () => {
       assert.equal(code, 0);
       assert.ok(dom.includes('data-smoke-mounted="true"'), 'Expected app content inside the Expo root');
       assert.ok(!dom.includes('data-smoke-error="1"'), 'A JavaScript or resource error occurred');
+      if (process.env.SMOKE_EXPECT_SEMVER_LOG) assert.equal(dom.includes('data-semver-debug="1"'), process.env.SMOKE_EXPECT_SEMVER_LOG === 'yes', 'Unexpected semver debug output');
       console.log('Headless production web bootstrap: root has content and no captured errors');
       server.close();
     } catch (error) {

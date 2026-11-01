@@ -62,6 +62,8 @@ jobs:
           if SMOKE_FORCE_ERROR=1 node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs base/packages/frontend/dist; then echo "Forced error was missed"; exit 1; fi
           node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs base/packages/frontend/dist
           node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs candidate/packages/frontend/dist
+          SMOKE_NODE_DEBUG=1 SMOKE_EXPECT_SEMVER_LOG=yes node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs base/packages/frontend/dist
+          SMOKE_NODE_DEBUG=1 SMOKE_EXPECT_SEMVER_LOG=no node candidate/packages/frontend/scripts/reanimated-web-runtime-smoke.cjs candidate/packages/frontend/dist
       - name: Verify changed caller delegates during a frozen production build
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
