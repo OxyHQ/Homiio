@@ -253,23 +253,44 @@ function mutationOwnerKey(owner: AccountOwner): string {
   return JSON.stringify([epoch, instance, generation]);
 }
 
-const savedSearchOwners = new WeakMap<object, AccountOwner>();
+const savedSearchOwners = new WeakMap<
+  object,
+  { owner: AccountOwner; data: SavedSearch[] | undefined }
+>();
+
+function hasVerifiedSavedSearches(client: QueryClient, owner: AccountOwner | null): boolean {
+  if (!owner) return false;
+  const query = client.getQueryCache().find({ queryKey: savedSearchesKeyFor(owner), exact: true });
+  const binding = query && savedSearchOwners.get(query);
+  return Boolean(
+    binding?.data && query?.state.data === binding.data && isExactAccountProjection(binding.owner),
+  );
+}
 
 function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClient) {
   const queryKey = savedSearchesKeyFor(owner);
+  const verified = hasVerifiedSavedSearches(client, owner);
   return {
     queryKey,
     enabled: Boolean(owner),
-    staleTime: 1000 * 30,
+    staleTime: verified ? 1000 * 30 : 0,
+    ...(verified ? {} : { refetchOnMount: 'always' as const }),
     gcTime: 1000 * 60 * 10,
+    structuralSharing: false,
     queryFn: () =>
       withAccountOwner(owner, async (current): Promise<SavedSearch[]> => {
         const query = client.getQueryCache().find({ queryKey, exact: true });
-        if (query) savedSearchOwners.set(query, current);
+        const previous = query && savedSearchOwners.get(query);
+        if (query && (!previous || !isExactAccountProjection(previous.owner))) {
+          savedSearchOwners.set(query, { owner: current, data: undefined });
+        }
         const response = await api.get<SavedSearchPayload>('/api/profiles/me/saved-searches', {
           owner: current,
         });
-        return extractSearchList(response.data).map((raw) => normalizeSearch(raw));
+        const searches = extractSearchList(response.data).map((raw) => normalizeSearch(raw));
+        assertAccountOwner(current);
+        if (query) savedSearchOwners.set(query, { owner: current, data: searches });
+        return searches;
       }),
   };
 }
@@ -286,11 +307,15 @@ function ownerIsBound(owner: AccountOwner | null): boolean {
 /** Locate a currently bound result for the out-of-React location observer. */
 export function savedSearchesReading(client: QueryClient, userId: string | undefined) {
   for (const query of client.getQueryCache().findAll({ queryKey: SAVED_SEARCHES_KEY })) {
-    const owner = savedSearchOwners.get(query);
-    if (!owner || owner.userId !== userId || !isExactAccountProjection(owner)) continue;
+    const binding = savedSearchOwners.get(query);
+    if (!binding || binding.owner.userId !== userId || !isExactAccountProjection(binding.owner))
+      continue;
+    const verified = Boolean(binding.data && query.state.data === binding.data);
     return {
-      data: query.state.data as SavedSearch[] | undefined,
-      isPending: query.state.status === 'pending',
+      data: verified ? binding.data : undefined,
+      isPending: verified
+        ? query.state.status === 'pending'
+        : query.state.status !== 'error' && query.state.fetchStatus !== 'paused',
       isFetching: query.state.fetchStatus === 'fetching',
     };
   }
@@ -369,14 +394,17 @@ export const usePrimarySavedArea = (): PrimarySavedArea => {
   const client = useQueryClient();
   const query = useQuery(savedSearchesQueryOptions(owner, client));
   const valid = Boolean(owner);
-  const unavailable = isBoundSubjectUnavailable();
+  const verified = hasVerifiedSavedSearches(client, owner);
+  const unavailable = isBoundSubjectUnavailable() || (!verified && query.fetchStatus === 'paused');
   return useMemo(
     () =>
       primarySavedAreaOf(isAuthenticated, {
-        isPending: valid ? query.isPending : !unavailable,
-        data: valid ? query.data : undefined,
+        isPending: valid
+          ? (!verified && !query.isError && !unavailable) || query.isPending
+          : !unavailable,
+        data: valid && verified ? query.data : undefined,
       }),
-    [isAuthenticated, valid, unavailable, query.isPending, query.data],
+    [isAuthenticated, valid, verified, unavailable, query.isPending, query.isError, query.data],
   );
 };
 
@@ -448,26 +476,34 @@ export const useSavedSearches = (): UseSavedSearches => {
    * when there is no token, which would otherwise 401-spam).
    */
   const listQuery = useQuery(savedSearchesQueryOptions(owner, queryClient));
+  const verified = hasVerifiedSavedSearches(queryClient, owner);
 
   // When logged out the query is disabled and never resolves, so fall back to a
   // stable empty list rather than leaving `searches` undefined. Memoised on the
   // query data so consumers' `useCallback`/`useMemo` deps stay referentially
   // stable across renders where the data is unchanged.
   const searches = useMemo<SavedSearch[]>(
-    () => (owner ? (listQuery.data ?? EMPTY_SEARCHES) : EMPTY_SEARCHES),
-    [owner, listQuery.data],
+    () => (owner && verified ? (listQuery.data ?? EMPTY_SEARCHES) : EMPTY_SEARCHES),
+    [owner, verified, listQuery.data],
   );
 
   /** Replace a single search in the cached list by id, or append if new. */
   const upsertCachedSearch = useCallback(
     (next: SavedSearch, capturedOwner: AccountOwner) => {
-      queryClient.setQueryData<SavedSearch[]>(savedSearchesKeyFor(capturedOwner), (prev) => {
+      const queryKey = savedSearchesKeyFor(capturedOwner);
+      const query = queryClient.getQueryCache().find({ queryKey, exact: true });
+      if (!query || !hasVerifiedSavedSearches(queryClient, capturedOwner)) {
+        void queryClient.invalidateQueries({ queryKey, exact: true });
+        return;
+      }
+      queryClient.setQueryData<SavedSearch[]>(queryKey, (prev) => {
         const list = prev ?? [];
         const index = list.findIndex((s) => s.id === next.id);
-        if (index === -1) return [...list, next];
-        const copy = list.slice();
-        copy[index] = next;
-        return copy;
+        const result = [...list];
+        if (index === -1) result.push(next);
+        else result[index] = next;
+        if (query) savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        return result;
       });
     },
     [queryClient],
@@ -476,9 +512,17 @@ export const useSavedSearches = (): UseSavedSearches => {
   /** Remove a single search from the cached list by id. */
   const removeCachedSearch = useCallback(
     (searchId: string, capturedOwner: AccountOwner) => {
-      queryClient.setQueryData<SavedSearch[]>(savedSearchesKeyFor(capturedOwner), (prev) =>
-        (prev ?? []).filter((s) => s.id !== searchId),
-      );
+      const queryKey = savedSearchesKeyFor(capturedOwner);
+      const query = queryClient.getQueryCache().find({ queryKey, exact: true });
+      if (!query || !hasVerifiedSavedSearches(queryClient, capturedOwner)) {
+        void queryClient.invalidateQueries({ queryKey, exact: true });
+        return;
+      }
+      queryClient.setQueryData<SavedSearch[]>(queryKey, (prev) => {
+        const result = (prev ?? []).filter((s) => s.id !== searchId);
+        if (query) savedSearchOwners.set(query, { owner: capturedOwner, data: result });
+        return result;
+      });
     },
     [queryClient],
   );
@@ -775,7 +819,9 @@ export const useSavedSearches = (): UseSavedSearches => {
     [searches, owner],
   );
 
-  const unavailable = isAuthenticated && !owner && isBoundSubjectUnavailable();
+  const unavailable =
+    isAuthenticated &&
+    ((!owner && isBoundSubjectUnavailable()) || (!verified && listQuery.fetchStatus === 'paused'));
   const error = unavailable
     ? t('search.widgets.savedSearches.loadFailed')
     : listQuery.error
@@ -784,7 +830,11 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   return {
     searches,
-    isLoading: !unavailable && ((isAuthenticated && !owner) || listQuery.isLoading),
+    isLoading:
+      !unavailable &&
+      ((isAuthenticated && !owner) ||
+        (Boolean(owner) && !verified && !listQuery.isError) ||
+        listQuery.isLoading),
     isSaving: Boolean(
       saveSearchMutation.isPending &&
         saveSearchMutation.variables &&

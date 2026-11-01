@@ -45,6 +45,8 @@ let client: QueryClient;
 let seen: Array<{ method: string; owner: string; path: string }>;
 let postBodies: string[];
 let holdB: ServerResponse | undefined;
+let holdA: ServerResponse | undefined;
+let shouldHoldA = false;
 let shouldHoldB = false;
 let nameA = 'A private watch';
 let allowPutA = false;
@@ -59,6 +61,10 @@ beforeAll(async () => {
     const owner = req.headers.authorization === `Bearer ${token('A')}` ? 'A' : 'B';
     seen.push({ method: req.method ?? '', owner, path: req.url ?? '' });
     res.setHeader('Content-Type', 'application/json');
+    if (req.method === 'GET' && owner === 'A' && shouldHoldA) {
+      holdA = res;
+      return;
+    }
     if (req.method === 'GET' && owner === 'B' && shouldHoldB) {
       holdB = res;
       return;
@@ -113,6 +119,8 @@ beforeEach(() => {
   seen = [];
   postBodies = [];
   shouldHoldB = false;
+  shouldHoldA = false;
+  holdA = undefined;
   nameA = 'A private watch';
   allowPutA = false;
   mockToast.success.mockClear();
@@ -605,4 +613,58 @@ it('deletes a saved search for the unchanged owner', async () => {
     path: '/api/profiles/me/saved-searches/watch-A',
   });
   await waitFor(() => expect(view.result.current.searches).toEqual([]));
+});
+
+it('does not expose an externally hydrated fresh query without an in-memory binding', async () => {
+  const first = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
+  const query = client.getQueryCache().find({ queryKey: ['savedSearches'] });
+  expect(query).toBeDefined();
+  const key = query!.queryKey;
+  first.unmount();
+  client.clear();
+
+  const source = new QueryClient();
+  source.setQueryData(key, [
+    {
+      id: 'unattributed',
+      name: 'unattributed private data',
+      location,
+      locationStatus: 'resolved',
+      isPrimaryArea: true,
+    },
+  ]);
+  const blob = JSON.parse(JSON.stringify(dehydrate(source)));
+  source.clear();
+  client = new QueryClient({
+    defaultOptions: { queries: { staleTime: 300000, retry: false, gcTime: Infinity } },
+  });
+  hydrate(client, blob);
+  shouldHoldA = true;
+  const restored = renderHook(
+    () => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }),
+    { wrapper },
+  );
+  await waitFor(() => expect(holdA).toBeDefined());
+  expect(restored.result.current.saved.searches).toEqual([]);
+  expect(restored.result.current.primary).toEqual({ selection: null, pending: true });
+  expect(savedSearchesReading(client, 'A').data).toBeUndefined();
+  await act(async () => {
+    holdA?.end(
+      JSON.stringify({
+        data: [
+          {
+            id: 'watch-A',
+            name: 'A private watch',
+            query: 'A',
+            location,
+            locationStatus: 'resolved',
+            isPrimaryArea: true,
+          },
+        ],
+      }),
+    );
+  });
+  await waitFor(() => expect(restored.result.current.saved.searches[0]?.id).toBe('watch-A'));
+  expect(restored.result.current.primary.selection).toEqual(location);
 });
