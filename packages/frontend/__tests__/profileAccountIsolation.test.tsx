@@ -81,7 +81,12 @@ beforeAll(async () => {
   realFetchProfile = useProfileStore.getState().fetchProfile;
 });
 
+const originalConsoleError = console.error.bind(console);
 beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation((...args) => {
+    if (String(args[0]).includes('act(')) originalConsoleError('ACT_WARNING_TEST', expect.getState().currentTestName);
+    originalConsoleError(...args);
+  });
   requests = [];
   requestMethods = [];
   holdA = null;
