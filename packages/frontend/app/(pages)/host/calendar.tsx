@@ -283,7 +283,14 @@ export default function HostCalendarScreen() {
    * its failure means there is no calendar at all.
    */
   const bookingsQueries = [hostReservationsQuery, hostExchangesQuery, guestExchangesQuery];
-  const bookingsError = bookingsQueries.find((query) => query.isError)?.error;
+  const reservationUnavailable = !hostReservationsQuery.isOwnerReady;
+  const reservationPaused =
+    hostReservationsQuery.isPending && hostReservationsQuery.fetchStatus === 'paused';
+  const bookingsError = reservationUnavailable
+    ? new Error(t('contracts.detail.signAccountUnavailable'))
+    : reservationPaused
+      ? new Error(t('host.calendar.tryAgain'))
+      : bookingsQueries.find((query) => query.isError)?.error;
   const refetchBookings = useCallback(() => {
     void hostReservationsQuery.refetch();
     void hostExchangesQuery.refetch();
@@ -547,7 +554,8 @@ export default function HostCalendarScreen() {
             </View>
 
             {availabilityQuery.isLoading ||
-            bookingsQueries.some((query) => query.isPending && !query.isError) ? (
+            (!bookingsError &&
+              bookingsQueries.some((query) => query.isPending && !query.isError)) ? (
               <View style={styles.loadingWrap}>
                 <Loading variant="spinner" />
               </View>
@@ -563,7 +571,7 @@ export default function HostCalendarScreen() {
                 icon={RiAlertLine}
                 title={t('host.calendar.bookingsError')}
                 description={bookingsError.message ?? t('host.calendar.tryAgain')}
-                onRetry={refetchBookings}
+                onRetry={reservationUnavailable ? () => openAccountDialog() : refetchBookings}
               />
             ) : (
               <View

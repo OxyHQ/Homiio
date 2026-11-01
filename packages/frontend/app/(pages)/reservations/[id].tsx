@@ -30,6 +30,8 @@ import { ReservationStatus } from '@homiio/shared-types/reservation';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
 import { useReservationQuery, useUpdateReservation } from '@/hooks/useReservationQueries';
+import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
+import { useOxy } from '@oxy.so/services/ui/client';
 import { PriceBreakdown } from '@/components/PriceBreakdown';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
 import { confirm } from '@oxy.so/bloom/surfaces';
@@ -74,6 +76,8 @@ export default function ReservationDetailScreen() {
   const reservationQuery = useReservationQuery(id);
   const updateMutation = useUpdateReservation(id ?? '');
   const { profile } = useProfile();
+  const { owner, isCurrent } = useAccountOwnerGuard();
+  const { openAccountDialog } = useOxy();
 
   const reservation = reservationQuery.data;
   const { property } = useProperty(reservation?.propertyId ?? '');
@@ -89,9 +93,10 @@ export default function ReservationDetailScreen() {
 
   const handleAction = useCallback(
     async (target: ReservationStatus) => {
-      if (!id) return;
+      if (!id || !isCurrent(owner)) return;
       try {
         await updateMutation.mutateAsync({ status: target });
+        if (!isCurrent(owner)) return;
         const toastKey =
           target === ReservationStatus.CONFIRMED
             ? 'reservations.detail.toastConfirmed'
@@ -100,16 +105,18 @@ export default function ReservationDetailScreen() {
               : 'reservations.detail.toastCancelled';
         toast.success(t(toastKey));
       } catch (error) {
+        if (!isCurrent(owner)) return;
         const message =
           error instanceof Error ? error.message : t('reservations.detail.toastUpdateFailed');
         toast.error(message);
       }
     },
-    [id, updateMutation, t],
+    [id, updateMutation, t, owner, isCurrent],
   );
 
   const confirmAction = useCallback(
     async (action: 'cancel' | 'confirm' | 'decline') => {
+      if (!isCurrent(owner)) return;
       const options = {
         cancel: {
           title: t('reservations.detail.confirmCancelTitle'),
@@ -134,11 +141,11 @@ export default function ReservationDetailScreen() {
         },
       }[action];
       const { status, ...prompt } = options;
-      if (await confirm({ ...prompt, cancelLabel: t('common.cancel') })) {
+      if ((await confirm({ ...prompt, cancelLabel: t('common.cancel') })) && isCurrent(owner)) {
         await handleAction(status);
       }
     },
-    [handleAction, t],
+    [handleAction, t, owner, isCurrent],
   );
 
   const header = (
@@ -167,6 +174,33 @@ export default function ReservationDetailScreen() {
     );
   }
 
+  if (!reservationQuery.isOwnerReady) {
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
+          <ErrorState
+            title={t('contracts.detail.signAccountUnavailable')}
+            onRetry={() => openAccountDialog()}
+            retryLabel={t('settings.sections.account')}
+          />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+  if (reservationQuery.isPending && reservationQuery.fetchStatus === 'paused') {
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
+          <ErrorState
+            title={t('reservations.detail.unavailable')}
+            description={t('reservations.detail.unavailableDescription')}
+            retryLabel={t('common.retry')}
+            onRetry={() => reservationQuery.refetch()}
+          />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
   if (reservationQuery.isPending) {
     return (
       <Screen documentScroll header={header}>
