@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useOxy } from '@oxy.so/services/ui/client';
 import type { RequestOwner } from '@/utils/api';
+import { useSessionSnapshot } from '@/hooks/useSessionSnapshot';
 
 export type AccountOwner = RequestOwner & { sessionId: string | null; generation: number };
 type Projection = Omit<AccountOwner, 'generation'>;
@@ -72,20 +73,7 @@ export function sameAccountProjection(
 /** Bind the projected account to the locally observed bearer and session epoch. */
 export function useAccountOwner(): AccountOwner | null {
   const { isAuthenticated, user, activeSessionId, oxyServices } = useOxy();
-  const subscribe = useCallback(
-    (listener: () => void) => oxyServices.session.onChange(listener),
-    [oxyServices],
-  );
-  const getSnapshot = useCallback(
-    () =>
-      JSON.stringify([
-        oxyServices.http.getSessionEpoch(),
-        oxyServices.session.userId,
-        Boolean(oxyServices.session.accessToken),
-      ]),
-    [oxyServices],
-  );
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const snapshot = useSessionSnapshot(oxyServices);
   const userId = isAuthenticated ? (user?.id ?? null) : null;
   const [epoch, bearerUser, hasToken] = JSON.parse(snapshot) as [number, string | null, boolean];
   const projected: Projection | null =

@@ -1,6 +1,7 @@
-import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useOxy } from '@oxy.so/services/ui/client';
 import type { OxyServices } from '@oxy.so/core';
+import { useSessionSnapshot } from '@/hooks/useSessionSnapshot';
 
 /** A committed local profile owner; this does not establish actor authority. */
 export type ProfileOwner = {
@@ -28,20 +29,7 @@ let nextRevision = 0;
  */
 export function useProfileOwner(): ProfileOwner | null {
   const { oxyServices, user, activeSessionId, isAuthenticated } = useOxy();
-  const subscribe = useCallback(
-    (notify: () => void) => oxyServices.session.onChange(notify),
-    [oxyServices],
-  );
-  const getSnapshot = useCallback(
-    () =>
-      JSON.stringify([
-        oxyServices.http.getSessionEpoch(),
-        oxyServices.session.userId,
-        Boolean(oxyServices.session.accessToken),
-      ]),
-    [oxyServices],
-  );
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const snapshot = useSessionSnapshot(oxyServices);
   const [epoch, bearerUser, hasToken] = JSON.parse(snapshot) as [number, string | null, boolean];
   const userId = isAuthenticated ? (user?.id ?? null) : null;
   const current = useRef<ProfileOwner | null>(null);
