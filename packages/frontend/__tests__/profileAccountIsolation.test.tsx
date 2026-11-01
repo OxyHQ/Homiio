@@ -330,7 +330,7 @@ it('DIAGNOSTIC reproduces an older same-owner GET overwriting a completed profil
   const spy = jest.spyOn(useProfileStore.getState(), 'fetchProfile');
   const view = renderHook(() => useProfile(), { wrapper });
   const oldResponse = await held;
-  const first = spy.mock.results[0].value;
+  const first = spy.mock.results.at(-1)!.value;
   first.catch(() => undefined);
   const owner = useProfileStore.getState().profileRequest?.owner;
   expect(owner).toBeDefined();
