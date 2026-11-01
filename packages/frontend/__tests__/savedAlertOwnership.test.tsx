@@ -315,7 +315,11 @@ it('does not treat an opaque bearer as an empty verified saved-search list', asy
   expect(view.result.current.saved.searches).toEqual([]);
   expect(view.result.current.saved.error).toBe('search.widgets.savedSearches.loadFailed');
   expect(view.result.current.saved.isLoading).toBe(false);
-  expect(view.result.current.primary).toEqual({ selection: null, pending: false });
+  expect(view.result.current.primary).toEqual({
+    selection: null,
+    pending: false,
+    unavailable: true,
+  });
 });
 
 it('does not toast or report success when a cache subscriber switches the owner during publication', async () => {
@@ -731,7 +735,11 @@ it('reports a paused unbound hydration as unavailable and recovers on reconnect'
   );
   expect(restored.result.current.saved.searches).toEqual([]);
   expect(restored.result.current.saved.isLoading).toBe(false);
-  expect(restored.result.current.primary).toEqual({ selection: null, pending: false });
+  expect(restored.result.current.primary).toEqual({
+    selection: null,
+    pending: false,
+    unavailable: true,
+  });
   await act(async () => {
     onlineManager.setOnline(true);
   });
@@ -812,4 +820,69 @@ it('settles a same-owner refetch with deeply equal data without a retry loop', a
   );
   expect(view.result.current.primary.selection).toEqual(location);
   expect(seen.filter((request) => request.method === 'GET')).toHaveLength(2);
+});
+
+it('does not infer a network area while an unbound saved area is paused and recovers', async () => {
+  const first = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  first.unmount();
+  client.clear();
+  const source = new QueryClient();
+  source.setQueryData(key, [{ id: 'unattributed', name: 'unknown' }]);
+  const blob = JSON.parse(JSON.stringify(dehydrate(source)));
+  source.clear();
+  client = new QueryClient({
+    defaultOptions: {
+      queries: { networkMode: 'online', staleTime: 300000, retry: false, gcTime: Infinity },
+    },
+  });
+  hydrate(client, blob);
+  const { useLocationScope, observeInferredScope } = jest.requireActual(
+    '../hooks/useLocationScope',
+  );
+  const { useLocationScopeStore } = jest.requireActual('../store/locationScopeStore');
+  const { APPROXIMATE_LOCATION_QUERY_KEY } = jest.requireActual('../hooks/useApproximateLocation');
+  useLocationScopeStore.setState({
+    sessionSelection: null,
+    explicitGlobal: false,
+    lastChosenArea: null,
+    deviceRequested: false,
+    autoScope: null,
+  });
+  const networkArea = { ...location, label: { primary: 'network area', kind: 'place' } };
+  client.setQueryData(APPROXIMATE_LOCATION_QUERY_KEY, {
+    status: 'resolved',
+    source: 'ip',
+    granularity: 'city',
+    selection: networkArea,
+    resolvedAt: '2026-01-01T00:00:00.000Z',
+    expiresAt: '2030-01-01T00:00:00.000Z',
+  });
+  act(() => onlineManager.setOnline(false));
+  const stop = observeInferredScope(client);
+  const view = renderHook(() => ({ scope: useLocationScope(), primary: usePrimarySavedArea() }), {
+    wrapper,
+  });
+  await waitFor(() =>
+    expect(view.result.current.primary).toEqual({
+      selection: null,
+      pending: false,
+      unavailable: true,
+    }),
+  );
+  expect(view.result.current.scope.source).toBeNull();
+  expect(view.result.current.scope.savedAreaUnavailable).toBe(true);
+  expect(useLocationScopeStore.getState().autoScope).toBeNull();
+  const explicitArea = { ...location, label: { primary: 'explicit choice', kind: 'place' } };
+  act(() => view.result.current.scope.choose(explicitArea));
+  await waitFor(() => expect(view.result.current.scope.selection).toEqual(explicitArea));
+  expect(view.result.current.scope.source).toBe('session');
+  act(() => useLocationScopeStore.setState({ sessionSelection: null }));
+  await act(async () => onlineManager.setOnline(true));
+  await waitFor(() => expect(view.result.current.primary.selection).toEqual(location));
+  expect(view.result.current.scope.source).toBe('saved_area');
+  expect(useLocationScopeStore.getState().autoScope).toBeNull();
+  view.unmount();
+  stop();
 });

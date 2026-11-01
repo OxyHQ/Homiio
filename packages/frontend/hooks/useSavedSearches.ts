@@ -336,9 +336,15 @@ export function savedSearchesReading(client: QueryClient, userId: string | undef
         ? query.state.status === 'pending'
         : query.state.status !== 'error' && query.state.fetchStatus !== 'paused',
       isFetching: query.state.fetchStatus === 'fetching',
+      isUnavailable:
+        !verified && (query.state.status === 'error' || query.state.fetchStatus === 'paused'),
     };
   }
-  return { data: undefined, isPending: true, isFetching: false };
+  const paused = client
+    .getQueryCache()
+    .findAll({ queryKey: SAVED_SEARCHES_KEY })
+    .some((query) => query.queryKey[1] === userId && query.state.fetchStatus === 'paused');
+  return { data: undefined, isPending: !paused, isFetching: false, isUnavailable: paused };
 }
 
 /**
@@ -390,6 +396,8 @@ export interface PrimarySavedArea {
    * waits on a request that will not be made.
    */
   readonly pending: boolean;
+  /** The account's saved area could not be established yet. */
+  readonly unavailable?: boolean;
 }
 
 /**
@@ -413,7 +421,8 @@ export const usePrimarySavedArea = (): PrimarySavedArea => {
   const client = useQueryClient();
   const { query, verified } = useBoundSavedSearchesQuery(owner, client);
   const valid = Boolean(owner);
-  const unavailable = isBoundSubjectUnavailable() || (!verified && query.fetchStatus === 'paused');
+  const unavailable =
+    isBoundSubjectUnavailable() || (!verified && (query.fetchStatus === 'paused' || query.isError));
   return useMemo(
     () =>
       primarySavedAreaOf(isAuthenticated, {
@@ -421,6 +430,7 @@ export const usePrimarySavedArea = (): PrimarySavedArea => {
           ? !unavailable && ((!verified && !query.isError) || query.isPending)
           : !unavailable,
         data: valid && verified ? query.data : undefined,
+        isUnavailable: unavailable,
       }),
     [isAuthenticated, valid, verified, unavailable, query.isPending, query.isError, query.data],
   );
@@ -435,9 +445,14 @@ export const usePrimarySavedArea = (): PrimarySavedArea => {
  */
 export function primarySavedAreaOf(
   isAuthenticated: boolean,
-  query: { readonly isPending: boolean; readonly data: readonly SavedSearch[] | undefined },
+  query: {
+    readonly isPending: boolean;
+    readonly data: readonly SavedSearch[] | undefined;
+    readonly isUnavailable?: boolean;
+  },
 ): PrimarySavedArea {
   if (!isAuthenticated) return { selection: null, pending: false };
+  if (query.isUnavailable) return { selection: null, pending: false, unavailable: true };
   // `isPending` is true while disabled too, so the guard above has to come
   // first — otherwise a logged-out Home would wait forever for a request that
   // is never sent.
