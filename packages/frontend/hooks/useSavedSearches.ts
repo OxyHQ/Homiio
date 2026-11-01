@@ -786,7 +786,7 @@ export const useSavedSearches = (): UseSavedSearches => {
 
   return {
     searches,
-    isLoading: unavailable ? false : listQuery.isLoading,
+    isLoading: !unavailable && ((isAuthenticated && !owner?.sessionId) || listQuery.isLoading),
     isSaving: Boolean(
       saveSearchMutation.isPending &&
         saveSearchMutation.variables &&
