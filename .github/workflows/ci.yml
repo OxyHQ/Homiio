@@ -53,7 +53,7 @@ jobs:
               if (filename.startsWith(process.cwd()+path.sep) && fs.existsSync(filename) && fs.statSync(filename).isFile()) {
                 const size=fs.statSync(filename).size;
                 item.sourceBytes+=size;
-                if (name.startsWith('/packages/frontend/')) appFiles.push({name,size});
+                if (name.startsWith('/packages/frontend/') && /\.(?:ts|tsx|js|jsx)$/.test(name)) appFiles.push({name,size});
               } else item.unresolved++;
               groups.set(key,item);
             }
