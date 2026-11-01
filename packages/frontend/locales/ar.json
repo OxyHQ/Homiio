@@ -937,6 +937,7 @@
       "emptyDocuments": "No documents attached.",
       "addShort": "Add",
       "signLease": "Sign lease",
+      "signAccountUnavailable": "لا يمكننا التحقق من الحساب للتوقيع. أعد ربط حسابك وحاول مرة أخرى.",
       "confirmSignExtended": "By signing you agree to the lease terms. Once both parties sign, the lease becomes active.",
       "confirmSignAction": "Sign",
       "confirmTerminateShortTitle": "Terminate lease?",

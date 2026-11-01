@@ -28,6 +28,7 @@ import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import * as DocumentPicker from 'expo-document-picker';
 import { toast } from '@oxy.so/bloom/toast';
+import { P } from '@oxy.so/bloom/typography';
 
 import { Button } from '@oxy.so/bloom/button';
 import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
@@ -48,6 +49,7 @@ import {
 import { useLeaseFormatContext } from '@/components/tenancy/useLeaseFormatContext';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProperty } from '@/hooks';
+import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { useProfile } from '@/context/ProfileContext';
 import {
   useLease,
@@ -83,6 +85,7 @@ export default function ContractDetailScreen() {
   const { profile } = useProfile();
   const { property: fetchedProperty } = useProperty(lease?.propertyId ?? '');
 
+  const { owner: signOwner, isCurrent: isSignOwnerCurrent } = useAccountOwnerGuard();
   const signMutation = useSignLease(id ?? '');
   const terminateMutation = useTerminateLease(id ?? '');
   const deleteMutation = useDeleteLease();
@@ -120,14 +123,15 @@ export default function ContractDetailScreen() {
    * in a column no read could return.
    */
   const handleSign = useCallback(async () => {
-    if (!id) return;
+    if (!id || !isSignOwnerCurrent(signOwner)) return;
     try {
       await signMutation.mutateAsync({ acceptTerms: true, termsSha256: shownTermsSha256 });
-      toast.success(t('contracts.detail.toastSigned'));
+      if (isSignOwnerCurrent(signOwner)) toast.success(t('contracts.detail.toastSigned'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('contracts.detail.toastSignFailed'));
+      if (isSignOwnerCurrent(signOwner))
+        toast.error(error instanceof Error ? error.message : t('contracts.detail.toastSignFailed'));
     }
-  }, [id, shownTermsSha256, signMutation, t]);
+  }, [id, shownTermsSha256, signMutation, signOwner, isSignOwnerCurrent, t]);
 
   const handleTerminate = useCallback(async () => {
     if (!id) return;
@@ -329,15 +333,20 @@ export default function ContractDetailScreen() {
     canSign || canTerminate || canDelete ? (
       <>
         {canSign ? (
-          <Button
-            size="sm"
-            onPress={() => void confirmAction('sign')}
-            disabled={busy}
-            tone="accent"
-            appearance="solid"
-          >
-            {t('contracts.detail.signLease')}
-          </Button>
+          <>
+            <Button
+              size="sm"
+              onPress={() => void confirmAction('sign')}
+              disabled={busy || !signMutation.isOwnerReady}
+              tone="accent"
+              appearance="solid"
+            >
+              {t('contracts.detail.signLease')}
+            </Button>
+            {!signMutation.isOwnerReady ? (
+              <P accessibilityLiveRegion="polite">{t('contracts.detail.signAccountUnavailable')}</P>
+            ) : null}
+          </>
         ) : null}
         {canTerminate ? (
           <Button

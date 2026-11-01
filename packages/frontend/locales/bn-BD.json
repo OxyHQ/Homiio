@@ -933,6 +933,7 @@
       "emptyDocuments": "No documents attached.",
       "addShort": "Add",
       "signLease": "Sign lease",
+      "signAccountUnavailable": "স্বাক্ষর করার জন্য অ্যাকাউন্ট যাচাই করা যাচ্ছে না। আপনার অ্যাকাউন্ট আবার সংযুক্ত করে চেষ্টা করুন।",
       "confirmSignExtended": "By signing you agree to the lease terms. Once both parties sign, the lease becomes active.",
       "confirmSignAction": "Sign",
       "confirmTerminateShortTitle": "Terminate lease?",

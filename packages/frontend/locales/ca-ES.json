@@ -1319,6 +1319,7 @@
       "emptyDocuments": "No documents attached.",
       "addShort": "Add",
       "signLease": "Sign lease",
+      "signAccountUnavailable": "No podem verificar el compte per signar. Torna a connectar el compte i prova-ho de nou.",
       "confirmSignExtended": "By signing you agree to the lease terms. Once both parties sign, the lease becomes active.",
       "confirmSignAction": "Sign",
       "confirmTerminateShortTitle": "Terminate lease?",

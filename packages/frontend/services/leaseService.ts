@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-import { api, ApiError, type ApiResponse } from '@/utils/api';
+import { api, ApiError, type ApiResponse, type RequestOwner } from '@/utils/api';
 import type { Lease, LeaseDocument, LeaseDocumentType } from '@homiio/shared-types';
 
 // Re-export the lease contract types so existing consumers keep a single import site.
@@ -98,11 +98,17 @@ class LeaseService {
    * no read could return — a string that proved nothing about anything. What
    * happened is recorded by the server as the signature's `method`.
    */
-  async signLease(leaseId: string, acceptTerms: boolean, termsSha256?: string): Promise<Lease> {
-    const response = await api.post<ApiResponse<Lease>>(`${LEASE_BASE}/${leaseId}/sign`, {
-      acceptTerms,
-      ...(termsSha256 ? { termsSha256 } : {}),
-    });
+  async signLease(
+    leaseId: string,
+    acceptTerms: boolean,
+    termsSha256?: string,
+    owner?: RequestOwner,
+  ): Promise<Lease> {
+    const response = await api.post<ApiResponse<Lease>>(
+      `${LEASE_BASE}/${leaseId}/sign`,
+      { acceptTerms, ...(termsSha256 ? { termsSha256 } : {}) },
+      { requireAuth: true, owner },
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease signing failed');
     }
