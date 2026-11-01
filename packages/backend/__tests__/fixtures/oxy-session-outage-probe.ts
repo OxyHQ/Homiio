@@ -93,7 +93,9 @@ async function run(): Promise<void> {
     process.env.OXY_API_URL = await listen(issuer);
     // Configuration syntax only: this test never opens a product database.
     process.env.DATABASE_URL = 'postgres://unused:unused@127.0.0.1:1/receiver_fixture_unused';
-    const { oxyService: oxyClient, HOMIIO_SERVICE_AUDIENCE } = await import('../../services/oxy.js');
+    const { oxyService: oxyClient, HOMIIO_SERVICE_AUDIENCE } = await import(
+      '../../services/oxy.js'
+    );
     const options = { auth: { expectedAudience: HOMIIO_SERVICE_AUDIENCE } };
     const middleware = createOxyAuthMiddleware(oxyClient, options);
     disposeOxy = () => oxyClient.dispose();
