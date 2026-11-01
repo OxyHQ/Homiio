@@ -78,7 +78,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         });
     },
     enabled: Boolean(owner),
-    ...(sameBinding ? {} : { refetchOnMount: 'always' as const }),
+    ...(sameBinding ? {} : { refetchOnMount: 'always' as const, staleTime: 0 }),
     retry: (count, error) => {
       if (error instanceof ProfileRequestSupersededError) return false;
       if (typeof configuredRetry === 'function') return configuredRetry(count, error);
