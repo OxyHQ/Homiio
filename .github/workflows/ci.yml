@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [web]
+        platform: [web, android, ios]
     env:
       NODE_OPTIONS: '--max-old-space-size=4096'
     steps:
@@ -76,8 +76,8 @@ jobs:
         run: |
           set -euo pipefail
           git clone --quiet --no-checkout https://github.com/OxyHQ/Alia.git "$RUNNER_TEMP/alia"
-          git -C "$RUNNER_TEMP/alia" checkout --quiet 9890310c9
-          test "$(git -C "$RUNNER_TEMP/alia" rev-parse HEAD)" = 9890310c9533e1284b3d681274ffa1580d6818f5
+          git -C "$RUNNER_TEMP/alia" checkout --quiet c60d0fccb
+          test "$(git -C "$RUNNER_TEMP/alia" rev-parse HEAD)" = c60d0fccb7951257b29a75e122bbeb3b19555b9e
           mkdir "$RUNNER_TEMP/sdk-pack"
           (cd "$RUNNER_TEMP/alia/packages/alia-chat" && npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP/sdk-pack" > "$RUNNER_TEMP/sdk-pack/manifest.json")
           node - <<'NODE'
