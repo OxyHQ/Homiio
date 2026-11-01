@@ -290,7 +290,11 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
       const query = client.getQueryCache().find({ queryKey, exact: true });
       const read = savedSearchReadRevisions.get(newData);
       if (!query || !read) return newData;
-      if (read.revision !== (savedSearchRevisions.get(query) ?? 0)) {
+      if (
+        read.revision !== (savedSearchRevisions.get(query) ?? 0) ||
+        !isBoundOxyInstance(read.owner.oxyServices) ||
+        !isExactAccountProjection(read.owner)
+      ) {
         if (Array.isArray(oldData)) return oldData;
         throw new Error('Saved search read was superseded');
       }
