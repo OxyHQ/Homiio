@@ -61,7 +61,7 @@ export default function ProfileScreen() {
       ).length,
     [applicationsQuery.data?.data],
   );
-  const totalReservations = reservationsQuery.data?.items?.length ?? 0;
+  const totalReservations = reservationsQuery.isSuccess ? reservationsQuery.data.items.length : '—';
   const totalSaved = savedProperties.length;
 
   const handleLogout = useCallback(async () => {
@@ -301,7 +301,7 @@ export default function ProfileScreen() {
 
 interface StatTileProps {
   label: string;
-  value: number;
+  value: number | string;
   description?: string;
   onPress?: () => void;
 }

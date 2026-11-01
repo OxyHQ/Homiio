@@ -112,7 +112,9 @@ export function useUpcomingBookings(options: UseUpcomingBookingsOptions): Upcomi
   // out of the roll-call rather than pinning the surface on a spinner.
   const active = includeViewings ? [reservations, exchanges, viewings] : [reservations, exchanges];
 
-  const isError = active.some((query) => query.isError);
+  const reservationUnavailable =
+    !reservations.isOwnerReady || (reservations.isPending && reservations.fetchStatus === 'paused');
+  const isError = reservationUnavailable || active.some((query) => query.isError);
   return {
     items,
     isPending: !isError && active.some((query) => query.isPending),

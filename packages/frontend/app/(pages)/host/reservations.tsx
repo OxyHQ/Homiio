@@ -52,6 +52,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
 import { useReservationsQuery, useUpdateReservation } from '@/hooks/useReservationQueries';
+import { accountOwnerKey, useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { propertyService } from '@/services/propertyService';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useFormatting } from '@/utils/format';
@@ -77,11 +78,15 @@ type Decision = ReservationStatus.CONFIRMED | ReservationStatus.DECLINED;
 function useReservationDecision(reservation: Reservation) {
   const { t } = useTranslation();
   const mutation = useUpdateReservation(reservation.id);
-  const [busy, setBusy] = useState<Decision | null>(null);
+  const { owner, isCurrent } = useAccountOwnerGuard();
+  const [, , epoch, instance, generation] = accountOwnerKey(owner);
+  const ownerKey = JSON.stringify([epoch, instance, generation]);
+  const [pending, setPending] = useState<{ ownerKey: string; target: Decision } | null>(null);
+  const busy = pending?.ownerKey === ownerKey ? pending.target : null;
 
   const decide = useCallback(
     async (target: Decision) => {
-      if (mutation.isPending) return;
+      if (!isCurrent(owner) || mutation.isPending) return;
       if (target === ReservationStatus.DECLINED) {
         const ok = await confirm({
           title: t('reservations.detail.confirmDeclineTitle'),
@@ -90,25 +95,27 @@ function useReservationDecision(reservation: Reservation) {
           cancelLabel: t('common.cancel'),
           destructive: true,
         });
-        if (!ok) return;
+        if (!ok || !isCurrent(owner)) return;
       }
-      setBusy(target);
+      setPending({ ownerKey, target });
       try {
         await mutation.mutateAsync({ status: target });
+        if (!isCurrent(owner)) return;
         toast.success(
           target === ReservationStatus.CONFIRMED
             ? t('host.reservations.toastConfirmed')
             : t('host.reservations.toastDeclined'),
         );
       } catch (error) {
+        if (!isCurrent(owner)) return;
         toast.error(
           error instanceof Error ? error.message : t('host.reservations.toastUpdateFailed'),
         );
       } finally {
-        setBusy(null);
+        if (isCurrent(owner)) setPending(null);
       }
     },
-    [mutation, t],
+    [mutation, t, owner, ownerKey, isCurrent],
   );
 
   return { decide, busy, isPending: mutation.isPending };
@@ -448,13 +455,28 @@ export default function HostReservationsScreen() {
     );
   }
 
+  if (!reservationsQuery.isOwnerReady) {
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
+          <ErrorState
+            title={t('contracts.detail.signAccountUnavailable')}
+            onRetry={() => openAccountDialog()}
+            retryLabel={t('settings.sections.account')}
+          />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+
   const activeLabel =
     statusFilter === 'all'
       ? t('host.reservations.allReservations')
       : (filters.find((entry) => entry.id === statusFilter)?.label ?? t('host.reservations.title'));
 
-  const isLoading = reservationsQuery.isLoading;
-  const isError = reservationsQuery.isError;
+  const isPaused = reservationsQuery.isPending && reservationsQuery.fetchStatus === 'paused';
+  const isLoading = reservationsQuery.isPending && !isPaused;
+  const isError = reservationsQuery.isError || isPaused;
 
   return (
     <Screen documentScroll header={header}>
