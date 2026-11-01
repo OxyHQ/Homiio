@@ -403,7 +403,10 @@ function OwnedPreferences({
   };
 
   const secondary = { color: theme.colors.textSecondary };
-  const readOnly = saveMutation.isPending || settingsQuery.isFetching || settingsQuery.isError;
+  const paused = settingsQuery.fetchStatus === 'paused';
+  const verifying = settingsQuery.fetchStatus !== 'idle';
+  const unavailable = paused || settingsQuery.isError;
+  const readOnly = saveMutation.isPending || verifying || settingsQuery.isError;
 
   const header = (
     <PageHeader
@@ -433,12 +436,12 @@ function OwnedPreferences({
   }
 
   if (!settings) {
-    const failed = settingsQuery.isError && !settingsQuery.isFetching;
+    const failed = unavailable;
     return (
       <Screen documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <BloomText accessibilityLiveRegion="polite" accessibilityRole={failed ? 'alert' : 'text'}>
-            {failed ? t('roommates.screen.loadError') : t('common.loading')}
+            {failed ? t('roommates.preferencesPage.refreshToSave') : t('common.loading')}
           </BloomText>
           {failed && (
             <Button
@@ -578,12 +581,12 @@ function OwnedPreferences({
           />
         </Card>
 
-        {(settingsQuery.isFetching || settingsQuery.isError) && (
+        {(verifying || settingsQuery.isError) && (
           <BloomText accessibilityRole="alert" accessibilityLiveRegion="polite">
             {t('roommates.preferencesPage.refreshToSave')}
           </BloomText>
         )}
-        {settingsQuery.isError && (
+        {unavailable && (
           <Button
             size="md"
             onPress={() => {
@@ -618,7 +621,7 @@ function OwnedPreferences({
           size="lg"
           onPress={handleSave}
           accessibilityHint={
-            settingsQuery.isFetching || settingsQuery.isError
+            verifying || settingsQuery.isError
               ? t('roommates.preferencesPage.refreshToSave')
               : undefined
           }

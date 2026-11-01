@@ -24,6 +24,10 @@ jest.mock('@/context/ProfileContext', () => ({
     hasProfile: true,
     refreshProfile: () => mockProfile(),
     isProfileProjectionCurrent: () => true,
+    profile: {
+      oxyUserId: 'stale-A',
+      personalProfile: { settings: { roommate: { enabled: true } } },
+    },
   }),
 }));
 jest.mock('@oxy.so/services/ui/client', () => ({ useOxy: () => mockAuth }));
@@ -190,7 +194,6 @@ afterEach(async () => {
         .every((mutation) => mutation.state.status !== 'pending'),
     ).toBe(true),
   );
-  cleanup();
   await waitFor(() =>
     expect(
       client
@@ -199,6 +202,10 @@ afterEach(async () => {
         .every((query) => query.state.fetchStatus === 'idle'),
     ).toBe(true),
   );
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  });
+  cleanup();
   client.clear();
   mockOxy.dispose();
 });
@@ -234,6 +241,7 @@ it('loads each account before submitting its existing preferences', async () => 
   await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
   expect(mockSave.mock.calls[0][0].budget.min).toBe(5678);
   expect(mockSave.mock.calls[0][2].userId).toBe('B');
+  expect(mockSave.mock.calls[0][1]).toBe(false);
   await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
 });
 
@@ -316,12 +324,14 @@ it.each(['sub-only', 'opaque', 'mismatched'])(
 it('does not enable save when either server read fails', async () => {
   mockStatus.mockRejectedValue(new Error('offline'));
   const screen = render(wrap(<RoommatePreferencesPage />));
-  await waitFor(() => expect(screen.getByText('roommates.screen.loadError')).toBeTruthy());
+  await waitFor(() =>
+    expect(screen.getByText('roommates.preferencesPage.refreshToSave')).toBeTruthy(),
+  );
   expect(screen.queryByRole('button', { name: 'roommates.preferencesPage.save' })).toBeNull();
   expect(mockSave).not.toHaveBeenCalled();
 });
 
-it('blocks editing when a remount cannot refresh offline', async () => {
+it('shows cached values read-only while an offline retry is paused and recovers online', async () => {
   const first = render(wrap(<RoommatePreferencesPage />));
   await waitFor(() =>
     expect(
@@ -329,14 +339,29 @@ it('blocks editing when a remount cannot refresh offline', async () => {
     ).not.toBeDisabled(),
   );
   first.unmount();
+  client.setDefaultOptions({
+    queries: { networkMode: 'offlineFirst', retry: 2, retryDelay: 0, gcTime: Infinity },
+    mutations: { networkMode: 'offlineFirst', retry: false },
+  });
   act(() => onlineManager.setOnline(false));
   try {
     mockPreferences.mockRejectedValue(new Error('offline'));
     mockStatus.mockRejectedValue(new Error('offline'));
     const second = render(wrap(<RoommatePreferencesPage />));
     await waitFor(() =>
-      expect(second.getByText('roommates.preferencesPage.refreshToSave')).toBeTruthy(),
+      expect(
+        client
+          .getQueryCache()
+          .getAll()
+          .some(
+            (query) =>
+              query.queryKey[0] === 'roommates' &&
+              query.queryKey[1] === 'preferences' &&
+              query.state.fetchStatus === 'paused',
+          ),
+      ).toBe(true),
     );
+    expect(second.getByText('roommates.preferencesPage.refreshToSave')).toBeTruthy();
     expect(second.getByRole('button', { name: 'roommates.preferencesPage.save' })).toBeDisabled();
     expect(second.getAllByLabelText('roommates.preferencesPage.min')[0]).toHaveProp(
       'value',
@@ -348,8 +373,30 @@ it('blocks editing when a remount cannot refresh offline', async () => {
     );
     expect(second.getByLabelText('roommates.preferencesPage.enableTitle')).toBeDisabled();
     expect(mockSave).not.toHaveBeenCalled();
+    mockPreferences.mockResolvedValue({ budget: { min: 5678, max: 9999 } });
+    mockStatus.mockResolvedValue({ hasRoommateMatching: true });
+    await act(async () => {
+      onlineManager.setOnline(true);
+    });
+    await waitFor(() =>
+      expect(second.getAllByLabelText('roommates.preferencesPage.min')[0]).toHaveProp(
+        'value',
+        '5678',
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        second.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+      ).not.toBeDisabled(),
+    );
+    expect(second.getByLabelText('roommates.preferencesPage.enableTitle')).toHaveProp(
+      'value',
+      true,
+    );
   } finally {
-    act(() => onlineManager.setOnline(true));
+    await act(async () => {
+      onlineManager.setOnline(true);
+    });
   }
 });
 
@@ -458,7 +505,9 @@ it('recovers after one of the two reads fails while the other finishes late', as
   );
   mockStatus.mockRejectedValueOnce(new Error('offline'));
   const screen = render(wrap(<RoommatePreferencesPage />));
-  await waitFor(() => expect(screen.getByText('roommates.screen.loadError')).toBeTruthy());
+  await waitFor(() =>
+    expect(screen.getByText('roommates.preferencesPage.refreshToSave')).toBeTruthy(),
+  );
   expect(screen.queryByRole('button', { name: 'roommates.preferencesPage.save' })).toBeNull();
   fireEvent.press(screen.getByRole('button', { name: 'common.retry' }));
   await waitFor(() =>
@@ -556,4 +605,67 @@ it('keeps unsaved edits and requires explicit discard after a conflicting remote
   );
   expect(screen.getAllByLabelText('roommates.preferencesPage.min')[0]).toHaveProp('value', '5678');
   expect(screen.getByRole('button', { name: 'roommates.preferencesPage.save' })).not.toBeDisabled();
+});
+
+it('explains a paused offline retry with no cached settings and recovers', async () => {
+  client.setDefaultOptions({
+    queries: { networkMode: 'offlineFirst', retry: 2, retryDelay: 0, gcTime: Infinity },
+    mutations: { networkMode: 'offlineFirst', retry: false },
+  });
+  act(() => onlineManager.setOnline(false));
+  try {
+    mockPreferences.mockRejectedValue(new Error('offline'));
+    mockStatus.mockRejectedValue(new Error('offline'));
+    const screen = render(wrap(<RoommatePreferencesPage />));
+    await waitFor(() =>
+      expect(screen.getByText('roommates.preferencesPage.refreshToSave')).toBeTruthy(),
+    );
+    expect(screen.queryByRole('button', { name: 'roommates.preferencesPage.save' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'common.retry' })).toBeTruthy();
+    expect(mockSave).not.toHaveBeenCalled();
+    mockPreferences.mockResolvedValue({ budget: { min: 1234, max: 9999 } });
+    mockStatus.mockResolvedValue({ hasRoommateMatching: false });
+    await act(async () => {
+      onlineManager.setOnline(true);
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+      ).not.toBeDisabled(),
+    );
+  } finally {
+    await act(async () => {
+      onlineManager.setOnline(true);
+    });
+  }
+});
+
+it('keeps B independent of a delayed A retry after an initial partial failure', async () => {
+  mockStatus.mockRejectedValueOnce(new Error('offline'));
+  let finish!: (value: unknown) => void;
+  const screen = render(wrap(<RoommatePreferencesPage />));
+  await waitFor(() =>
+    expect(screen.getByText('roommates.preferencesPage.refreshToSave')).toBeTruthy(),
+  );
+  mockStatus.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  fireEvent.press(screen.getByRole('button', { name: 'common.retry' }));
+  await waitFor(() => expect(mockStatus).toHaveBeenCalledTimes(2));
+  switchTo('B', () => screen.rerender(wrap(<RoommatePreferencesPage />)));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  await act(async () => {
+    finish({ hasRoommateMatching: true });
+  });
+  expect(screen.getByLabelText('roommates.preferencesPage.enableTitle')).toHaveProp('value', false);
+  expect(toast.success).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
+  await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+  expect(mockSave.mock.calls[0][0].budget.min).toBe(5678);
 });
