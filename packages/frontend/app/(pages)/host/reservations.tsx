@@ -16,8 +16,6 @@ import { useRouter } from 'expo-router';
 import { useQueries } from '@tanstack/react-query';
 import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
-import { toast } from '@oxy.so/bloom/toast';
-import { confirm } from '@oxy.so/bloom/surfaces';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
@@ -51,7 +49,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
-import { useReservationsQuery, useUpdateReservation } from '@/hooks/useReservationQueries';
+import { useReservationsQuery } from '@/hooks/useReservationQueries';
+import { useReservationDecision } from '@/hooks/useReservationDecision';
 import { propertyService } from '@/services/propertyService';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useFormatting } from '@/utils/format';
@@ -67,52 +66,6 @@ const FILTER_ENTRIES: { id: StatusFilter; labelKey: string }[] = [
   { id: ReservationStatus.CANCELLED, labelKey: 'host.reservations.filterCancelled' },
   { id: ReservationStatus.COMPLETED, labelKey: 'host.reservations.filterCompleted' },
 ];
-
-type Decision = ReservationStatus.CONFIRMED | ReservationStatus.DECLINED;
-
-/**
- * Approve / decline one pending reservation. Declining is confirmed first; the
- * outcome is reported by toast. Shared by the card footer and the table row.
- */
-function useReservationDecision(reservation: Reservation) {
-  const { t } = useTranslation();
-  const mutation = useUpdateReservation(reservation.id);
-  const [busy, setBusy] = useState<Decision | null>(null);
-
-  const decide = useCallback(
-    async (target: Decision) => {
-      if (mutation.isPending) return;
-      if (target === ReservationStatus.DECLINED) {
-        const ok = await confirm({
-          title: t('reservations.detail.confirmDeclineTitle'),
-          description: t('reservations.detail.confirmDeclineBody'),
-          confirmLabel: t('host.reservations.decline'),
-          cancelLabel: t('common.cancel'),
-          destructive: true,
-        });
-        if (!ok) return;
-      }
-      setBusy(target);
-      try {
-        await mutation.mutateAsync({ status: target });
-        toast.success(
-          target === ReservationStatus.CONFIRMED
-            ? t('host.reservations.toastConfirmed')
-            : t('host.reservations.toastDeclined'),
-        );
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : t('host.reservations.toastUpdateFailed'),
-        );
-      } finally {
-        setBusy(null);
-      }
-    },
-    [mutation, t],
-  );
-
-  return { decide, busy, isPending: mutation.isPending };
-}
 
 const CardActions: React.FC<{ reservation: Reservation }> = ({ reservation }) => {
   const { t } = useTranslation();
@@ -448,13 +401,28 @@ export default function HostReservationsScreen() {
     );
   }
 
+  if (!reservationsQuery.isOwnerReady) {
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
+          <ErrorState
+            title={t('contracts.detail.signAccountUnavailable')}
+            onRetry={() => openAccountDialog()}
+            retryLabel={t('settings.sections.account')}
+          />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+
   const activeLabel =
     statusFilter === 'all'
       ? t('host.reservations.allReservations')
       : (filters.find((entry) => entry.id === statusFilter)?.label ?? t('host.reservations.title'));
 
-  const isLoading = reservationsQuery.isLoading;
-  const isError = reservationsQuery.isError;
+  const isPaused = reservationsQuery.isPending && reservationsQuery.fetchStatus === 'paused';
+  const isLoading = reservationsQuery.isPending && !isPaused;
+  const isError = reservationsQuery.isError || isPaused;
 
   return (
     <Screen documentScroll header={header}>

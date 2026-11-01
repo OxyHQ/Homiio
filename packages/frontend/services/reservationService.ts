@@ -1,4 +1,4 @@
-import { api, type ApiResponse } from '@/utils/api';
+import { api, type ApiResponse, type RequestOwner } from '@/utils/api';
 import type {
   AvailabilityWindow,
   CancellationPolicy,
@@ -47,19 +47,28 @@ export interface ListReservationsParams {
 }
 
 export const reservationService = {
-  async createReservation(payload: CreateReservationData): Promise<Reservation> {
-    const response = await api.post<ApiResponse<Reservation>>('/api/reservations', payload);
+  async createReservation(
+    payload: CreateReservationData,
+    owner?: RequestOwner,
+  ): Promise<Reservation> {
+    const response = await api.post<ApiResponse<Reservation>>('/api/reservations', payload, {
+      owner,
+    });
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Reservation creation failed');
     }
     return response.data.data;
   },
 
-  async listReservations(params: ListReservationsParams = {}): Promise<ReservationListResponse> {
+  async listReservations(
+    params: ListReservationsParams = {},
+    owner?: RequestOwner,
+  ): Promise<ReservationListResponse> {
     const response = await api.get<{
       data?: Reservation[];
       pagination?: ReservationListResponse['pagination'];
     }>('/api/reservations', {
+      owner,
       params: {
         asHost: params.asHost ? 'true' : undefined,
         status: params.status,
@@ -77,16 +86,22 @@ export const reservationService = {
     return { items, pagination };
   },
 
-  async getReservationById(id: string): Promise<Reservation> {
-    const response = await api.get<ApiResponse<Reservation>>(`/api/reservations/${id}`);
+  async getReservationById(id: string, owner?: RequestOwner): Promise<Reservation> {
+    const response = await api.get<ApiResponse<Reservation>>(`/api/reservations/${id}`, { owner });
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Reservation not found');
     }
     return response.data.data;
   },
 
-  async updateReservation(id: string, payload: UpdateReservationData): Promise<Reservation> {
-    const response = await api.patch<ApiResponse<Reservation>>(`/api/reservations/${id}`, payload);
+  async updateReservation(
+    id: string,
+    payload: UpdateReservationData,
+    owner?: RequestOwner,
+  ): Promise<Reservation> {
+    const response = await api.patch<ApiResponse<Reservation>>(`/api/reservations/${id}`, payload, {
+      owner,
+    });
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Reservation update failed');
     }

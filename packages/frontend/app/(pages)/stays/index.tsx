@@ -149,6 +149,32 @@ export default function StaysScreen() {
     );
   }
 
+  if (!reservationsQuery.isOwnerReady) {
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
+          <ErrorState
+            title={t('contracts.detail.signAccountUnavailable')}
+            onRetry={() => openAccountDialog()}
+            retryLabel={t('settings.sections.account')}
+          />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
+  if (reservationsQuery.isPending && reservationsQuery.fetchStatus === 'paused') {
+    return (
+      <Screen documentScroll header={header}>
+        <ScreenScrollView contentContainerStyle={styles.centerWrap}>
+          <ErrorState
+            title={t('stays.list.loadError')}
+            description={t('stays.list.tryAgain')}
+            onRetry={() => reservationsQuery.refetch()}
+          />
+        </ScreenScrollView>
+      </Screen>
+    );
+  }
   if (reservationsQuery.isPending) {
     return (
       <Screen documentScroll header={header}>
