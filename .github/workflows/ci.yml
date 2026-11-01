@@ -1028,3 +1028,75 @@ jobs:
     # by name rather than expanding the whole context.
     secrets: inherit
     uses: ./.github/workflows/deploy-aws.yml
+
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout identity and date baseline
+        uses: actions/checkout@v7
+        with:
+          ref: 562c7d73914185bed977b793f86d969d7336e8ba
+          path: base
+      - name: Checkout SDK candidate
+        uses: actions/checkout@v7
+        with:
+          path: candidate
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.3'
+      - name: Verify candidate parent and unchanged budget
+        run: |
+          set -euo pipefail
+          test "$(git -C base rev-parse HEAD)" = 562c7d73914185bed977b793f86d969d7336e8ba
+          git -C candidate fetch --no-tags --depth=1 origin 562c7d73914185bed977b793f86d969d7336e8ba
+          git -C candidate diff --exit-code 562c7d73914185bed977b793f86d969d7336e8ba -- performance-budgets.json
+      - name: Install frozen trees separately
+        run: |
+          (cd base && bash .github/scripts/bun-install.sh --frozen-lockfile)
+          (cd candidate && bash .github/scripts/bun-install.sh --frozen-lockfile)
+      - name: Capture native module selection
+        run: |
+          set -euo pipefail
+          for tree in base candidate; do
+            (cd "$tree/packages/frontend" && bunx expo-modules-autolinking resolve --platform android --json > "$RUNNER_TEMP/$tree-android.json")
+            (cd "$tree/packages/frontend" && bunx expo-modules-autolinking resolve --platform apple --json > "$RUNNER_TEMP/$tree-apple.json")
+          done
+          node - <<'NODE'
+          const fs = require('node:fs'), path = require('node:path');
+          function load(tree, platform) { const json=fs.readFileSync(path.join(process.env.RUNNER_TEMP,`${tree}-${platform}.json`),'utf8').replaceAll(`${process.env.GITHUB_WORKSPACE}/${tree}`,'<project>'); return JSON.parse(json); }
+          for (const platform of ['android','apple']) {
+            const old=load('base',platform), next=load('candidate',platform);
+            const a=new Map(old.modules.map(m=>[m.packageName,m])),b=new Map(next.modules.map(m=>[m.packageName,m]));
+            const changes=[...new Set([...a.keys(),...b.keys()])].filter(k=>JSON.stringify(a.get(k))!==JSON.stringify(b.get(k))).map(name=>({name,from:a.get(name),to:b.get(name)}));
+            console.log(JSON.stringify({platform,changes,extraDependenciesChanged:JSON.stringify(old.extraDependencies)!==JSON.stringify(next.extraDependencies),coreFeaturesChanged:JSON.stringify(old.coreFeatures)!==JSON.stringify(next.coreFeatures)},null,2));
+          }
+          NODE
+      - name: Export baseline and candidate production web
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
+        run: |
+          set -euo pipefail
+          (cd base && bun run --cwd packages/frontend build --clear)
+          (cd candidate && bun run --cwd packages/frontend build --clear)
+      - name: Compare unchanged budgets
+        run: |
+          echo Baseline
+          (cd base && bun scripts/check-web-export-budget.mjs packages/frontend/dist) || true
+          echo Candidate
+          (cd candidate && bun scripts/check-web-export-budget.mjs packages/frontend/dist) || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: owner-sdk-autolinking
+          path: |
+            ${{ runner.temp }}/base-android.json
+            ${{ runner.temp }}/candidate-android.json
+            ${{ runner.temp }}/base-apple.json
+            ${{ runner.temp }}/candidate-apple.json
+          if-no-files-found: warn
+          retention-days: 2
