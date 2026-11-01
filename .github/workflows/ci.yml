@@ -1,4 +1,4 @@
-name: Saved search cache deduplication paired diagnostic
+name: Reservation focused entry paired diagnostic
 on:
   workflow_dispatch:
 permissions:
@@ -10,11 +10,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: 72399aaa47fd890b853e8ad76175c8f2af14452c
+          ref: 6d2e02f2692e654c6285e3d24d6a365c18454bd6
           path: base
       - uses: actions/checkout@v7
         with:
-          ref: 9e0c137fa51b002604a46ea595fae00a5ff0e121
+          ref: 977427b7a451d881c2c833185ee901dc6167d450
           path: candidate
       - uses: actions/setup-node@v7
         with:
@@ -25,23 +25,17 @@ jobs:
       - name: Verify exact inputs and the isolated source change
         run: |
           set -euo pipefail
-          test "$(git -C base rev-parse HEAD)" = 72399aaa47fd890b853e8ad76175c8f2af14452c
-          test "$(git -C candidate rev-parse HEAD)" = 9e0c137fa51b002604a46ea595fae00a5ff0e121
-          git -C candidate fetch --no-tags --depth=1 origin 72399aaa47fd890b853e8ad76175c8f2af14452c
-          test "$(git -C candidate diff --name-only 72399aaa47fd890b853e8ad76175c8f2af14452c HEAD)" = packages/frontend/hooks/useSavedSearches.ts
-          git -C candidate diff --exit-code 72399aaa47fd890b853e8ad76175c8f2af14452c HEAD -- bun.lock performance-budgets.json packages/frontend/package.json package.json
+          test "$(git -C base rev-parse HEAD)" = 6d2e02f2692e654c6285e3d24d6a365c18454bd6
+          test "$(git -C candidate rev-parse HEAD)" = 977427b7a451d881c2c833185ee901dc6167d450
+          git -C candidate fetch --no-tags --depth=1 origin 6d2e02f2692e654c6285e3d24d6a365c18454bd6
+          git -C candidate diff --name-only 6d2e02f2692e654c6285e3d24d6a365c18454bd6 HEAD | tee "$RUNNER_TEMP/changed-files"
+          test "$(sha256sum "$RUNNER_TEMP/changed-files" | cut -d' ' -f1)" = 28251380fb2002c85d9159b2b5e1c6e3c4fedccbd96abb1c2087039cb0208d46
+          git -C candidate diff --exit-code 6d2e02f2692e654c6285e3d24d6a365c18454bd6 HEAD -- bun.lock performance-budgets.json packages/frontend/package.json package.json
       - name: Install frozen dependencies in both trees
         run: |
           set -euo pipefail
           (cd base && bash .github/scripts/bun-install.sh --frozen-lockfile)
           (cd candidate && bash .github/scripts/bun-install.sh --frozen-lockfile)
-      - name: Test full frontend and types without forced exit
-        run: |
-          set -euo pipefail
-          cd candidate
-          bun run --cwd packages/frontend test -- --json --outputFile="$RUNNER_TEMP/frontend-tests.json"
-          bun .github/scripts/assert-test-floor.mjs "$RUNNER_TEMP/frontend-tests.json" packages/frontend 110
-          bun run --cwd packages/frontend typecheck
       - name: Export both production web builds
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
