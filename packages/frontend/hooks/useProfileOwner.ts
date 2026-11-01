@@ -55,6 +55,8 @@ export function useProfileOwner(): ProfileOwner | null {
       (bearerUser !== null && bearerUser !== userId)
     ) {
       current.current = null;
+      // Publish only committed owners: abandoned renders must not invalidate another screen.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOwner(null);
       return;
     }

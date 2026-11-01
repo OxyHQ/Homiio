@@ -29,6 +29,7 @@ let useProfileStore: typeof import('../store/profileStore').useProfileStore;
 let bindApiToOxy: typeof import('../utils/api').bindApiToOxy;
 let requests: string[] = [];
 let holdA: ((response: ServerResponse) => void) | null = null;
+let holdB: ((response: ServerResponse) => void) | null = null;
 let statusA = 200;
 
 beforeAll(async () => {
@@ -50,6 +51,10 @@ beforeAll(async () => {
       res.write('{"success":true,"data":');
       holdA(res);
       holdA = null;
+    } else if (who === 'B' && holdB) {
+      res.write('{"success":true,"data":');
+      holdB(res);
+      holdB = null;
     } else {
       res.end(
         JSON.stringify({ success: true, data: { oxyUserId: who, note: `${who}-${ordinal}` } }),
@@ -66,6 +71,7 @@ beforeAll(async () => {
 beforeEach(() => {
   requests = [];
   holdA = null;
+  holdB = null;
   statusA = 200;
   client = new QueryClient({
     defaultOptions: {
@@ -180,6 +186,33 @@ it('rejects the first A result after A-to-B-to-A commits', async () => {
   expect(useProfileStore.getState().profile).toEqual(
     expect.objectContaining({ oxyUserId: 'A', note: 'A-2' }),
   );
+});
+
+it('does not clear B loading while B is still waiting after A fails late', async () => {
+  statusA = 500;
+  const heldA = heldRequest();
+  const heldB = new Promise<ServerResponse>((resolve) => {
+    holdB = resolve;
+  });
+  const fetchProfile = jest.spyOn(useProfileStore.getState(), 'fetchProfile');
+  const view = renderHook(() => useProfile(), { wrapper });
+  const responseA = await heldA;
+  const pendingA = fetchProfile.mock.results[0].value.catch(() => undefined);
+  switchTo('B', () => view.rerender(undefined));
+  const responseB = await heldB;
+  const pendingB = fetchProfile.mock.results[1].value;
+  await act(async () => {
+    responseA.end(`${JSON.stringify({ oxyUserId: 'A' })}}`);
+    await pendingA;
+  });
+  expect(useProfileStore.getState().isLoading).toBe(true);
+  expect(useProfileStore.getState().profileRequest?.owner.userId).toBe('B');
+  await act(async () => {
+    responseB.end(`${JSON.stringify({ oxyUserId: 'B' })}}`);
+    await pendingB;
+  });
+  await waitFor(() => expect(view.result.current.profile?.oxyUserId).toBe('B'));
+  expect(useProfileStore.getState().isLoading).toBe(false);
 });
 
 it('preserves sub-only bearer compatibility when the returned profile matches', async () => {
