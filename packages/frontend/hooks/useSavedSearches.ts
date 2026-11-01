@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { SavedSearch, SavedSearchFilters } from '@/store/savedSearchesStore';
 import { toast } from '@oxy.so/bloom/toast';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services/ui/client';
-import { api, ApiError, isBoundSubjectUnavailable } from '@/utils/api';
+import { api, ApiError, isBoundOxyInstance, isBoundSubjectUnavailable } from '@/utils/api';
 import {
   accountOwnerKey,
   assertAccountOwner,
@@ -263,7 +263,10 @@ function hasVerifiedSavedSearches(client: QueryClient, owner: AccountOwner | nul
   const query = client.getQueryCache().find({ queryKey: savedSearchesKeyFor(owner), exact: true });
   const binding = query && savedSearchOwners.get(query);
   return Boolean(
-    binding?.data && query?.state.data === binding.data && isExactAccountProjection(binding.owner),
+    binding?.data &&
+      query?.state.data === binding.data &&
+      isBoundOxyInstance(binding.owner.oxyServices) &&
+      isExactAccountProjection(binding.owner),
   );
 }
 
@@ -295,10 +298,21 @@ function savedSearchesQueryOptions(owner: AccountOwner | null, client: QueryClie
   };
 }
 
+function useBoundSavedSearchesQuery(owner: AccountOwner | null, client: QueryClient) {
+  const query = useQuery(savedSearchesQueryOptions(owner, client));
+  const verified = hasVerifiedSavedSearches(client, owner);
+  useEffect(() => {
+    if (owner && !verified && query.status === 'success' && query.fetchStatus === 'idle') {
+      void query.refetch({ cancelRefetch: false });
+    }
+  }, [owner, verified, query.status, query.fetchStatus, query.refetch]);
+  return { query, verified };
+}
+
 function ownerIsBound(owner: AccountOwner | null): boolean {
   try {
     assertAccountOwner(owner);
-    return true;
+    return isBoundOxyInstance(owner.oxyServices);
   } catch {
     return false;
   }
@@ -308,7 +322,12 @@ function ownerIsBound(owner: AccountOwner | null): boolean {
 export function savedSearchesReading(client: QueryClient, userId: string | undefined) {
   for (const query of client.getQueryCache().findAll({ queryKey: SAVED_SEARCHES_KEY })) {
     const binding = savedSearchOwners.get(query);
-    if (!binding || binding.owner.userId !== userId || !isExactAccountProjection(binding.owner))
+    if (
+      !binding ||
+      binding.owner.userId !== userId ||
+      !isBoundOxyInstance(binding.owner.oxyServices) ||
+      !isExactAccountProjection(binding.owner)
+    )
       continue;
     const verified = Boolean(binding.data && query.state.data === binding.data);
     return {
@@ -392,9 +411,8 @@ export const usePrimarySavedArea = (): PrimarySavedArea => {
   const { isAuthenticated } = useOxy();
   const { owner } = useAccountOwnerGuard();
   const client = useQueryClient();
-  const query = useQuery(savedSearchesQueryOptions(owner, client));
+  const { query, verified } = useBoundSavedSearchesQuery(owner, client);
   const valid = Boolean(owner);
-  const verified = hasVerifiedSavedSearches(client, owner);
   const unavailable = isBoundSubjectUnavailable() || (!verified && query.fetchStatus === 'paused');
   return useMemo(
     () =>
@@ -475,8 +493,7 @@ export const useSavedSearches = (): UseSavedSearches => {
    * sits behind `oxy.auth()` and `utils/api.ts` sends no `Authorization` header
    * when there is no token, which would otherwise 401-spam).
    */
-  const listQuery = useQuery(savedSearchesQueryOptions(owner, queryClient));
-  const verified = hasVerifiedSavedSearches(queryClient, owner);
+  const { query: listQuery, verified } = useBoundSavedSearchesQuery(owner, queryClient);
 
   // When logged out the query is disabled and never resolves, so fall back to a
   // stable empty list rather than leaving `searches` undefined. Memoised on the

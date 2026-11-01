@@ -712,3 +712,53 @@ it('reports a paused unbound hydration as unavailable and recovers on reconnect'
   await waitFor(() => expect(restored.result.current.saved.searches[0]?.id).toBe('watch-A'));
   expect(restored.result.current.saved.error).toBeNull();
 });
+
+it('recovers from a cache publication that does not match the verified object', async () => {
+  const view = renderHook(() => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }), {
+    wrapper,
+  });
+  await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
+  const query = client.getQueryCache().find({ queryKey: ['savedSearches'] });
+  expect(query).toBeDefined();
+  shouldHoldA = true;
+  act(() => {
+    client.setQueryData(query!.queryKey, [{ id: 'unattributed', name: 'unknown' }]);
+  });
+  await waitFor(() => expect(holdA).toBeDefined());
+  expect(view.result.current.saved.searches).toEqual([]);
+  expect(view.result.current.primary).toEqual({ selection: null, pending: true });
+  expect(savedSearchesReading(client, 'A').data).toBeUndefined();
+  await act(async () => {
+    holdA?.end(
+      JSON.stringify({
+        data: [
+          {
+            id: 'watch-A',
+            name: 'A private watch',
+            query: 'A',
+            location,
+            locationStatus: 'resolved',
+            isPrimaryArea: true,
+          },
+        ],
+      }),
+    );
+  });
+  await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
+  expect(seen.filter((request) => request.method === 'GET')).toHaveLength(2);
+});
+
+it('does not read an old instance cache when the linked API is rebound', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  const retainedLookup = view.result.current.getSearchById;
+  const replacement = new OxyServices({ baseURL: mockOrigin });
+  replacement.session.setAccessToken(token('A'));
+  act(() => {
+    bind(replacement);
+    expect(savedSearchesReading(client, 'A').data).toBeUndefined();
+    expect(retainedLookup('watch-A')).toBeUndefined();
+    bind(oxy);
+  });
+  replacement.dispose();
+});
