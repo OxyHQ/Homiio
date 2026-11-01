@@ -111,7 +111,12 @@ import { useProfileStore } from '@/store/profileStore';
 import { toast } from '@oxy.so/bloom/toast';
 
 let client: QueryClient;
+const originalConsoleError = console.error.bind(console);
 beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation((...args) => {
+    if (String(args[0]).includes('not wrapped in act')) originalConsoleError('ACT_WARNING_TEST', expect.getState().currentTestName);
+    originalConsoleError(...args);
+  });
   jest.clearAllMocks();
   mockAccount = 'A';
   useProfileStore.setState({
