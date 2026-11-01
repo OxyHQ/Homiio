@@ -50,6 +50,9 @@ let shouldHoldA = false;
 let shouldHoldB = false;
 let nameA = 'A private watch';
 let allowPutA = false;
+let holdPost: ServerResponse | undefined;
+let shouldHoldPost = false;
+let deletedA = false;
 let useSavedSearches: typeof import('../hooks/useSavedSearches').useSavedSearches;
 let usePrimarySavedArea: typeof import('../hooks/useSavedSearches').usePrimarySavedArea;
 let savedSearchesReading: typeof import('../hooks/useSavedSearches').savedSearchesReading;
@@ -77,8 +80,21 @@ beforeAll(async () => {
       });
       req.on('end', () => {
         postBodies.push(body);
+        if (shouldHoldPost) {
+          holdPost = res;
+          return;
+        }
         res.end(JSON.stringify({ data: { id: 'new-A', name: 'new A', query: 'apartments' } }));
       });
+      return;
+    }
+    if (req.method === 'DELETE' && owner === 'A') {
+      deletedA = true;
+      res.end('{}');
+      return;
+    }
+    if (req.method === 'GET' && owner === 'A' && deletedA) {
+      res.end(JSON.stringify({ data: [] }));
       return;
     }
     if (req.method === 'PUT' && owner === 'A' && allowPutA) {
@@ -125,6 +141,9 @@ beforeEach(() => {
   holdA = undefined;
   nameA = 'A private watch';
   allowPutA = false;
+  holdPost = undefined;
+  shouldHoldPost = false;
+  deletedA = false;
   mockToast.success.mockClear();
   mockToast.error.mockClear();
   holdB = undefined;
@@ -987,4 +1006,44 @@ it('keeps successful create and delete of different searches while an earlier re
   expect((client.getQueryData(key) as Array<{ id: string }>).map((item) => item.id)).toEqual([
     'new-A',
   ]);
+});
+
+it('keeps both concurrent writes when starting from an unverified cache', async () => {
+  const first = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(first.result.current.searches[0]?.id).toBe('watch-A'));
+  const key = loadedSavedSearchQuery()!.queryKey;
+  first.unmount();
+  client.clear();
+  const source = new QueryClient();
+  source.setQueryData(key, [{ id: 'unverified', name: 'unverified' }]);
+  const blob = JSON.parse(JSON.stringify(dehydrate(source)));
+  source.clear();
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
+  });
+  hydrate(client, blob);
+  shouldHoldA = true;
+  shouldHoldPost = true;
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(holdA).toBeDefined());
+  const stale = holdA!;
+  let creating: Promise<boolean> | undefined;
+  act(() => {
+    creating = view.result.current.saveSearch('new A', 'apartments');
+  });
+  await waitFor(() => expect(holdPost).toBeDefined());
+  shouldHoldA = false;
+  await act(async () => {
+    expect(await view.result.current.deleteSavedSearch('watch-A')).toBe(true);
+  });
+  await waitFor(() => expect(deletedA).toBe(true));
+  await act(async () => {
+    holdPost!.end(JSON.stringify({ data: { id: 'new-A', name: 'new A', query: 'apartments' } }));
+    expect(await creating).toBe(true);
+  });
+  await waitFor(() => expect(view.result.current.searches.map((x) => x.id)).toEqual(['new-A']));
+  await act(async () => {
+    stale.end(JSON.stringify({ data: [{ id: 'watch-A', name: 'A private watch', query: 'A' }] }));
+  });
+  expect((client.getQueryData(key) as Array<{ id: string }>).map((x) => x.id)).toEqual(['new-A']);
 });
