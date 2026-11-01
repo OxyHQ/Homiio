@@ -1115,6 +1115,9 @@
       "following": "{{count}} following"
     },
     "preferencesPage": {
+      "remoteConflict": "As preferências mudaram em outro lugar. Suas alterações foram mantidas; descarte-as para carregar os valores atuais.",
+      "discardAndReload": "Descartar alterações e atualizar",
+      "refreshToSave": "Atualize suas preferências antes de salvar. Verifique sua conexão e tente novamente.",
       "title": "Roommate preferences",
       "eyebrow": "Sharing a place",
       "subtitle": "Let other Homiio users find you when their preferences and yours line up.",
