@@ -1,0 +1,69 @@
+name: Diagnose current Homiio SDK upgrade
+on:
+  push:
+    branches: [codex/homiio-sdk-paired-diagnostic]
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Check out base
+        uses: actions/checkout@v7
+        with:
+          ref: 0fab9c18ac2ddf20d1a7c7c6860523cb5411c194
+          path: baseline
+          persist-credentials: false
+      - name: Check out candidate
+        uses: actions/checkout@v7
+        with:
+          ref: b534d756e64a0560c203eccdb1bf1780799deebc
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - name: Frozen install each exact tree
+        run: |
+          (cd baseline && git rev-parse HEAD && sha256sum bun.lock package.json && bash .github/scripts/bun-install.sh --frozen-lockfile)
+          (cd candidate && git rev-parse HEAD && sha256sum bun.lock package.json && bash .github/scripts/bun-install.sh --frozen-lockfile)
+      - name: Compare route sources
+        run: diff -qr baseline/packages/frontend/app candidate/packages/frontend/app
+      - name: Inspect Expo and React Native selections
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { createRequire } from 'node:module';
+          import { dirname, join, resolve } from 'node:path';
+          function inspect(repository, platform) {
+            const repo = resolve(repository), root = join(repo, 'packages/frontend');
+            const require = createRequire(join(root, 'package.json'));
+            const cli = join(dirname(require.resolve('expo-modules-autolinking/package.json')), 'bin/expo-modules-autolinking.js');
+            const expo = JSON.parse(execFileSync(process.execPath, [cli, 'resolve', '--platform', platform, '--project-root', root, '--json'], { encoding: 'utf8', cwd: root }));
+            const rn = JSON.parse(execFileSync(process.execPath, [cli, 'react-native-config', '--platform', platform === 'apple' ? 'ios' : 'android', '--project-root', root, '--json'], { encoding: 'utf8', cwd: root }));
+            const services = expo.modules.filter(m => m.packageName === '@oxy.so/services').map(m => ({version:m.packageVersion, projects:m.projects, pods:m.pods, modules:m.modules}));
+            if (services.length !== 1 || typeof rn.dependencies !== 'object') throw new Error(`Unexpected resolver selection for ${repository} ${platform}`);
+            const netinfo = rn.dependencies['@react-native-community/netinfo'] ?? null;
+            return JSON.parse(JSON.stringify({services,netinfo}).replaceAll(repo, '<repo>'));
+          }
+          for (const platform of ['android','apple']) console.log(JSON.stringify({platform,before:inspect('baseline',platform),after:inspect('candidate',platform)}));
+          NODE
+      - name: Export and report unchanged budgets
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_ENV: production
+        run: |
+          for tree in baseline candidate; do
+            echo "::group::$tree export and budget (failure is recorded, not a gate)"
+            (cd "$tree" && bun run --cwd packages/frontend build)
+            if (cd "$tree" && bun run check:web-bundle-budget); then
+              echo "$tree budget status: pass"
+            else
+              echo "$tree budget status: fail"
+            fi
+            echo '::endgroup::'
+          done
