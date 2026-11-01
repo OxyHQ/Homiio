@@ -4,7 +4,13 @@ import { createServer, type Server, type ServerResponse } from 'node:http';
 import { dirname, join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react-native';
-import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  dehydrate,
+  hydrate,
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
 import { OxyServices } from '@oxy.so/core';
 
 let mockOrigin = '';
@@ -50,6 +56,10 @@ beforeAll(async () => {
     res.setHeader('Content-Type', 'application/json');
     if (req.method === 'GET' && owner === 'B' && shouldHoldB) {
       holdB = res;
+      return;
+    }
+    if (req.method === 'POST') {
+      res.end(JSON.stringify({ data: { id: 'new-A', name: 'new A', query: 'apartments' } }));
       return;
     }
     if (req.method === 'PUT' && owner === 'A' && allowPutA) {
@@ -296,4 +306,57 @@ it('does not toast or report success when a cache subscriber switches the owner 
   expect(switched).toBe(true);
   expect(mockToast.success).not.toHaveBeenCalled();
   off();
+});
+
+it('saves successfully for the unchanged owner', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  await act(async () => {
+    expect(await view.result.current.saveSearch('new A', 'apartments')).toBe(true);
+  });
+  expect(seen).toContainEqual({
+    method: 'POST',
+    owner: 'A',
+    path: '/api/profiles/me/saved-searches',
+  });
+  expect(view.result.current.searches.map((item) => item.id)).toContain('new-A');
+  expect(mockToast.success).toHaveBeenCalledTimes(1);
+});
+
+it('does not restore an unknown owner binding from serialized paused variables', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  onlineManager.setOnline(false);
+  let pending!: Promise<boolean>;
+  act(() => {
+    pending = view.result.current.saveSearch('new A', 'apartments');
+  });
+  await waitFor(() => expect(view.result.current.isSaving).toBe(true));
+  const paused = client
+    .getMutationCache()
+    .getAll()
+    .find((mutation) => mutation.state.isPaused);
+  expect(paused?.options.mutationFn).toBeDefined();
+  const vars = paused!.state.variables as { ownerKey: string };
+  expect(JSON.parse(vars.ownerKey).every((part: unknown) => typeof part === 'number')).toBe(true);
+  const serialized = JSON.stringify(
+    dehydrate(client, {
+      shouldDehydrateQuery: () => false,
+      shouldDehydrateMutation: (mutation) => mutation === paused,
+    }),
+  );
+  expect(serialized).not.toContain(token('A'));
+  expect(serialized).not.toContain('session-A');
+  const restored = new QueryClient();
+  restored.setMutationDefaults(['saveSearch'], { mutationFn: paused!.options.mutationFn });
+  hydrate(restored, JSON.parse(serialized));
+  switchToB(() => view.rerender(undefined));
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await Promise.all([client.resumePausedMutations(), restored.resumePausedMutations()]);
+    expect(await pending).toBe(false);
+  });
+  expect(restored.getMutationCache().getAll()[0]?.state.status).toBe('error');
+  expect(seen.filter((request) => request.method === 'POST')).toEqual([]);
+  restored.clear();
 });
