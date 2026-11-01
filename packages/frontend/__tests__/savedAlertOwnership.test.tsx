@@ -4,7 +4,7 @@ import { createServer, type Server, type ServerResponse } from 'node:http';
 import { dirname, join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OxyServices } from '@oxy.so/core';
 
 let mockOrigin = '';
@@ -101,6 +101,7 @@ afterEach(() => {
   cleanup();
   client.clear();
   oxy.dispose();
+  onlineManager.setOnline(true);
 });
 afterAll(async () => {
   server.closeAllConnections();
@@ -165,9 +166,12 @@ it.each([false, true])(
       client,
       memoryOnly ? { memoryOnlyRoots: ['savedSearches'] } : undefined,
     );
+    const writes: string[] = [];
     persister.setStorage({
       getItem: async () => null,
-      setItem: async () => {},
+      setItem: async (_key: string, value: string) => {
+        writes.push(value);
+      },
       removeItem: async () => {},
     });
     persister.attach();
@@ -195,7 +199,64 @@ it.each([false, true])(
       await invalidating;
     });
     await waitFor(() => expect(view.result.current.saved.searches).toEqual([]));
+    await persister.whenReady();
+    if (memoryOnly) {
+      expect(writes.length).toBeGreaterThan(0);
+      expect(writes.join(' ')).not.toContain('watch-A');
+      expect(writes.join(' ')).not.toContain(token('A'));
+    }
     view.unmount();
     persister.detach();
   },
 );
+
+it('rejects a retained A alert after an A to B to A transition', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  const update = view.result.current.updateAlertSettings;
+  switchToB(() => view.rerender(undefined));
+  act(() => {
+    oxy.session.setAccessToken(token('A'));
+    mockAuth.user = { id: 'A' };
+    mockAuth.activeSessionId = 'session-A';
+    view.rerender(undefined);
+  });
+  await act(async () => {
+    expect(await update('watch-A', { cadence: 'off' })).toBe(false);
+  });
+  expect(seen.filter((request) => request.method === 'PUT')).toEqual([]);
+});
+
+it('does not resume an A save with the B bearer or show it as B pending', async () => {
+  const view = renderHook(() => useSavedSearches(), { wrapper });
+  await waitFor(() => expect(view.result.current.searches[0]?.id).toBe('watch-A'));
+  onlineManager.setOnline(false);
+  let pending!: Promise<boolean>;
+  act(() => {
+    pending = view.result.current.saveSearch('new A', 'apartments');
+  });
+  await waitFor(() => expect(view.result.current.isSaving).toBe(true));
+  switchToB(() => view.rerender(undefined));
+  expect(view.result.current.isSaving).toBe(false);
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await client.resumePausedMutations();
+    expect(await pending).toBe(false);
+  });
+  expect(seen.filter((request) => request.method === 'POST')).toEqual([]);
+});
+
+it('does not treat an opaque bearer as an empty verified saved-search list', async () => {
+  const view = renderHook(() => ({ saved: useSavedSearches(), primary: usePrimarySavedArea() }), {
+    wrapper,
+  });
+  await waitFor(() => expect(view.result.current.saved.searches[0]?.id).toBe('watch-A'));
+  act(() => {
+    oxy.session.setAccessToken('opaque-bearer');
+    view.rerender(undefined);
+  });
+  expect(view.result.current.saved.searches).toEqual([]);
+  expect(view.result.current.saved.error).toBe('search.widgets.savedSearches.loadFailed');
+  expect(view.result.current.saved.isLoading).toBe(false);
+  expect(view.result.current.primary).toEqual({ selection: null, pending: false });
+});
