@@ -10,7 +10,7 @@
  * `DatePicker` move-in date (stored as `YYYY-MM-DD`, converted at the
  * boundary), `Chip` option rows, `Switch`, and a `toast` for the save outcome.
  */
-import React, { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -32,8 +32,8 @@ import { LeaseDuration } from '@homiio/shared-types/common';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
+import { ProfileOwnerChangedError } from '@/hooks/useProfileOwner';
 import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
-import { useProfileStore } from '@/store/profileStore';
 import { spacing } from '@/constants/styles';
 import { RiAccountCircleLine } from '@oxy.so/bloom/icons/RiAccountCircleLine';
 import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
@@ -248,7 +248,10 @@ export default function RoommatePreferencesPage() {
   const queryClient = useQueryClient();
   const [roommateEnabled, setRoommateEnabled] = useState(false);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const { profile, hasProfile } = useProfile();
+  const { profile, hasProfile, refreshProfile, isProfileOwnerCurrent } = useProfile();
+  const refreshOwners = useRef(
+    new WeakMap<object, { refresh: typeof refreshProfile; isCurrent: () => boolean }>(),
+  );
 
   const profileSettingsKey = hasProfile ? profile : null;
   const [prevProfileSettingsKey, setPrevProfileSettingsKey] = useState(profileSettingsKey);
@@ -279,15 +282,28 @@ export default function RoommatePreferencesPage() {
 
   const saveMutation = useMutation({
     mutationKey: ['roommates', 'savePreferences'],
-    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) =>
-      roommateService.updateRoommatePreferences(vars.preferences, vars.enabled),
-    onSuccess: async () => {
-      await useProfileStore.getState().fetchProfile();
+    mutationFn: async (vars: { preferences: RoommateMatchingPreferences; enabled: boolean }) => {
+      if (!refreshOwners.current.get(vars)?.isCurrent()) throw new ProfileOwnerChangedError();
+      return roommateService.updateRoommatePreferences(vars.preferences, vars.enabled);
+    },
+    onSuccess: async (_result, variables) => {
+      const guard = refreshOwners.current.get(variables);
+      if (!guard?.isCurrent()) return;
+      try {
+        await guard.refresh();
+      } catch (error) {
+        if (error instanceof ProfileOwnerChangedError) return;
+        throw error;
+      }
+      if (!guard.isCurrent()) return;
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
+      if (!guard.isCurrent()) return;
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'] });
+      if (!guard.isCurrent()) return;
       toast.success(t('roommates.alert.preferencesSaved'));
     },
-    onError: () => {
+    onError: (_error, variables) => {
+      if (!refreshOwners.current.get(variables)?.isCurrent()) return;
       toast.error(t('roommates.alert.preferencesFailed'));
     },
   });
@@ -299,7 +315,12 @@ export default function RoommatePreferencesPage() {
   });
 
   const handleSave = () => {
-    saveMutation.mutate({ preferences: toPreferences(form), enabled: roommateEnabled });
+    const variables = { preferences: toPreferences(form), enabled: roommateEnabled };
+    refreshOwners.current.set(variables, {
+      refresh: refreshProfile,
+      isCurrent: isProfileOwnerCurrent,
+    });
+    saveMutation.mutate(variables);
   };
 
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
