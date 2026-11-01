@@ -37,7 +37,7 @@ import { useAuth, useOxy } from '@oxy.so/services/ui/client';
 
 import { AliaAvatarIcon } from '@alia.onl/sdk/avatar';
 import { LogoIcon } from '@/assets/logo';
-import { useAskAgent } from '@alia.onl/sdk';
+import { useAskAgent } from '@alia.onl/sdk/ask/eager';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';

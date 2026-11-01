@@ -24,7 +24,7 @@
  */
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useAskAgent } from '@alia.onl/sdk';
+import { useAskAgent } from '@alia.onl/sdk/ask/eager';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';

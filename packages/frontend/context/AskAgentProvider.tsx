@@ -19,13 +19,10 @@
  * providers the cards read (saved homes).
  */
 
-import {
-  ALIA_CHARACTER_RUNTIME_URL,
-  type AliaAsk,
-  AliaAskProvider,
-  AliaRuntimeProvider,
-  type AliaSuggestion,
-} from '@alia.onl/sdk';
+import type { AliaSuggestion } from '@alia.onl/sdk';
+import { type AliaAsk, AliaAskProvider } from '@alia.onl/sdk/ask/eager';
+import { ALIA_CHARACTER_RUNTIME_URL } from '@alia.onl/sdk/character';
+import { AliaRuntimeProvider } from '@alia.onl/sdk/runtime';
 import { AgentAvatarProvider } from '@oxy.so/bloom/agent-avatar';
 import type React from 'react';
 import { useCallback, useMemo, useRef } from 'react';
