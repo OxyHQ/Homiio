@@ -265,6 +265,24 @@ jobs:
       - name: Verify Oxy dependency health
         run: bun run doctor:oxy
 
+      - name: Verify Android device session module autolinking
+        run: |
+          node -e '
+            const { createRequire } = require("node:module");
+            const { resolve } = require("node:path");
+            const fromApp = createRequire(resolve("packages/frontend/package.json"));
+            const expected = fromApp("./package.json").dependencies?.["@oxy.so/services"];
+            const installed = fromApp("@oxy.so/services/package.json").version;
+            if (typeof expected !== "string" || expected !== installed) {
+              console.error("Installed Oxy Services does not match the app declaration");
+              process.exit(1);
+            }
+          '
+          bun run oxy-doctor-expo-android --project-root=packages/frontend \
+            --require-source=SharedDeviceSessionPublish.kt \
+            --require-source=SharedDeviceSessionSweep.kt \
+            --require-source=OxyDeviceSessionStore.kt
+
       # `shared-types` is built by the root postinstall; `listing-providers` is
       # not, and the backend typecheck resolves it through project references —
       # without this, tsc reports TS6305 in files nobody touched, which reads
