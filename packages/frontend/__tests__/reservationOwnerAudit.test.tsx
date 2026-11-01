@@ -8,6 +8,11 @@ import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react
 import { OxyServices } from '@oxy.so/core';
 
 let mockOrigin = '';
+const mockConfirm = jest.fn();
+const mockToast = { success: jest.fn(), error: jest.fn() };
+jest.mock('@oxy.so/bloom/surfaces', () => ({ confirm: mockConfirm }));
+jest.mock('@oxy.so/bloom/toast', () => ({ toast: mockToast }));
+jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 const mockAuth = {
   isAuthenticated: true,
   user: { id: 'A' },
@@ -27,6 +32,7 @@ let useUpdate: typeof import('../hooks/useReservationQueries').useUpdateReservat
 let useCreate: typeof import('../hooks/useReservationQueries').useCreateReservation;
 let useDetail: typeof import('../hooks/useReservationQueries').useReservationQuery;
 let useAvailability: typeof import('../hooks/useReservationQueries').usePropertyAvailabilityQuery;
+let useDecision: typeof import('../hooks/useReservationDecision').useReservationDecision;
 let requests: Array<{ owner: string; method: string; path: string }> = [];
 let session = 'A';
 let holdB = false;
@@ -39,7 +45,12 @@ function QueryScreen() {
     { asHost: true, limit: 100, status: undefined },
     { enabled: Boolean(session) },
   );
-  return <Text testID="reservation">{query.data?.items[0]?.id ?? 'none'}</Text>;
+  return (
+    <>
+      <Text testID="reservation">{query.data?.items[0]?.id ?? 'none'}</Text>
+      <Text testID="reservation-status">{`${query.status}:${query.fetchStatus}:${query.error?.message ?? ''}`}</Text>
+    </>
+  );
 }
 function view() {
   return (
@@ -102,9 +113,13 @@ beforeAll(async () => {
     useReservationQuery: useDetail,
     usePropertyAvailabilityQuery: useAvailability,
   } = jest.requireActual('../hooks/useReservationQueries'));
+  useDecision = jest.requireActual('../hooks/useReservationDecision').useReservationDecision;
 });
 beforeEach(() => {
   requests = [];
+  mockConfirm.mockReset();
+  mockToast.success.mockReset();
+  mockToast.error.mockReset();
   session = 'A';
   holdB = false;
   heldB = undefined;
@@ -141,9 +156,16 @@ afterAll(async () => {
 });
 it('hides the A list while B loads, then presents B data', async () => {
   const screen = render(view());
-  await waitFor(() =>
-    expect(screen.getByTestId('reservation').props.children).toBe('A-private-reservation'),
-  );
+  try {
+    await waitFor(
+      () => expect(screen.getByTestId('reservation').props.children).toBe('A-private-reservation'),
+      { timeout: 5000 },
+    );
+  } catch {
+    throw new Error(
+      JSON.stringify({ requests, status: screen.getByTestId('reservation-status').props.children }),
+    );
+  }
   holdB = true;
   await act(async () => {
     oxy.session.setAccessToken(token('B'));
@@ -397,4 +419,114 @@ it('keeps reservation query keys and paused action inputs out of Services shared
       await client.resumePausedMutations();
     });
   }
+});
+
+it('does not execute a host decline confirmation opened by A after B signs in', async () => {
+  let resolveConfirm: (answer: boolean) => void = () => {};
+  mockConfirm.mockImplementation(
+    () =>
+      new Promise<boolean>((resolve) => {
+        resolveConfirm = resolve;
+      }),
+  );
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  const hook = renderHook(() => useDecision({ id: 'private-A', status: 'pending' } as never), {
+    wrapper,
+  });
+  await act(async () => {
+    void hook.result.current.decide('declined' as never);
+  });
+  expect(mockConfirm).toHaveBeenCalled();
+  await act(async () => {
+    oxy.session.setAccessToken(token('B'));
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    hook.rerender(undefined);
+  });
+  await act(async () => {
+    resolveConfirm(true);
+  });
+  expect(requests.filter((r) => r.method === 'PATCH')).toEqual([]);
+  expect(mockToast.success).not.toHaveBeenCalled();
+  expect(mockToast.error).not.toHaveBeenCalled();
+});
+it('permits a confirmed host decline for the same owner', async () => {
+  allowPatch = true;
+  mockConfirm.mockResolvedValue(true);
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  const hook = renderHook(() => useDecision({ id: 'private-A', status: 'pending' } as never), {
+    wrapper,
+  });
+  await act(async () => {
+    await hook.result.current.decide('declined' as never);
+  });
+  expect(requests).toContainEqual({
+    owner: 'A',
+    method: 'PATCH',
+    path: '/api/reservations/private-A',
+  });
+  expect(mockToast.success).toHaveBeenCalled();
+});
+
+it('creates a reservation for the unchanged owner', async () => {
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  const hook = renderHook(() => useCreate(), { wrapper });
+  let result: unknown;
+  await act(async () => {
+    result = await hook.result.current.mutateAsync({
+      propertyId: 'property-1',
+      checkIn: '2026-12-01',
+      checkOut: '2026-12-02',
+      guestCount: 2,
+    } as never);
+  });
+  expect(result).toMatchObject({ id: 'created' });
+  expect(requests).toContainEqual({ owner: 'A', method: 'POST', path: '/api/reservations' });
+});
+it('does not replay a paused creation after a switch to B', async () => {
+  client.clear();
+  client = new QueryClient({
+    defaultOptions: { mutations: { retry: false, gcTime: 0, networkMode: 'online' } },
+  });
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  const hook = renderHook(() => useCreate(), { wrapper });
+  await act(async () => {
+    onlineManager.setOnline(false);
+    void hook.result.current
+      .mutateAsync({
+        propertyId: 'property-A',
+        checkIn: '2026-12-01',
+        checkOut: '2026-12-02',
+        guestCount: 2,
+      } as never)
+      .catch(() => {});
+  });
+  await waitFor(() =>
+    expect(
+      client
+        .getMutationCache()
+        .getAll()
+        .some((m) => m.state.isPaused),
+    ).toBe(true),
+  );
+  await act(async () => {
+    oxy.session.setAccessToken(token('B'));
+    mockAuth.user = { id: 'B' };
+    mockAuth.activeSessionId = 'session-B';
+    hook.rerender(undefined);
+  });
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await client.resumePausedMutations();
+  });
+  expect(requests.filter((r) => r.method === 'POST')).toEqual([]);
+  expect(hook.result.current.isPending).toBe(false);
 });
