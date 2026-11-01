@@ -363,7 +363,9 @@ it('does not publish an older same-owner GET after a completed store update', as
     oldResponse.end(`${JSON.stringify({ oxyUserId: 'A', note: 'old-before-update' })}}`);
     await expect(first).rejects.toThrow('A newer profile request superseded this one');
     await waitFor(() => {
-      const query = client.getQueryCache().find({ queryKey: ['profile', 'me', 'session-A'] });
+      const query = client
+        .getQueryCache()
+        .find({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'], exact: false });
       expect(query?.state.fetchStatus).toBe('idle');
     });
   });
@@ -394,9 +396,11 @@ it('does not publish the older of two same-owner refreshes', async () => {
     await expect(older).rejects.toThrow('A newer profile request superseded this one');
   });
   expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
-  const cached = client.getQueryCache().findAll({ queryKey: ['profile', 'me', 'session-A'] });
+  const cached = client
+    .getQueryCache()
+    .findAll({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'] });
   expect(cached).toHaveLength(1);
-  expect(cached[0].state.data).toEqual(expect.objectContaining({ note: 'A-3' }));
+  expect(cached[0].state.data).toBe(true);
 });
 
 it('does not publish an older success when the newer refresh failed', async () => {
@@ -420,9 +424,11 @@ it('does not publish an older success when the newer refresh failed', async () =
     await expect(older).rejects.toThrow('A newer profile request superseded this one');
   });
   expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-1' }));
-  const cached = client.getQueryCache().findAll({ queryKey: ['profile', 'me', 'session-A'] });
+  const cached = client
+    .getQueryCache()
+    .findAll({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'] });
   expect(cached).toHaveLength(1);
-  expect(cached[0].state.data).toEqual(expect.objectContaining({ note: 'A-1' }));
+  expect(cached[0].state.data).toBe(true);
   expect(useProfileStore.getState().error).not.toBeNull();
 });
 
@@ -509,7 +515,7 @@ it('keeps the actual write error when a later read completes first', async () =>
   await act(async () => {
     writeResponse.end(`${JSON.stringify({ oxyUserId: 'A' })}}`);
     const error = await write.catch((reason) => reason);
-    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) throw new Error('Expected the write to reject with an error');
     expect(error.message).not.toContain('superseded');
   });
   expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
@@ -534,8 +540,9 @@ it('retains the underlying failure on a superseded read without replacing the ne
   await act(async () => {
     oldResponse.end(`${JSON.stringify({ oxyUserId: 'A' })}}`);
     const error = await old.catch((reason) => reason);
+    if (!(error instanceof Error)) throw new Error('Expected the read to reject with an error');
     expect(error.message).toBe('A newer profile request superseded this one');
-    expect(error.cause).toBeInstanceOf(Error);
+    expect((error as Error & { cause?: unknown }).cause).toBeInstanceOf(Error);
   });
   expect(view.result.current.profile).toEqual(expect.objectContaining({ note: 'A-3' }));
 });

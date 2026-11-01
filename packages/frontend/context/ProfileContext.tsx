@@ -43,7 +43,13 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const sameBinding = Boolean(
     owner && binding?.userId === owner.userId && binding.sessionId === owner.sessionId,
   );
-  const queryKey = ['profile', 'me', owner?.sessionId ?? null, owner?.revision ?? null] as const;
+  const queryKey = [
+    'profile',
+    'me',
+    'provider-v2',
+    owner?.sessionId ?? null,
+    owner?.revision ?? null,
+  ] as const;
   const configuredRetry =
     queryClient.getQueryDefaults(queryKey).retry ?? queryClient.getDefaultOptions().queries?.retry;
   useLayoutEffect(
@@ -55,15 +61,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   // A committed owner revision keeps a late query result or error separate
   // from the next projection, even when the same session returns later.
-  const sessionProfile = useQuery({
+  useQuery({
     queryKey,
     queryFn: () => {
       if (!owner) throw new ProfileOwnerChangedError();
       return readCurrentProfile(owner)
-        .then(({ profile, request }) => {
+        .then(({ request }) => {
           if (useProfileStore.getState().latestProfileRequest !== request)
             throw new ProfileRequestSupersededError();
-          return profile;
+          return true;
         })
         .catch((loadError: unknown) => {
           if (owner.isCurrent() && !(loadError instanceof ProfileRequestSupersededError))
@@ -78,21 +84,23 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       if (typeof configuredRetry === 'number') return count < configuredRetry;
       return configuredRetry ?? (isServer ? false : count < 3);
     },
-    initialData: sameBinding ? storedProfile : undefined,
+    initialData: sameBinding ? true : undefined,
     initialDataUpdatedAt: sameBinding ? profileUpdatedAt : undefined,
   });
 
   // A cached profile is reusable only for the same observed user and session.
   // That local match is not an actor authorization check.
-  const profile =
-    owner?.isCurrent() && sameBinding && sessionProfile.data !== undefined ? storedProfile : null;
+  const profile = owner?.isCurrent() && sameBinding ? storedProfile : null;
   const refreshProfile = useCallback(async () => {
     if (!owner?.isCurrent()) throw new ProfileOwnerChangedError();
     const { profile, request } = await readCurrentProfile(owner);
     if (!owner.isCurrent()) throw new ProfileOwnerChangedError();
     if (useProfileStore.getState().latestProfileRequest !== request)
       throw new ProfileRequestSupersededError();
-    queryClient.setQueryData(['profile', 'me', owner.sessionId, owner.revision], profile);
+    queryClient.setQueryData(
+      ['profile', 'me', 'provider-v2', owner.sessionId, owner.revision],
+      true,
+    );
     return profile;
   }, [owner, queryClient]);
   const isProfileProjectionCurrent = useCallback(() => Boolean(owner?.isCurrent()), [owner]);

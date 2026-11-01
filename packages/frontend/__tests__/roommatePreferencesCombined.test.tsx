@@ -8,6 +8,7 @@ const mockSave = jest.fn();
 const mockPreferences = jest.fn();
 const mockStatus = jest.fn();
 const mockProfile = jest.fn();
+const mockProfileUpdate = jest.fn();
 const mockSetProfile = jest.fn();
 let mockOxy: OxyServices;
 const mockAuth = {
@@ -21,7 +22,10 @@ const token = (id: string, subOnly = false) =>
 jest.mock('@oxy.so/services/ui/client', () => ({ useOxy: () => mockAuth }));
 jest.mock('@/services/profileService', () => ({
   __esModule: true,
-  default: { getOrCreateProfile: (...args: unknown[]) => mockProfile(...args) },
+  default: {
+    getOrCreateProfile: (...args: unknown[]) => mockProfile(...args),
+    updateMyProfile: (...args: unknown[]) => mockProfileUpdate(...args),
+  },
 }));
 jest.mock('@/services/roommateService', () => ({
   roommateService: {
@@ -341,4 +345,65 @@ it('does not toast for an accepted A save after switching during settings invali
   expect(toast.success).not.toHaveBeenCalled();
   expect(toast.error).not.toHaveBeenCalled();
   invalidate.mockRestore();
+});
+
+it('keeps profile data out of the query cache when a write settles before query publication', async () => {
+  let finishRead!: (value: unknown) => void;
+  mockProfile.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finishRead = resolve;
+    }),
+  );
+  mockProfileUpdate.mockResolvedValueOnce({ oxyUserId: 'A', note: 'accepted-write' });
+  const events: string[] = [];
+  const unsubscribe = client.getQueryCache().subscribe((event) => {
+    if (event.type === 'updated' && event.query.state.status === 'success')
+      events.push('query-success');
+  });
+  function Capture() {
+    useProfile();
+    return null;
+  }
+  render(wrap(<Capture />));
+  await waitFor(() => expect(mockProfile).toHaveBeenCalledTimes(1));
+  const owner = useProfileStore.getState().latestProfileRequest?.owner;
+  if (!owner) throw new Error('Expected a pending profile owner');
+  let resolveWrite!: () => void;
+  let rejectWrite!: (error: unknown) => void;
+  const written = new Promise<void>((resolve, reject) => {
+    resolveWrite = resolve;
+    rejectWrite = reject;
+  });
+  function startAfter(count: number) {
+    queueMicrotask(() => {
+      if (count) startAfter(count - 1);
+      else {
+        events.push('write-start');
+        void useProfileStore
+          .getState()
+          .updateProfile({}, owner)
+          .then(() => {
+            events.push('write-accepted');
+            resolveWrite();
+          }, rejectWrite);
+      }
+    });
+  }
+  await act(async () => {
+    finishRead({ oxyUserId: 'A', note: 'old-read' });
+    startAfter(2);
+    await written;
+    await waitFor(() => expect(events).toContain('query-success'));
+  });
+  expect(events.indexOf('write-start')).toBeLessThan(events.indexOf('write-accepted'));
+  expect(events.indexOf('write-accepted')).toBeLessThan(events.indexOf('query-success'));
+  expect(useProfileStore.getState().profile).toEqual(
+    expect.objectContaining({ note: 'accepted-write' }),
+  );
+  const entries = client
+    .getQueryCache()
+    .findAll({ queryKey: ['profile', 'me', 'provider-v2', 'session-A'] });
+  expect(entries).toHaveLength(1);
+  expect(entries[0].state.data).toBe(true);
+  unsubscribe();
 });
