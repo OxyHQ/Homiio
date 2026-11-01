@@ -5,7 +5,7 @@ import { confirm } from '@oxy.so/bloom/surfaces';
 import type { Reservation } from '@homiio/shared-types';
 import { ReservationStatus } from '@homiio/shared-types/reservation';
 import { useUpdateReservation } from '@/hooks/useReservationQueries';
-import { accountOwnerKey, useAccountOwnerGuard } from '@/hooks/useAccountOwner';
+import { accountOwnerKey } from '@/hooks/useAccountOwner';
 
 type Decision = ReservationStatus.CONFIRMED | ReservationStatus.DECLINED;
 
@@ -16,7 +16,7 @@ type Decision = ReservationStatus.CONFIRMED | ReservationStatus.DECLINED;
 export function useReservationDecision(reservation: Reservation) {
   const { t } = useTranslation();
   const mutation = useUpdateReservation(reservation.id);
-  const { owner, isCurrent } = useAccountOwnerGuard();
+  const { owner, isCurrent } = mutation;
   const [, , epoch, instance, generation] = accountOwnerKey(owner);
   const ownerKey = JSON.stringify([epoch, instance, generation]);
   const [pending, setPending] = useState<{ ownerKey: string; target: Decision } | null>(null);

@@ -31,7 +31,6 @@ import {
 } from '@/components/AvailabilityCalendar';
 import { useStayQuoteBreakdown } from '@/components/PriceBreakdown';
 import { useCreateReservation, usePropertyAvailabilityQuery } from '@/hooks/useReservationQueries';
-import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { formatLocalized } from '@/utils/dateLocale';
 import { useFormatting } from '@/utils/format';
 import { isShortTermRentable } from '@/utils/propertyUtils';
@@ -89,7 +88,8 @@ export function useStayBooking(
   const formatting = useFormatting();
   const router = useRouter();
   const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
-  const { owner, isCurrent } = useAccountOwnerGuard();
+  const createMutation = useCreateReservation();
+  const { owner, isCurrent } = createMutation;
 
   const shortTerm = property?.shortTermRent;
   const nightlyRate = shortTerm?.nightlyRate ?? 0;
@@ -109,8 +109,6 @@ export function useStayBooking(
   const [activeField, setActiveField] = useState<StayDateField | null>(null);
 
   const availabilityQuery = usePropertyAvailabilityQuery(propertyId, { enabled: active });
-  const createMutation = useCreateReservation();
-
   const nights = range
     ? Math.max(0, Math.round((range.checkOut.getTime() - range.checkIn.getTime()) / DAY_MS))
     : 0;

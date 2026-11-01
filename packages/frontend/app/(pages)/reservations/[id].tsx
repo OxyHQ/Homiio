@@ -30,7 +30,6 @@ import { ReservationStatus } from '@homiio/shared-types/reservation';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
 import { useReservationQuery, useUpdateReservation } from '@/hooks/useReservationQueries';
-import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { useOxy } from '@oxy.so/services/ui/client';
 import { PriceBreakdown } from '@/components/PriceBreakdown';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
@@ -76,7 +75,7 @@ export default function ReservationDetailScreen() {
   const reservationQuery = useReservationQuery(id);
   const updateMutation = useUpdateReservation(id ?? '');
   const { profile } = useProfile();
-  const { owner, isCurrent } = useAccountOwnerGuard();
+  const { owner, isCurrent } = updateMutation;
   const { openAccountDialog } = useOxy();
 
   const reservation = reservationQuery.data;

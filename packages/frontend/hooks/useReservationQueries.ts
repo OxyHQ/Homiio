@@ -96,6 +96,8 @@ const reservationOwners = new WeakMap<object, CapturedReservation>();
 type OwnedResult<Input> = {
   mutateAsync: (input: Input) => Promise<Reservation>;
   isPending: boolean;
+  owner: AccountOwner | null;
+  isCurrent: (owner: AccountOwner | null) => boolean;
 };
 
 function useOwnedReservationMutation<Input extends object>(id?: string): OwnedResult<Input> {
@@ -149,6 +151,8 @@ function useOwnedReservationMutation<Input extends object>(id?: string): OwnedRe
   return {
     isPending: Boolean(owner && mutation.isPending && mutation.variables?.ownerKey === ownerKey),
     mutateAsync,
+    owner,
+    isCurrent,
   };
 }
 
