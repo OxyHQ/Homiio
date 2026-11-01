@@ -10,6 +10,7 @@ const mockStatus = jest.fn();
 const mockProfile = jest.fn();
 const mockSetProfile = jest.fn();
 let mockOxy: OxyServices;
+let mockFocus: (() => void) | undefined;
 const mockAuth = {
   oxyServices: null as unknown as OxyServices,
   activeSessionId: 'session-A',
@@ -65,6 +66,15 @@ jest.mock('@/components/ui/EmptyState', () => ({
 }));
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), canGoBack: () => false }),
+  useFocusEffect: (fn: () => void) => {
+    require('react').useEffect(() => {
+      mockFocus = fn;
+      fn();
+      return () => {
+        mockFocus = undefined;
+      };
+    }, [fn]);
+  },
 }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
@@ -99,8 +109,42 @@ jest.mock('@oxy.so/bloom/card', () => ({ Card: require('react-native').View }));
 jest.mock('@oxy.so/bloom/field', () => ({ Field: require('react-native').View }));
 jest.mock('@oxy.so/bloom/chip', () => ({ Chip: () => null }));
 jest.mock('@oxy.so/bloom/date-picker', () => ({ DatePicker: () => null }));
-jest.mock('@oxy.so/bloom/switch', () => ({ Switch: () => null }));
-jest.mock('@oxy.so/bloom/text-field', () => ({ TextFieldInput: () => null }));
+jest.mock('@oxy.so/bloom/switch', () => ({
+  Switch: ({
+    checked,
+    accessibilityLabel,
+    disabled,
+  }: {
+    checked: boolean;
+    accessibilityLabel: string;
+    disabled?: boolean;
+  }) =>
+    require('react').createElement(require('react-native').Switch, {
+      value: checked,
+      accessibilityLabel,
+      disabled,
+      accessibilityState: { disabled },
+    }),
+}));
+jest.mock('@oxy.so/bloom/text-field', () => ({
+  TextFieldInput: ({
+    label,
+    value,
+    disabled,
+    onChangeText,
+  }: {
+    label: string;
+    value: string;
+    disabled?: boolean;
+    onChangeText?: (value: string) => void;
+  }) =>
+    require('react').createElement(require('react-native').TextInput, {
+      accessibilityLabel: label,
+      value,
+      editable: !disabled,
+      onChangeText,
+    }),
+}));
 jest.mock('@oxy.so/bloom/theme', () => ({
   useTheme: () => ({ colors: { textSecondary: '#777' } }),
 }));
@@ -119,7 +163,7 @@ beforeEach(() => {
   mockAccount = 'A';
   client = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: Infinity },
+      queries: { networkMode: 'offlineFirst', retry: false, gcTime: Infinity },
       mutations: { networkMode: 'offlineFirst', retry: false, gcTime: Infinity },
     },
   });
@@ -277,7 +321,7 @@ it('does not enable save when either server read fails', async () => {
   expect(mockSave).not.toHaveBeenCalled();
 });
 
-it('retains fresh same-generation in-memory preferences on remount offline', async () => {
+it('blocks editing when a remount cannot refresh offline', async () => {
   const first = render(wrap(<RoommatePreferencesPage />));
   await waitFor(() =>
     expect(
@@ -291,14 +335,19 @@ it('retains fresh same-generation in-memory preferences on remount offline', asy
     mockStatus.mockRejectedValue(new Error('offline'));
     const second = render(wrap(<RoommatePreferencesPage />));
     await waitFor(() =>
-      expect(
-        second.getByRole('button', { name: 'roommates.preferencesPage.save' }),
-      ).not.toBeDisabled(),
+      expect(second.getByText('roommates.preferencesPage.refreshToSave')).toBeTruthy(),
     );
-    expect(mockPreferences).toHaveBeenCalledTimes(1);
-    fireEvent.press(second.getByRole('button', { name: 'roommates.preferencesPage.save' }));
-    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
-    expect(mockSave.mock.calls[0][0].budget.min).toBe(1234);
+    expect(second.getByRole('button', { name: 'roommates.preferencesPage.save' })).toBeDisabled();
+    expect(second.getAllByLabelText('roommates.preferencesPage.min')[0]).toHaveProp(
+      'value',
+      '1234',
+    );
+    expect(second.getAllByLabelText('roommates.preferencesPage.min')[0]).toHaveProp(
+      'editable',
+      false,
+    );
+    expect(second.getByLabelText('roommates.preferencesPage.enableTitle')).toBeDisabled();
+    expect(mockSave).not.toHaveBeenCalled();
   } finally {
     act(() => onlineManager.setOnline(true));
   }
@@ -338,4 +387,173 @@ it('does not apply a profile refresh that finishes after switching', async () =>
   );
   expect(mockSetProfile).not.toHaveBeenCalled();
   expect(toast.success).not.toHaveBeenCalled();
+});
+
+it('reflects a matching change when returning with a fresh cached entry', async () => {
+  let enabled = false;
+  mockStatus.mockImplementation(async () => ({ hasRoommateMatching: enabled }));
+  const first = render(wrap(<RoommatePreferencesPage />));
+  await waitFor(() =>
+    expect(
+      first.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  first.unmount();
+  enabled = true;
+  const second = render(wrap(<RoommatePreferencesPage />));
+  await waitFor(() => expect(mockStatus.mock.calls.length).toBeGreaterThan(1));
+  await waitFor(() =>
+    expect(second.getByLabelText('roommates.preferencesPage.enableTitle')).toHaveProp(
+      'value',
+      true,
+    ),
+  );
+  await waitFor(() =>
+    expect(
+      second.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  fireEvent.press(second.getByRole('button', { name: 'roommates.preferencesPage.save' }));
+  await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+  expect(mockSave.mock.calls[0][1]).toBe(true);
+});
+
+it('refreshes matching status when the mounted screen regains focus', async () => {
+  let enabled = false;
+  mockStatus.mockImplementation(async () => ({ hasRoommateMatching: enabled }));
+  const screen = render(wrap(<RoommatePreferencesPage />));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  const calls = mockStatus.mock.calls.length;
+  enabled = true;
+  await act(async () => {
+    mockFocus?.();
+  });
+  await waitFor(() => expect(mockStatus.mock.calls.length).toBeGreaterThan(calls));
+  await waitFor(() =>
+    expect(screen.getByLabelText('roommates.preferencesPage.enableTitle')).toHaveProp(
+      'value',
+      true,
+    ),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
+  await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+  expect(mockSave.mock.calls[0][1]).toBe(true);
+});
+
+it('recovers after one of the two reads fails while the other finishes late', async () => {
+  let finish!: (value: unknown) => void;
+  mockPreferences.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  mockStatus.mockRejectedValueOnce(new Error('offline'));
+  const screen = render(wrap(<RoommatePreferencesPage />));
+  await waitFor(() => expect(screen.getByText('roommates.screen.loadError')).toBeTruthy());
+  expect(screen.queryByRole('button', { name: 'roommates.preferencesPage.save' })).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'common.retry' }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  await act(async () => {
+    finish({ budget: { min: 9999 } });
+  });
+  fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
+  await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+  expect(mockSave.mock.calls[0][0].budget.min).toBe(1234);
+});
+
+it('rejects a retained save handler while a focus refresh has started', async () => {
+  const screen = render(wrap(<RoommatePreferencesPage />));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  const button = screen.getByRole('button', { name: 'roommates.preferencesPage.save' });
+  let finish!: (value: unknown) => void;
+  mockStatus.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  act(() => {
+    mockFocus?.();
+    fireEvent.press(button);
+  });
+  expect(mockSave).not.toHaveBeenCalled();
+  await act(async () => {
+    finish({ hasRoommateMatching: true });
+  });
+  await waitFor(() =>
+    expect(screen.getByLabelText('roommates.preferencesPage.enableTitle')).toHaveProp(
+      'value',
+      true,
+    ),
+  );
+});
+
+it('preserves an unsaved budget while refreshing a changed matching status', async () => {
+  let enabled = false;
+  mockStatus.mockImplementation(async () => ({ hasRoommateMatching: enabled }));
+  const screen = render(wrap(<RoommatePreferencesPage />));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  fireEvent.changeText(screen.getAllByLabelText('roommates.preferencesPage.min')[0], '4321');
+  enabled = true;
+  await act(async () => {
+    mockFocus?.();
+  });
+  await waitFor(() =>
+    expect(screen.getByLabelText('roommates.preferencesPage.enableTitle')).toHaveProp(
+      'value',
+      true,
+    ),
+  );
+  expect(screen.getAllByLabelText('roommates.preferencesPage.min')[0]).toHaveProp('value', '4321');
+  fireEvent.press(screen.getByRole('button', { name: 'roommates.preferencesPage.save' }));
+  await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+  expect(mockSave.mock.calls[0][0].budget.min).toBe(4321);
+  expect(mockSave.mock.calls[0][1]).toBe(true);
+});
+
+it('keeps unsaved edits and requires explicit discard after a conflicting remote update', async () => {
+  let budget = 1234;
+  mockPreferences.mockImplementation(async () => ({ budget: { min: budget, max: 9999 } }));
+  const screen = render(wrap(<RoommatePreferencesPage />));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'roommates.preferencesPage.save' }),
+    ).not.toBeDisabled(),
+  );
+  fireEvent.changeText(screen.getAllByLabelText('roommates.preferencesPage.min')[0], '4321');
+  budget = 5678;
+  await act(async () => {
+    mockFocus?.();
+  });
+  await waitFor(() =>
+    expect(screen.getByText('roommates.preferencesPage.remoteConflict')).toBeTruthy(),
+  );
+  expect(screen.getAllByLabelText('roommates.preferencesPage.min')[0]).toHaveProp('value', '4321');
+  expect(screen.getByRole('button', { name: 'roommates.preferencesPage.save' })).toBeDisabled();
+  expect(mockSave).not.toHaveBeenCalled();
+  fireEvent.press(
+    screen.getByRole('button', { name: 'roommates.preferencesPage.discardAndReload' }),
+  );
+  expect(screen.getAllByLabelText('roommates.preferencesPage.min')[0]).toHaveProp('value', '5678');
+  expect(screen.getByRole('button', { name: 'roommates.preferencesPage.save' })).not.toBeDisabled();
 });

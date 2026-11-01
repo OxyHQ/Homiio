@@ -55,6 +55,7 @@ jest.mock('@/components/ui/EmptyState', () => ({
 }));
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), canGoBack: () => false }),
+  useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]),
 }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
