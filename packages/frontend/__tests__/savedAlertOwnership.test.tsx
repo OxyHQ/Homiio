@@ -102,6 +102,8 @@ beforeAll(async () => {
                   location,
                   locationStatus: 'resolved',
                   isPrimaryArea: true,
+                  createdAt: '2026-01-01T00:00:00.000Z',
+                  updatedAt: '2026-01-01T00:00:00.000Z',
                 },
               ]
             : [],
@@ -536,6 +538,10 @@ it('allows a known-subject legacy bearer while its projected session id is absen
     owner: 'A',
     path: '/api/profiles/me/saved-searches',
   });
+  await waitFor(() => expect(view.result.current.saved.isSaving).toBe(false));
+  await waitFor(() =>
+    expect(view.result.current.saved.searches.map((item) => item.id)).toContain('new-A'),
+  );
 });
 
 it('uses the newly projected session result in the out-of-render reader', async () => {
