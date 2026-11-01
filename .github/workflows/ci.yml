@@ -562,10 +562,13 @@ jobs:
       # ships it. Expo compiles through Babel and therefore does NOT typecheck the
       # frontend — this proves the bundle builds, nothing more.
       - name: Export production web bundle
-        run: bun run --cwd packages/frontend build
+        run: bun run --cwd packages/frontend build --source-maps
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
           NODE_ENV: production
+
+      - name: Diagnose source attribution (non-additive estimate)
+        run: node scripts/diagnose-bundle-sources.cjs
 
       - name: Enforce production web bundle budgets
         run: bun run check:web-bundle-budget
