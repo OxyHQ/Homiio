@@ -489,6 +489,7 @@ export const useSavedSearches = (): UseSavedSearches => {
       const current = currentFor(vars);
       if (!current) return;
       upsertCachedSearch(saved, current);
+      if (!isCurrent(current)) return;
       toast.success(t('search.widgets.savedSearches.saveSuccess', { name: saved.name }));
     },
     onError: (error: unknown, vars) => {
@@ -536,6 +537,7 @@ export const useSavedSearches = (): UseSavedSearches => {
       const current = currentFor(vars);
       if (!current) return;
       upsertCachedSearch(updated, current);
+      if (!isCurrent(current)) return;
       toast.success(t('search.widgets.savedSearches.updateSuccess'));
     },
     onError: (error: unknown, vars) => {
@@ -555,6 +557,7 @@ export const useSavedSearches = (): UseSavedSearches => {
       const current = currentFor(vars);
       if (!current) return;
       removeCachedSearch(vars.searchId, current);
+      if (!isCurrent(current)) return;
       toast.success(
         vars.searchName
           ? t('search.widgets.savedSearches.deleteSuccessNamed', { name: vars.searchName })
