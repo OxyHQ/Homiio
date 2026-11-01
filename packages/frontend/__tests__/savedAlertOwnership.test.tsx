@@ -50,6 +50,7 @@ let shouldHoldA = false;
 let shouldHoldB = false;
 let nameA = 'A private watch';
 let allowPutA = false;
+let unavailableA = false;
 let useSavedSearches: typeof import('../hooks/useSavedSearches').useSavedSearches;
 let usePrimarySavedArea: typeof import('../hooks/useSavedSearches').usePrimarySavedArea;
 let savedSearchesReading: typeof import('../hooks/useSavedSearches').savedSearchesReading;
@@ -61,6 +62,11 @@ beforeAll(async () => {
     const owner = req.headers.authorization === `Bearer ${token('A')}` ? 'A' : 'B';
     seen.push({ method: req.method ?? '', owner, path: req.url ?? '' });
     res.setHeader('Content-Type', 'application/json');
+    if (req.method === 'GET' && owner === 'A' && unavailableA) {
+      res.writeHead(503);
+      res.end(JSON.stringify({ message: 'Unavailable' }));
+      return;
+    }
     if (req.method === 'GET' && owner === 'A' && shouldHoldA) {
       holdA = res;
       return;
@@ -125,6 +131,7 @@ beforeEach(() => {
   holdA = undefined;
   nameA = 'A private watch';
   allowPutA = false;
+  unavailableA = false;
   mockToast.success.mockClear();
   mockToast.error.mockClear();
   holdB = undefined;
@@ -887,6 +894,48 @@ it('does not infer a network area while an unbound saved area is paused and reco
   });
   await act(async () => {
     onlineManager.setOnline(true);
+  });
+  await waitFor(() => expect(view.result.current.primary.selection).toEqual(location));
+  await waitFor(() => expect(view.result.current.scope.source).toBe('saved_area'));
+  expect(useLocationScopeStore.getState().autoScope).toBeNull();
+  view.unmount();
+  stop();
+});
+
+it('holds automatic inference when the saved-area request returns 503 and recovers', async () => {
+  const { useLocationScope, observeInferredScope } = jest.requireActual(
+    '../hooks/useLocationScope',
+  );
+  const { useLocationScopeStore } = jest.requireActual('../store/locationScopeStore');
+  const { APPROXIMATE_LOCATION_QUERY_KEY } = jest.requireActual('../hooks/useApproximateLocation');
+  useLocationScopeStore.setState({
+    sessionSelection: null,
+    explicitGlobal: false,
+    lastChosenArea: null,
+    deviceRequested: false,
+    autoScope: null,
+  });
+  const networkArea = { ...location, label: { primary: 'network area', kind: 'place' } };
+  client.setQueryData(APPROXIMATE_LOCATION_QUERY_KEY, {
+    status: 'resolved',
+    source: 'ip',
+    granularity: 'city',
+    selection: networkArea,
+    resolvedAt: '2026-01-01T00:00:00.000Z',
+    expiresAt: '2030-01-01T00:00:00.000Z',
+  });
+  unavailableA = true;
+  const stop = observeInferredScope(client);
+  const view = renderHook(() => ({ scope: useLocationScope(), primary: usePrimarySavedArea() }), {
+    wrapper,
+  });
+  await waitFor(() => expect(view.result.current.primary.unavailable).toBe(true));
+  expect(view.result.current.scope.source).toBeNull();
+  expect(view.result.current.scope.savedAreaUnavailable).toBe(true);
+  expect(useLocationScopeStore.getState().autoScope).toBeNull();
+  unavailableA = false;
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ['savedSearches'] });
   });
   await waitFor(() => expect(view.result.current.primary.selection).toEqual(location));
   await waitFor(() => expect(view.result.current.scope.source).toBe('saved_area'));
