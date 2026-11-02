@@ -150,7 +150,7 @@ export default function MyApplicationsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiFileTextLine}
@@ -167,7 +167,7 @@ export default function MyApplicationsScreen() {
 
   if (applicationsQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.content}>
           <FilterRow value={filter} onChange={setFilter} t={t} />
           <ListSkeleton rows={5} rowHeight={120} />
@@ -178,7 +178,7 @@ export default function MyApplicationsScreen() {
 
   if (applicationsQuery.isError) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('applications.list.loadError')}
@@ -192,7 +192,7 @@ export default function MyApplicationsScreen() {
   }
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <FilterRow value={filter} onChange={setFilter} t={t} />
 

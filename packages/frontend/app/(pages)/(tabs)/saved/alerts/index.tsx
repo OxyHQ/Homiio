@@ -101,7 +101,7 @@ export default function AlertHistoryScreen() {
 
   if (isLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <Loading style={styles.loading} />
         </ScreenScrollView>
@@ -110,7 +110,7 @@ export default function AlertHistoryScreen() {
   }
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content} onEndReached={loadMore}>
         {groups.length === 0 ? (
           <EmptyState

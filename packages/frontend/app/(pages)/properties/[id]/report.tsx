@@ -174,6 +174,7 @@ export default function ReportListingScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

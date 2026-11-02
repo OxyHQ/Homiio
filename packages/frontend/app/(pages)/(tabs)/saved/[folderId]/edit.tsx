@@ -38,6 +38,7 @@ export default function EditFolderScreen() {
   if (!folder) {
     return (
       <Screen
+        scroll="content"
         documentScroll
         header={
           <PageHeader
@@ -137,6 +138,7 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

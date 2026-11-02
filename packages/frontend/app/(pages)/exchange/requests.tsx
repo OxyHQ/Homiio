@@ -150,7 +150,7 @@ export default function ExchangeRequestsScreen() {
 
   if (!isAuthed) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiArrowLeftRightLine}
@@ -166,7 +166,7 @@ export default function ExchangeRequestsScreen() {
   }
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         {/* Role segmented toggle */}
         <SegmentedControl<RoleView>

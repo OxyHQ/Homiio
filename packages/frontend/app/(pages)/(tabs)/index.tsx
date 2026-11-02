@@ -169,6 +169,7 @@ export default function HomePage() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         // Over the hero: the photo runs behind it (and behind the notch).

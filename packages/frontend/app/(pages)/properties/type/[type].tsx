@@ -163,6 +163,7 @@ export default function PropertyTypeScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PropertyListHeader

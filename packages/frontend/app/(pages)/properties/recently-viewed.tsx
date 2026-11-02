@@ -91,6 +91,7 @@ export default function RecentlyViewedScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PropertyListHeader

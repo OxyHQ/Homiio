@@ -213,7 +213,7 @@ export default function LandlordApplicationDetailScreen() {
 
   if (!id) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             icon={RiErrorWarningFill}
@@ -229,7 +229,7 @@ export default function LandlordApplicationDetailScreen() {
 
   if (applicationQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <DetailSkeleton />
         </ScreenScrollView>
@@ -239,7 +239,7 @@ export default function LandlordApplicationDetailScreen() {
 
   if (applicationQuery.isError || !application) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             icon={RiAlertLine}
@@ -256,7 +256,7 @@ export default function LandlordApplicationDetailScreen() {
 
   if (!isLandlord) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             icon={RiLockLine}
@@ -290,7 +290,7 @@ export default function LandlordApplicationDetailScreen() {
     application.status === TenantApplicationStatus.REVIEWING;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.applicantHeader}>
           <Avatar size={56} name={applicantName} source={applicantAvatar ?? null} variant="thumb" />

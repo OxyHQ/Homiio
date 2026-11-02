@@ -224,6 +224,7 @@ export default function PropertiesScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={topBar}
       primaryAction={

@@ -199,7 +199,7 @@ export default function TipArticleScreen() {
 
   if (!slug) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             icon={RiFileTextLine}
@@ -215,7 +215,7 @@ export default function TipArticleScreen() {
 
   if (tipQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <TipDetailSkeleton />
         </ScreenScrollView>
@@ -225,7 +225,7 @@ export default function TipArticleScreen() {
 
   if (tipQuery.isError || !tipQuery.data) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             icon={RiFileTextLine}
@@ -242,7 +242,7 @@ export default function TipArticleScreen() {
   const tip = tipQuery.data;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View className="bg-card" style={styles.hero}>
           {tip.coverImageUrl ? (

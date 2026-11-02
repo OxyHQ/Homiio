@@ -153,7 +153,7 @@ export default function ReservationDetailScreen() {
 
   if (!id) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             icon={RiAlertLine}
@@ -169,7 +169,7 @@ export default function ReservationDetailScreen() {
 
   if (reservationQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </ScreenScrollView>
@@ -179,7 +179,7 @@ export default function ReservationDetailScreen() {
 
   if (reservationQuery.isError || !reservation) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('reservations.detail.unavailable')}
@@ -211,7 +211,7 @@ export default function ReservationDetailScreen() {
     role === 'host' && reservation.status === ReservationStatus.PENDING;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View className="bg-muted" style={styles.thumbWrap}>
           {imageSource ? (

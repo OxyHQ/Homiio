@@ -188,6 +188,7 @@ export default function DonatePage() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

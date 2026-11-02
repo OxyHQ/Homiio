@@ -392,6 +392,7 @@ export default function BookViewingPage() {
   if (loading || !property) {
     return (
       <Screen
+        scroll="content"
         documentScroll
         header={
           <PageHeader
@@ -412,6 +413,7 @@ export default function BookViewingPage() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

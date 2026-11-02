@@ -279,6 +279,7 @@ export default function PropertyDraftsScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PropertyListHeader

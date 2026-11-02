@@ -320,7 +320,7 @@ export default function RoommatePreferencesPage() {
 
   if (!hasProfile) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiUserLine}
@@ -336,7 +336,7 @@ export default function RoommatePreferencesPage() {
   }
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
           <SectionEyebrow>{t('roommates.preferencesPage.eyebrow')}</SectionEyebrow>

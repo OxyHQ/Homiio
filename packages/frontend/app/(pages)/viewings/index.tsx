@@ -273,7 +273,7 @@ export default function ViewingsPage() {
 
   if (!isAuthed) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiCalendarLine}
@@ -289,7 +289,7 @@ export default function ViewingsPage() {
   }
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
           <SectionEyebrow>Upcoming visits</SectionEyebrow>

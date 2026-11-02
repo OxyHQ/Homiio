@@ -106,7 +106,7 @@ export default function ReportRepairScreen(): React.ReactElement {
 
   if (!isAuthenticated) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <EmptyState
             title={t('sindi.auth.required')}
@@ -123,7 +123,7 @@ export default function ReportRepairScreen(): React.ReactElement {
     // A repair is filed against a TENANCY. With no lease there is nothing to
     // file it against, and inventing one is not available.
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <EmptyState
             title={t('maintenance.report.noLeaseTitle')}
@@ -137,7 +137,7 @@ export default function ReportRepairScreen(): React.ReactElement {
   }
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <Field label={t('maintenance.field.title')}>
           <TextField>

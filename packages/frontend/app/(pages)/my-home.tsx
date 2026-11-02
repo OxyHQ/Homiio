@@ -127,6 +127,7 @@ export default function MyHomeScreen() {
 
   const frame = (contentStyle: StyleProp<ViewStyle>, body: React.ReactNode) => (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

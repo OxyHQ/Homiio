@@ -339,6 +339,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader
@@ -587,7 +588,7 @@ export default function EvictionsFormScreen() {
 
   if (isEdit && isLoading) {
     return (
-      <Screen documentScroll header={editHeader}>
+      <Screen scroll="content" documentScroll header={editHeader}>
         <ScreenScrollView contentContainerStyle={styles.content}>
           <Skeleton.Box width="100%" height={48} borderRadius={radius.md} />
           <Skeleton.Box width="100%" height={200} borderRadius={radius.lg} />
@@ -599,7 +600,7 @@ export default function EvictionsFormScreen() {
 
   if (isEdit && (isError || !existing)) {
     return (
-      <Screen documentScroll header={editHeader}>
+      <Screen scroll="content" documentScroll header={editHeader}>
         <ScreenScrollView>
           <ErrorState
             icon={RiAlertLine}

@@ -40,6 +40,7 @@ export default function ReviewExploreNeighborhoodScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

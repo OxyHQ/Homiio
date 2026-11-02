@@ -499,7 +499,7 @@ export default function RoommatesPage() {
   // The page owns the one scroller: on the Rooms tab it paginates and refreshes
   // the room feed, which `RoomList` only renders.
   return (
-    <Screen documentScroll>
+    <Screen scroll="content" documentScroll>
       <ScreenScrollView
         onEndReached={showRooms ? roomsFeed.loadMore : undefined}
         refreshControl={

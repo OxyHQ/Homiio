@@ -134,7 +134,7 @@ export default function AgencyProfileScreen() {
 
   if (agencyQuery.isLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.content}>
           <Skeleton.Box width="60%" height={28} borderRadius={radius.md} />
           <Skeleton.Box width="100%" height={80} borderRadius={radius.md} />
@@ -145,7 +145,7 @@ export default function AgencyProfileScreen() {
 
   if (agencyQuery.isError || !agency || !stats) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             icon={RiBuilding2Line}
@@ -176,7 +176,7 @@ export default function AgencyProfileScreen() {
     (stats.distinctAuthors ?? 0) >= AGGREGATE_MIN_AUTHORS;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView
         contentContainerStyle={styles.content}
         onEndReached={tab === 'reviews' ? loadMoreReviews : loadMoreProperties}

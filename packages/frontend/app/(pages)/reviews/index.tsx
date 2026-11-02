@@ -33,6 +33,7 @@ export default function ReviewExploreScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

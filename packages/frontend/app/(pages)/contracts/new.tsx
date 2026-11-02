@@ -81,7 +81,7 @@ export default function NewContractScreen() {
 
   if (!applicationId) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiFileTextLine}
@@ -98,7 +98,7 @@ export default function NewContractScreen() {
 
   if (applicationQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </ScreenScrollView>
@@ -108,7 +108,7 @@ export default function NewContractScreen() {
 
   if (applicationQuery.isError || !application) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('contracts.new.applicationUnavailableTitle')}
@@ -128,7 +128,7 @@ export default function NewContractScreen() {
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={[styles.thumbWrap, { backgroundColor: themeColors.backgroundSecondary }]}>
           {imageSource ? (

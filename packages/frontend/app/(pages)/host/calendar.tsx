@@ -400,7 +400,7 @@ export default function HostCalendarScreen() {
 
   if (!isAuthed) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiCalendarLine}
@@ -417,7 +417,7 @@ export default function HostCalendarScreen() {
 
   if (propertiesQuery.isLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.content}>
           <View style={styles.stack}>
             <Skeleton.Text style={{ width: 120, lineHeight: 14 }} />
@@ -435,7 +435,7 @@ export default function HostCalendarScreen() {
 
   if (propertiesQuery.error) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             icon={RiAlertLine}
@@ -454,7 +454,7 @@ export default function HostCalendarScreen() {
 
   if (properties.length === 0) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiHomeLine}
@@ -585,7 +585,7 @@ export default function HostCalendarScreen() {
   );
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       {body}
 
       <Dialog

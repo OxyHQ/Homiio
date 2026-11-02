@@ -58,7 +58,7 @@ export default function AlertReasonScreen() {
 
   if (isLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <Loading style={styles.loading} />
         </ScreenScrollView>
@@ -68,7 +68,7 @@ export default function AlertReasonScreen() {
 
   if (isError || !data) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <EmptyState
             icon={RiQuestionLine}
@@ -83,7 +83,7 @@ export default function AlertReasonScreen() {
   const { alert, watch, event } = data;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3>{t('alerts.reason.whatChanged')}</H3>

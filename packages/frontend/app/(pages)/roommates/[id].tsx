@@ -197,6 +197,7 @@ export default function RoommateProfilePage() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

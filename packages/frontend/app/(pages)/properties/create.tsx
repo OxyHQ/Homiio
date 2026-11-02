@@ -211,7 +211,7 @@ export default function CreatePropertyScreen() {
   // Show loading state when in edit mode and property is loading
   if (isEditMode && propertyLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centeredState}>
           <Loading size="lg" text={t('propertyCreate.loading')} />
         </ScreenScrollView>
@@ -222,7 +222,7 @@ export default function CreatePropertyScreen() {
   // Show error state if property failed to load in edit mode
   if (isEditMode && propertyError) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centeredState}>
           <Admonition type="error">
             {t('propertyCreate.loadError', { error: propertyError || t('property.notFound') })}
@@ -237,6 +237,7 @@ export default function CreatePropertyScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={header}
       bottomBar={

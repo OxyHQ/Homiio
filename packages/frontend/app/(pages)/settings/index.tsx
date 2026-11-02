@@ -112,6 +112,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

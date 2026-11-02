@@ -93,7 +93,7 @@ export default function ProfileScreen() {
 
   if (!profileQuery.ownerReady) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('contracts.detail.signAccountUnavailable')}
@@ -107,7 +107,7 @@ export default function ProfileScreen() {
 
   if (isPaused) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('profile.loadFailed')}
@@ -122,7 +122,7 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.content}>
           <View style={styles.heroSkeleton}>
             <ListSkeleton rows={2} rowHeight={120} />
@@ -137,7 +137,7 @@ export default function ProfileScreen() {
 
   if (isError) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('profile.loadFailed')}
@@ -163,7 +163,7 @@ export default function ProfileScreen() {
     verifiedBadges.push({ label: 'Background verified', key: 'background' });
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroWrap}>
           <View style={styles.heroContent}>

@@ -296,7 +296,7 @@ export default function EvictionDetailScreen() {
 
   if (isLoading) {
     return (
-      <Screen documentScroll header={header()}>
+      <Screen scroll="content" documentScroll header={header()}>
         <ScreenScrollView>
           <DetailSkeleton />
         </ScreenScrollView>
@@ -306,7 +306,7 @@ export default function EvictionDetailScreen() {
 
   if (isError || !eviction) {
     return (
-      <Screen documentScroll header={header()}>
+      <Screen scroll="content" documentScroll header={header()}>
         <ScreenScrollView>
           <ErrorState
             icon={RiAlertLine}
@@ -330,6 +330,7 @@ export default function EvictionDetailScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={header(
         <>

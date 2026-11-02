@@ -119,6 +119,7 @@ export default function CityPropertiesPage() {
   if (cityLoading) {
     return (
       <Screen
+        scroll="content"
         documentScroll
         header={
           <PageHeader
@@ -140,6 +141,7 @@ export default function CityPropertiesPage() {
   if (cityError || !city) {
     return (
       <Screen
+        scroll="content"
         documentScroll
         header={
           <PageHeader
@@ -203,6 +205,7 @@ export default function CityPropertiesPage() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

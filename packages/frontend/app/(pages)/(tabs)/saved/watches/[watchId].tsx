@@ -132,7 +132,7 @@ export default function WatchAlertSettingsScreen() {
 
   if (isLoading && searches.length === 0) {
     return (
-      <Screen documentScroll header={missingHeader}>
+      <Screen scroll="content" documentScroll header={missingHeader}>
         <ScreenScrollView>
           <Loading style={styles.loading} />
         </ScreenScrollView>
@@ -142,7 +142,7 @@ export default function WatchAlertSettingsScreen() {
 
   if (!watch) {
     return (
-      <Screen documentScroll header={missingHeader}>
+      <Screen scroll="content" documentScroll header={missingHeader}>
         <ScreenScrollView>
           <EmptyState
             icon={RiSearchLine}
@@ -159,6 +159,7 @@ export default function WatchAlertSettingsScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader
