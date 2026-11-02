@@ -71,7 +71,7 @@
   "cacheDirectories": [],
   "dependencies": {
     "@oxy.so/core": "7.10.5",
-    "@oxy.so/bloom": "15.53.0",
+    "@oxy.so/bloom": "15.65.0",
     "zod": "3.25.76"
   }
 }
