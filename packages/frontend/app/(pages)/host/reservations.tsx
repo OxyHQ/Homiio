@@ -433,7 +433,7 @@ export default function HostReservationsScreen() {
 
   if (!isAuthed) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiMailLine}
@@ -457,7 +457,7 @@ export default function HostReservationsScreen() {
   const isError = reservationsQuery.isError;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View className="lg:hidden">
           <ScrollView

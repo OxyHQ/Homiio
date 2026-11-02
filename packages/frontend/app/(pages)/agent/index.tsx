@@ -99,6 +99,7 @@ export default function AgentScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

@@ -458,6 +458,7 @@ export default function PropertyDetailPage() {
   if (isLoading) {
     return (
       <Screen
+        scroll="content"
         documentScroll
         header={
           <PageHeader
@@ -478,6 +479,7 @@ export default function PropertyDetailPage() {
   if (error || !property) {
     return (
       <Screen
+        scroll="content"
         documentScroll
         header={
           <PageHeader
@@ -612,6 +614,7 @@ export default function PropertyDetailPage() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

@@ -126,7 +126,7 @@ export default function ApplicationDetailScreen() {
 
   if (!id) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             icon={RiAlertLine}
@@ -142,7 +142,7 @@ export default function ApplicationDetailScreen() {
 
   if (applicationQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </ScreenScrollView>
@@ -152,7 +152,7 @@ export default function ApplicationDetailScreen() {
 
   if (applicationQuery.isError || !application) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title="Application unavailable"
@@ -170,7 +170,7 @@ export default function ApplicationDetailScreen() {
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundSecondary }]}>
           {imageSource ? (

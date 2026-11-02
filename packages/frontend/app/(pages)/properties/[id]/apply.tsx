@@ -382,6 +382,7 @@ export default function ApplyToRentScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

@@ -198,7 +198,7 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
 
   if (isLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ListSkeleton rows={3} />
         </ScreenScrollView>
@@ -208,7 +208,7 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
 
   if (error || !request) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             title={t('maintenance.errors.loadFailed')}
@@ -221,7 +221,7 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
   }
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <MaintenanceRequestCard
           {...maintenanceCardProps(request, { t })}

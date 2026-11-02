@@ -283,6 +283,7 @@ export default function MyPropertiesScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PropertyListHeader

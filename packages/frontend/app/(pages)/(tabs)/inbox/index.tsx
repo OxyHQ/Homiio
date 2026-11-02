@@ -250,6 +250,7 @@ export default function InboxScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

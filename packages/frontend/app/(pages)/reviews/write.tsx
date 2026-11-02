@@ -162,7 +162,7 @@ export default function WriteReviewPage() {
 
   if (addressQuery.isLoading) {
     return (
-      <Screen documentScroll header={<WriteReviewHeader />}>
+      <Screen scroll="content" documentScroll header={<WriteReviewHeader />}>
         <ScreenScrollView contentContainerStyle={styles.content}>
           <WriteReviewSkeleton />
         </ScreenScrollView>
@@ -172,7 +172,7 @@ export default function WriteReviewPage() {
 
   if (addressQuery.isError) {
     return (
-      <Screen documentScroll header={<WriteReviewHeader />}>
+      <Screen scroll="content" documentScroll header={<WriteReviewHeader />}>
         <ScreenScrollView>
           <ErrorState
             icon={RiAlertLine}
@@ -381,6 +381,7 @@ function WriteReviewWizard({ initialData }: { initialData: ReviewWizardData }) {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={<WriteReviewHeader />}
       bottomBar={

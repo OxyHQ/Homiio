@@ -134,7 +134,7 @@ export default function StaysScreen() {
 
   if (!isAuthed) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiHotelBedLine}
@@ -151,7 +151,7 @@ export default function StaysScreen() {
 
   if (reservationsQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.content}>
           <FilterRow value={filter} onChange={setFilter} t={t} />
           <ListSkeleton rows={4} rowHeight={140} />
@@ -162,7 +162,7 @@ export default function StaysScreen() {
 
   if (reservationsQuery.isError) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('stays.list.loadError')}
@@ -176,7 +176,7 @@ export default function StaysScreen() {
   }
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <FilterRow value={filter} onChange={setFilter} t={t} />
 

@@ -44,6 +44,7 @@ export default function CurrencySettingsScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

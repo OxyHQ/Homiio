@@ -269,7 +269,7 @@ export default function ContractDetailScreen() {
 
   if (!id) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             icon={RiAlertLine}
@@ -285,7 +285,7 @@ export default function ContractDetailScreen() {
 
   if (leaseQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </ScreenScrollView>
@@ -295,7 +295,7 @@ export default function ContractDetailScreen() {
 
   if (leaseQuery.isError || !lease) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('contracts.detail.unavailableTitle')}
@@ -446,7 +446,7 @@ export default function ContractDetailScreen() {
   );
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View className="gap-4 lg:flex-row lg:items-start lg:gap-6">
           {thumbnail ? <View className="lg:hidden">{thumbnail}</View> : null}

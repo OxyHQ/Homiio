@@ -440,7 +440,7 @@ export default function LandlordApplicationsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiGroupLine}
@@ -457,7 +457,7 @@ export default function LandlordApplicationsScreen() {
 
   if (hostLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.content}>
           <ApplicationsSkeleton />
         </ScreenScrollView>
@@ -467,7 +467,7 @@ export default function LandlordApplicationsScreen() {
 
   if (!isHost) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.emptyWrap}>
           <EmptyState
             icon={RiLockLine}
@@ -482,7 +482,7 @@ export default function LandlordApplicationsScreen() {
   const listReady = !applicationsQuery.isPending && !applicationsQuery.isError;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleBlock}>
           <SectionEyebrow>{t('applications.landlord.inboxEyebrow')}</SectionEyebrow>

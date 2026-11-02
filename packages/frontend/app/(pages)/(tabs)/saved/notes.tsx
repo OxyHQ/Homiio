@@ -226,6 +226,7 @@ function NotesScreenContent() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

@@ -169,7 +169,7 @@ export default function ExchangeRequestDetailScreen() {
 
   if (!id) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             icon={RiAlertLine}
@@ -185,7 +185,7 @@ export default function ExchangeRequestDetailScreen() {
 
   if (requestQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </ScreenScrollView>
@@ -195,7 +195,7 @@ export default function ExchangeRequestDetailScreen() {
 
   if (requestQuery.isError || !request) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('listing.exchange.unavailable')}
@@ -232,7 +232,7 @@ export default function ExchangeRequestDetailScreen() {
     !alreadyReviewed;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundTertiary }]}>
           {imageSource ? (

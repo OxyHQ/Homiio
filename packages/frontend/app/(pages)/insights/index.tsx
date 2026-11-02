@@ -120,7 +120,7 @@ export default function InsightsScreen() {
 
   if (statsQuery.isPending) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <InsightsSkeleton />
         </ScreenScrollView>
@@ -130,7 +130,7 @@ export default function InsightsScreen() {
 
   if (statsQuery.isError) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerClassName="items-center p-6">
           <BloomText style={{ color: theme.colors.text }}>
             {statsQuery.error.message || t('home.insights.loadError')}
@@ -150,7 +150,7 @@ export default function InsightsScreen() {
     c.state ? `${c.city}, ${c.state}` : c.city;
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       {/* Vertical rhythm between the stacked blocks is owned here by
           NativeWind `gap` — no per-block stacking margins. */}
       <ScreenScrollView contentContainerClassName="w-full gap-6 md:gap-8 px-4 pt-4 pb-14">

@@ -29,6 +29,7 @@ export default function ReviewExploreCityScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

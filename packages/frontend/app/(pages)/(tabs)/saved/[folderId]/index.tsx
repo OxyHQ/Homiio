@@ -97,7 +97,7 @@ export default function SavedFolderScreen() {
 
   if (isLoading) {
     return (
-      <Screen documentScroll header={fallbackHeader}>
+      <Screen scroll="content" documentScroll header={fallbackHeader}>
         <ScreenScrollView contentContainerStyle={styles.skeletonWrap}>
           <ListSkeleton rows={4} rowHeight={160} />
         </ScreenScrollView>
@@ -107,7 +107,7 @@ export default function SavedFolderScreen() {
 
   if (isError) {
     return (
-      <Screen documentScroll header={fallbackHeader}>
+      <Screen scroll="content" documentScroll header={fallbackHeader}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <ErrorState
             title={t('saved.loadFailed')}
@@ -121,7 +121,7 @@ export default function SavedFolderScreen() {
 
   if (!folder) {
     return (
-      <Screen documentScroll header={fallbackHeader}>
+      <Screen scroll="content" documentScroll header={fallbackHeader}>
         <ScreenScrollView contentContainerStyle={styles.centerWrap}>
           <EmptyState
             icon={RiFolderOpenLine}
@@ -135,6 +135,7 @@ export default function SavedFolderScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

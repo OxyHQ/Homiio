@@ -259,7 +259,7 @@ export default function ContractsScreen() {
     contracts.length === 0
   ) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <EmptyState
             icon={RiFileTextLine}
@@ -279,6 +279,7 @@ export default function ContractsScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={header}
       bottomBar={

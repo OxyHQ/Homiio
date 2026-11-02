@@ -20,7 +20,7 @@ export default function ProfileEditScreen() {
   const { t } = useTranslation();
   if (!owner) {
     return (
-      <Screen documentScroll>
+      <Screen scroll="content" documentScroll>
         <ErrorState
           title={t('contracts.detail.signAccountUnavailable')}
           onRetry={() => openAccountDialog()}
@@ -57,7 +57,7 @@ function OwnedProfileEdit({
 
   if (profilePaused || profileError) {
     return (
-      <Screen documentScroll>
+      <Screen scroll="content" documentScroll>
         <ErrorState
           title={t('profile.loadFailed')}
           description={t('profile.loadFailedHint')}
@@ -71,6 +71,7 @@ function OwnedProfileEdit({
   if (shouldShowLoading) {
     return (
       <Screen
+        scroll="content"
         documentScroll
         header={
           <PageHeader
@@ -91,6 +92,7 @@ function OwnedProfileEdit({
 
   return (
     <Screen
+      scroll="content"
       key={`edit-${activeProfile?.id}`}
       documentScroll
       header={

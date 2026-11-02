@@ -227,7 +227,7 @@ export default function ViewingAvailabilityPage() {
 
   if (scheduleQuery.isLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.centered}>
           <Loading variant="spinner" size="lg" />
         </ScreenScrollView>
@@ -241,7 +241,7 @@ export default function ViewingAvailabilityPage() {
     // that does not exist. That is the intended outcome, not an error to
     // explain away.
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             title={t('viewings.schedule.notYours')}
@@ -253,7 +253,7 @@ export default function ViewingAvailabilityPage() {
   }
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Admonition type="info">{t('viewings.schedule.explainer')}</Admonition>
 

@@ -286,6 +286,7 @@ export default function EvictionsBoardScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

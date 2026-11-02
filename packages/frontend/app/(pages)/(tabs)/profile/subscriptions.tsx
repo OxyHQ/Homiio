@@ -315,7 +315,7 @@ export default function SubscriptionsScreen() {
 
   if (!owner?.sessionId) {
     return (
-      <Screen documentScroll>
+      <Screen scroll="content" documentScroll>
         <ErrorState
           title={t('contracts.detail.signAccountUnavailable')}
           onRetry={() => openAccountDialog()}
@@ -329,7 +329,7 @@ export default function SubscriptionsScreen() {
     (entitlementsQuery.isPending && entitlementsQuery.fetchStatus === 'paused')
   ) {
     return (
-      <Screen documentScroll>
+      <Screen scroll="content" documentScroll>
         <ErrorState
           title={t('subscriptions.loadFailed')}
           description={t('profile.loadFailedHint')}
@@ -343,13 +343,14 @@ export default function SubscriptionsScreen() {
   }
   if (entitlementsQuery.isPending)
     return (
-      <Screen documentScroll>
+      <Screen scroll="content" documentScroll>
         <ProfileSkeleton />
       </Screen>
     );
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

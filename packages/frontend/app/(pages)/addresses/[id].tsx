@@ -161,7 +161,7 @@ export default function AddressDetailsPage() {
 
   if (addressQuery.isLoading) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView contentContainerStyle={styles.content}>
           <PropertyListSkeleton viewMode="list" />
         </ScreenScrollView>
@@ -171,7 +171,7 @@ export default function AddressDetailsPage() {
 
   if (!address) {
     return (
-      <Screen documentScroll header={header}>
+      <Screen scroll="content" documentScroll header={header}>
         <ScreenScrollView>
           <ErrorState
             icon={RiSearchLine}
@@ -197,7 +197,7 @@ export default function AddressDetailsPage() {
   };
 
   return (
-    <Screen documentScroll header={header}>
+    <Screen scroll="content" documentScroll header={header}>
       <ScreenScrollView contentContainerStyle={styles.content}>
         <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
           <AddressDisplay address={addressForDisplay} variant="detailed" showActions />

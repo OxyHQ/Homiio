@@ -29,6 +29,7 @@ export default function SavedScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

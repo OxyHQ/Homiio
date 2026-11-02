@@ -160,6 +160,7 @@ export default function TipsScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader

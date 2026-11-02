@@ -41,6 +41,7 @@ export default function LanguageSettingsScreen() {
 
   return (
     <Screen
+      scroll="content"
       documentScroll
       header={
         <PageHeader
