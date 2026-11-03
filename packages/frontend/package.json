@@ -31,7 +31,7 @@
     "@goway.to/sdk": "^0.7.0",
     "@homiio/shared-types": "workspace:*",
     "@maplibre/maplibre-react-native": "^11.4.0",
-    "@oxy.so/app-preset": "^4.1.0",
+    "@oxy.so/app-preset": "^5.2.1",
     "@oxy.so/bloom": "16.5.0",
     "@oxy.so/core": "7.13.0",
     "@oxy.so/expo-splash": "^1.1.0",
