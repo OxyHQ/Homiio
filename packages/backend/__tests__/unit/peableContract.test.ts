@@ -11,7 +11,7 @@ import {
 
 const SECRET = 'whsec_test_secret';
 const TIMESTAMP = 1791000000;
-const created = new Date(TIMESTAMP * 1000).toISOString();
+const created = TIMESTAMP;
 type Event = ReturnType<WebhooksResource['constructEvent']>;
 const EVENT = {
   id: 'evt_fixture',
@@ -28,14 +28,14 @@ const EVENT = {
       currency: 'FAIR',
       network: 'testnet',
       address: 'synthetic-address',
-      merchantId: 'merch_fixture',
+      merchant_id: 'merch_fixture',
       txid: 'synthetic-tx',
       confirmations: 6,
-      clientSecret: 'synthetic-unused-secret',
+      client_secret: 'synthetic-unused-secret',
       metadata: {},
-      expiresAt: created,
-      createdAt: created,
-      updatedAt: created,
+      expires_at: created,
+      created,
+      updated_at: created,
     },
   },
 } satisfies Event;
@@ -140,39 +140,41 @@ describe('published SDK webhook verification without a client or token mint', ()
     '{}',
     JSON.stringify({ ...EVENT, type: 'toString' }),
     JSON.stringify({ ...EVENT, type: 'unknown.event' }),
-    JSON.stringify({ ...EVENT, created: 42 }),
+    JSON.stringify({ ...EVENT, created: new Date(TIMESTAMP * 1000).toISOString() }),
   ])('refuses signed malformed or unknown event: %s', (raw) => {
     expect(verify(raw, sign(raw, TIMESTAMP))).toEqual({ ok: false, reason: 'invalid_webhook' });
   });
   const dispute = {
     id: 'dp_fixture',
     object: 'dispute',
-    paymentIntentId: 'pi_fixture',
+    payment_intent_id: 'pi_fixture',
     amount: '100',
     currency: 'EUR',
     status: 'needs_response',
     reason: null,
-    evidenceDueAt: null,
-    evidenceSubmittedAt: null,
-    createdAt: created,
-    updatedAt: created,
+    evidence_due_at: null,
+    evidence_submitted_at: null,
+    created,
+    updated_at: created,
   } as const;
   const account = {
     id: 'ca_fixture',
     object: 'connected_account',
-    externalRef: 'synthetic-fixture',
+    external_ref: 'synthetic-fixture',
+    rails: ['card'],
+    faircoin: null,
     country: 'ES',
-    defaultCurrency: 'EUR',
+    default_currency: 'EUR',
     payable: false,
-    payoutsEnabled: false,
-    chargesEnabled: false,
-    transfersCapability: 'pending',
-    cardPaymentsCapability: null,
-    requirements: { currentlyDue: 1, eventuallyDue: 1, pastDue: 0, pendingVerification: 0 },
-    disabledReasonCodes: [],
-    lastSyncedAt: null,
-    createdAt: created,
-    updatedAt: created,
+    payouts_enabled: false,
+    charges_enabled: false,
+    transfers_capability: 'pending',
+    card_payments_capability: null,
+    requirements: { currently_due: 1, eventually_due: 1, past_due: 0, pending_verification: 0 },
+    disabled_reason_codes: [],
+    last_synced_at: null,
+    created,
+    updated_at: created,
   } as const;
   const payloads = {
     'payment_intent.confirming': EVENT.data.object,
@@ -185,6 +187,13 @@ describe('published SDK webhook verification without a client or token mint', ()
     'payment_intent.disputed': dispute,
     'payment_intent.dispute_closed': { ...dispute, status: 'won' },
     'connected_account.updated': account,
+    'billing.observation.updated': {
+      object: 'billing_observation',
+      resource_kind: 'subscription',
+      resource_id: 'sub_fixture',
+      revision: 1,
+      observed_at: created,
+    },
   } satisfies { [T in Event['type']]: Extract<Event, { type: T }>['data']['object'] };
   for (const type of Object.keys(payloads) as (keyof typeof payloads)[]) {
     it(`accepts signed ${type} with its actual resource family`, () => {
