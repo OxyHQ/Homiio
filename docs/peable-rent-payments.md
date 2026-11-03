@@ -4,7 +4,7 @@ Peable remains the intended rent processor. Homiio has an **unmounted, pure cont
 
 ## Current evidence — 2026-10-03
 
-The earlier 2026-09-20 report identified an un-installable SDK0.1.1 (`workspace:^` runtime dependency) and a five-event allowlist. Both package blockers have been resolved upstream: **`@peable.to/sdk@0.2.2` with `@peable.to/shared-types@0.3.0` is published and installable**, and its standalone `WebhooksResource` covers ten canonical event types, including refunds, disputes and connected-account updates. [Publication evidence](https://github.com/OxyHQ/Peable/pull/98) records registry digests, isolated CJS/ESM/TypeScript checks and independent review. Homiio installs the registry release and has no local HMAC implementation. It now pins **`@peable.to/sdk@0.8.0`** (the Orbit wire, Peable ADR 0014): every event payload is snake_case, `created` and every other instant are integer Unix seconds, and `billing.observation.updated` is an eleventh canonical event type.
+The earlier 2026-09-20 report identified an un-installable SDK0.1.1 (`workspace:^` runtime dependency) and a five-event allowlist. Both package blockers have been resolved upstream: **`@peable.to/sdk@0.2.2` with `@peable.to/shared-types@0.3.0` is published and installable**, and its standalone `WebhooksResource` covers ten canonical event types, including refunds, disputes and connected-account updates. [Publication evidence](https://github.com/OxyHQ/Peable/pull/98) records registry digests, isolated CJS/ESM/TypeScript checks and independent review. Homiio installs the registry release and has no local HMAC implementation. It now pins **`@peable.to/sdk@1.0.0`** (Peable ADR 0014's one wire and ADR 0019's Stripe vocabulary): a PaymentIntent is `requires_payment_method` / `requires_confirmation` / `requires_action` / `processing` / `requires_capture` / `succeeded` / `canceled`, events carry Stripe's names (`payment_intent.succeeded`, `refund.created`, `charge.dispute.created`, …) in an envelope with `livemode`, `api_version` and `request`, refunds are `Refund` objects rather than statuses, and the SDK owns the base URL, paths and the `Idempotency-Key` it sends on every `POST` (a caller's own key is the `idempotencyKey` request option).
 
 Peable backend readiness was verified on TD7, with health/ready200 and unauthenticated billing401; its provider/cohort configuration remained absent. Separately, the approved **Mercaria-specific** cohort implementation passed real Stripe test-account Checkout and TestClock exercises. Those facts replace “never tested anywhere”; they do not prove a configured Homiio EUR rail, Homiio acceptance, a production card payment, or permission to reuse Mercaria's financial namespace. [I08 and its scope](https://github.com/OxyHQ/Peable/issues/87) remain the authority for that distinction.
 
@@ -16,12 +16,13 @@ Peable's billing provider exposes explicit customer/checkout/portal/subscription
 
 `packages/backend/services/payments/peableContract.ts` retains the existing domain mapping:
 
-- Only `settled` means `succeeded`.
-- Created/approval/action states mean initiated; in-flight states mean pending.
-- Refunded and partially refunded mean a separate refund row.
-- Unknown statuses remain unknown and authorize no ledger change.
+- The mapping is keyed by the SDK's `PaymentIntentStatus`, so a status Peable adds fails Homiio's typecheck on the upgrade that brings it.
+- Only `succeeded` means `succeeded`.
+- The `requires_*` states before money moves mean initiated; `processing` and `requires_capture` mean pending; `canceled` (including expiry and FairCoin underpayment) means failed, because the rent is still owed.
+- No status means a refund: a refund is Peable's `Refund` (`refund.*`, `charge.refunded`) and a separate Homiio movement pointing at the original.
+- Unknown statuses — including retired 0.x names such as `settled` — remain unknown and authorize no ledger change.
 
-`verifyPeableSignature` delegates to the **published standalone `WebhooksResource`**. It verifies the raw UTF-8 bytes, signed timestamp window, JSON event envelope and canonical event type without constructing a credential-bearing client or minting a token. Invalid UTF-8 buffers are refused before lossy decoding. The local unmounted seam now reports one `invalid_webhook` refusal instead of parsing SDK error messages into the old local header/version categories. No mounted caller relied on those categories. Tests control the clock rather than adding a production time override.
+`verifyPeableSignature` delegates to the **published standalone `WebhooksResource`**. It verifies the raw UTF-8 bytes, signed timestamp window (the SDK's default 300 s tolerance), JSON event envelope and canonical event type without constructing a credential-bearing client or minting a token. Invalid UTF-8 buffers are refused before lossy decoding. The local unmounted seam now reports one `invalid_webhook` refusal instead of parsing SDK error messages into the old local header/version categories. No mounted caller relied on those categories. Tests control the clock rather than adding a production time override.
 
 The SDK's envelope check is not Homiio domain authorization or full nested-resource validation. A future mounted ingress still needs exact merchant/environment, obligation/reference/amount/currency validation, event deduplication and atomic ledger handling. Valid HMAC alone is never sufficient authority to settle an obligation.
 

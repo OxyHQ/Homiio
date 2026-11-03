@@ -1,10 +1,14 @@
 import { createHmac } from 'node:crypto';
 import { closePostgres } from '../../db/postgres';
-import type { WebhooksResource } from '@peable.to/sdk';
+import {
+  DEFAULT_WEBHOOK_TOLERANCE_SEC,
+  PEABLE_API_VERSION,
+  type PaymentIntent,
+  type WebhookEvent,
+} from '@peable.to/sdk';
 
 import {
   PEABLE_INTENT_STATUSES,
-  PEABLE_SIGNATURE_TOLERANCE_SECONDS,
   peableStatusMeaning,
   verifyPeableSignature,
 } from '../../services/payments/peableContract';
@@ -12,33 +16,61 @@ import {
 const SECRET = 'whsec_test_secret';
 const TIMESTAMP = 1791000000;
 const created = TIMESTAMP;
-type Event = ReturnType<WebhooksResource['constructEvent']>;
+const INTENT = {
+  id: 'pi_fixture',
+  object: 'payment_intent',
+  livemode: false,
+  status: 'succeeded',
+  rail: 'faircoin',
+  payment_method_types: ['faircoin'],
+  payment_method_configuration_details: null,
+  amount: '100000',
+  amount_capturable: '0',
+  amount_received: '100000',
+  amount_refunded: '0',
+  currency: 'FAIR',
+  capture_method: 'automatic',
+  setup_future_usage: null,
+  customer: null,
+  payment_method: null,
+  latest_charge: null,
+  next_action: null,
+  last_payment_error: null,
+  cancellation_reason: null,
+  canceled_at: null,
+  description: null,
+  receipt_email: null,
+  statement_descriptor_suffix: null,
+  shipping: null,
+  faircoin: {
+    network: 'testnet',
+    address: 'synthetic-address',
+    txid: 'synthetic-tx',
+    confirmations: 6,
+    required_confirmations: 6,
+  },
+  merchant_id: 'merch_fixture',
+  connected_account: null,
+  application_fee_amount: null,
+  transfer_data: null,
+  on_behalf_of: null,
+  client_secret: 'synthetic-unused-secret',
+  metadata: {},
+  expires_at: created,
+  can_expire: false,
+  created,
+  updated_at: created,
+} satisfies PaymentIntent;
 const EVENT = {
   id: 'evt_fixture',
   object: 'event',
-  type: 'payment_intent.settled',
+  type: 'payment_intent.succeeded',
   created,
-  data: {
-    object: {
-      id: 'pi_fixture',
-      object: 'payment_intent',
-      status: 'settled',
-      rail: 'faircoin',
-      amount: '100000',
-      currency: 'FAIR',
-      network: 'testnet',
-      address: 'synthetic-address',
-      merchant_id: 'merch_fixture',
-      txid: 'synthetic-tx',
-      confirmations: 6,
-      client_secret: 'synthetic-unused-secret',
-      metadata: {},
-      expires_at: created,
-      created,
-      updated_at: created,
-    },
-  },
-} satisfies Event;
+  livemode: false,
+  api_version: PEABLE_API_VERSION,
+  data: { object: INTENT },
+  request: { id: null, idempotency_key: null },
+} satisfies WebhookEvent;
 const BODY = JSON.stringify(EVENT);
 beforeEach(() => {
   jest.spyOn(Date, 'now').mockReturnValue(TIMESTAMP * 1000);
@@ -54,49 +86,43 @@ function sign(body: string, timestamp: number, secret = SECRET): string {
 }
 
 describe('what a Peable status means to the ledger', () => {
-  it('settles only on `settled`', () => {
+  it('settles only on `succeeded`', () => {
     const settling = PEABLE_INTENT_STATUSES.filter((status) => {
       const meaning = peableStatusMeaning(status);
       return meaning.kind === 'state' && meaning.state === 'succeeded';
     });
     // The whole list, checked at once: a mapping that credited money on
-    // `approved` or `broadcast` would be a payment system reporting funds that
-    // never arrived, and it would look like a one-word mistake in a switch.
-    expect(settling).toEqual(['settled']);
+    // `processing` or `requires_capture` would be a payment system reporting
+    // funds that never arrived, and it would look like a one-word mistake.
+    expect(settling).toEqual(['succeeded']);
   });
 
-  it('treats a refund as a ROW, never as a state', () => {
-    expect(peableStatusMeaning('refunded')).toEqual({ kind: 'refund', partial: false });
-    expect(peableStatusMeaning('partially_refunded')).toEqual({ kind: 'refund', partial: true });
-    // Homiio's ledger records a refund as its own movement pointing at what it
-    // reverses, and the original stays `succeeded`. Collapsing these into a
-    // state would edit history and leave nothing to reconcile against.
+  it('has no refund status: a refund is its own row, never a state', () => {
+    // Peable reports money coming back as a Refund (`refund.*`, `charge.refunded`)
+    // and `amount_refunded`; Homiio records it as a movement pointing at the
+    // original, which stays `succeeded`. A status string must never reverse it.
+    for (const status of ['refunded', 'partially_refunded'])
+      expect(peableStatusMeaning(status)).toEqual({ kind: 'unknown', status });
   });
 
   it('calls a status it has never heard of unknown, rather than guessing', () => {
-    // A new processor status must never become a settlement by default.
-    expect(peableStatusMeaning('captured_offline')).toEqual({
-      kind: 'unknown',
-      status: 'captured_offline',
-    });
-    expect(peableStatusMeaning('')).toMatchObject({ kind: 'unknown' });
+    // A new processor status, a retired 0.x one, or a prototype key must never
+    // become a settlement by default.
+    for (const status of ['captured_offline', 'settled', 'toString', ''])
+      expect(peableStatusMeaning(status)).toEqual({ kind: 'unknown', status });
   });
 
-  it('is total over every status this build knows', () => {
-    for (const status of PEABLE_INTENT_STATUSES) {
-      expect(peableStatusMeaning(status).kind).not.toBe('unknown');
-    }
-  });
-
-  it('keeps `requires_action` out of flight', () => {
+  it('keeps every `requires_*` state before money moves out of flight', () => {
     // Nothing is moving until somebody does something, so it is `initiated`.
     // Reading it as `pending` would show a tenant "awaiting settlement" for a
     // payment that is waiting on them.
-    expect(peableStatusMeaning('requires_action')).toEqual({ kind: 'state', state: 'initiated' });
+    for (const status of ['requires_payment_method', 'requires_confirmation', 'requires_action'])
+      expect(peableStatusMeaning(status)).toEqual({ kind: 'state', state: 'initiated' });
+    expect(peableStatusMeaning('requires_capture')).toEqual({ kind: 'state', state: 'pending' });
   });
 
-  it('counts an expiry as a failure, because the rent is still owed', () => {
-    expect(peableStatusMeaning('expired')).toEqual({ kind: 'state', state: 'failed' });
+  it('counts a cancellation (expiry, underpayment) as a failure, because the rent is still owed', () => {
+    expect(peableStatusMeaning('canceled')).toEqual({ kind: 'state', state: 'failed' });
   });
 });
 
@@ -115,7 +141,7 @@ describe('published SDK webhook verification without a client or token mint', ()
     expect(verify(BODY, `t=${TIMESTAMP},v1=ff`).ok).toBe(false);
   });
   it('enforces the exact signed timestamp window without refreshing old signatures', () => {
-    expect(verify(BODY, sign(BODY, TIMESTAMP - PEABLE_SIGNATURE_TOLERANCE_SECONDS)).ok).toBe(true);
+    expect(verify(BODY, sign(BODY, TIMESTAMP - DEFAULT_WEBHOOK_TOLERANCE_SEC)).ok).toBe(true);
     for (const offset of [-301, 301])
       expect(verify(BODY, sign(BODY, TIMESTAMP + offset)).ok).toBe(false);
     expect(
@@ -140,61 +166,42 @@ describe('published SDK webhook verification without a client or token mint', ()
     '{}',
     JSON.stringify({ ...EVENT, type: 'toString' }),
     JSON.stringify({ ...EVENT, type: 'unknown.event' }),
+    JSON.stringify({ ...EVENT, type: 'payment_intent.settled' }),
+    JSON.stringify({ ...EVENT, livemode: undefined }),
+    JSON.stringify({ ...EVENT, request: undefined }),
     JSON.stringify({ ...EVENT, created: new Date(TIMESTAMP * 1000).toISOString() }),
   ])('refuses signed malformed or unknown event: %s', (raw) => {
     expect(verify(raw, sign(raw, TIMESTAMP))).toEqual({ ok: false, reason: 'invalid_webhook' });
   });
-  const dispute = {
-    id: 'dp_fixture',
-    object: 'dispute',
-    payment_intent_id: 'pi_fixture',
-    amount: '100',
-    currency: 'EUR',
-    status: 'needs_response',
-    reason: null,
-    evidence_due_at: null,
-    evidence_submitted_at: null,
-    created,
-    updated_at: created,
-  } as const;
-  const account = {
-    id: 'ca_fixture',
-    object: 'connected_account',
-    external_ref: 'synthetic-fixture',
-    rails: ['card'],
-    faircoin: null,
-    country: 'ES',
-    default_currency: 'EUR',
-    payable: false,
-    payouts_enabled: false,
-    charges_enabled: false,
-    transfers_capability: 'pending',
-    card_payments_capability: null,
-    requirements: { currently_due: 1, eventually_due: 1, past_due: 0, pending_verification: 0 },
-    disabled_reason_codes: [],
-    last_synced_at: null,
-    created,
-    updated_at: created,
-  } as const;
+  // The events a rent ledger would read about its payment, each with the
+  // resource it actually carries; and the billing observation, whose payload
+  // the SDK validates field by field.
   const payloads = {
-    'payment_intent.confirming': EVENT.data.object,
-    'payment_intent.settled': EVENT.data.object,
-    'payment_intent.failed': EVENT.data.object,
-    'payment_intent.rejected': EVENT.data.object,
-    'payment_intent.expired': EVENT.data.object,
-    'payment_intent.refunded': EVENT.data.object,
-    'payment_intent.partially_refunded': EVENT.data.object,
-    'payment_intent.disputed': dispute,
-    'payment_intent.dispute_closed': { ...dispute, status: 'won' },
-    'connected_account.updated': account,
+    'payment_intent.created': { ...INTENT, status: 'requires_action' },
+    'payment_intent.requires_action': { ...INTENT, status: 'requires_action' },
+    'payment_intent.processing': { ...INTENT, status: 'processing' },
+    'payment_intent.succeeded': INTENT,
+    'payment_intent.payment_failed': {
+      ...INTENT,
+      status: 'requires_payment_method',
+      rail: 'card',
+      payment_method_types: ['card'],
+      currency: 'EUR',
+      amount_received: '0',
+      faircoin: null,
+    },
+    'payment_intent.canceled': { ...INTENT, status: 'canceled', cancellation_reason: 'abandoned' },
     'billing.observation.updated': {
       object: 'billing_observation',
+      livemode: false,
       resource_kind: 'subscription',
       resource_id: 'sub_fixture',
       revision: 1,
       observed_at: created,
     },
-  } satisfies { [T in Event['type']]: Extract<Event, { type: T }>['data']['object'] };
+  } satisfies {
+    [T in WebhookEvent['type']]?: Extract<WebhookEvent, { type: T }>['data']['object'];
+  };
   for (const type of Object.keys(payloads) as (keyof typeof payloads)[]) {
     it(`accepts signed ${type} with its actual resource family`, () => {
       const raw = JSON.stringify({ ...EVENT, type, data: { object: payloads[type] } });
@@ -202,6 +209,14 @@ describe('published SDK webhook verification without a client or token mint', ()
       expect(verify(raw, sign(raw, TIMESTAMP), 'wrong').ok).toBe(false);
     });
   }
+  it('refuses a signed billing observation whose payload is not one', () => {
+    const raw = JSON.stringify({
+      ...EVENT,
+      type: 'billing.observation.updated',
+      data: { object: { ...payloads['billing.observation.updated'], revision: 0 } },
+    });
+    expect(verify(raw, sign(raw, TIMESTAMP))).toEqual({ ok: false, reason: 'invalid_webhook' });
+  });
   it('does not silently replace invalid UTF-8 before verifying raw buffer bytes', () => {
     const raw = JSON.stringify({ ...EVENT, id: 'evt_\uFFFD' });
     const bytes = Buffer.from(raw);
