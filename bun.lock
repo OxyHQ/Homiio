@@ -37,7 +37,7 @@
         "@oxy.so/homiio-contracts": "workspace:*",
         "@oxy.so/mcp": "1.4.0",
         "@oxy.so/utils": "^1.5.1",
-        "@peable.to/sdk": "0.2.2",
+        "@peable.to/sdk": "0.8.0",
         "axios": "^1.18.1",
         "bcryptjs": "^3.0.3",
         "body-parser": "^1.20.6",
@@ -948,11 +948,11 @@
 
     "@parcel/watcher-win32-x64": ["@parcel/watcher-win32-x64@2.6.0", "", { "os": "win32", "cpu": "x64" }, "sha512-cA+/pXV2YkfxlIcXOQ5fSWqAzzPyD78/x5qbK/I0vUkrlYHA8TIz+MXjAbGouguKVSI4bOmkTSJ1/poVSsgt+A=="],
 
-    "@peable.to/contracts": ["@peable.to/contracts@0.1.0", "", { "dependencies": { "zod": "^4.3.6" } }, "sha512-plGdQ0rLT/you4j08OK7DI0QRv20dxVam8MgVz0PMear554WYZ+fF9AD90ld6ST5RpJqt07SMbF2WBB9oEf98w=="],
+    "@peable.to/contracts": ["@peable.to/contracts@0.3.0", "", { "dependencies": { "zod": "^4.6.7" } }, "sha512-ro2hEtxglLgU8iANt6ZgjKKe5ro6o50rHwfon0bI+GyYIsJ5OMyC3qAmWnZeHKiat76xwCfBhXek1X59Iyq2bg=="],
 
-    "@peable.to/sdk": ["@peable.to/sdk@0.2.2", "", { "dependencies": { "@peable.to/shared-types": "^0.3.0", "qrcode-generator": "^2.0.4", "socket.io-client": "^4.8.3" } }, "sha512-U1i6gGK2yGXvsIIjHBMga+RzuvgSl9+74N0+ENFLinv7vD56syP5lfrD+Jmuw208E5H9tLars61ucq7HW00a9A=="],
+    "@peable.to/sdk": ["@peable.to/sdk@0.8.0", "", { "dependencies": { "@peable.to/contracts": "0.3.0", "@peable.to/shared-types": "0.6.0", "qrcode-generator": "^2.0.4", "socket.io-client": "^4.8.3" }, "peerDependencies": { "@oxy.so/bloom": ">=16.10.0", "react": ">=19.0.0 <20.0.0", "react-native": ">=0.86.0 <1.0.0" }, "optionalPeers": ["@oxy.so/bloom", "react", "react-native"] }, "sha512-DPjTam2k0s5d0ZsQcxcpH7z5Cwde3KRuBl+0ol2ifuY/iMR/eo4KT4XcD21FZ+myqaM5g0aruc/wZWf0+k4KGg=="],
 
-    "@peable.to/shared-types": ["@peable.to/shared-types@0.3.0", "", {}, "sha512-SczFYX93BkY1OghT95oKemixSFsbWI98jeV6gwXBqWtBAuXS6mit2fk0hLyoFQVvSpul1Rq3RCjsBEobygZOaw=="],
+    "@peable.to/shared-types": ["@peable.to/shared-types@0.6.0", "", { "dependencies": { "@peable.to/contracts": "0.3.0" } }, "sha512-Ng9JoAjJETD1Mj/LH55raEv9o9rC4ijtBhZtcdn1O9xPQT2sx1/5XZT6rrQ0XC4oGK4/dLxAOcMkBgs6gZGCHw=="],
 
     "@pkgjs/parseargs": ["@pkgjs/parseargs@0.11.0", "", {}, "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg=="],
 
@@ -3774,6 +3774,8 @@
 
     "@modelcontextprotocol/sdk/raw-body/iconv-lite": ["iconv-lite@0.7.3", "", { "dependencies": { "safer-buffer": ">= 2.1.2 < 3.0.0" } }, "sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ=="],
 
+    "@oxy.so/services/@peable.to/sdk/@peable.to/contracts": ["@peable.to/contracts@0.1.0", "", { "dependencies": { "zod": "^4.3.6" } }, "sha512-plGdQ0rLT/you4j08OK7DI0QRv20dxVam8MgVz0PMear554WYZ+fF9AD90ld6ST5RpJqt07SMbF2WBB9oEf98w=="],
+
     "@oxy.so/services/@peable.to/sdk/@peable.to/shared-types": ["@peable.to/shared-types@0.5.0", "", { "dependencies": { "@peable.to/contracts": "0.1.0" } }, "sha512-ffRUGOJi/6O2Cohq3PrryNm7lFNFMaL0eit4mO5aKPzSE35bfdHuPvPW8yz2tXwQ3mBESC2BlkeyO7Km2T8kTw=="],
 
     "@react-native/babel-preset/@react-native/babel-plugin-codegen/@react-native/codegen": ["@react-native/codegen@0.87.1", "", { "dependencies": { "@babel/core": "^7.25.2", "@babel/parser": "^7.29.0", "hermes-parser": "0.36.1", "invariant": "^2.2.4", "nullthrows": "^1.1.1", "tinyglobby": "^0.2.15", "yargs": "^17.6.2" } }, "sha512-qbaqEdlUfj2vRgvWTpMoNgHnEqAhAYJLUrpGkb0WC9n0kdtqUvgigpz4bDktZwolM9BemXwgGFgyiAnbs3t0xw=="],
@@ -4155,6 +4157,8 @@
     "@modelcontextprotocol/sdk/express/mime-types/mime-db": ["mime-db@1.54.0", "", {}, "sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ=="],
 
     "@modelcontextprotocol/sdk/express/type-is/media-typer": ["media-typer@1.1.1", "", {}, "sha512-yz3xRaG20c6/BOzvYoDaGtPmGscs7YivItZEEqe6GbwNfHuxu9YNmvnEkMzKldAGY4/80pRcQRZSEnhquk9XuQ=="],
+
+    "@oxy.so/services/@peable.to/sdk/@peable.to/contracts/zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "@react-native/babel-preset/@react-native/babel-plugin-codegen/@react-native/codegen/hermes-parser": ["hermes-parser@0.36.1", "", { "dependencies": { "hermes-estree": "0.36.1" } }, "sha512-GApNk4zLHi2UWoWZZkx7LNCOSzLSc5lB55pZ/PhK7ycFeg7u5LcF88p/WbpIi1XUDtE0MpHE3uRR3u3KB7TjSQ=="],
 
