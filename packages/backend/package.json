@@ -32,9 +32,9 @@
     "@homiio/listing-providers": "workspace:*",
     "@homiio/shared-types": "workspace:*",
     "@oxy.so/contracts": "6.5.0",
-    "@oxy.so/core": "7.13.0",
+    "@oxy.so/core": "7.16.0",
     "@oxy.so/db": "^1.4.0",
-    "@oxy.so/utils": "^1.5.1",
+    "@oxy.so/utils": "^1.5.2",
     "@peable.to/sdk": "1.0.0",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
@@ -64,7 +64,7 @@
     "@oxy.so/homiio-contracts": "workspace:*",
     "@oxy.so/allo-sdk": "0.4.0",
     "@oxy.so/allo-contracts": "0.2.1",
-    "@oxy.so/mcp": "1.4.0",
+    "@oxy.so/mcp": "1.4.1",
     "@aws-sdk/credential-provider-node": "3.972.83"
   },
   "devDependencies": {
