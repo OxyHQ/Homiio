@@ -4,15 +4,16 @@ Oxy ADR 0049 separates workload identity from user and resource authorization.
 The team capability protocol remains the domain boundary: adding an own service
 bearer never grants ownership or membership and never replaces the capability.
 
-The SDK-only releases are published: `@oxy.so/allo-sdk` 0.4.0 and
-`@oxy.so/homiio-sdk` 0.2.0. Both `/server` factories require core7. The application branches adopt those registry packages and patched contracts6. Deploy Homiio before Allo, so the
+The SDK-only releases are published: `@oxy.so/allo-sdk` 1.0.0 (its
+`alloTeamForOxyService` is the only snapshot client and always sends the
+workload bearer) and `@oxy.so/homiio-sdk` 0.2.0. Both `/server` factories require core7. The application branches adopt those registry packages and patched contracts6. Deploy Homiio before Allo, so the
 Homiio receiver already declares its canonical audience when Allo starts
 sending its workload bearer. The frontend linked socket getter and deferred
 Files calls additionally require the core7.1/API follow-up before their cutover.
 
 | Caller | Receiver route | Resource authorization | Rolling compatibility |
 | --- | --- | --- | --- |
-| Homiio | Allo `POST /v1/team-access/snapshot` | Opaque team capability, live conversation lookup | Route is before global session/instance auth in old and new Allo. The new bearer does not replace the capability. |
+| Homiio | Allo `POST /v1/team-access/snapshot` | Opaque team capability, live conversation lookup | Allo requires the service bearer (`oxy.middleware.service()`) on this route; allo-sdk 1.0.0 always sends it. The bearer does not replace the capability. |
 | Allo | Homiio `POST /api/v1/team-chat/operations/read` | HMAC operation capability, live operation and encrypted team reference | Old core6.14 optional auth refuses the new audience but continues anonymously; the capability still authorizes this published read. New Homiio accepts its canonical workload audience. |
 
 Mutations remain separate. Homiio creates operations only for the actual case
