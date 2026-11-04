@@ -4,7 +4,7 @@
 
 External listing ingestion is handled by `packages/backend/worker.ts` + `@homiio/listing-providers` on BullMQ. See **Listing Provider Plugins** in `AGENTS.md` for the full architecture, queue names, plugin contract, and how to add providers.
 
-The legacy Fotocasa cron scrape loop (`localhost:3000` sidecar) is retired. `services/cron.ts` now runs only health + TTL cleanup. The `scraperService` upsert helpers (`upsertExternalListing`, `getScraperHealth`, `cleanupExpiredProperties`) remain for TTL cleanup, health reporting, and manual admin-triggered runs via the admin-only `/api/scraper/*` routes.
+The legacy Fotocasa cron scrape loop (`localhost:3000` sidecar) is retired. `services/cron.ts` now runs only health + TTL cleanup. The `scraperService` upsert helpers (`upsertExternalListing`, `getScraperHealth`, `cleanupExpiredProperties`) remain for TTL cleanup, health reporting, and manual admin-triggered runs via the `/api/scraper/*` routes, which only holders of the `homiio.scraper.operate` application permission reach (`services/applicationPermissions.ts`).
 
 ## US portal probes (2026-07)
 

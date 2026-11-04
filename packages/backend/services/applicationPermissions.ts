@@ -1,11 +1,17 @@
 /**
  * Homiio's application permission vocabulary (`~/Oxy/docs/application-roles.md`).
  *
- * Declare these keys on Homiio's Oxy application (Console → Settings → Roles,
- * or `PUT /applications/:appId/roles/permissions`, which replaces the WHOLE
- * vocabulary — keep any other declared key) and grant them to the people who
- * operate the surface. Shipping this code declares and grants nothing: until a
- * person holds the key, the surface it gates answers 404 to everyone.
+ * Homiio is Oxy's own application, so these keys are declared in code in
+ * Homiio's entry of oxy's first-party registry (`operatorPermissions` in
+ * `packages/api/src/scripts/seedOxyApplicationsSpecs.ts`, applied by oxy's
+ * "Seed Oxy applications" workflow; oxy ADR 0056). Each key is held by roles of
+ * the organization that owns Homiio (today its owners and admins): to make
+ * somebody an operator, give them that role there. Nothing is granted per
+ * person, in the Console or otherwise (Oxy answers a grant on a first-party
+ * application `409 FIRST_PARTY_ROLES_IN_CODE`), and Homiio keeps no list of
+ * user ids. Every key here must equal the registry's: a key renamed in only
+ * one place answers 404 to everyone, and a new key does nothing until the
+ * registry declares it and the seed runs.
  */
 export const APPLICATION_PERMISSIONS = [
   {

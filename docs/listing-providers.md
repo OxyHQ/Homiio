@@ -301,7 +301,10 @@ ID/TH/TR; OLX PT/PL; Immowelt AT; Blueground PT/GR/AE/HK; ImmobiliareScout24 AT.
 - The `localhost:3000` sidecar dependency and the `config/cron.ts` `scrapeSources`
   array are removed.
 - `/api/scraper/*` routes need the `homiio.scraper.operate` application permission
-  (`routes/scraper.ts`, `requireAppPermission`, read fresh on every call).
+  (`routes/scraper.ts`, `requireAppPermission`, read fresh on every call). Oxy
+  decides who holds it: the key is declared in Homiio's entry of oxy's
+  first-party registry and held by the owners and admins of the organization
+  that owns Homiio (oxy ADR 0056). Nobody grants it per person.
 - `scraperService` upsert helpers (`upsertExternalListing`, `getScraperHealth`,
   `cleanupExpiredProperties`) remain for expired-listing cleanup, health
   reporting and manual admin runs.
