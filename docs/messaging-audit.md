@@ -13,9 +13,9 @@ of the exercise is to stop "there is no messaging platform" and "just use the
 messaging platform" from both being assertions nobody checked.
 
 **Current status (2026-11-04):** `@oxy.so/allo-sdk`1.0 and
-`@oxy.so/homiio-sdk`0.2 are published. [Case-team chat](./team-chat) uses their
-resource capabilities (the Allo snapshot read also carries Homiio's Oxy service
-token, which Allo requires) and preserves account membership, operation checks and
+`@oxy.so/homiio-sdk`1.0 are published. [Case-team chat](./team-chat) uses their
+resource capabilities (each read also carries the caller's Oxy service token,
+which the receiving product requires) and preserves account membership, operation checks and
 client-held MLS keys. The [rollout contract](./first-party-team-rollout) records
 the receiver order and actual compatibility checks. SDK publication is no longer
 a blanket blocker to integration, but it does not expose the private headless

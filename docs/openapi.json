@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Homiio public API",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "servers": [
     {
@@ -83,10 +83,11 @@
         "operationId": "readTeamOperation",
         "security": [
           {
+            "OxyServiceToken": [],
             "TeamOperationCapability": []
           }
         ],
-        "description": "Read one immutable operation using its header-only capability; no message or housing content.",
+        "description": "Service read of one immutable operation: the caller sends its Oxy service token (minted for oxy-service:<Homiio application id> by @oxy.so/homiio-sdk/server) and the header-only capability. No message or housing content. 401: no, invalid or inactive service token; 403: the bearer is not a service token.",
         "requestBody": {
           "required": true,
           "content": {
@@ -114,6 +115,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OxyAuthError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OxyAuthError"
                 }
               }
             }
@@ -344,6 +365,11 @@
         "type": "http",
         "scheme": "bearer"
       },
+      "OxyServiceToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
       "TeamOperationCapability": {
         "type": "apiKey",
         "in": "header",
@@ -351,6 +377,27 @@
       }
     },
     "schemas": {
+      "OxyAuthError": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "message",
+          "code"
+        ],
+        "additionalProperties": {}
+      },
       "PublicCaseBatchRequest": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",

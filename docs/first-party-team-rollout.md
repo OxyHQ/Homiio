@@ -6,7 +6,8 @@ bearer never grants ownership or membership and never replaces the capability.
 
 The SDK-only releases are published: `@oxy.so/allo-sdk` 1.0.0 (its
 `alloTeamForOxyService` is the only snapshot client and always sends the
-workload bearer) and `@oxy.so/homiio-sdk` 0.2.0. Both `/server` factories require core7. The application branches adopt those registry packages and patched contracts6. Deploy Homiio before Allo, so the
+workload bearer) and `@oxy.so/homiio-sdk` 1.0.0 (likewise for the operation
+read: `homiioTeamForOxyService` is its only client). Both `/server` factories require core7. The application branches adopt those registry packages and patched contracts6. Deploy Homiio before Allo, so the
 Homiio receiver already declares its canonical audience when Allo starts
 sending its workload bearer. The frontend linked socket getter and deferred
 Files calls additionally require the core7.1/API follow-up before their cutover.
@@ -14,7 +15,7 @@ Files calls additionally require the core7.1/API follow-up before their cutover.
 | Caller | Receiver route | Resource authorization | Rolling compatibility |
 | --- | --- | --- | --- |
 | Homiio | Allo `POST /v1/team-access/snapshot` | Opaque team capability, live conversation lookup | Allo requires the service bearer (`oxy.middleware.service()`) on this route; allo-sdk 1.0.0 always sends it. The bearer does not replace the capability. |
-| Allo | Homiio `POST /api/v1/team-chat/operations/read` | HMAC operation capability, live operation and encrypted team reference | Old core6.14 optional auth refuses the new audience but continues anonymously; the capability still authorizes this published read. New Homiio accepts its canonical workload audience. |
+| Allo | Homiio `POST /api/v1/team-chat/operations/read` | HMAC operation capability, live operation and encrypted team reference | Homiio requires the service bearer (`oxyService.middleware.service()`, audience `oxy-service:<Homiio's application id>`) on this route; homiio-sdk 1.0.0's `homiioTeamForOxyService` is the only reader and always sends it. The bearer does not replace the capability. |
 
 Mutations remain separate. Homiio creates operations only for the actual case
 owner. Allo checks the returned owner and team-reference hash against the
@@ -32,7 +33,9 @@ and temporary workload provider against a local signed issuer fixture.
 - Valid capability: read succeeds and returns the original owner/reference.
 - Invalid capability and another operation: rejected.
 - Another actor attempting `beginTeamOperation`: rejected as not found.
-- Existing capability read without a bearer: still succeeds.
+- Existing capability read without a bearer: still succeeded then. Since
+  homiio-sdk 1.0.0 the route requires a service token, so it is now 401
+  (`__tests__/integration/evictionTeamChat.test.ts`).
 - The old optional middleware reports audience refusal without fabricating a
   user or making the domain read depend on bearer acceptance.
 

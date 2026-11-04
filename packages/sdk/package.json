@@ -1,6 +1,6 @@
 {
   "name": "@oxy.so/homiio-sdk",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Homiio public case sdk",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
@@ -43,7 +43,7 @@
     "typecheck:tests": "tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
-    "@oxy.so/homiio-contracts": "0.2.1"
+    "@oxy.so/homiio-contracts": "0.2.2"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
