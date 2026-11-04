@@ -1,9 +1,19 @@
-import { afterAll, expect, it } from 'bun:test';
+import { afterAll, afterEach, expect, it } from 'bun:test';
 import { OxyServer } from '@oxy.so/core/server';
+import * as root from '../dist/index.js';
 import { homiioTeamForOxyService, SERVICE_AUDIENCE } from '../dist/server.js';
 
-const requests: Request[] = [];
+const CAPABILITY = 'operation-capability';
 const TOKEN = `e30.${Buffer.from(JSON.stringify({ type: 'service', authority: 'first_party', exp: Math.floor(Date.now() / 1000) + 300 })).toString('base64url')}.signature`;
+const OPERATION = {
+  id: 'operation-1',
+  caseId: 'case-1',
+  ownerAccountId: 'owner',
+  action: 'open',
+  targetAccountIds: ['member', 'owner'] as string[],
+  teamReferenceHash: 'a'.repeat(64),
+  finalized: false,
+} as const;
 const issuer = Bun.serve({
   hostname: '127.0.0.1',
   port: 0,
@@ -17,8 +27,17 @@ const issuer = Bun.serve({
   },
 });
 afterAll(() => issuer.stop(true));
-it('uses shared receiver-bound workload transport while retaining resource capability denial', async () => {
-  const original = globalThis.fetch;
+
+const original = globalThis.fetch;
+const servers: OxyServer[] = [];
+afterEach(() => {
+  globalThis.fetch = original;
+  for (const oxy of servers.splice(0)) oxy.dispose();
+});
+
+/** A workload OxyServer whose Homiio requests are answered by `homiio`. */
+function reader(homiio: (req: Request) => Response) {
+  const requests: Request[] = [];
   const oxy = new OxyServer({
     baseURL: issuer.url.origin,
     workloadCredentials: async () => ({
@@ -27,21 +46,40 @@ it('uses shared receiver-bound workload transport while retaining resource capab
       Token: 'fixture-session',
     }),
   });
+  servers.push(oxy);
   globalThis.fetch = (async (input, init) => {
     const req = new Request(input, init);
     if (new URL(req.url).hostname !== 'api.homiio.com') return original(input, init);
     requests.push(req);
-    expect(req.headers.get('authorization')).toBe(`Bearer ${TOKEN}`);
-    expect(req.headers.get('x-homiio-team-operation')).toBe('revoked-capability');
-    return new Response(null, { status: 404 });
+    return homiio(req);
   }) as typeof fetch;
-  try {
-    await expect(
-      homiioTeamForOxyService(oxy).read('operation', 'revoked-capability'),
-    ).rejects.toThrow('unavailable');
-    expect(requests).toHaveLength(1);
-  } finally {
-    oxy.dispose();
-    globalThis.fetch = original;
+  return { team: homiioTeamForOxyService(oxy), requests };
+}
+
+it('offers no unauthenticated operation read: the root client only begins and finalizes', () => {
+  expect(Object.getOwnPropertyNames(root.HomiioTeamClient.prototype)).not.toContain('read');
+});
+
+it('sends the service token AND the operation capability to the read route', async () => {
+  const { team, requests } = reader(() => Response.json(OPERATION));
+  expect(await team.read('operation-1', CAPABILITY)).toEqual(OPERATION);
+  expect(requests).toHaveLength(1);
+  const [req] = requests;
+  expect(req.method).toBe('POST');
+  expect(req.url).toBe('https://api.homiio.com/api/v1/team-chat/operations/read');
+  expect(req.headers.get('authorization')).toBe(`Bearer ${TOKEN}`);
+  expect(req.headers.get('x-homiio-team-operation')).toBe(CAPABILITY);
+  expect(await req.json()).toEqual({ operationId: 'operation-1' });
+});
+
+it('throws for every refusal: unknown operation, missing service identity, outage', async () => {
+  for (const status of [401, 403, 404, 503]) {
+    const { team } = reader(() => new Response(null, { status }));
+    await expect(team.read('operation-1', CAPABILITY)).rejects.toThrow('unavailable');
   }
+});
+
+it('refuses a response that is not a team operation', async () => {
+  const { team } = reader(() => Response.json({ id: 1 }));
+  await expect(team.read('operation-1', CAPABILITY)).rejects.toThrow();
 });

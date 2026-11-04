@@ -1,22 +1,50 @@
 # Homiio SDK
 
-The public resource capability API remains compatible. Own Oxy backends can
-use the `/server` export with their process's shared `OxyServer`:
+Three entries:
+
+- `@oxy.so/homiio-sdk/client` — public case cards for browsers (`HomiioClient`),
+  no Zod.
+- `@oxy.so/homiio-sdk` — the same plus case links and `HomiioTeamClient`, the
+  case owner's side of a team operation (`begin`, `finalize`) over the
+  signed-in person's Oxy linked transport. The transport is required.
+- `@oxy.so/homiio-sdk/server` — the team operation read, for backends.
+
+## Reading a team operation
 
 ```ts
 import { homiioTeamForOxyService } from '@oxy.so/homiio-sdk/server';
 
-const team = homiioTeamForOxyService(oxy);
+const team = homiioTeamForOxyService(oxy); // the process's one OxyServer
+const operation = await team.read(operationId, capability);
 ```
 
-The factory uses Oxy's shared workload transport and the registered Homiio
-audience. It adds no API key, internal scopes or app consent. Team capabilities,
-membership and operation checks remain the resource authorization contract.
-Both entries are independent of Oxy at runtime and in their emitted types.
-The factory accepts only the structural service-client method it uses. The own
-integration requires Oxy core7 or newer. Its built artifact is tested against
-published core7.1.0 by `tests/server.test.ts`; the SDK test typecheck runs in CI.
+Every request carries two things, and neither replaces the other:
 
-Allo0.4 and Homiio0.2 were published before the runtime migrations. The apps now
-use the same core7 major, so the temporary independent test installation has
-been removed. Doctor checks the one runtime dependency tree.
+- **The caller's Oxy service token** — transport identity, minted by
+  `OxyServer.createServiceClient` for Homiio's audience (`SERVICE_AUDIENCE`,
+  `oxy-service:<Homiio's application id>`) from the process's attested workload
+  identity (Oxy ADR 0026/0049). No API key, internal scope or app consent.
+- **The operation's capability** (`x-homiio-team-operation`) — the resource
+  grant. Operation and membership checks are Homiio's, whoever the caller is.
+
+Homiio refuses the read without a service token (401) or with a person's
+session (403); `read` throws for every refusal. The factory takes only the
+structural `createServiceClient` method it uses, so neither entry carries Oxy
+types; it requires Oxy core7 or newer. `createServiceClient` mints from
+workload identity only, so an `OxyServer` configured only with `serviceAuth`
+(an external application's key pair) cannot read operations; there is no
+second, key-based path.
+
+## 1.0.0 — the operation read always authenticates
+
+0.x let `new HomiioTeamClient()` call the read route with bare `fetch` and no
+token, so Homiio could not require a service token there.
+
+- Removed: `HomiioTeamClient.read` and its optional `fetch`. `homiioTeamForOxyService`
+  now returns a `HomiioTeamOperationReader` (`read` only).
+- Changed: `new HomiioTeamClient({ transport })` — the transport is required.
+- Unchanged: `begin`, `finalize`, `SERVICE_AUDIENCE`, `/client`, links and the
+  contract types.
+
+A backend that already read through `homiioTeamForOxyService` and a frontend
+that already passed a transport only bump the version.

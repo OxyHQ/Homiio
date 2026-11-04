@@ -86,7 +86,7 @@
     },
     "packages/contracts": {
       "name": "@oxy.so/homiio-contracts",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "dependencies": {
         "zod": "^4.6.7",
       },
@@ -217,9 +217,9 @@
     },
     "packages/sdk": {
       "name": "@oxy.so/homiio-sdk",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "dependencies": {
-        "@oxy.so/homiio-contracts": "0.2.1",
+        "@oxy.so/homiio-contracts": "0.2.2",
       },
       "devDependencies": {
         "@types/bun": "^1.4.3",

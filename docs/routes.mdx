@@ -58,13 +58,14 @@ All under `/api`. Source: `packages/backend/routes/public.ts`.
 |---|---|---|
 | `POST` | `/api/v1/cases/batch` | 1–50 opaque IDs, deduplicated; current public fields only. Archived, held and missing cases return `unavailableIds`. `Cache-Control: no-store`. |
 | `GET` | `/api/v1/openapi.json` | Generated OpenAPI 3.1 from `@oxy.so/homiio-contracts`; checked in CI. |
+| `POST` | `/api/v1/team-chat/operations/read` | **Not anonymous:** an Oxy service token for Homiio's audience (`oxyService.middleware.service()`; no token 401, a person's session 403) plus the operation capability in `x-homiio-team-operation` (wrong or missing 404). Read with `@oxy.so/homiio-sdk/server`'s `homiioTeamForOxyService(oxy)`. `Cache-Control: no-store`. |
 
 `@oxy.so/homiio-sdk` resolves batches with `HomiioClient.getPublicCases(ids, { signal })`.
 The response contains `items` and `unavailableIds`. Cards carry only `id`, public
 `title`, coarse `area`, `scheduledAt`, `status` and a canonical Homiio `url`.
 The SDK validates responses, deduplicates and chunks references, and retains no
 content cache. Browsers import `@oxy.so/homiio-sdk/client`, which checks the same
-contract by hand and loads no Zod; the root entry adds the team-chat client. Consumers must remove stale content on failure or withdrawal.
+contract by hand and loads no Zod; the root entry adds `HomiioTeamClient` (begin and finalize over the person's linked transport); the operation read is `@oxy.so/homiio-sdk/server`. Consumers must remove stale content on failure or withdrawal.
 `getHomiioCaseUrl` / `parseHomiioCaseUrl` support pasted links;
 `getMentionShareUrl` opens Mention's composer with only `homiioCaseId`.
 Participation continues in Homiio.

@@ -9,7 +9,15 @@ import {
   publicCaseBatchResponseSchema,
 } from './index';
 
+/** The body `@oxy.so/core`'s service middleware answers a refused credential with. */
+const oxyAuthErrorSchema = z.looseObject({
+  error: z.string(),
+  message: z.string(),
+  code: z.string(),
+});
+
 export const schemas = {
+  OxyAuthError: oxyAuthErrorSchema,
   PublicCaseBatchRequest: publicCaseBatchRequestSchema,
   PublicCaseBatchResponse: publicCaseBatchResponseSchema,
   ApiError: apiErrorSchema,
@@ -38,8 +46,15 @@ export const routes = [
     operationId: 'readTeamOperation',
     body: 'TeamOperationIdRequest',
     description:
-      'Read one immutable operation using its header-only capability; no message or housing content.',
-    responses: { 200: 'TeamOperation', 400: 'ApiError', 404: 'ApiError', 503: 'ApiError' },
+      'Service read of one immutable operation: the caller sends its Oxy service token (minted for oxy-service:<Homiio application id> by @oxy.so/homiio-sdk/server) and the header-only capability. No message or housing content. 401: no, invalid or inactive service token; 403: the bearer is not a service token.',
+    responses: {
+      200: 'TeamOperation',
+      400: 'ApiError',
+      401: 'OxyAuthError',
+      403: 'OxyAuthError',
+      404: 'ApiError',
+      503: 'ApiError',
+    },
   },
   {
     method: 'post',
@@ -87,7 +102,7 @@ export function generateOpenApi() {
           ...('baseUrl' in route
             ? { servers: [{ url: route.baseUrl }], security: [{ OxySession: [] }] }
             : route.operationId === 'readTeamOperation'
-              ? { security: [{ TeamOperationCapability: [] }] }
+              ? { security: [{ OxyServiceToken: [], TeamOperationCapability: [] }] }
               : {}),
           ...(route.path.includes('{id}')
             ? {
@@ -123,12 +138,13 @@ export function generateOpenApi() {
   );
   return {
     openapi: '3.1.0',
-    info: { title: 'Homiio public API', version: '0.1.0' },
+    info: { title: 'Homiio public API', version: '0.2.0' },
     servers: [{ url: 'https://api.homiio.com/api/v1' }],
     paths,
     components: {
       securitySchemes: {
         OxySession: { type: 'http', scheme: 'bearer' },
+        OxyServiceToken: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
         TeamOperationCapability: { type: 'apiKey', in: 'header', name: 'x-homiio-team-operation' },
       },
       schemas: Object.fromEntries(

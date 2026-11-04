@@ -1,5 +1,7 @@
+import { generateKeyPairSync, sign } from 'node:crypto';
 import express from 'express';
 import request from 'supertest';
+import { accountActorChainFromSession } from '@oxy.so/contracts';
 import { eq } from 'drizzle-orm';
 import type { TeamSnapshot } from '@oxy.so/allo-sdk';
 import evictionRoutes from '../../routes/evictions';
@@ -17,17 +19,66 @@ import {
   readTeamOperation,
 } from '../../db/evictions/teamChatRepository';
 import { errorHandler } from '../../middlewares/errorHandler';
+import { publicApiBodyErrorHandler, publicApiRouter } from '../../routes/publicApi';
+import { HOMIIO_APPLICATION_ID, oxyService } from '../../services/oxy';
 jest.mock('../../services/oxy', () => {
   const { OxyServer } = jest.requireActual('@oxy.so/core/server');
+  const { HOMIIO_APPLICATION_ID } = jest.requireActual('../../services/oxy');
   const oxyService = new OxyServer({
     baseURL: 'https://fixture.oxy.test',
     workloadCredentials: async () => ({ AccessKeyId: 'fixture', SecretAccessKey: 'fixture' }),
+    expectedAudience: `oxy-service:${HOMIIO_APPLICATION_ID}`,
   });
   jest
     .spyOn(oxyService.users, 'get')
     .mockImplementation(async (id: unknown) => ({ id: String(id) }));
-  return { oxyService };
+  return { oxyService, HOMIIO_APPLICATION_ID };
 });
+/**
+ * Oxy stand-in: workload tokens are shaped like Oxy's (EdDSA under a published
+ * kid) so `oxyService.middleware.service()` verifies them for real, and each
+ * minted token stays live in `/auth/resources/introspect`.
+ */
+const SERVICE_KID = 'homiio-fixture-key';
+const serviceKeys = generateKeyPairSync('ed25519');
+const liveServiceTokens = new Map<string, Record<string, unknown>>();
+function mintServiceToken(audience: string): string {
+  const iat = Math.floor(Date.now() / 1000);
+  const claims = {
+    iat,
+    exp: iat + 300,
+    type: 'service',
+    iss: 'oxy-auth',
+    aud: audience,
+    tier: 'internal',
+    authority: 'first_party',
+    appId: 'workload-fixture',
+    appName: 'Workload fixture',
+    credentialId: 'wl_fixture',
+    ownerAccountId: 'fixture-owner',
+    environment: 'development',
+  };
+  const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const unsigned = `${encode({ alg: 'EdDSA', typ: 'JWT', kid: SERVICE_KID })}.${encode(claims)}`;
+  const token = `${unsigned}.${sign(null, Buffer.from(unsigned), serviceKeys.privateKey).toString('base64url')}`;
+  liveServiceTokens.set(token, {
+    active: true,
+    authority: 'first_party',
+    applicationId: claims.appId,
+    credentialId: claims.credentialId,
+    accountId: claims.ownerAccountId,
+    environment: claims.environment,
+    audience,
+    expiresAt: new Date(claims.exp * 1000).toISOString(),
+  });
+  return token;
+}
+function audienceOf(token: string | undefined): unknown {
+  const payload = token?.replace(/^Bearer /, '').split('.')[1] ?? '';
+  return JSON.parse(Buffer.from(payload, 'base64url').toString() || '{}').aud;
+}
+/** A person's session bearer, validated by the fixture's session endpoint. */
+const PERSON_BEARER = `e30.${Buffer.from(JSON.stringify({ type: 'user', userId: 'person', sessionId: 'person-session', exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.fixture`;
 const originalFetch = globalThis.fetch;
 let snapshot: TeamSnapshot | null = null;
 let offline = false;
@@ -71,15 +122,39 @@ beforeEach(async () => {
     if (req.url === 'https://fixture.oxy.test/auth/service-token/workload') {
       const body = await req.json();
       expect(body.protocolVersion).toBe(2);
-      expect(body.audience).toBe('oxy-service:6a2f851751b784a86fd0e92b');
-      return Response.json({
-        token: `e30.${Buffer.from(JSON.stringify({ type: 'service', authority: 'first_party', exp: Math.floor(Date.now() / 1000) + 300 })).toString('base64url')}.signature`,
-        expiresIn: 300,
-      });
+      return Response.json({ token: mintServiceToken(body.audience ?? 'oxy-api'), expiresIn: 300 });
     }
+    if (req.url === 'https://fixture.oxy.test/.well-known/jwks.json')
+      return Response.json({
+        keys: [
+          {
+            ...serviceKeys.publicKey.export({ format: 'jwk' }),
+            kid: SERVICE_KID,
+            alg: 'EdDSA',
+            use: 'sig',
+          },
+        ],
+      });
+    if (req.url === 'https://fixture.oxy.test/auth/resources/introspect') {
+      const receiver = req.headers.get('authorization')?.replace(/^Bearer /, '') ?? '';
+      if (!liveServiceTokens.has(receiver)) return Response.json({}, { status: 401 });
+      const { token } = await req.json();
+      return Response.json(liveServiceTokens.get(token) ?? { active: false });
+    }
+    if (req.url.startsWith('https://fixture.oxy.test/session/validate-header/'))
+      return Response.json({
+        valid: true,
+        sessionId: 'person-session',
+        expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        lastActivity: new Date().toISOString(),
+        user: { id: 'person', username: 'person', name: { displayName: 'person' } },
+        actor: accountActorChainFromSession({ subjectAccountId: 'person' }),
+      });
     expect(req.url).toBe('https://api.allo.you/v1/team-access/snapshot');
     expect(req.headers.get('x-allo-team-capability')).toHaveLength(43);
-    expect(req.headers.get('authorization')).toMatch(/^Bearer /);
+    expect(audienceOf(req.headers.get('authorization') ?? undefined)).toBe(
+      'oxy-service:6a2f851751b784a86fd0e92b',
+    );
     if (offline) throw new TypeError('fetch failed: Allo offline');
     return Response.json(snapshot ?? { error: { code: 'not_found', message: 'Not found' } }, {
       status: snapshot ? 200 : 404,
@@ -171,4 +246,51 @@ it('commits removal only after frozen matching Allo membership; failed and stale
       .where(eq(evictionCaseCollaborators.caseId, id)),
   ).toHaveLength(0);
   expect((await finalizeTeamOperation(remove.operation.id, 'owner')).finalized).toBe(true);
+});
+
+it('reads an operation only for an Oxy service caller that also holds its capability', async () => {
+  const id = await fixture();
+  const op = await beginTeamOperation(id, 'owner', { action: 'open' });
+  const api = express();
+  api.use(express.json());
+  api.use(publicApiBodyErrorHandler);
+  api.use('/api/v1', publicApiRouter);
+  const read = () => request(api).post('/api/v1/team-chat/operations/read');
+  const body = { operationId: op.operation.id };
+  // No service identity: refused before the capability is looked at.
+  expect((await read().set('x-homiio-team-operation', op.capability).send(body)).status).toBe(401);
+  // A person's session is not a service identity.
+  expect(
+    (
+      await read()
+        .set('Authorization', `Bearer ${PERSON_BEARER}`)
+        .set('x-homiio-team-operation', op.capability)
+        .send(body)
+    ).status,
+  ).toBe(403);
+  // A genuine service token minted for another receiver is not Homiio's.
+  const elsewhere = await oxyService.serviceTokenFor('oxy-service:6a2f851751b784a86fd0e92b');
+  expect(
+    (
+      await read()
+        .set('Authorization', `Bearer ${elsewhere}`)
+        .set('x-homiio-team-operation', op.capability)
+        .send(body)
+    ).status,
+  ).toBe(401);
+  const token = await oxyService.serviceTokenFor(`oxy-service:${HOMIIO_APPLICATION_ID}`);
+  // A service caller without the capability is answered as before.
+  const missing = await read().set('Authorization', `Bearer ${token}`).send(body);
+  expect(missing.status).toBe(404);
+  const wrong = await read()
+    .set('Authorization', `Bearer ${token}`)
+    .set('x-homiio-team-operation', 'wrong')
+    .send(body);
+  expect(wrong.status).toBe(404);
+  const ok = await read()
+    .set('Authorization', `Bearer ${token}`)
+    .set('x-homiio-team-operation', op.capability)
+    .send(body);
+  expect(ok.status).toBe(200);
+  expect(ok.body).toEqual(await readTeamOperation(op.operation.id, op.capability));
 });
