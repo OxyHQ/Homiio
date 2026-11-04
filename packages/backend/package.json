@@ -44,8 +44,8 @@
     "express": "^5.3.0",
     "express-validator": "^7.3.2",
     "i18n": "^0.15.3",
-    "maxmind": "^5.0.7",
-    "multer": "^2.4.0",
+    "maxmind": "^5.0.8",
+    "multer": "^2.5.0",
     "node-cron": "^3.0.3",
     "node-telegram-bot-api": "^0.67.0",
     "pdf-parse": "^1.1.4",
@@ -61,7 +61,7 @@
     "@oxy.so/allo-sdk": "1.0.0",
     "@oxy.so/allo-contracts": "0.2.1",
     "@oxy.so/mcp": "1.4.1",
-    "@aws-sdk/credential-provider-node": "3.972.83"
+    "@aws-sdk/credential-provider-node": "3.972.92"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
@@ -70,7 +70,7 @@
     "@types/i18n": "^0.13.12",
     "@types/jest": "^29.5.14",
     "@types/multer": "^2.3.0",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@types/node-cron": "^3.0.11",
     "@types/node-telegram-bot-api": "^0.64.15",
     "@types/pdf-parse": "^1.1.5",
@@ -82,7 +82,7 @@
     "node-fetch": "^2.7.0",
     "nodemon": "^3.1.14",
     "supertest": "^7.3.1",
-    "ts-jest": "^29.4.14",
+    "ts-jest": "^29.4.15",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   }
