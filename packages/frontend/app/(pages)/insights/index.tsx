@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
+import { formatInteger, formatNumber } from '@oxy.so/bloom/locale';
 import { StatCards, type StatCardsItem } from '@oxy.so/bloom/stat-cards';
 import {
   BarListCard,
@@ -71,36 +72,35 @@ export default function InsightsScreen() {
   );
 
   const kpis = useMemo<StatCardsItem[]>(() => {
-    const number = new Intl.NumberFormat(locale);
-    const ratio = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
     const totals = appStats?.totals ?? { properties: 0, cities: 0, saves: 0, uniqueSavers: 0 };
-    const per = (a: number, b: number) => (b > 0 ? ratio.format(a / b) : '—');
+    const per = (a: number, b: number) =>
+      b > 0 ? formatNumber(a / b, locale, { maximumFractionDigits: 1 }) : '—';
     return [
       {
         icon: RiHome4Line,
         label: t('home.insights.kpi.properties'),
-        value: number.format(totals.properties),
+        value: formatInteger(totals.properties),
         delta: t('home.insights.kpi.perCity', { value: per(totals.properties, totals.cities) }),
         deltaColor: 'neutral',
       },
       {
         icon: RiBuilding2Line,
         label: t('home.insights.kpi.cities'),
-        value: number.format(totals.cities),
+        value: formatInteger(totals.cities),
         delta: appStats?.topCities[0]?.city ?? '—',
         deltaColor: 'neutral',
       },
       {
         icon: RiBookmarkLine,
         label: t('home.insights.kpi.saves'),
-        value: number.format(totals.saves),
+        value: formatInteger(totals.saves),
         delta: t('home.insights.kpi.perListing', { value: per(totals.saves, totals.properties) }),
         deltaColor: 'neutral',
       },
       {
         icon: RiGroupLine,
         label: t('home.insights.kpi.uniqueSavers'),
-        value: number.format(totals.uniqueSavers),
+        value: formatInteger(totals.uniqueSavers),
         delta: t('home.insights.kpi.savesEach', { value: per(totals.saves, totals.uniqueSavers) }),
         deltaColor: 'neutral',
       },
