@@ -19,12 +19,8 @@ import { listMyProperties } from '../../domain/properties';
 import { getErrorName } from '../../utils/errors';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger } from '../queryParams';
-
-/** The session's viewer, from the optional Oxy auth — never an id the caller supplied. */
-function viewerOf(req: ControllerRequest): string | undefined {
-  const viewer = req.user?.id ?? req.user?._id;
-  return typeof viewer === 'string' && viewer.length > 0 ? viewer : undefined;
-}
+import { getOxyUserId } from '@oxy.so/core/server';
+import { requireSessionOxyUserId } from '../../utils/sessionUser';
 
 export async function getPropertyById(
   req: ControllerRequest,
@@ -33,7 +29,10 @@ export async function getPropertyById(
 ) {
   try {
     // The use case decides visibility and audience from the viewer.
-    const { listing, audience } = await getListing(viewerOf(req), req.params.propertyId);
+    const { listing, audience } = await getListing(
+      getOxyUserId(req) ?? undefined,
+      req.params.propertyId,
+    );
     // One URL now answers two bodies, so the owner's must never be stored by
     // anything in front of the API and replayed to somebody else.
     if (audience === 'owner') res.set('Cache-Control', 'private, no-store');
@@ -52,7 +51,7 @@ export async function openPropertyById(
   next: ControllerNext,
 ) {
   try {
-    await openListing(viewerOf(req), req.params.propertyId);
+    await openListing(getOxyUserId(req) ?? undefined, req.params.propertyId);
     res.json(successResponse(null, 'Property view recorded'));
   } catch (error) {
     next(error);
@@ -67,10 +66,7 @@ export async function getMyProperties(
   try {
     const page = getQueryInteger(req.query.page, 1);
     const limit = getQueryInteger(req.query.limit, 10);
-    const oxyUserId = req.userId;
-    if (!oxyUserId) {
-      return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-    }
+    const oxyUserId = requireSessionOxyUserId(req);
     // Drafts included, archived excluded, no moderation filter — see
     // `domain/properties.listMyProperties`, shared with the capability tool.
     const result = await listMyProperties(oxyUserId, { page, limit });

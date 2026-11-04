@@ -28,17 +28,17 @@ import { profiles, roommateRelationships, roommateRequests } from '../../db/sche
 import { sortPair } from '../../db/roommates/roommateRepository';
 import { asyncHandler } from '../../middlewares';
 import { errorHandler } from '../../middlewares/errorHandler';
+import { oxyService } from '../../services/oxy';
 import { containsNumberToken, leafPathsEqualTo } from '../helpers/leakSweep';
 
-beforeAll(() => {
-  (global as unknown as { fetch: jest.Mock }).fetch = jest.fn(async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({ data: [] }),
-  }));
-});
-
 beforeEach(async () => {
+  // Participant display names come from Oxy (`users.lookupMany`); no network
+  // here. Oxy answers, and knows none of these fixture accounts.
+  jest.spyOn(oxyService.users, 'lookupMany').mockImplementation(async (ids: string[]) => ({
+    found: [],
+    missing: ids,
+    failed: [],
+  }));
   // Relationships first: `request_id` references `roommate_requests`.
   await getDb().delete(roommateRelationships);
   await getDb().delete(roommateRequests);

@@ -1,26 +1,15 @@
 import 'express';
-
-/**
- * Authenticated user shape attached to Express requests by the Oxy auth
- * middleware (`oxy.auth()`). The Oxy SDK declares its own `User` type with an
- * `id` field, but throughout this backend handlers also read `_id`,
- * `oxyUserId`, and `profileId` from the same object, so we augment the request
- * with a permissive superset here.
- */
-export interface HomiioRequestUser {
-  id?: string;
-  _id?: string;
-  oxyUserId?: string;
-  profileId?: string;
-  username?: string;
-  email?: string;
-  [key: string]: unknown;
-}
+import type { OxyRequestUser } from '@oxy.so/core/server';
 
 declare global {
   namespace Express {
     interface Request {
-      user?: HomiioRequestUser | null;
+      /**
+       * The person the Oxy auth middleware resolved, in the SDK's own shape.
+       * Read the caller's id with `getOxyUserId` / `requireSessionOxyUserId`,
+       * never from this object directly.
+       */
+      user?: OxyRequestUser | null;
       userId?: string | null;
       accessToken?: string;
       sessionId?: string | null;

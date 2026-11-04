@@ -18,6 +18,10 @@
  * to that list.
  */
 
+import { Readable } from 'node:stream';
+import type { ReadableStream as WebReadableStream } from 'node:stream/web';
+import { readResponseBody } from '@oxy.so/core/server';
+
 import { oxyService } from '../oxy';
 import { type OxyFilesApi, linkedDownloadOverride, oxyFilesOverride } from './oxyFilesSeam';
 
@@ -32,11 +36,13 @@ export function oxyFiles(): OxyFilesApi {
 const LINKED_DOWNLOAD_TIMEOUT_MS = 30_000;
 
 /**
- * The bytes behind a URL `linkedDownloadUrls` minted. The URL is a bearer
- * credential: it is fetched here, never handed to a client or logged, and only
- * over https.
+ * The bytes behind a URL `linkedDownloadUrls` minted, at most `maxBytes` (the
+ * size Oxy recorded for the file). The URL is a bearer credential: it is
+ * fetched here, never handed to a client or logged, and only over https. A
+ * trusted Oxy-minted host, so plain `fetch` — bounded by one deadline and a
+ * byte cap, never read whole on the server's word.
  */
-export async function downloadLinked(url: string): Promise<Buffer> {
+export async function downloadLinked(url: string, maxBytes: number): Promise<Buffer> {
   const override = linkedDownloadOverride();
   if (override) return override(url);
   if (new URL(url).protocol !== 'https:') throw new Error('Oxy download URLs are https only');
@@ -44,30 +50,14 @@ export async function downloadLinked(url: string): Promise<Buffer> {
     credentials: 'omit',
     signal: AbortSignal.timeout(LINKED_DOWNLOAD_TIMEOUT_MS),
   });
-  if (!response.ok) {
-    throw Object.assign(new Error(`Oxy download failed (${response.status})`), {
-      status: response.status,
-    });
+  if (!response.ok || !response.body) {
+    await response.body?.cancel();
+    throw new Error(`Oxy download failed (${response.status})`);
   }
-  return Buffer.from(await response.arrayBuffer());
-}
-
-/**
- * The HTTP status a failed Oxy call answered with, or undefined for a
- * transport failure. The SDK annotates its errors with `status` (and
- * `response.status`); its own helper for this is not exported.
- */
-export function oxyErrorStatus(error: unknown): number | undefined {
-  if (!error || typeof error !== 'object') return undefined;
-  const record = error as { status?: unknown; response?: { status?: unknown } };
-  if (typeof record.status === 'number') return record.status;
-  if (typeof record.response?.status === 'number') return record.response.status;
-  return undefined;
-}
-
-/** The machine-readable code a failed Oxy call answered with, when it gave one. */
-export function oxyErrorCode(error: unknown): string | undefined {
-  if (!error || typeof error !== 'object') return undefined;
-  const code = (error as { code?: unknown }).code;
-  return typeof code === 'string' ? code : undefined;
+  const read = await readResponseBody(Readable.fromWeb(response.body as WebReadableStream), {
+    maxBytes,
+    timeoutMs: LINKED_DOWNLOAD_TIMEOUT_MS,
+  });
+  if (read.kind !== 'ok') throw new Error(`Oxy download failed (${read.kind})`);
+  return read.body;
 }

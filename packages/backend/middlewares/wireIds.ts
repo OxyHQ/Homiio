@@ -57,8 +57,8 @@
  *     upstream bodies this service parses are Nominatim (`lat`/`lon`/
  *     `display_name`), Overpass (`id`/`lat`/`lon`/`tags`) and Wikimedia
  *     (`pageid`) — none of which uses `_id`. Oxy's
- *     `/users/by-ids` is read in `controllers/roommate/serialize.ts` but its
- *     payload is projected into Homiio's own shape and never reaches `res.json`.
+ *     users (`users.lookupMany` in `controllers/roommate/serialize.ts`) are
+ *     projected into Homiio's own shape and never reach `res.json`.
  *
  * If a future endpoint DOES need to relay a third-party payload verbatim, it
  * must not acquire this behaviour by accident: give it a route that serializes

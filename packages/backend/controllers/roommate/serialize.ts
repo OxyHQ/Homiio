@@ -2,79 +2,43 @@
  * Roommate request / relationship DTO serialization.
  */
 
-import config from '../../config';
 import { type HydratedProfile, toProfileDTO } from '../../db/profiles/profileSerializer';
+import { AppError } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
-import { describeErrorForLog } from '../../middlewares/errorHandler';
+import { oxyService } from '../../services/oxy';
 
 /**
- * A user as the OXY API returns it from `POST /users/by-ids`.
+ * The Oxy display name of each participant, read with `users.lookupMany` on
+ * Homiio's service identity.
  *
- * The `_id` here is deliberate and must NOT be renamed by a sweep of Homiio's
- * own `_id` → `id` cut. This is a foreign service's response shape, not Homiio's
- * wire: Oxy decides what it sends, and editing this declaration would only make
- * Homiio stop reading a field Oxy still emits. It is also never re-served —
- * {@link hydrateDisplayNames} keeps the display name and nothing else, so the
- * raw object never reaches `res.json`.
+ * An id Oxy ANSWERED without (deleted, hidden) simply has no name. An id whose
+ * lookup FAILED (timeout, 5xx, 429) is unknown, not nameless: the list answers
+ * 503 rather than show those people as strangers with no name, so a retry gets
+ * the real answer.
  */
-interface OxyPublicUser {
-  id?: string;
-  _id?: string;
-  username?: string;
-  name?: { displayName?: string };
-}
-
-const USERS_BY_IDS_CAP = 100;
-
 export async function hydrateDisplayNames(
   oxyUserIds: ReadonlyArray<string | undefined | null>,
 ): Promise<Map<string, string>> {
-  const unique = Array.from(new Set(oxyUserIds.filter((id): id is string => Boolean(id)))).slice(
-    0,
-    USERS_BY_IDS_CAP,
-  );
-
+  const ids = oxyUserIds.filter((id): id is string => Boolean(id));
   const result = new Map<string, string>();
-  if (unique.length === 0) {
-    return result;
-  }
+  if (ids.length === 0) return result;
 
-  try {
-    const response = await fetch(`${config.oxy.baseURL}/users/by-ids`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: unique }),
+  const lookup = await oxyService.users.lookupMany(ids);
+  if (lookup.failed.length > 0) {
+    logger.warn('Roommate display names unavailable from Oxy', {
+      failed: lookup.failed.length,
+      requested: ids.length,
     });
-
-    if (!response.ok) {
-      logger.warn('Roommate display-name hydration failed', {
-        status: response.status,
-        count: unique.length,
-      });
-      return result;
-    }
-
-    const payload = (await response.json()) as { data?: OxyPublicUser[] } | OxyPublicUser[];
-    const users = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.data)
-        ? payload.data
-        : [];
-
-    for (const user of users) {
-      const id = user?.id ?? user?._id;
-      const displayName = user?.name?.displayName ?? user?.username;
-      if (id && displayName) {
-        result.set(String(id), String(displayName));
-      }
-    }
-  } catch (error) {
-    logger.warn('Roommate display-name hydration errored', {
-      error: describeErrorForLog(error),
-      count: unique.length,
-    });
+    throw new AppError(
+      'Participant names are temporarily unavailable. Try again shortly.',
+      503,
+      'OXY_UNAVAILABLE',
+    );
   }
-
+  for (const user of lookup.found) {
+    const displayName = user.name?.displayName || user.username;
+    if (user.id && displayName) result.set(user.id, displayName);
+  }
   return result;
 }
 

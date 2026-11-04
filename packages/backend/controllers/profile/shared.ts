@@ -23,15 +23,4 @@ const errorResponse = (message = 'Error occurred', code = 'ERROR') => ({
   timestamp: new Date().toISOString(),
 });
 
-/**
- * The caller's Oxy account id, from the session.
- *
- * Never from the body or a route parameter: `AGENTS.md` requires every write to
- * resolve its owner server-side, and every handler in this directory is scoped
- * to whoever is holding the credential.
- */
-function _getOxyUserId(req: { user?: { id?: string; _id?: string } | null }): string | undefined {
-  return req?.user?.id || req?.user?._id;
-}
-
-export { successResponse, errorResponse, _getOxyUserId };
+export { successResponse, errorResponse };

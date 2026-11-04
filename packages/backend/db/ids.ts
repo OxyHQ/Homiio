@@ -36,8 +36,7 @@
  *
  * Owner-scoped write guards (`and(eq(id), eq(oxy_user_id))`) carry no shape
  * precondition, so a malformed id matches no row and 404s — the documented
- * intent. `middlewares/requireAdmin.ts` gates on an **Oxy** user id allowlist
- * and denies everyone when it is empty, i.e. it fails CLOSED.
+ * intent.
  */
 
 export { isLiveEntityId } from '@oxy.so/db';

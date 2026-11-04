@@ -33,8 +33,9 @@ import { getDb } from '../../db/postgres';
 import { fileReferenceChanges } from '../../db/schema';
 import { describeErrorForLog } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
-import { oxyErrorStatus, oxyFiles } from './oxyFilesClient';
+import { oxyFiles } from './oxyFilesClient';
 import { type FileReferenceEntityType, isReferenceInUse } from './referenceUsage';
+import { OxyApiError } from '@oxy.so/core';
 
 /** How long a claim is held before another task may take the pair over. */
 const LEASE_SECONDS = 120;
@@ -119,7 +120,7 @@ async function backOff(owner: string, pair: ClaimedPair, error: unknown): Promis
     BACKOFF_MAX_SECONDS,
     BACKOFF_BASE_SECONDS * 2 ** Math.min(attempts - 1, 20),
   );
-  const status = oxyErrorStatus(error);
+  const status = error instanceof OxyApiError && error.status > 0 ? error.status : undefined;
   await getDb()
     .update(fileReferenceChanges)
     .set({

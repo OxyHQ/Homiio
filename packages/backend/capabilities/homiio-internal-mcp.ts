@@ -24,13 +24,14 @@
  */
 
 import type { AppCapabilityCatalog, CapabilityCatalogBinding } from '@oxy.so/contracts';
+import { readCapabilityAuthorization } from '@oxy.so/core/server';
 import { createInternalCatalogMcpHttpService, type InvocationHandlers } from '@oxy.so/mcp';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { logger } from '../middlewares/logging';
 import type { CapabilityAuditor, TicketVerifier } from './capabilityAuthority';
 import { HOMIIO_CAPABILITY_CATALOG } from './homiio.catalog';
-import { HOMIIO_INVOCATION_HANDLERS } from './homiio.handlers';
+import { authorizationOf, HOMIIO_INVOCATION_HANDLERS, idempotencyKeyOf } from './homiio.handlers';
 
 /** Base64 documents ride in tool input (applications, leases, maintenance). */
 export const HOMIIO_MCP_MAX_BODY_BYTES = 10 * 1024 * 1024;
@@ -41,10 +42,6 @@ export interface HomiioInternalMcpOptions {
   readonly audit: CapabilityAuditor;
   readonly catalog?: AppCapabilityCatalog;
   readonly handlers?: InvocationHandlers;
-}
-
-function headerValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? (value.length === 1 ? value[0] : undefined) : value;
 }
 
 export function createHomiioInternalMcp(options: HomiioInternalMcpOptions) {
@@ -63,14 +60,9 @@ export function createHomiioInternalMcp(options: HomiioInternalMcpOptions) {
             if (context.principal.kind !== 'capability') {
               throw new Error('Capability principal required');
             }
-            const headers = context.request.requestInfo?.headers ?? {};
-            const authorization = headerValue(
-              headers.authorization as string | string[] | undefined,
-            );
-            const ticket = authorization?.replace(/^Capability\s+/i, '');
-            if (!ticket || ticket === authorization) throw new Error('Verified ticket missing');
-            const key = headerValue(headers['idempotency-key'] as string | string[] | undefined);
-            const idempotencyKey = key?.trim() || undefined;
+            const ticket = readCapabilityAuthorization(authorizationOf(context));
+            if (!ticket) throw new Error('Verified ticket missing');
+            const idempotencyKey = idempotencyKeyOf(context);
 
             const result = await handler(input, context);
 

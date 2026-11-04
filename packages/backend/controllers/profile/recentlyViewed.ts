@@ -16,15 +16,11 @@ import {
 import { getQueryInteger } from '../queryParams';
 import { sendAuthenticationRequired, sendSavedError } from './savedErrors';
 import { successResponse } from './shared';
-
-/** Resolve the owner from the session, in the shape the auth layer sets. */
-function ownerOf(req: Request): string | undefined {
-  return req.user?.id || req.user?._id || undefined;
-}
+import { getOxyUserId } from '@oxy.so/core/server';
 
 /** Get recently viewed properties for the current user's profile */
 export async function getRecentProperties(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     // `getQueryInteger` floors at 1 by falling back on a non-positive value;
@@ -39,7 +35,7 @@ export async function getRecentProperties(req: Request, res: Response, next: Nex
 
 /** Track property view for the current user's profile */
 export async function trackPropertyView(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     await recordRecentlyViewedHome(oxyUserId, req.params.propertyId);
@@ -51,7 +47,7 @@ export async function trackPropertyView(req: Request, res: Response, next: NextF
 
 /** Clear recently viewed properties for the current user's profile */
 export async function clearRecentProperties(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     const cleared = await clearRecentlyViewedHomes(oxyUserId);

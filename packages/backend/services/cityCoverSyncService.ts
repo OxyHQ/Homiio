@@ -24,10 +24,10 @@ import type { ImageAttribution } from '@homiio/shared-types';
 
 import { getDb } from '../db/postgres';
 import { cities, countries, images } from '../db/schema';
-import { oxyErrorStatus } from './files/oxyFilesClient';
 import { importApplicationImage, insertOxyImage } from './files/publicImages';
 import { isPlausibleCityName } from '../utils/plausibleCityName';
 import { Logger } from '../utils/logger';
+import { OxyApiError } from '@oxy.so/core';
 
 const logger = new Logger('CityCoverSyncService');
 
@@ -343,7 +343,8 @@ export async function ensureCover(
     return { kind: 'stored', imageId: image.id };
   } catch (error) {
     logger.error('Failed to ensure city cover', error);
-    const status = oxyErrorStatus(error);
+    // The HTTP status Oxy answered with; a transport failure (status 0) has none.
+    const status = error instanceof OxyApiError && error.status > 0 ? error.status : undefined;
     return { kind: 'failed', stage, ...(status === undefined ? {} : { status }) };
   }
 }

@@ -365,7 +365,7 @@ handshake.
 | `/api/images` | `POST /upload`, `POST /upload-multiple` (into the uploader's own Oxy account; one request carries at most `UPLOAD_REQUEST_MAX_BYTES`, so the app sends a set in batches), `DELETE /:imageKey` (deletes nothing; kept for app builds in use) |
 | `/api/billing` | Checkout, customer portal, subscription lifecycle — see [Payments](./payments) |
 | `/api/telegram` | Notification and bot management |
-| `/api/scraper` | **Admin only** (`requireAdmin`): `GET /health`, `GET /sources`, `POST /run`, `POST /cleanup` |
+| `/api/scraper` | **Operators only** (`homiio.scraper.operate` application permission, 404 to everyone else): `GET /health`, `GET /sources`, `POST /run`, `POST /cleanup` |
 | `/api/cities` | `POST /cities`, `PUT /cities/:id/update-count` — declared in `routes/index.ts` |
 | `/api/health` | Authenticated health echo |
 

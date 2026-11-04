@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { assertAllowedScraperEndpoint, guardedRequestConfig } from '../utils/outboundGuard';
+import { readResponseJson, safeFetch, UpstreamError } from '@oxy.so/core/server';
+import { assertAllowedScraperEndpoint } from './scraperEndpoint';
 import { OfferingType } from '@homiio/shared-types';
 import { forwardGeocode } from './geocodingService';
 import { schedulePriceEthicsScore } from './priceEthicsService';
@@ -30,22 +30,21 @@ function errorMessageOf(error: unknown): string {
   return typeof described.message === 'string' ? described.message : String(error);
 }
 
-function errorCodeOf(error: unknown): string | undefined {
-  if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as { code: unknown }).code;
-    return typeof code === 'string' ? code : undefined;
+/** A feed that answered, but not with a body to ingest. `status` is the HTTP one. */
+class FeedResponseError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = 'FeedResponseError';
   }
-  return undefined;
 }
 
-function errorStatusOf(error: unknown): number | undefined {
-  if (error && typeof error === 'object' && 'response' in error) {
-    const resp = (error as { response?: { status?: unknown } }).response;
-    if (resp && typeof resp === 'object' && typeof resp.status === 'number') {
-      return resp.status;
-    }
-  }
-  return undefined;
+/** A failure worth another attempt: the feed's own 5xx, a timeout or a dropped connection. */
+function isRetryableFeedFailure(error: unknown): boolean {
+  if (error instanceof FeedResponseError) return error.status !== undefined && error.status >= 500;
+  return error instanceof UpstreamError;
 }
 
 interface ExternalRawImage {
@@ -346,55 +345,56 @@ export async function upsertExternalListing(
   return { status: 'error', error: errorMessage };
 }
 
-// Helper function to make HTTP requests with retry logic
+/** The largest feed body the scraper reads; a bigger one is refused, not truncated. */
+const MAX_FEED_BYTES = 20 * 1024 * 1024;
+
+/**
+ * GET a caller-chosen feed with retries. The destination comes from the request
+ * body, so it goes out through `safeFetch`: every resolved address is checked
+ * and pinned, and no redirect is followed (`scraperEndpoint.ts`). The body is
+ * read capped and deadline-bound with `readResponseJson`.
+ */
 async function makeRequest(
   url: string,
   options: { apiKey?: string; timeout?: number; maxRetries?: number },
   logger: ScraperLogger,
-): Promise<any> {
+): Promise<unknown> {
   const maxRetries = options.maxRetries || SCRAPER_CONFIG.MAX_RETRIES;
   const timeout = options.timeout || SCRAPER_CONFIG.DEFAULT_TIMEOUT;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  for (let attempt = 1; ; attempt++) {
     try {
       logger.debug(`Making request to ${url} (attempt ${attempt})`);
-
-      // The destination comes from the request body, so every request goes out
-      // under the outbound guard: no redirects, and every socket resolves
-      // through a lookup that refuses internal addresses. See utils/outboundGuard.
-      const response = await axios.get(url, {
+      const { response, status } = await safeFetch(url, {
         headers: options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {},
-        timeout,
-        validateStatus: (status) => status < 500, // Don't throw for 4xx errors
-        ...guardedRequestConfig(),
+        maxRedirects: 0,
+        redirect: 'manual',
+        headersTimeoutMs: timeout,
       });
 
-      // A 3xx here means the destination tried to send us somewhere else, and
-      // the guard refused to go. Treat it as a failure rather than letting an
-      // empty redirect body read as "the feed returned no listings" — that is
-      // the silent-zero shape this codebase keeps paying for.
-      if (response.status >= 300 && response.status < 400) {
-        throw new Error(
-          `HTTP ${response.status}: endpoint redirected; redirects are not followed for caller-supplied endpoints`,
+      // A 3xx means the destination tried to send us somewhere else; nothing
+      // follows it. A failure, never an empty body read as "no listings" — the
+      // silent-zero shape this codebase keeps paying for.
+      if (status >= 300) {
+        response.destroy();
+        throw new FeedResponseError(
+          status < 400
+            ? `HTTP ${status}: endpoint redirected; redirects are not followed for caller-supplied endpoints`
+            : `HTTP ${status}`,
+          status,
         );
       }
 
-      if (response.status >= 400) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return response.data;
+      const body = await readResponseJson(response, {
+        maxBytes: MAX_FEED_BYTES,
+        timeoutMs: timeout,
+      });
+      if (body.kind === 'timeout') throw new UpstreamError('feed body timeout');
+      if (body.kind === 'error') throw new UpstreamError(`feed body failed: ${body.error.message}`);
+      if (body.kind !== 'ok') throw new FeedResponseError(`Feed body refused: ${body.kind}`);
+      return body.value;
     } catch (error) {
-      const isLastAttempt = attempt === maxRetries;
-      const code = errorCodeOf(error);
-      const status = errorStatusOf(error);
-      const shouldRetry =
-        code === 'ECONNRESET' || code === 'ETIMEDOUT' || (status !== undefined && status >= 500);
-
-      if (!shouldRetry || isLastAttempt) {
-        throw error;
-      }
-
+      if (!isRetryableFeedFailure(error) || attempt >= maxRetries) throw error;
       logger.warn(`Request attempt ${attempt} failed, retrying:`, errorMessageOf(error));
       await new Promise((resolve) => setTimeout(resolve, SCRAPER_CONFIG.RETRY_DELAY * attempt));
     }
@@ -468,7 +468,7 @@ async function processBatch(
 }
 
 export async function runExternalScrape(options: ScraperOptions): Promise<ScrapeResult> {
-  // THE ADMIN GUARD ON THIS ROUTE BOUNDS *WHO*, NOT *WHAT*. `endpoint` is
+  // THE PERMISSION ON THIS ROUTE BOUNDS *WHO*, NOT *WHAT*. `endpoint` is
   // caller-supplied and this process runs inside the VPC, where a GET can reach
   // the ECS task-metadata endpoint (the task role's IAM credentials), IMDS, and
   // every internal service. CodeQL has called this `js/request-forgery` at
@@ -512,7 +512,9 @@ export async function runExternalScrape(options: ScraperOptions): Promise<Scrape
     );
 
     // API now returns data in the correct format
-    const listings: any[] = Array.isArray(data) ? data : data?.listings || [];
+    const listings: any[] = Array.isArray(data)
+      ? data
+      : ((data as { listings?: unknown[] } | null)?.listings ?? []);
 
     logger.info(`Found ${listings.length} listings to process`);
     result.totalProcessed = listings.length;

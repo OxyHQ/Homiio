@@ -11,14 +11,16 @@ import {
   type ScraperOptions,
 } from '../services/scraperService';
 import { asyncHandler } from '../middlewares';
-import { requireAdmin } from '../middlewares/requireAdmin';
+import { SCRAPER_OPERATE_PERMISSION } from '../services/applicationPermissions';
+import { oxyService } from '../services/oxy';
 
 const router = express.Router();
 
-// External ingestion management is admin-only. These routes are mounted under
-// the authenticated router (server.ts), so `req.user` is resolved here; this
-// gate additionally restricts them to configured platform admins.
-router.use(requireAdmin);
+// External ingestion tooling is for the people Homiio's Oxy application grants
+// `homiio.scraper.operate`, read fresh on every call (these routes write and
+// fetch caller-chosen URLs). Everyone else, a service token included, gets 404;
+// an Oxy outage is 503, never a cached "no" (`~/Oxy/docs/application-roles.md`).
+router.use(oxyService.middleware.requireAppPermission(SCRAPER_OPERATE_PERMISSION, { fresh: true }));
 
 /**
  * GET /api/scraper/health

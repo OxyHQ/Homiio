@@ -11,8 +11,9 @@
  */
 
 import { markPropertyTransacted as markTransactedForOwner } from '../../domain/properties';
-import { AppError, successResponse } from '../../middlewares/errorHandler';
+import { successResponse } from '../../middlewares/errorHandler';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
+import { requireSessionOxyUserId } from '../../utils/sessionUser';
 
 export async function markPropertyTransacted(
   req: ControllerRequest,
@@ -21,10 +22,7 @@ export async function markPropertyTransacted(
 ) {
   try {
     const { propertyId } = req.params;
-    const oxyUserId = req.user?.id ?? req.userId;
-    if (!oxyUserId) {
-      return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-    }
+    const oxyUserId = requireSessionOxyUserId(req);
     const requested = typeof req.body?.status === 'string' ? req.body.status : undefined;
     const result = await markTransactedForOwner(oxyUserId, propertyId, requested);
     return res.json(successResponse(result, 'Property marked as transacted'));

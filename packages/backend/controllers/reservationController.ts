@@ -20,18 +20,13 @@ import {
   updateReservationStatus,
 } from '../domain/reservations';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
-
-function requireCaller(req: Request): string {
-  const oxyUserId = req.user?.id || req.user?._id || req.userId;
-  if (!oxyUserId) throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
-  return oxyUserId;
-}
+import { requireSessionOxyUserId } from '../utils/sessionUser';
 
 class ReservationController {
   /** POST /api/reservations — guest creates a reservation (auto-confirms with instant book). */
   async createReservation(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = requireCaller(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const { propertyId, checkIn, checkOut, guestCount, specialRequests } = req.body;
       const outcome = await createReservation(oxyUserId, {
         propertyId,
@@ -52,7 +47,7 @@ class ReservationController {
   /** GET /api/reservations — as guest, or as host with `?asHost=true`. */
   async listMyReservations(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = requireCaller(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const result = await listMyReservations(oxyUserId, {
         ...reservationPage(req.query.page, req.query.limit),
         status: req.query.status,
@@ -75,7 +70,7 @@ class ReservationController {
   /** GET /api/reservations/:id */
   async getReservationById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = requireCaller(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const reservation = await getReservation(oxyUserId, { reservationId: req.params.id });
       res.json(successResponse(reservation, 'Reservation retrieved'));
     } catch (error) {
@@ -86,7 +81,7 @@ class ReservationController {
   /** PATCH /api/reservations/:id — host approves/declines, guest or host cancels. */
   async updateReservationStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = requireCaller(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const outcome = await updateReservationStatus(oxyUserId, {
         reservationId: req.params.id,
         status: req.body?.status,

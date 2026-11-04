@@ -144,9 +144,10 @@ measurements: **`docs/postgres.md`**.
   on user content.** The user vetoed this explicitly (PR #229 reverted by #231).
   Moderation is community-level only — per-user `reports[]` with automatic
   `under_review` at 3+, `EvictionReport`s, and owners removing their own content;
-  the `removed` status is intentionally unreachable. `/api/scraper/*`'s
-  `requireAdmin` is infra tooling and is the one exception. If a need arises,
-  ask the user first.
+  the `removed` status is intentionally unreachable. `/api/scraper/*` is infra
+  tooling behind the `homiio.scraper.operate` application permission
+  (`services/applicationPermissions.ts`) and is the one exception — never an
+  env list of user ids. If a need arises, ask the user first.
 - **`/explore` is the discovery surface; `/search` is a redirect and nothing
   else.** Never add a screen, filter or data hook under `/search`.
 - **Do not maintain a second route list anywhere.** `docs/routes.mdx` is

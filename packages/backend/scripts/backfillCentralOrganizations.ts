@@ -1,7 +1,6 @@
 /** Dry-run first; source-bound imports and resumable per-batch checkpoints. Never matches company names. */
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
-import { OxyServer } from '@oxy.so/core/server';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { connectPostgres, closePostgres } from '../db/postgres';
@@ -145,11 +144,11 @@ async function main() {
     );
     if (!values.apply) return;
     if (!values['plan-sha256']) throw new Error('Apply requires the reviewed --plan-sha256');
-    const staff = process.env.OXY_ADMIN_ACCESS_TOKEN
-      ? new OxyServer({ baseURL: process.env.OXY_API_URL || 'https://api.oxy.so' })
-      : undefined;
-    if (staff && process.env.OXY_ADMIN_ACCESS_TOKEN)
-      staff.http.setTokens(process.env.OXY_ADMIN_ACCESS_TOKEN);
+    // Reviewed links are imported AS the staff person whose bearer the operator
+    // passes in, on a user client of the one OxyServer — never a token planted
+    // on a server client.
+    const staffToken = process.env.OXY_ADMIN_ACCESS_TOKEN;
+    const staff = staffToken ? oxyService.asUser(staffToken) : undefined;
     const outcome = await applyAgencyBackfill({
       records,
       role,
@@ -177,7 +176,7 @@ async function main() {
               throw new Error(`Agency mapping changed for ${item.agencyId}; batch rolled back`);
           }
         }),
-    });
+    }).finally(() => staff?.dispose());
     console.log(JSON.stringify({ database: values['target-database'], ...outcome }));
   } finally {
     await closePostgres();

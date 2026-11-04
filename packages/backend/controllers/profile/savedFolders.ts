@@ -13,15 +13,11 @@ import {
 } from '../../domain/saved';
 import { sendAuthenticationRequired, sendSavedError } from './savedErrors';
 import { successResponse } from './shared';
-
-/** Resolve the owner from the session, in the shape the auth layer sets. */
-function ownerOf(req: Request): string | undefined {
-  return req.user?.id || req.user?._id || undefined;
-}
+import { getOxyUserId } from '@oxy.so/core/server';
 
 /** Get saved property folders for the current user's profile */
 export async function getSavedPropertyFolders(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     res.json(
@@ -37,7 +33,7 @@ export async function getSavedPropertyFolders(req: Request, res: Response, next:
 
 /** Create a new saved property folder */
 export async function createSavedPropertyFolder(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     const { name, description, color, icon } = req.body;
@@ -50,7 +46,7 @@ export async function createSavedPropertyFolder(req: Request, res: Response, nex
 
 /** Update a saved property folder */
 export async function updateSavedPropertyFolder(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     const { name, description, color, icon } = req.body;
@@ -68,7 +64,7 @@ export async function updateSavedPropertyFolder(req: Request, res: Response, nex
 
 /** Delete a saved property folder */
 export async function deleteSavedPropertyFolder(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     await deleteSavedFolder(oxyUserId, req.params.folderId);

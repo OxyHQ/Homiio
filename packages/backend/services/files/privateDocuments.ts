@@ -57,8 +57,10 @@ import { personalDocumentFiles, type DocumentRequester } from './requester';
 import { AppError } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import { SERVABLE_DOCUMENT_CONTENT_TYPES } from '../../utils/imageStoreKey';
-import { retryAfterMs } from './oxyCallPacer';
-import { downloadLinked, oxyErrorCode, oxyErrorStatus, oxyFiles } from './oxyFilesClient';
+import { isOxyRateLimited, retryAfterMs } from './oxyCallPacer';
+import { downloadLinked, oxyFiles } from './oxyFilesClient';
+import { OxyApiError } from '@oxy.so/core';
+import { LargeUploadFailedError } from '@oxy.so/core/server';
 
 /** Whose document it is, and what uses it. */
 export interface PrivateDocumentOwner {
@@ -165,12 +167,22 @@ const TERMINAL_FAILURE_CODES = new Set([
   'VERIFY_TIMEOUT',
 ]);
 
-function isTransient(error: unknown): boolean {
-  const status = oxyErrorStatus(error);
-  if (status === undefined) {
-    const code = oxyErrorCode(error);
-    return code === undefined || !TERMINAL_FAILURE_CODES.has(code);
+/**
+ * What Oxy answered an upload with: the HTTP status (absent when no response
+ * arrived) and the machine code — an `OxyApiError`'s, or the large-upload
+ * protocol's own (`VERIFY_TIMEOUT`, `OWNER_GONE`).
+ */
+function uploadFailure(error: unknown): { status?: number; code?: string } {
+  if (error instanceof OxyApiError) {
+    return { ...(error.status > 0 ? { status: error.status } : {}), code: error.code };
   }
+  if (error instanceof LargeUploadFailedError) return { code: error.code };
+  return {};
+}
+
+function isTransient(error: unknown): boolean {
+  const { status, code } = uploadFailure(error);
+  if (status === undefined) return code === undefined || !TERMINAL_FAILURE_CODES.has(code);
   return status >= 500 || status === 422;
 }
 
@@ -180,8 +192,7 @@ function isTransient(error: unknown): boolean {
  * logged error when it is Homiio's.
  */
 function refusal(owner: PrivateDocumentOwner, error: unknown): AppError {
-  const status = oxyErrorStatus(error);
-  const code = oxyErrorCode(error);
+  const { status, code } = uploadFailure(error);
   const context = { kind: owner.kind, status, code };
   if (code === 'STORAGE_QUOTA_EXCEEDED') {
     logger.warn('Oxy refused a private document: the owner’s storage is full', context);
@@ -274,7 +285,7 @@ async function storeInOxy(
         verifyTimeoutMs: OXY_VERIFY_TIMEOUT_MS,
       });
     } catch (error) {
-      if (oxyErrorStatus(error) === 429 && !rateLimited) {
+      if (isOxyRateLimited(error) && !rateLimited) {
         const wait = retryAfterMs(error);
         if (wait <= MAX_RATE_LIMIT_WAIT_MS) {
           rateLimited = true;
@@ -428,7 +439,7 @@ async function readFromOxy(
   const entries = await oxyFiles().linkedDownloadUrls([fileId]);
   const entry = entries.find((candidate) => candidate.id === fileId);
   if (!entry || !SERVABLE_TYPES.has(entry.mime)) return null;
-  const buffer = await downloadLinked(entry.url);
+  const buffer = await downloadLinked(entry.url, entry.size);
   if (buffer.length !== entry.size || digest(buffer) !== entry.sha256) {
     throw new Error('An Oxy document did not match its recorded digest');
   }

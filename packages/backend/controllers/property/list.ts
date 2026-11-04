@@ -69,6 +69,7 @@ import {
   listSavedProperties,
 } from '../../db/saved/savedPropertyRepository';
 import { resolveCityId, resolveRegionId } from '../../services/geoQueryService';
+import { getOxyUserId } from '@oxy.so/core/server';
 
 const OFFERING_VALUES: ReadonlySet<string> = new Set(Object.values(OfferingType));
 
@@ -407,8 +408,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     // Narrowed to a `string` in ONE place rather than re-derived: the
     // repositories are typed, so the union has to collapse before it reaches
     // them.
-    const oxyUserId = req.user?.id ?? req.user?._id;
-    if (typeof oxyUserId === 'string' && oxyUserId.length > 0) {
+    const oxyUserId = getOxyUserId(req);
+    if (oxyUserId) {
       try {
         const [recentlyViewed, savedProperties] = await Promise.all([
           listRecentlyViewed(getDb(), oxyUserId, RECENT_VIEWS_FOR_PERSONALISATION),

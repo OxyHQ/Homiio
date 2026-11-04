@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import type { Request, Response, NextFunction } from 'express';
 import config from '../config';
+import { getOxyUserId } from '@oxy.so/core/server';
 
 /**
  * Whether file logging is still viable for this process. Set to `false` the
@@ -155,7 +156,7 @@ const requestLogger = (req: Request, res: Response, next: NextFunction): void =>
     method: req.method,
     url: req.originalUrl,
     userAgent: userAgent,
-    userId: req.userId || (req.user ? req.user.id : null),
+    userId: getOxyUserId(req),
     requestId: req.id || null,
   });
 
@@ -188,7 +189,7 @@ const requestLogger = (req: Request, res: Response, next: NextFunction): void =>
       statusCode: res.statusCode,
       duration: duration,
       contentLength: contentLength,
-      userId: req.userId || (req.user ? req.user.id : null),
+      userId: getOxyUserId(req),
       requestId: req.id || null,
     });
 

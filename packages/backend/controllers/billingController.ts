@@ -402,7 +402,7 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
     const stripe = requireStripe(res);
     if (!stripe) return;
 
-    const oxyUserId = req.user?.id || req.user?._id;
+    const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
       return res.status(401).json({
         success: false,

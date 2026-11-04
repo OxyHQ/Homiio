@@ -19,15 +19,11 @@ import {
 } from '../../domain/saved';
 import { sendAuthenticationRequired, sendSavedError } from './savedErrors';
 import { successResponse } from './shared';
-
-/** Resolve the owner from the session, in the shape the auth layer sets. */
-function ownerOf(req: Request): string | undefined {
-  return req.user?.id || req.user?._id || undefined;
-}
+import { getOxyUserId } from '@oxy.so/core/server';
 
 /** Get saved searches for the current user */
 export async function getSavedSearches(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     res.json(
@@ -40,7 +36,7 @@ export async function getSavedSearches(req: Request, res: Response, next: NextFu
 
 /** Save a search for the current user */
 export async function saveSearch(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     const savedSearch = await createSavedSearch(oxyUserId, req.body as Record<string, unknown>);
@@ -52,7 +48,7 @@ export async function saveSearch(req: Request, res: Response, next: NextFunction
 
 /** Delete a saved search for the current user */
 export async function deleteSavedSearch(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     await deleteSavedSearchForOwner(oxyUserId, req.params.searchId);
@@ -64,7 +60,7 @@ export async function deleteSavedSearch(req: Request, res: Response, next: NextF
 
 /** Update a saved search for the current user */
 export async function updateSavedSearch(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     const savedSearch = await updateSavedSearchForOwner(
@@ -83,7 +79,7 @@ export async function updateSavedSearch(req: Request, res: Response, next: NextF
  * several clients call it. It moves `cadence` too.
  */
 export async function toggleSearchNotifications(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     const savedSearch = await setSavedSearchNotifications(
@@ -99,7 +95,7 @@ export async function toggleSearchNotifications(req: Request, res: Response, nex
 
 /** The alert history — in-app, and the visible source of truth. */
 export async function getHousingAlerts(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     const { alerts, total, limit, offset, hasMore } = await listHousingAlerts(oxyUserId, {
@@ -125,7 +121,7 @@ export async function getHousingAlerts(req: Request, res: Response, next: NextFu
 
 /** "Why did I get this?" — one alert, with the fact behind it. */
 export async function getHousingAlert(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     res.json(
