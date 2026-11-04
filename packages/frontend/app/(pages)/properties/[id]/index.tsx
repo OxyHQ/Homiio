@@ -21,8 +21,8 @@ import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { useHaptics } from '@oxy.so/bloom/hooks';
 import { toast } from '@oxy.so/bloom/toast';
-import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 
 import { useOxy } from '@oxy.so/services/ui/client';
@@ -126,6 +126,7 @@ export default function PropertyDetailPage() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const formatting = useFormatting();
+  const haptic = useHaptics();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
@@ -380,7 +381,7 @@ export default function PropertyDetailPage() {
     if (!property) return;
     const propertyUrl = `https://homiio.com/properties/${property.id}`;
     const details = `${property.title}\n\n${property.location}\n${property.price}\n${property.bedrooms} Bedrooms\n${property.bathrooms} Bathrooms\n${property.size}m²\n\n${propertyUrl}`;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptic('light');
     // The clipboard fallback copies the full details (not just the URL), matching
     // the share-sheet message.
     const outcome = await shareContent({
@@ -394,7 +395,7 @@ export default function PropertyDetailPage() {
     } else if (outcome === 'failed') {
       toast.error('Failed to share property');
     }
-  }, [property]);
+  }, [property, haptic]);
 
   // Sale-listing primary CTA: open the existing viewing-request flow.
   const handleRequestViewing = useCallback(() => {

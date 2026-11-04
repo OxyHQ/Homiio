@@ -12,7 +12,7 @@ import { ThemedText } from './ThemedText';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import { toast } from '@oxy.so/bloom/toast';
-import * as Haptics from 'expo-haptics';
+import { useHapticFeedback, useHaptics } from '@oxy.so/bloom/hooks';
 import { RiArrowRightSLine } from '@oxy.so/bloom/icons/RiArrowRightSLine';
 import { RiFileCopyLine } from '@oxy.so/bloom/icons/RiFileCopyLine';
 import { RiMapPinFill } from '@oxy.so/bloom/icons/RiMapPinFill';
@@ -50,6 +50,8 @@ export function AddressDisplay({
 }: AddressDisplayProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const haptic = useHaptics();
+  const feedback = useHapticFeedback();
 
   const formattedAddress = `${address.street || ''}, ${address.city || ''}, ${address.state || ''} ${address.zipCode || ''}`;
   const shortAddress = `${address.city || ''}, ${address.state || ''}`;
@@ -58,7 +60,7 @@ export function AddressDisplay({
     try {
       await Clipboard.setStringAsync(formattedAddress);
       toast.success(t('addresses.display.copySuccess'));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      feedback.success();
     } catch (error) {
       toast.error(t('addresses.display.copyFailed'));
     }
@@ -78,7 +80,7 @@ export function AddressDisplay({
       } else {
         await Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent(formattedAddress)}`);
       }
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      haptic('medium');
     } catch (error) {
       toast.error(t('addresses.display.mapsFailed'));
     }
@@ -86,7 +88,7 @@ export function AddressDisplay({
 
   const handlePress = () => {
     if (onPress) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      haptic('light');
       onPress();
     }
   };
