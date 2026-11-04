@@ -191,14 +191,6 @@ describe('published SDK webhook verification without a client or token mint', ()
       faircoin: null,
     },
     'payment_intent.canceled': { ...INTENT, status: 'canceled', cancellation_reason: 'abandoned' },
-    'billing.observation.updated': {
-      object: 'billing_observation',
-      livemode: false,
-      resource_kind: 'subscription',
-      resource_id: 'sub_fixture',
-      revision: 1,
-      observed_at: created,
-    },
   } satisfies {
     [T in WebhookEvent['type']]?: Extract<WebhookEvent, { type: T }>['data']['object'];
   };
@@ -209,11 +201,20 @@ describe('published SDK webhook verification without a client or token mint', ()
       expect(verify(raw, sign(raw, TIMESTAMP), 'wrong').ok).toBe(false);
     });
   }
-  it('refuses a signed billing observation whose payload is not one', () => {
+  it('refuses a signed event of a type Peable retired (billing.observation.updated)', () => {
     const raw = JSON.stringify({
       ...EVENT,
       type: 'billing.observation.updated',
-      data: { object: { ...payloads['billing.observation.updated'], revision: 0 } },
+      data: {
+        object: {
+          object: 'billing_observation',
+          livemode: false,
+          resource_kind: 'subscription',
+          resource_id: 'sub_fixture',
+          revision: 1,
+          observed_at: created,
+        },
+      },
     });
     expect(verify(raw, sign(raw, TIMESTAMP))).toEqual({ ok: false, reason: 'invalid_webhook' });
   });
