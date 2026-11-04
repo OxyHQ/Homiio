@@ -46,7 +46,7 @@ export default function EditFolderScreen() {
             titleAlign="center"
             leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
             onBack={router.canGoBack() ? router.back : undefined}
-            backLabel={t('goBack')}
+            backLabel={t('common.goBack')}
           />
         }
       >
@@ -146,7 +146,7 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
           titleAlign="center"
           leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
           onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
+          backLabel={t('common.goBack')}
         />
       }
     >

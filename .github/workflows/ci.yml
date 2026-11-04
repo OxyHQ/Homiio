@@ -407,6 +407,10 @@ jobs:
       - name: Check locale parity
         run: bun run --cwd packages/frontend check:i18n
 
+      # ADR 0055: nested namespace keys, no stray keys in a translation.
+      - name: Check translation keys
+        run: bun run i18n:check
+
       - name: Test frontend
         run: >-
           bun run --cwd packages/frontend test --

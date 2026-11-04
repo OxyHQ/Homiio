@@ -1329,7 +1329,7 @@
     "all": "All",
     "noResults": "No results found",
     "tryAgain": "Try again",
-    "goBack": "Go Back",
+    "goBack": "Go back",
     "signIn": "Sign in",
     "month": "month",
     "decreaseItem": "Diminuer : {{title}}",
@@ -2262,7 +2262,6 @@
       }
     }
   },
-  "goBack": "Go back",
   "notFound": {
     "title": "Page Not Found",
     "message": "The page you are looking for does not exist.",
@@ -3471,10 +3470,6 @@
       "title": "Report this case",
       "intro": "Flag a case that looks fake, abusive or inappropriate. Our team reviews every report.",
       "reason": {
-        "inaccurate": "Inaccurate",
-        "scam": "Fake",
-        "inappropriate": "Inappropriate",
-        "other": "Other",
         "false_information": "False information",
         "personal_data_exposed": "Exposes personal data",
         "location_too_precise": "Location is too precise",

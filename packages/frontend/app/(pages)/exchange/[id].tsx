@@ -163,7 +163,7 @@ export default function ExchangeRequestDetailScreen() {
       titleAlign="center"
       leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
       onBack={router.canGoBack() ? router.back : undefined}
-      backLabel={t('goBack')}
+      backLabel={t('common.goBack')}
     />
   );
 
@@ -175,7 +175,7 @@ export default function ExchangeRequestDetailScreen() {
             icon={RiAlertLine}
             title={t('listing.exchange.invalidId')}
             description={t('listing.exchange.invalidIdBody')}
-            retryLabel={t('goBack')}
+            retryLabel={t('common.goBack')}
             onRetry={() => router.back()}
           />
         </ScreenScrollView>
@@ -200,7 +200,7 @@ export default function ExchangeRequestDetailScreen() {
           <ErrorState
             title={t('listing.exchange.unavailable')}
             description={requestQuery.error?.message ?? t('listing.exchange.unavailableBody')}
-            retryLabel={t('goBack')}
+            retryLabel={t('common.goBack')}
             onRetry={() => router.back()}
           />
         </ScreenScrollView>

@@ -207,7 +207,7 @@ export default function LandlordApplicationDetailScreen() {
       titleAlign="center"
       leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
       onBack={router.canGoBack() ? router.back : undefined}
-      backLabel={t('goBack')}
+      backLabel={t('common.goBack')}
     />
   );
 
@@ -220,7 +220,7 @@ export default function LandlordApplicationDetailScreen() {
             title={t('applications.landlord.invalidTitle')}
             description={t('applications.landlord.invalidDescription')}
             onRetry={() => router.back()}
-            retryLabel={t('goBack')}
+            retryLabel={t('common.goBack')}
           />
         </ScreenScrollView>
       </Screen>
@@ -263,7 +263,7 @@ export default function LandlordApplicationDetailScreen() {
             title={t('applications.landlord.notAuthorisedTitle')}
             description={t('applications.landlord.notAuthorisedDescription')}
             onRetry={() => router.back()}
-            retryLabel={t('goBack')}
+            retryLabel={t('common.goBack')}
           />
         </ScreenScrollView>
       </Screen>

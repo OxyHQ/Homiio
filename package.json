@@ -21,6 +21,7 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "doctor:oxy": "oxy-doctor --ci",
+    "i18n:check": "oxy-doctor-i18n --ci",
     "check:bundle-imports": "bun ./scripts/check-frontend-bundle-imports.mjs && bun ./scripts/test-check-frontend-bundle-imports.mjs",
     "check:web-bundle-budget": "bun ./scripts/check-web-export-budget.mjs",
     "check:lockfile": "bun ./scripts/check-lockfile-sync.mjs",
@@ -36,7 +37,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@oxy.so/doctor": "1.5.0",
+    "@oxy.so/doctor": "1.6.0",
     "@types/node": "^26.6.5",
     "ajv": "^8.20.0",
     "ajv-keywords": "^5.1.0",

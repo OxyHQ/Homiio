@@ -182,7 +182,7 @@ export default function ReportListingScreen() {
           titleAlign="center"
           leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
           onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
+          backLabel={t('common.goBack')}
         />
       }
     >

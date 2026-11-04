@@ -216,7 +216,7 @@
     "all": "Tutto",
     "noResults": "Nessun risultato trovato",
     "tryAgain": "Riprova",
-    "goBack": "Go Back",
+    "goBack": "Indietro",
     "signIn": "Accedi",
     "saving": "Saving...",
     "name": "Name",
@@ -1822,15 +1822,6 @@
   },
   "saved": {
     "title": "Proprietà Salvate",
-    "emptyTitle": "Nessuna Proprietà Salvata",
-    "emptyDescription": "Non hai ancora salvato nessuna proprietà. Inizia a esplorare e salva le proprietà che ami!",
-    "startExploring": "Inizia a Esplorare",
-    "unsave": {
-      "title": "Rimuovi dai Salvati",
-      "message": "Sei sicuro di voler rimuovere \"{{title}}\" dalle tue proprietà salvate?",
-      "confirm": "Rimuovi",
-      "cancel": "Annulla"
-    },
     "notes": {
       "title": "Note Proprietà",
       "placeholder": "Aggiungi note su questa proprietà...",
@@ -1861,25 +1852,9 @@
       "withNotes": "Con note"
     },
     "openFolder": "Apri la cartella {{name}}",
-    "sorting": {
-      "newest": "Prima i Più Recenti",
-      "oldest": "Prima i Più Vecchi",
-      "alphabetical": "Alfabetico"
-    },
     "header": "Saved",
-    "view": {
-      "list": "List",
-      "grid": "Grid"
-    },
     "searchPlaceholder": "Search your saved items...",
     "adjustFilters": "Try adjusting your search or filter criteria",
-    "sort": {
-      "recent": "Recently Saved",
-      "price-low": "Price: Low to High",
-      "price-high": "Price: High to Low",
-      "title": "Property Name",
-      "notes": "Most Notes"
-    },
     "editFolder": "Edit Folder",
     "defaultFolder": "Default Folder",
     "folderNamePlaceholder": "Folder name",
@@ -2213,7 +2188,6 @@
       }
     }
   },
-  "goBack": "Indietro",
   "app": {
     "loading": "Loading..."
   },
@@ -3496,10 +3470,6 @@
       "title": "Segnala questo caso",
       "intro": "Segnala un caso che sembra falso, offensivo o inappropriato. Il nostro team controlla ogni segnalazione.",
       "reason": {
-        "inaccurate": "Informazioni false",
-        "scam": "È falso",
-        "inappropriate": "Inappropriato",
-        "other": "Altro",
         "false_information": "False information",
         "personal_data_exposed": "Exposes personal data",
         "location_too_precise": "Location is too precise",
