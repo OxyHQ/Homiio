@@ -147,7 +147,8 @@ measurements: **`docs/postgres.md`**.
   the `removed` status is intentionally unreachable. `/api/scraper/*` is infra
   tooling behind the `homiio.scraper.operate` application permission
   (`services/applicationPermissions.ts`) and is the one exception — never an
-  env list of user ids. If a need arises, ask the user first.
+  env list of user ids. The key is declared in oxy's first-party registry and
+  held by owning-organization role (oxy ADR 0056); keep both names equal. If a need arises, ask the user first.
 - **`/explore` is the discovery surface; `/search` is a redirect and nothing
   else.** Never add a screen, filter or data hook under `/search`.
 - **Do not maintain a second route list anywhere.** `docs/routes.mdx` is

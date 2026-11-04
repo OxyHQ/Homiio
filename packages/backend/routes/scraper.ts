@@ -16,9 +16,10 @@ import { oxyService } from '../services/oxy';
 
 const router = express.Router();
 
-// External ingestion tooling is for the people Homiio's Oxy application grants
-// `homiio.scraper.operate`, read fresh on every call (these routes write and
-// fetch caller-chosen URLs). Everyone else, a service token included, gets 404;
+// External ingestion tooling is for the people who hold `homiio.scraper.operate`
+// (the owners and admins of the organization that owns Homiio, declared in
+// oxy's first-party registry, oxy ADR 0056), read fresh on every call (these
+// routes write and fetch caller-chosen URLs). Everyone else, a service token included, gets 404;
 // an Oxy outage is 503, never a cached "no" (`~/Oxy/docs/application-roles.md`).
 router.use(oxyService.middleware.requireAppPermission(SCRAPER_OPERATE_PERMISSION, { fresh: true }));
 
