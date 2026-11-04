@@ -35,8 +35,11 @@ module.exports = {
     '^@homiio/listing-providers$': '<rootDir>/../listing-providers/dist/index.js',
     '^@homiio/listing-providers/(.*)$': '<rootDir>/../listing-providers/dist/$1.js',
   },
+  // @oxy.so/protocol (via core) signs with @noble/curves, which ships ESM only and
+  // Jest cannot require(esm): compile it to CommonJS like our own sources.
+  transformIgnorePatterns: ['/node_modules/(?!@noble/)'],
   transform: {
-    '^.+\\.ts$': [
+    '^.+\\.(?:ts|js)$': [
       'ts-jest',
       {
         tsconfig: {
@@ -46,6 +49,7 @@ module.exports = {
           allowSyntheticDefaultImports: true,
           resolveJsonModule: true,
           isolatedModules: true,
+          allowJs: true,
           ignoreDeprecations: '6.0',
         },
       },
