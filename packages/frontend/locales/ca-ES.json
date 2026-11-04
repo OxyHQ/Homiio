@@ -136,31 +136,9 @@
       "continue": "Continua explorant"
     },
     "saved": {
-      "header": "Desats",
-      "title": "Propietats Desades",
-      "tabs": {
-        "all": "Tot",
-        "recent": "Recents",
-        "noted": "Amb notes",
-        "quickSaves": "Desats ràpids",
-        "folders": "Carpetes"
-      },
-      "view": {
-        "list": "Llista",
-        "grid": "Quadrícula"
-      },
-      "searchPlaceholder": "Cerca als teus desats...",
-      "adjustFilters": "Prova d'ajustar la teva cerca o filtres",
-      "sort": {
-        "recent": "Recentment desats",
-        "price-low": "Preu: menor a major",
-        "price-high": "Preu: major a menor",
-        "title": "Nom de la propietat",
-        "notes": "Més notes"
-      }
+      "title": "Propietats Desades"
     },
     "tips": {
-      "article": "Article",
       "title": "Consells i guies de lloguer",
       "subtitle": "Guies pràctiques de llogaters locals, experts legals i l'equip editorial de Homiio.",
       "eyebrow": "Llogar millor"
@@ -1712,7 +1690,7 @@
     "all": "Tot",
     "noResults": "No s'han trobat resultats",
     "tryAgain": "Provar de nou",
-    "goBack": "Go Back",
+    "goBack": "Tornar",
     "signIn": "Inicia sessió",
     "name": "Name",
     "emoji": "Emoji",
@@ -1833,15 +1811,6 @@
   "saved": {
     "header": "Desats",
     "title": "Propietats Desades",
-    "emptyTitle": "Cap Propietat Desada",
-    "emptyDescription": "Encara no heu desat cap propietat. Comenceu a explorar i deseu les propietats que us agradin!",
-    "startExploring": "Començar a Explorar",
-    "unsave": {
-      "title": "Treure de Desades",
-      "message": "Esteu segur que voleu eliminar \"{{title}}\" de les vostres propietats desades?",
-      "confirm": "Treure",
-      "cancel": "Cancel·lar"
-    },
     "notes": {
       "title": "Notes de la Propietat",
       "placeholder": "Afegir notes sobre aquesta propietat...",
@@ -1872,24 +1841,8 @@
       "withNotes": "Amb notes"
     },
     "openFolder": "Obre la carpeta {{name}}",
-    "sorting": {
-      "newest": "Més Recents Primer",
-      "oldest": "Més Antics Primer",
-      "alphabetical": "Alfabètic"
-    },
-    "view": {
-      "list": "List",
-      "grid": "Grid"
-    },
     "searchPlaceholder": "Search your saved items...",
     "adjustFilters": "Try adjusting your search or filter criteria",
-    "sort": {
-      "recent": "Recently Saved",
-      "price-low": "Price: Low to High",
-      "price-high": "Price: High to Low",
-      "title": "Property Name",
-      "notes": "Most Notes"
-    },
     "editFolder": "Edit Folder",
     "defaultFolder": "Default Folder",
     "folderNamePlaceholder": "Folder name",
@@ -2223,7 +2176,6 @@
       }
     }
   },
-  "goBack": "Tornar",
   "app": {
     "loading": "Loading..."
   },
@@ -3518,10 +3470,6 @@
       "title": "Denuncia aquest cas",
       "intro": "Avisa'ns si un cas sembla fals, abusiu o inapropiat. El nostre equip revisa cada denúncia.",
       "reason": {
-        "inaccurate": "Informació falsa",
-        "scam": "És fals",
-        "inappropriate": "Inapropiat",
-        "other": "Altres",
         "false_information": "False information",
         "personal_data_exposed": "Exposes personal data",
         "location_too_precise": "Location is too precise",

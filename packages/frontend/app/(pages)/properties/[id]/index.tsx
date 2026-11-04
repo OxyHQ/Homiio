@@ -465,7 +465,7 @@ export default function PropertyDetailPage() {
             placement="overlap"
             leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
             onBack={router.canGoBack() ? router.back : undefined}
-            backLabel={t('goBack')}
+            backLabel={t('common.goBack')}
           />
         }
       >
@@ -487,7 +487,7 @@ export default function PropertyDetailPage() {
             titleAlign="center"
             leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
             onBack={router.canGoBack() ? router.back : undefined}
-            backLabel={t('goBack')}
+            backLabel={t('common.goBack')}
           />
         }
       >
@@ -499,7 +499,7 @@ export default function PropertyDetailPage() {
               t('property.notFoundHelp', 'It may have been removed or the link is broken.') ||
               'It may have been removed or the link is broken.'
             }
-            retryLabel={t('goBack', 'Go back') || 'Go back'}
+            retryLabel={t('common.goBack')}
             onRetry={() => router.back()}
           />
         </ScreenScrollView>
@@ -623,7 +623,7 @@ export default function PropertyDetailPage() {
           titleAlign="center"
           leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
           onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
+          backLabel={t('common.goBack')}
           actions={
             <ButtonGroup>
               {landlordOxyUserId ? (

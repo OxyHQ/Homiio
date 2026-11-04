@@ -347,7 +347,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
           titleAlign="center"
           leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
           onBack={router.canGoBack() ? router.back : undefined}
-          backLabel={t('goBack')}
+          backLabel={t('common.goBack')}
         />
       }
     >
@@ -582,7 +582,7 @@ export default function EvictionsFormScreen() {
       titleAlign="center"
       leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
       onBack={router.canGoBack() ? router.back : undefined}
-      backLabel={t('goBack')}
+      backLabel={t('common.goBack')}
     />
   );
 

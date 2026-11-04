@@ -1329,7 +1329,7 @@
     "all": "All",
     "noResults": "No results found",
     "tryAgain": "Try again",
-    "goBack": "Go Back",
+    "goBack": "Go back",
     "signIn": "Sign in",
     "month": "month",
     "decreaseItem": "Decrease {{title}}",
@@ -2262,7 +2262,6 @@
       }
     }
   },
-  "goBack": "Go back",
   "notFound": {
     "title": "Page Not Found",
     "message": "The page you are looking for does not exist.",

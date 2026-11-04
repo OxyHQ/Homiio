@@ -161,7 +161,6 @@
       "title": "Propiedades Guardadas"
     },
     "tips": {
-      "article": "Artículo",
       "title": "Consejos y guías de alquiler",
       "subtitle": "Guías prácticas de inquilinos locales, expertos legales y el equipo editorial de Homiio.",
       "eyebrow": "Alquilar mejor"
@@ -1694,7 +1693,7 @@
     "all": "Todo",
     "noResults": "No se encontraron resultados",
     "tryAgain": "Intentar de nuevo",
-    "goBack": "Go Back",
+    "goBack": "Volver",
     "signIn": "Iniciar sesión",
     "month": "month",
     "decreaseItem": "Reducir {{title}}",
@@ -1812,22 +1811,8 @@
   "saved": {
     "header": "Guardados",
     "title": "Propiedades Guardadas",
-    "view": {
-      "list": "Lista",
-      "grid": "Cuadrícula"
-    },
     "searchPlaceholder": "Busca en tus guardados...",
     "adjustFilters": "Prueba ajustando tu búsqueda o filtros",
-    "sort": {
-      "recent": "Recientemente guardados",
-      "price-low": "Precio: menor a mayor",
-      "price-high": "Precio: mayor a menor",
-      "title": "Nombre de la propiedad",
-      "notes": "Más notas"
-    },
-    "emptyTitle": "No Hay Propiedades Guardadas",
-    "emptyDescription": "Aún no has guardado ninguna propiedad. ¡Comienza a explorar y guarda las propiedades que te gusten!",
-    "startExploring": "Comenzar a Explorar",
     "editFolder": "Editar carpeta",
     "defaultFolder": "Carpeta predeterminada",
     "folderNamePlaceholder": "Nombre de la carpeta",
@@ -1835,12 +1820,6 @@
     "noFolderDescription": "Es posible que esta carpeta haya sido eliminada",
     "noFolderItems": "No hay propiedades en esta carpeta",
     "noFolderItemsDescription": "Guarda propiedades en esta carpeta para verlas aquí",
-    "unsave": {
-      "title": "Quitar de Guardados",
-      "message": "¿Estás seguro de que quieres eliminar \"{{title}}\" de tus propiedades guardadas?",
-      "confirm": "Quitar",
-      "cancel": "Cancelar"
-    },
     "notes": {
       "title": "Notas de la Propiedad",
       "placeholder": "Agregar notas sobre esta propiedad...",
@@ -1865,11 +1844,6 @@
     },
     "errors": {
       "updateNotesFailed": "Error al actualizar notas"
-    },
-    "sorting": {
-      "newest": "Más Recientes Primero",
-      "oldest": "Más Antiguos Primero",
-      "alphabetical": "Alfabético"
     },
     "toast": {
       "loadFoldersFailed": "No se pudieron cargar las carpetas",
@@ -2273,7 +2247,6 @@
       }
     }
   },
-  "goBack": "Volver",
   "app": {
     "loading": "Loading..."
   },
@@ -3497,10 +3470,6 @@
       "title": "Reportar este caso",
       "intro": "Avisa si un caso parece falso, abusivo o inapropiado. Nuestro equipo revisa cada reporte.",
       "reason": {
-        "inaccurate": "Información falsa",
-        "scam": "Es falso",
-        "inappropriate": "Inapropiado",
-        "other": "Otro",
         "false_information": "False information",
         "personal_data_exposed": "Exposes personal data",
         "location_too_precise": "Location is too precise",
