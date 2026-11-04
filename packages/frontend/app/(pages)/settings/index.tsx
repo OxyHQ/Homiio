@@ -32,6 +32,7 @@ import { RiSmartphoneLine } from '@oxy.so/bloom/icons/RiSmartphoneLine';
 import { RiStarLine } from '@oxy.so/bloom/icons/RiStarLine';
 import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
 import { RiWrenchLine } from '@oxy.so/bloom/icons/RiWrenchLine';
+import { useHapticsSettingRow } from '@oxy.so/bloom/preferences';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Switch } from '@oxy.so/bloom/switch';
@@ -57,6 +58,7 @@ export default function SettingsScreen() {
   const { getCurrentCurrency } = useCurrency();
   const { colors: theme } = useTheme();
   const { mode, setMode } = useBloomTheme();
+  const haptics = useHapticsSettingRow();
 
   const [notifications, setNotifications] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
@@ -173,6 +175,12 @@ export default function SettingsScreen() {
                 ))}
               </SegmentedControl>
             }
+          />
+          <SettingsListItem
+            icon={<SettingsRowIcon icon={RiSmartphoneLine} />}
+            title={haptics.label}
+            description={haptics.description}
+            rightElement={haptics.control}
           />
         </SettingsListGroup>
 
