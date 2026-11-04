@@ -1,4 +1,3 @@
-import type { DocumentRequester } from '../services/files/requester';
 /**
  * The catalogue's handlers, as both MCP lanes call them.
  *
@@ -23,11 +22,13 @@ import type { DocumentRequester } from '../services/files/requester';
  */
 
 import type { CatalogTool, InvocationPrincipal } from '@oxy.so/contracts';
-import type { InvocationContext, InvocationHandlers } from '@oxy.so/mcp';
+import { type ExternalMcpDocumentProof, readCapabilityAuthorization } from '@oxy.so/core/server';
+import { extractBearerToken, type InvocationContext, type InvocationHandlers } from '@oxy.so/mcp';
 
 import { AppError } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
 import { renameWireIds } from '../middlewares/wireIds';
+import type { DocumentRequester } from '../services/files/requester';
 import { runWithEffectReceipt } from './effectReceipts';
 import { HOMIIO_CAPABILITY_CATALOG } from './homiio.catalog';
 import { HOMIIO_TOOL_HANDLERS } from './handlers/all';
@@ -42,30 +43,52 @@ export function effectiveAccountOf(principal: InvocationPrincipal): string {
     : principal.activeAccountId;
 }
 
-function idempotencyKeyOf(context: InvocationContext): string | undefined {
+export function idempotencyKeyOf(context: InvocationContext): string | undefined {
   const header = context.request.requestInfo?.headers?.['idempotency-key'];
   const value = Array.isArray(header) ? (header.length === 1 ? header[0] : undefined) : header;
   const key = typeof value === 'string' ? value.trim() : '';
   return key.length > 0 ? key : undefined;
 }
 
+type ExternalDocumentTool = ExternalMcpDocumentProof['tool'];
+
+/** The OAuth-lane tools Oxy accepts a connection token for, to store a person's document. */
+const EXTERNAL_DOCUMENT_TOOLS: Readonly<Record<ExternalDocumentTool, true>> = {
+  uploadLeaseDocument: true,
+  submitApplication: true,
+  addApplicationDocuments: true,
+};
+
+function isExternalDocumentTool(name: string): name is ExternalDocumentTool {
+  return Object.hasOwn(EXTERNAL_DOCUMENT_TOOLS, name);
+}
+
+/** The value of the request's single `Authorization` header, if it has exactly one. */
+export function authorizationOf(context: InvocationContext): string | undefined {
+  const header = context.request.requestInfo?.headers?.authorization;
+  if (Array.isArray(header)) return header.length === 1 ? header[0] : undefined;
+  return typeof header === 'string' ? header : undefined;
+}
+
+/**
+ * The proof Oxy Files needs to store a document in the person's account, in the
+ * credential each lane really carries: the internal lane's
+ * `Authorization: Capability <ticket>` (the ticket is the requester proof), the
+ * OAuth lane's `Bearer <connection token>` for the document tools Oxy accepts it
+ * on. The transport verified both before the handler ran.
+ */
 function fileRequesterOf(
   context: InvocationContext,
   tool: CatalogTool,
 ): DocumentRequester | undefined {
-  const header = context.request.requestInfo?.headers?.authorization;
-  const token =
-    typeof header === 'string' && header.startsWith('Bearer ') ? header.slice(7) : undefined;
-  if (!token) return undefined;
-  if (context.principal.kind === 'capability')
-    return { kind: 'own', proof: { capabilityTicket: token } };
-  if (
-    tool.name === 'uploadLeaseDocument' ||
-    tool.name === 'submitApplication' ||
-    tool.name === 'addApplicationDocuments'
-  )
-    return { kind: 'external', proof: { connectionToken: token, tool: tool.name } };
-  return undefined;
+  if (context.principal.kind === 'capability') {
+    const ticket = readCapabilityAuthorization(authorizationOf(context));
+    return ticket ? { kind: 'own', proof: { capabilityTicket: ticket } } : undefined;
+  }
+  const name = tool.name;
+  if (!isExternalDocumentTool(name)) return undefined;
+  const token = extractBearerToken({ authorization: authorizationOf(context) });
+  return token ? { kind: 'external', proof: { connectionToken: token, tool: name } } : undefined;
 }
 
 /** What `res.json` would have put on the wire for this value. */

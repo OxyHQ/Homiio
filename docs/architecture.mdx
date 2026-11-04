@@ -175,19 +175,19 @@ cache rather than from a component.
 
 `server.ts` mounts in a deliberate order:
 
-1. `helmet`.
-2. CORS, locked to known origins.
-3. `optionalAuth` — resolves a session when one is presented, without requiring one.
-4. Rate limiting on `/api`.
-5. **Stripe webhook first**, with `bodyParser.raw()` before any JSON parser, so signatures verify. `/api/billing/confirm` sits next with `bodyParser.json()`.
-6. Content-type-aware body parsing for everything else.
-7. Request logger.
-8. `GET /` and `GET /health`.
-9. **Public routes** (`routes/public.ts`) under `/api`.
-10. **Authenticated routes** (`routes/index.ts`) under `/api`, behind `createOxyAuthMiddleware(oxy)`.
-11. Error logger, 404, error handler.
+1. `createOxySecurityHeaders()` — Helmet with the Oxy CSP baseline.
+2. `createOxyCors({ appOrigins })` — the Oxy apex family plus Homiio's own origins.
+3. `createOxyRateLimit(oxy)` on `/api` — resolves a session when one is presented
+   (without requiring one), then limits per user, or per hashed IP when anonymous.
+4. **Stripe webhook first**, with `bodyParser.raw()` before any JSON parser, so signatures verify. `/api/billing/confirm` sits next with `bodyParser.json()`.
+5. Content-type-aware body parsing for everything else.
+6. Request logger.
+7. `GET /` and `GET /health`.
+8. **Public routes** (`routes/public.ts`) under `/api`.
+9. **Authenticated routes** (`routes/index.ts`) under `/api`, behind `createOxyAuthMiddleware(oxy)`.
+10. Error logger, 404, error handler.
 
-Steps 9 and 10 are why a handler's auth requirement is decided by **which file it
+Steps 8 and 9 are why a handler's auth requirement is decided by **which file it
 is in**, not by a check inside it. Moving a handler between the two routers
 changes whether a session is required, silently. See [Routes](./routes).
 
@@ -197,7 +197,7 @@ changes whether a session is required, silently. See [Routes](./routes).
 Client (Expo / web)
    │  Authorization: Bearer <Oxy access token>   (linked client mints + refreshes it)
    ▼
-helmet → CORS → optionalAuth → rate limit → body parser → requestLogger
+security headers → CORS → session + rate limit → body parser → requestLogger
    │
    ├─▶ routes/public.ts   ─────────────────────── no session required
    │

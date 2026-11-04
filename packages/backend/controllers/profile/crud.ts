@@ -19,8 +19,9 @@ import {
   getPublicProfile,
   updateMyProfile as writeMyProfile,
 } from '../../domain/profile';
-import { errorResponse, successResponse, _getOxyUserId } from './shared';
+import { errorResponse, successResponse } from './shared';
 import type { NextFunction, Request, Response } from 'express';
+import { getOxyUserId } from '@oxy.so/core/server';
 
 /**
  * The caller's own profile, created empty if this is their first request.
@@ -32,7 +33,7 @@ import type { NextFunction, Request, Response } from 'express';
  */
 export async function getOrCreateProfile(req: Request, res: Response, next: NextFunction) {
   try {
-    const oxyUserId = _getOxyUserId(req);
+    const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
       return res
         .status(401)
@@ -95,7 +96,7 @@ export async function getProfileByOxyUserId(req: Request, res: Response, next: N
  */
 export async function updateMyProfile(req: Request, res: Response, next: NextFunction) {
   try {
-    const oxyUserId = _getOxyUserId(req);
+    const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
       return res
         .status(401)

@@ -300,7 +300,8 @@ ID/TH/TR; OLX PT/PL; Immowelt AT; Blueground PT/GR/AE/HK; ImmobiliareScout24 AT.
   now runs only health checks and the expiry sweep.
 - The `localhost:3000` sidecar dependency and the `config/cron.ts` `scrapeSources`
   array are removed.
-- `/api/scraper/*` routes are admin only (`middlewares/requireAdmin.ts`).
+- `/api/scraper/*` routes need the `homiio.scraper.operate` application permission
+  (`routes/scraper.ts`, `requireAppPermission`, read fresh on every call).
 - `scraperService` upsert helpers (`upsertExternalListing`, `getScraperHealth`,
   `cleanupExpiredProperties`) remain for expired-listing cleanup, health
   reporting and manual admin runs.
@@ -579,8 +580,8 @@ card hint, 30 normalized with zero network calls.**
 ## The scraper endpoint was an SSRF (CRITICAL, open since 2025-08-23)
 
 `POST /api/scraper/run` takes `endpoint` straight from the request body and
-hands it to `axios.get`. `requireAdmin` guards the route — but **it bounds who,
-not what**, and this process runs inside the VPC. An admin-supplied endpoint
+fetches it. The `homiio.scraper.operate` application permission guards the route —
+but **it bounds who, not what**, and this process runs inside the VPC. An operator-supplied endpoint
 makes the API issue a GET from a position nothing on the internet has:
 `169.254.170.2/v2/credentials/…` (the task role's IAM credentials), IMDS,
 `postgres.internal.oxy.so`, every internal service. App-admin becomes AWS-role.
@@ -590,20 +591,21 @@ is parsed into listings and returned as counts, not echoed to the caller, so
 this is not a clean credential read-back. It is arbitrary GET from inside the
 VPC, which is enough.
 
-`utils/outboundGuard.ts` puts two layers in front of it, and **both are
-required**:
+Two layers stand in front of it, and **both are required**: the origin
+allowlist (`services/scraperEndpoint.ts`) and `safeFetch` from `@oxy.so/core/server`
+(`services/scraperService.ts`), whose body is read capped with `readResponseJson`:
 
 | defeat | what stops it |
 | --- | --- |
 | an allow-listed host answering `302 Location: http://169.254.170.2/…` | `maxRedirects: 0` — follow none, not fewer |
-| a name that resolves to public at validation and link-local at connect | a `dns.lookup` on the socket that refuses internal addresses **at connect time** |
+| a name that resolves to public at validation and link-local at connect | `safeFetch` checks every resolved address and **pins the socket** to the one it checked |
 
 The allowlist alone is defeated by rebinding; the address check alone would
 permit any public host and turn the API into an open proxy.
 
 **`SCRAPER_ALLOWED_ORIGINS` is empty by default, and empty means nothing is
 allowed.** The legacy scrape loop this route drove is retired; what remains is
-manual admin tooling nothing runs on a schedule. A default of "any host" is what
+manual operator tooling nothing runs on a schedule. A default of "any host" is what
 made the finding critical, and a default of "none" fails as a 400 rather than as
 a leaked IAM role.
 

@@ -36,8 +36,8 @@ import { requireSessionOxyUserId } from '../utils/sessionUser';
 import { AppError, logUnexpectedError } from '../middlewares/errorHandler';
 import { fileIdFromOxyKey, OXY_KEY_PREFIX, oxyImageUrls } from '../services/files/imageUrls';
 import { resolveLegacyImage } from '../services/files/legacyImages';
-import { oxyErrorCode, oxyErrorStatus } from '../services/files/oxyFilesClient';
 import { type StoredPublicImage, uploadAccountImage } from '../services/files/publicImages';
+import { OxyApiError } from '@oxy.so/core';
 
 // Minimal shape for an uploaded file to avoid relying on Express.Multer types
 type UploadedFile = {
@@ -99,7 +99,8 @@ function uploadAnswer(image: StoredPublicImage) {
 function refusal(error: unknown): { status: number; message: string } | null {
   // Homiio's own refusals (no session) answer as themselves.
   if (error instanceof AppError) return { status: error.statusCode, message: error.message };
-  const status = oxyErrorStatus(error);
+  if (!(error instanceof OxyApiError)) return null;
+  const { status, code } = error;
   if (status === 413) return { status: 413, message: 'File size too large.' };
   if (status === 415) return { status: 400, message: 'Invalid file type.' };
   if (status === 451) {
@@ -108,7 +109,7 @@ function refusal(error: unknown): { status: number; message: string } | null {
       message: 'This photo was removed after a legal claim and cannot be uploaded again.',
     };
   }
-  if (oxyErrorCode(error) === 'STORAGE_QUOTA_EXCEEDED') {
+  if (code === 'STORAGE_QUOTA_EXCEEDED') {
     return { status: 413, message: 'Your Oxy storage is full.' };
   }
   return null;

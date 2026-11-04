@@ -252,7 +252,7 @@ export async function setRoommateMatching(oxyUserId: string, enabled: unknown) {
  * The participant profiles and Oxy display names for a set of Oxy account ids.
  *
  * One batched profile read for the whole list rather than one per participant,
- * and one `POST /users/by-ids` beside it — the two lists below are the only
+ * and one `users.lookupMany` beside it — the two lists below are the only
  * callers and both need exactly this pair.
  */
 async function loadParticipants(oxyUserIds: readonly string[]): Promise<{

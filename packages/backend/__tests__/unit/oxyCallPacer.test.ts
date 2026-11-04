@@ -4,10 +4,16 @@
  * transport failure retried a few times before it is the caller's.
  */
 
+import { OxyApiError } from '@oxy.so/core';
+
 import { OxyCallPacer, retryAfterMs } from '../../services/files/oxyCallPacer';
 
 function oxyError(status: number, details?: Record<string, unknown>) {
-  return Object.assign(new Error(`${status}`), { status, ...(details ? { details } : {}) });
+  return new OxyApiError(`${status}`, {
+    status,
+    code: `HTTP_${status}`,
+    ...(details ? { details } : {}),
+  });
 }
 
 /** A clock that only moves when the pacer sleeps. */
@@ -87,7 +93,9 @@ describe('OxyCallPacer', () => {
       await pacer.run(async () => {
         calls += 1;
         if (calls === 1) throw new Error('socket hang up');
-        if (calls === 2) throw oxyError(503);
+        // The SDK's own transport failure: no response arrived, status 0.
+        if (calls === 2) throw oxyError(0);
+        if (calls === 3) throw oxyError(503);
         return 'ok';
       }),
     ).toBe('ok');

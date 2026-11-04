@@ -31,12 +31,7 @@ import {
   viewingHorizonDays,
 } from '../domain/viewings';
 import { AppError, successResponse } from '../middlewares/errorHandler';
-
-function requireCaller(req: Request): string {
-  const oxyUserId = req.user?.id || req.user?._id || req.userId;
-  if (!oxyUserId) throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
-  return oxyUserId;
-}
+import { requireSessionOxyUserId } from '../utils/sessionUser';
 
 class ViewingAvailabilityController {
   /** The slots a listing offers. PUBLIC — see the module header. */
@@ -64,7 +59,7 @@ class ViewingAvailabilityController {
   /** The owner's own schedule, including the zone it is expressed in. */
   async getViewingWindows(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const schedule = await getViewingWindows(requireCaller(req), {
+      const schedule = await getViewingWindows(requireSessionOxyUserId(req), {
         propertyId: req.params.propertyId,
       });
       res.json(successResponse(schedule, 'Viewing schedule retrieved'));
@@ -76,7 +71,7 @@ class ViewingAvailabilityController {
   /** Replace the schedule, and optionally the zone it is expressed in. */
   async putViewingWindows(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = requireCaller(req);
+      const oxyUserId = requireSessionOxyUserId(req);
       const schedule = await setViewingWindows(oxyUserId, {
         propertyId: req.params.propertyId,
         windows: req.body?.windows,

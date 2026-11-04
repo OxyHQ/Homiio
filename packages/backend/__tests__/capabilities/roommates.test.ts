@@ -15,6 +15,7 @@ import { getDb } from '../../db/postgres';
 import { ensureProfile } from '../../db/profiles/profileRepository';
 import { profiles, roommateRelationships, roommateRequests } from '../../db/schema';
 import { notificationDispatchService } from '../../services/notificationDispatchService';
+import { oxyService } from '../../services/oxy';
 import { callTool } from '../helpers/capabilityHarness';
 
 const SUITE = uuidv7().slice(-8);
@@ -22,22 +23,24 @@ const ALICE = `oxy-rm-alice-${SUITE}`;
 const BOB = `oxy-rm-bob-${SUITE}`;
 const MALLORY = `oxy-rm-mallory-${SUITE}`;
 
-const realFetch = global.fetch;
+type Lookup = Awaited<ReturnType<typeof oxyService.users.lookupMany>>;
 
-beforeAll(() => {
-  // Participant display names come from Oxy's `/users/by-ids`; no network here.
-  (global as unknown as { fetch: jest.Mock }).fetch = jest.fn(async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({ data: [] }),
-  }));
-});
-
-afterAll(() => {
-  global.fetch = realFetch;
-});
+/** What Oxy answers for the participants' display names; no network here. */
+function answerLookup(answer: (ids: string[]) => Lookup) {
+  return jest
+    .spyOn(oxyService.users, 'lookupMany')
+    .mockImplementation(async (ids: string[]) => answer(ids));
+}
 
 beforeEach(async () => {
+  answerLookup(
+    (ids) =>
+      ({
+        found: ids.map((id) => ({ id, username: id, name: { displayName: `Name of ${id}` } })),
+        missing: [],
+        failed: [],
+      }) as unknown as Lookup,
+  );
   await getDb().delete(roommateRelationships);
   await getDb().delete(roommateRequests);
   await getDb().delete(profiles);
@@ -92,6 +95,43 @@ describe('the request handshake', () => {
     expect(dispatch).toHaveBeenCalledWith(BOB, expect.objectContaining({ type: 'roommate' }));
     const listed = await callTool('listRoommateRequests', BOB);
     expect((listed.structuredContent.data as { received: unknown[] }).received).toHaveLength(1);
+  });
+
+  it('names each participant from Oxy, and leaves an account Oxy does not know nameless', async () => {
+    answerLookup(
+      (ids) =>
+        ({
+          found: ids
+            .filter((id) => id !== ALICE)
+            .map((id) => ({ id, username: id, name: { displayName: `Name of ${id}` } })),
+          missing: [ALICE],
+          failed: [],
+        }) as unknown as Lookup,
+    );
+    await send();
+    const listed = await callTool('listRoommateRequests', BOB);
+    const [received] = (
+      listed.structuredContent.data as {
+        received: Array<{ sender: { displayName?: string }; receiver: { displayName?: string } }>;
+      }
+    ).received;
+    expect(received.receiver.displayName).toBe(`Name of ${BOB}`);
+    expect(received.sender.displayName).toBeUndefined();
+  });
+
+  it('answers 503 when Oxy cannot say who the participants are, never a nameless list', async () => {
+    await send();
+    answerLookup(
+      (ids) =>
+        ({
+          found: [],
+          missing: [],
+          failed: ids,
+          error: new Error('timeout'),
+        }) as unknown as Lookup,
+    );
+    const listed = await callTool('listRoommateRequests', BOB);
+    expect(listed.error).toMatchObject({ code: 'OXY_UNAVAILABLE', status: 503 });
   });
 
   it('refuses somebody without matching enabled, and oneself', async () => {

@@ -68,29 +68,21 @@ export type PeableSignatureVerdict =
   | { readonly ok: false; readonly reason: 'invalid_webhook' };
 
 const webhooks = new WebhooksResource();
-// The SDK decodes bytes leniently (invalid sequences become U+FFFD), so two
-// different bodies could verify as one string. Peable only ever signs valid
-// UTF-8, so a body that is not is refused before it reaches the SDK; the BOM is
-// kept because the signature covers it.
-const strictUtf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 /**
  * Verify the signed raw bytes, the signed timestamp window (the SDK's default
- * tolerance) and the canonical event envelope. No HTTP, no credential.
+ * tolerance) and the canonical event envelope. No HTTP, no credential. The
+ * bytes go to the SDK as they arrived: it decodes them as exact UTF-8 (BOM
+ * kept, an invalid sequence refused), so two different bodies can never verify
+ * as one string.
  */
 export function verifyPeableSignature(input: {
   readonly rawBody: Buffer | string;
   readonly header: string | undefined;
   readonly secret: string;
 }): PeableSignatureVerdict {
-  let raw: string;
   try {
-    raw = typeof input.rawBody === 'string' ? input.rawBody : strictUtf8.decode(input.rawBody);
-  } catch {
-    return { ok: false, reason: 'invalid_webhook' };
-  }
-  try {
-    webhooks.constructEvent(raw, input.header ?? '', input.secret);
+    webhooks.constructEvent(input.rawBody, input.header ?? '', input.secret);
     return { ok: true };
   } catch (error) {
     if (error instanceof PeableSignatureVerificationError)

@@ -30,6 +30,7 @@ import type {
   ServiceReferenceReconcileResult,
   ServiceUserMediaFile,
 } from '@oxy.so/core';
+import { OxyApiError } from '@oxy.so/core';
 
 import type { OxyFilesApi } from '../../services/files/oxyFilesSeam';
 
@@ -49,9 +50,9 @@ export interface FakeFile {
   bytes: Buffer;
 }
 
-/** An error shaped like the SDK's: `status` and `code`. */
-export function oxyError(status: number, code: string): Error & { status: number; code: string } {
-  return Object.assign(new Error(`${status} ${code}`), { status, code });
+/** The error the SDK rejects with: an `OxyApiError` carrying Oxy's `status` and `code`. */
+export function oxyError(status: number, code: string): OxyApiError {
+  return new OxyApiError(`${status} ${code}`, { status, code });
 }
 
 function sha(bytes: Buffer): string {

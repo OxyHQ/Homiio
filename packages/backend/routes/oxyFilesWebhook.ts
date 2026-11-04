@@ -23,14 +23,17 @@
  */
 
 import express, { Router } from 'express';
-import rateLimit from 'express-rate-limit';
-import { FileEventVerificationError, verifyFileEventSignature } from '@oxy.so/core/server';
+import {
+  FileEventVerificationError,
+  createOxyRateLimit,
+  verifyFileEventSignature,
+} from '@oxy.so/core/server';
 
 import config from '../config';
 import { describeErrorForLog } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
-import { rateLimitKeyFor } from '../middlewares/rateLimitKey';
 import { applyFileEvent } from '../services/files/fileEvents';
+import { oxyService } from '../services/oxy';
 
 /** Oxy's events are small JSON documents; anything bigger is not one. */
 const MAX_BODY = '256kb';
@@ -41,12 +44,10 @@ const MAX_BODY = '256kb';
  * that an unauthenticated caller cannot make this route spend an HMAC and a
  * body read without bound. A 429 is a retry for Oxy, never a lost event.
  */
-const webhookLimiter = rateLimit({
+const webhookLimiter = createOxyRateLimit(oxyService, {
   windowMs: 60_000,
-  max: 600,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => rateLimitKeyFor(req, 'oxy-files-webhook'),
+  authenticatedMax: 600,
+  anonymousMax: 600,
 });
 
 export function createOxyFilesWebhookRoutes(): Router {

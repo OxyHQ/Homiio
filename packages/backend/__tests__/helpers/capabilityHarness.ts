@@ -76,14 +76,22 @@ export async function callTool(
   const tool = HOMIIO_CAPABILITY_CATALOG.tools.find((entry) => entry.name === name);
   const handler = HOMIIO_INVOCATION_HANDLERS[name];
   if (!tool || !handler) throw new Error(`No catalogue tool named ${name}`);
+  const lane = options.lane ?? 'oauth';
+  // Exactly the credential each lane's transport receives: the internal lane is
+  // called with `Authorization: Capability <ticket>`, the OAuth lane with
+  // `Bearer <connection token>`. A Bearer on the capability lane once hid that
+  // every agent document upload was refused (no requester proof).
   const headers: Record<string, string> = {
-    authorization: `Bearer fixture-${options.lane ?? 'oauth'}-${accountId}`,
+    authorization:
+      lane === 'capability'
+        ? `Capability fixture-capability-${accountId}`
+        : `Bearer fixture-oauth-${accountId}`,
   };
   if (options.idempotencyKey !== undefined) headers['idempotency-key'] = options.idempotencyKey;
   const context = {
     appId: 'homiio',
     tool,
-    principal: principalFor(accountId, options.lane ?? 'oauth', name),
+    principal: principalFor(accountId, lane, name),
     request: { requestInfo: { headers }, signal: new AbortController().signal },
   } as unknown as InvocationContext;
   const result = await handler(input, context);

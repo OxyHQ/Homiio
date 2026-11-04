@@ -5,14 +5,13 @@
 
 import express from 'express';
 import { publicApiRouter } from './publicApi';
-import rateLimit from 'express-rate-limit';
+import { createOxyRateLimit } from '@oxy.so/core/server';
 import neighborhoodRoutes from './neighborhoods';
 import cityController from '../controllers/cityController';
 import imageController from '../controllers/imageController';
 import geocodingController from '../controllers/geocodingController';
 import * as geoController from '../controllers/geoController';
 import { getHomeSections } from '../controllers/home/homeSectionsController';
-import { rateLimitKeyFor } from '../middlewares/rateLimitKey';
 import observabilityController from '../controllers/observabilityController';
 import * as propertyController from '../controllers/property';
 import reservationController from '../controllers/reservationController';
@@ -25,6 +24,7 @@ import { serializeWireIds } from '../middlewares/wireIds';
 import performanceMonitor from '../middlewares/performance';
 import * as profileController from '../controllers/profile';
 import * as evictionController from '../controllers/eviction';
+import { oxyService } from '../services/oxy';
 
 const PROPERTY_ADJUSTMENTS = {
   studio: 0.8,
@@ -50,14 +50,14 @@ const PROPERTY_ADJUSTMENTS = {
 const GEO_RATE_LIMIT_MAX = 300;
 const GEO_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 
-const geoLimiter = rateLimit({
+// Its own limiter (its own store), so the geo budget and the global API budget
+// cannot consume one another; the same SDK key — a validated user, otherwise a
+// salted hash of the client IP — and the same answer.
+const geoLimiter = createOxyRateLimit(oxyService, {
   windowMs: GEO_RATE_LIMIT_WINDOW_MS,
-  max: GEO_RATE_LIMIT_MAX,
-  // Its own namespace, so the geo budget and the global API budget cannot
-  // consume one another.
-  keyGenerator: (req) => rateLimitKeyFor(req, 'geo'),
-  standardHeaders: true,
-  legacyHeaders: false,
+  authenticatedMax: GEO_RATE_LIMIT_MAX,
+  anonymousMax: GEO_RATE_LIMIT_MAX,
+  message: 'Too many requests.',
 });
 
 function getPropertyAdjustmentFactor(propertyType: unknown): number {
@@ -162,9 +162,8 @@ export default function () {
   // Its own rate limiter, tighter than the global one, because these calls
   // leave Homiio's network and are counted against Homiio by the provider —
   // unlike the rest of `/api`, where the cost of an extra request is a database
-  // read. The key is the same privacy-preserving one the global limiter uses
-  // (`middlewares/rateLimitKey.ts`): a user id when there is one, otherwise a
-  // salted HMAC of the normalized IP, so no user IP is held at rest.
+  // read. The key is the SDK's privacy-preserving one: a user id when there is
+  // one, otherwise a salted HMAC of the normalized IP, so no IP is held at rest.
   router.use('/geo', geoLimiter);
   // The Home surface, in ONE request (#353). Public: Home works logged out, and
   // every section it serves is public listing data. The saved and

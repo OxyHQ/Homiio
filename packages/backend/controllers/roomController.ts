@@ -19,6 +19,7 @@ import {
 import { paginationResponse, successResponse } from '../middlewares/errorHandler';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import { getAmenitiesParam } from './queryParams';
+import { getOxyUserId } from '@oxy.so/core/server';
 
 function optionalQuery(value: unknown): string | undefined {
   return value === undefined || value === null || value === '' ? undefined : String(value);
@@ -92,7 +93,7 @@ class RoomController {
   /** Get a single room by id. */
   async getRoomById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { room, audience } = await getRoom(req.user?.id || req.user?._id, req.params.id);
+      const { room, audience } = await getRoom(getOxyUserId(req) ?? undefined, req.params.id);
       if (audience === 'owner') res.set('Cache-Control', 'private, no-store');
       res.json(successResponse(room, 'Room retrieved successfully'));
     } catch (error) {

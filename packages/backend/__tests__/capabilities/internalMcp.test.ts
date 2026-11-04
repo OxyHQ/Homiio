@@ -11,10 +11,12 @@
 import { generateKeyPairSync, type KeyObject } from 'node:crypto';
 import express, { type Express } from 'express';
 import request from 'supertest';
+import { LeaseStatus, PropertyStatus } from '@homiio/shared-types';
 import type { CapabilityCatalogBinding } from '@oxy.so/contracts';
 import { issueCapabilityTicket } from '@oxy.so/core/server';
 import { capabilityCatalogDigest } from '@oxy.so/mcp';
 import { uuidv7 } from '@oxy.so/db';
+import { eq } from 'drizzle-orm';
 
 import {
   createTicketVerifier,
@@ -26,6 +28,10 @@ import {
   createHomiioInternalMcpReceiver,
 } from '../../capabilities/homiio-internal-mcp';
 import { creditCheckoutSession, findBillingByOxyUserId } from '../../db/billing/billingRepository';
+import { getDb } from '../../db/postgres';
+import { leaseDocuments, leases } from '../../db/schema';
+import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
+import { objectIdHex, resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 const ISSUER = 'https://api.oxy.so';
 const HOST = 'api.homiio.com';
@@ -55,7 +61,7 @@ function verifierFor(key: KeyObject = publicKey) {
   return createTicketVerifier({
     issuer: ISSUER,
     audience: HOMIIO_CAPABILITY_CATALOG.audience,
-    resolveKey: async (kid) => (kid === KEY_ID ? key : undefined),
+    resolvePublicKey: async (kid) => (kid === KEY_ID ? key : undefined),
     introspect,
   });
 }
@@ -322,6 +328,63 @@ describe('/_oxy/mcp admits', () => {
       status: 402,
     });
     expect(audits[0]?.result).toEqual({ status: 'failed', code: 'capability_execution_failed' });
+  });
+});
+
+describe('/_oxy/mcp stores an agent document upload', () => {
+  afterEach(async () => {
+    await getDb().delete(leaseDocuments);
+    await getDb().delete(leases);
+    await resetGeoTables();
+  });
+
+  it('in the tenant’s Oxy account, proven by the Capability ticket the lane received', async () => {
+    const landlord = `oxy-mcp-landlord-${uuidv7()}`;
+    const tenant = `oxy-mcp-tenant-${uuidv7()}`;
+    const { propertyId } = await seedListingWithGeo({
+      countryCode: 'WM',
+      overrides: { status: PropertyStatus.PUBLISHED, oxyUserId: landlord },
+    });
+    const [lease] = await getDb()
+      .insert(leases)
+      .values({
+        id: objectIdHex(),
+        propertyId,
+        landlordOxyUserId: landlord,
+        tenantOxyUserId: tenant,
+        status: LeaseStatus.DRAFT as never,
+        leaseTermsStartDate: new Date('2026-01-01T00:00:00.000Z'),
+        leaseTermsEndDate: new Date('2027-01-01T00:00:00.000Z'),
+        rentDetailsMonthlyRent: 950,
+        rentDetailsCurrency: 'EUR',
+      })
+      .returning({ id: leases.id });
+    const ticket = ticketFor(tenant, { tool: 'uploadLeaseDocument' });
+    const before = fakeOxyFiles.callsOf('withRequester').length;
+
+    const res = await callTool(
+      buildApp(),
+      ticket,
+      'uploadLeaseDocument',
+      {
+        leaseId: lease.id,
+        filename: 'agreement.pdf',
+        mimeType: 'application/pdf',
+        contentBase64: Buffer.from('%PDF-1.7\nagent upload').toString('base64'),
+      },
+      { 'Idempotency-Key': 'upload-1' },
+    );
+
+    // Before the fix the handler read only `Bearer`, found no proof on this
+    // lane, and every agent upload answered 403 REQUESTER_REQUIRED.
+    expect(res.status).toBe(200);
+    expect(res.body.result.isError).toBeFalsy();
+    expect(fakeOxyFiles.callsOf('withRequester').slice(before)).toEqual([
+      [{ capabilityTicket: ticket, accountId: tenant }],
+    ]);
+    expect(
+      await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, lease.id)),
+    ).toHaveLength(1);
   });
 });
 

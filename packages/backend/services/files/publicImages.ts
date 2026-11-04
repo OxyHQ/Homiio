@@ -28,7 +28,8 @@ import { getDb, type DatabaseOrTransaction } from '../../db/postgres';
 import type { FILE_REFERENCE_ENTITY_TYPES } from '../../db/schema/oxyFiles';
 import { AppError } from '../../middlewares/errorHandler';
 import { oxyImageUrls } from './imageUrls';
-import { oxyErrorCode, oxyErrorStatus, oxyFiles } from './oxyFilesClient';
+import { oxyFiles } from './oxyFilesClient';
+import { OxyApiError } from '@oxy.so/core';
 
 /** An entity that uses a photo, as Oxy records the use. */
 export interface FileReferenceTarget {
@@ -266,11 +267,13 @@ export async function requireOwnAccountImages(
   try {
     entries = await oxyFiles().metadataByIds(unique);
   } catch (error) {
-    const status = oxyErrorStatus(error);
+    // Oxy refused the ids themselves (4xx): the caller's to fix. Anything else,
+    // a transport failure included, is Oxy being unavailable.
+    const refusedIds = error instanceof OxyApiError && error.status >= 400 && error.status < 500;
     throw new AppError(
       'The photo could not be checked with Oxy Files',
-      status !== undefined && status < 500 ? 400 : 502,
-      oxyErrorCode(error) ?? 'OXY_FILES_UNAVAILABLE',
+      refusedIds ? 400 : 502,
+      refusedIds ? error.code : 'OXY_FILES_UNAVAILABLE',
     );
   }
   const byId = new Map(entries.map((entry) => [entry.id, entry]));

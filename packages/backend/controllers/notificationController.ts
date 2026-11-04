@@ -40,16 +40,11 @@ import {
   updateOwnNotification,
 } from '../domain/notifications';
 import { AppError, successResponse } from '../middlewares/errorHandler';
+import { getOxyUserId } from '@oxy.so/core/server';
 
-/**
- * Resolve the mailbox owner from the session, in the shape the auth layer sets.
- *
- * `req.userId` is declared `string | null`, so the `||` chain widens to include
- * `null` — coalesced away here rather than at each call site, every one of
- * which only ever asks "is there an owner?".
- */
+/** The mailbox owner, from the session; `undefined` when there is none. */
 function recipientOf(req: Request): string | undefined {
-  return req.user?.id || req.user?._id || req.userId || undefined;
+  return getOxyUserId(req) ?? undefined;
 }
 
 function unauthenticated(): AppError {

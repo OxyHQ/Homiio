@@ -5,7 +5,7 @@ import type { RouteCoverage } from './types';
  * have no tool. Each reason is the decision, not a placeholder.
  */
 const SCRAPER =
-  'Listing-provider infrastructure behind `requireAdmin` — the one sanctioned admin surface (AGENTS.md); never an agent action.';
+  'Listing-provider infrastructure behind the `homiio.scraper.operate` application permission — the one sanctioned operator surface (AGENTS.md); never an agent action.';
 const TELEGRAM =
   'Operator tooling for the Telegram listing bot (test messages, bulk notifications, group mapping); not something a signed-in person does.';
 const BILLING_OPS = 'Stripe webhook, debug or manual-override plumbing; not a person action.';

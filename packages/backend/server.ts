@@ -4,10 +4,7 @@ import { startPlatformActivity } from './services/platformActivity';
 
 import express from 'express';
 import type { Request, Response } from 'express';
-import cors, { type CorsOptions } from 'cors';
 import { publicCaseCors } from './middlewares/publicCaseCors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import bodyParser from 'body-parser';
 import { version } from './package.json';
 
@@ -15,14 +12,15 @@ import config from './config';
 import routes from './routes';
 import { logger, requestLogger } from './middlewares/logging';
 import { notFound, errorHandler } from './middlewares/errorHandler';
-import { rateLimitKeyFor } from './middlewares/rateLimitKey';
 import { rejectOversizedRequest } from './middlewares/uploadBudget';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
 import { publicApiBodyErrorHandler } from './routes/publicApi';
 import {
-  createOptionalOxyAuth,
   createOxyAuthMiddleware,
+  createOxyCors,
+  createOxyRateLimit,
+  createOxySecurityHeaders,
   oxyTrustProxy,
   type OxyAuthRefusal,
 } from '@oxy.so/core/server';
@@ -41,37 +39,17 @@ interface RawBodyRequest extends Request {
   rawBody?: Buffer;
 }
 
-import { HOMIIO_SERVICE_AUDIENCE, oxyService as oxy } from './services/oxy';
+import { oxyService as oxy } from './services/oxy';
 
 const healthService = new HealthService();
 
-const isDev = config.environment === 'development';
-
 /**
- * Per-window rate-limit budgets (window = config.rateLimit.windowMs, 15 min).
- *
- * Homiio fans out into many small GETs per screen (property cards, city tiles,
- * cover/gallery images, geocoding lookups). Behind the AWS ALB many clients
- * share one egress IP, so the previous IP-keyed `max: 100` bucket (config.ts)
- * was shared across all users and exhausted almost instantly — the cause of the
- * frequent 429s. We now resolve the user BEFORE the limiter and key per user,
- * with realistic media-app budgets.
- */
-const AUTHENTICATED_RATE_LIMIT_MAX = 5000; // ~5.5 req/sec sustained per user
-const UNAUTHENTICATED_RATE_LIMIT_MAX = 600; // ~0.66 req/sec per anonymous IP
-
-/**
- * Resolve the user from the bearer token WITHOUT rejecting unauthenticated
- * requests, via the shared `@oxy.so/core/server` helper. It is idempotent (skips
- * re-verification when a prior pass already resolved the user) and a
- * failed/expired token never blocks public traffic.
- *
- * Runs BEFORE the global rate limiter so the limiter can key/scale per user
- * instead of per shared egress IP behind the ALB.
+ * Options of every Oxy auth mount (the limiter's optional resolver and the
+ * authenticated router). The service-token audience is the server's own
+ * (`services/oxy.ts`), so no mount names it.
  */
 const oxyAuthOptions = {
   auth: {
-    expectedAudience: HOMIIO_SERVICE_AUDIENCE,
     /**
      * Why a credential was refused, in Homiio's own log.
      *
@@ -89,37 +67,26 @@ const oxyAuthOptions = {
   },
 } as const;
 
-const optionalAuth = createOptionalOxyAuth(oxy, oxyAuthOptions);
-
 /**
- * Paths exempt from the global API rate limiter.
- *
- * Image bytes (self-hosted store + uploads) fan out heavily and are
- * individually authorised/validated, so counting each one against the coarse
- * global bucket exhausts it. Liveness probes must never be
- * limited. Shared by the rate limiter's `skip` so the policy lives in one place.
+ * Browser origins beside the Oxy apex family `createOxyCors` always admits.
+ * `CORS_ALLOWED_ORIGINS` (comma-separated) adds a deployment's extra web origin,
+ * such as a preview; an entry that is not an origin is dropped and logged by
+ * the SDK. A native app sends no `Origin` and is not a CORS request.
  */
-const isRateLimitExempt = (req: Request): boolean => {
-  const path = req.path;
-  return (
-    // Liveness/readiness probes from the ALB/ECS.
-    path === '/health' ||
-    // Self-hosted image store + image upload endpoints (per-screen fan-out).
-    path.startsWith('/api/images/') ||
-    path.includes('/images/') ||
-    path.startsWith('/api/files/upload')
-  );
-};
-
-/**
- * Per-user (authenticated) or per-anonymous-client key.
- *
- * The implementation moved to `middlewares/rateLimitKey.ts` when the geo
- * gateway needed a second, tighter limiter: two limiters keying differently
- * would mean two privacy postures, and the weaker one would be the one nobody
- * reviewed. `rl` is this limiter's namespace.
- */
-const rateLimitKey = (req: Request): string => rateLimitKeyFor(req, 'rl');
+const appOrigins = [
+  'https://homiio.com',
+  'https://allo.you',
+  'http://localhost:4130',
+  'http://localhost:8130',
+  'http://localhost:19006',
+  'http://127.0.0.1:4130',
+  'http://127.0.0.1:8130',
+  'http://127.0.0.1:19006',
+  ...(process.env.CORS_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
 
 /**
  * Open the store before serving traffic.
@@ -148,7 +115,7 @@ const app = express();
 // published Cloudflare edge, nothing further out. So `req.ip` is the person
 // whether `api.homiio.com` is DNS-only (`client → ALB`) or proxied
 // (`client → Cloudflare → ALB`), and a forged X-Forwarded-For is never
-// believed. Every limiter key (`middlewares/rateLimitKey.ts`) and the GeoIP
+// believed. Every limiter key (`createOxyRateLimit`) and the GeoIP
 // lookup (`services/geoip/clientIp.ts`) read `req.ip` and nothing else.
 app.set('trust proxy', oxyTrustProxy);
 if (activity) app.use(activity.observeHttp);
@@ -164,69 +131,15 @@ if (activity) app.use(activity.observeHttp);
 const capabilityLanes = createCapabilityLanes();
 mountCapabilityLanes(app, capabilityLanes);
 
-// Helmet defaults keep CORP `same-origin` for API routes. Image routes set
-// `Cross-Origin-Resource-Policy: cross-origin` in imageController so listing
-// photos embed from homiio.com without weakening CORP on sensitive endpoints.
-app.use(helmet());
-
-// CORS configuration — O(1) Set lookup instead of Array.includes per request
-const allowedOriginsSet = new Set([
-  'https://homiio.com',
-  'https://allo.you',
-  'http://localhost:4130',
-  'http://localhost:8130',
-  'http://localhost:19006',
-  'http://127.0.0.1:4130',
-  'http://127.0.0.1:8130',
-  'http://127.0.0.1:19006',
-]);
-// Extra production web origins (e.g. a preview deployment), comma-separated
-for (const origin of (process.env.CORS_ALLOWED_ORIGINS || '').split(',')) {
-  const trimmed = origin.trim();
-  if (trimmed) allowedOriginsSet.add(trimmed);
-}
-// Single combined regex for all private LAN ranges
-const lanRegex =
-  /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
-
-const corsOptions: CorsOptions = {
-  origin(origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-
-    // O(1) exact match
-    if (allowedOriginsSet.has(origin)) return callback(null, true);
-
-    // In development, allow localhost and private LAN IPs
-    if (isDev) {
-      if (origin.includes('localhost') || origin.includes('127.0.0.1') || lanRegex.test(origin)) {
-        return callback(null, true);
-      }
-    }
-
-    return callback(null, false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Origin',
-    'X-Requested-With',
-    'Content-Type',
-    'Accept',
-    'Authorization',
-    'X-Oxy-Edge-Region',
-    'X-Oxy-Activity-Id',
-    'Cache-Control',
-    'Pragma',
-  ],
-  exposedHeaders: ['Content-Length'],
-  maxAge: 86400,
-};
+// The Oxy baseline (Helmet + CSP). Helmet's CORP `same-origin` stays the
+// default for API routes; image routes set `Cross-Origin-Resource-Policy:
+// cross-origin` in imageController so listing photos embed from homiio.com
+// without weakening CORP on sensitive endpoints.
+app.use(createOxySecurityHeaders());
 
 // Anonymous case cards have their own narrow browser integration policy.
 app.use('/api/v1/cases', publicCaseCors);
-// Middleware
-app.use(cors(corsOptions));
+app.use(createOxyCors({ appOrigins, exposedHeaders: ['Content-Length'] }));
 
 // No request over the shared per-request budget, on any route: refused from
 // its declared length, after CORS so a browser can read the answer and before
@@ -234,42 +147,19 @@ app.use(cors(corsOptions));
 // carry their own, smaller cap.
 app.use(rejectOversizedRequest);
 
-// Resolve the user BEFORE rate limiting so the limiter keys per authenticated
-// user (high budget) rather than per shared egress IP behind the ALB. Strict
-// `oxy.middleware.auth()` still guards the protected routers below.
-app.use(optionalAuth);
-
-const apiLimiter = rateLimit({
-  windowMs: config.rateLimit.windowMs,
-  // Per-user budget for authenticated traffic; smaller per-IP budget for
-  // anonymous traffic. Authenticated users are keyed individually, so a busy
-  // user can no longer exhaust the shared-IP bucket.
-  max: (req: Request): number =>
-    req.user?.id || req.user?._id ? AUTHENTICATED_RATE_LIMIT_MAX : UNAUTHENTICATED_RATE_LIMIT_MAX,
-  keyGenerator: rateLimitKey,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: isRateLimitExempt,
-  handler: (req, res) => {
-    const resetTime = (req as Request & { rateLimit?: { resetTime?: Date } }).rateLimit?.resetTime;
-    const retryAfterSeconds = Math.max(
-      1,
-      Math.ceil(
-        ((resetTime?.getTime() ?? Date.now() + config.rateLimit.windowMs) - Date.now()) / 1000,
-      ),
-    );
-    res.set('Retry-After', String(retryAfterSeconds));
-    if (req.path.startsWith('/v1/')) res.set('Cache-Control', 'no-store');
-    res.status(429).json({
-      error: {
-        code: 'rate_limited',
-        message: 'Too many requests.',
-        details: { retryAfterSeconds },
-      },
-    });
-  },
-});
-app.use('/api', apiLimiter);
+// The SDK's budgets per 15 minutes: 5000 per validated session, 600 per salted
+// hash of the client IP otherwise. Behind the ALB many people share one egress
+// address, so the limiter resolves the session first and keys on it. The SDK
+// exempts health probes, preflight and image fan-out; the upload door is
+// Homiio's own addition.
+app.use(
+  '/api',
+  createOxyRateLimit(oxy, {
+    exempt: (req) => req.path.startsWith('/files/upload'),
+    message: 'Too many requests.',
+    auth: oxyAuthOptions.auth,
+  }),
+);
 
 /**
  * CrowdSource webhook — mounted BEFORE every body parser, for the same reason

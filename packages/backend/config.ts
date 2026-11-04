@@ -116,22 +116,10 @@ export interface Config {
      */
     discoverIntervalHours: number;
   };
-  /**
-   * Admin gate. Only these Oxy user ids may call privileged endpoints (e.g.
-   * `/api/scraper/*`). Sourced from `HOMIIO_ADMIN_OXY_USER_IDS` (comma-separated).
-   * An empty list denies everyone — privileged routes are locked until set.
-   */
-  admin: {
-    oxyUserIds: string[];
-  };
   email: {
     service: string;
     user?: string;
     password?: string;
-  };
-  rateLimit: {
-    windowMs: number;
-    max: number;
   };
   logging: {
     level: string;
@@ -372,14 +360,6 @@ const config: Config = {
     ),
   },
 
-  // Admin gate for privileged endpoints (scraper/ingestion management).
-  admin: {
-    oxyUserIds: (process.env.HOMIIO_ADMIN_OXY_USER_IDS || '')
-      .split(',')
-      .map((id) => id.trim())
-      .filter(Boolean),
-  },
-
   // Email Configuration
   email: {
     service: process.env.EMAIL_SERVICE || 'gmail',
@@ -391,11 +371,6 @@ const config: Config = {
   // user with realistic media-app budgets (see AUTHENTICATED_RATE_LIMIT_MAX /
   // UNAUTHENTICATED_RATE_LIMIT_MAX) and only consumes `windowMs` from here.
   // `max` is retained as the legacy/anonymous fallback documented value.
-  rateLimit: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 600, // anonymous per-IP fallback budget per window
-  },
-
   // Logging
   logging: {
     level: process.env.LOG_LEVEL || 'info',

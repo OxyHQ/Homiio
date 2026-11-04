@@ -47,7 +47,7 @@
  *
  * It is read transiently and discarded. It is not logged, not persisted, not
  * put in a cache key, and not returned to the caller in any form — the same
- * posture `middlewares/rateLimitKey.ts` takes, for the same reason.
+ * posture the rate limiter (`createOxyRateLimit`) takes, for the same reason.
  */
 
 /** A client address that is worth asking a GeoIP database about. */

@@ -21,7 +21,7 @@
  * `sleep` and `now` are injectable so a test does not wait a minute.
  */
 
-import { oxyErrorStatus } from './oxyFilesClient';
+import { OxyApiError } from '@oxy.so/core';
 
 /** What a pacer needs from the outside world. */
 export interface OxyCallPacerOptions {
@@ -43,15 +43,22 @@ const realSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(reso
 
 /** How long Oxy asked the caller to wait, from a 429 the SDK rejected with. */
 export function retryAfterMs(error: unknown): number {
-  const details = (error as { details?: { retryAfterSeconds?: unknown } } | null)?.details;
-  const seconds = Number(details?.retryAfterSeconds);
+  const seconds = Number(
+    error instanceof OxyApiError ? error.details?.retryAfterSeconds : undefined,
+  );
   if (!Number.isFinite(seconds) || seconds <= 0) return DEFAULT_RATE_LIMIT_WAIT_MS;
   return Math.min(MAX_RATE_LIMIT_WAIT_MS, Math.ceil(seconds * 1000));
 }
 
+/** Oxy's 429: the SAME call is sent again once the window Oxy named has passed. */
+export function isOxyRateLimited(error: unknown): boolean {
+  return error instanceof OxyApiError && error.status === 429;
+}
+
+/** A transport failure (no response, status 0) or a 5xx; any other failure is not. */
 function isTransient(error: unknown): boolean {
-  const status = oxyErrorStatus(error);
-  return status === undefined || status >= 500;
+  if (!(error instanceof OxyApiError)) return true;
+  return !error.cancelled && (error.status === 0 || error.status >= 500);
 }
 
 export class OxyCallPacer {
@@ -99,7 +106,7 @@ export class OxyCallPacer {
       try {
         return await call();
       } catch (error) {
-        if (oxyErrorStatus(error) === 429) {
+        if (isOxyRateLimited(error)) {
           const wait = retryAfterMs(error);
           this.rateLimited += 1;
           this.onRateLimited?.(wait);

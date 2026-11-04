@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors';
+import { createOxyCors } from '@oxy.so/core/server';
 import { publicCaseCors } from '../../middlewares/publicCaseCors';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
@@ -10,7 +10,7 @@ import { evictionCases } from '../../db/schema/evictions';
 const app = express();
 app.use('/api/v1/cases', publicCaseCors);
 // The general app policy declines Mention; it must not undo this public policy.
-app.use(cors({ origin: false }));
+app.use(createOxyCors());
 app.use(express.json());
 app.use(publicApiBodyErrorHandler);
 app.use('/api/v1', publicApiRouter);
@@ -146,7 +146,7 @@ test.each(['https://mention.earth', 'https://www.mention.earth'])(
       .expect(204);
     expect(preflight.headers['access-control-allow-origin']).toBe(origin);
     expect(preflight.headers['access-control-allow-methods']).toContain('POST');
-    expect(preflight.headers['access-control-allow-headers']).toBe('Content-Type');
+    expect(preflight.headers['access-control-allow-headers']?.toLowerCase()).toBe('content-type');
     expect(preflight.headers['access-control-allow-credentials']).toBeUndefined();
     const response = await request(app)
       .post('/api/v1/cases/batch')

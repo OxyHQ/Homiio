@@ -19,12 +19,7 @@ import {
   listMyReferrals,
 } from '../domain/partners';
 import { AppError, successResponse } from '../middlewares/errorHandler';
-
-/** Extract the authenticated Oxy user id from a request, or null. */
-function getOxyUserId(req: Request): string | null {
-  const id = req.user?.id || req.user?._id || req.userId;
-  return id ? String(id) : null;
-}
+import { getOxyUserId } from '@oxy.so/core/server';
 
 /** Best-effort display name/username for seeding a partner's referral slug. */
 function getDisplayName(req: Request): string | undefined {

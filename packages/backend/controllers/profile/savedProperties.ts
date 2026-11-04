@@ -8,15 +8,11 @@ import type { NextFunction, Request, Response } from 'express';
 import { listSavedHomes, saveHome, unsaveHome, updateSavedHomeNotes } from '../../domain/saved';
 import { sendAuthenticationRequired, sendSavedError } from './savedErrors';
 import { successResponse } from './shared';
-
-/** Resolve the owner from the session, in the shape the auth layer sets. */
-function ownerOf(req: Request): string | undefined {
-  return req.user?.id || req.user?._id || undefined;
-}
+import { getOxyUserId } from '@oxy.so/core/server';
 
 /** Get saved properties for the current user's profile */
 export async function getSavedProperties(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     res.json(
@@ -29,7 +25,7 @@ export async function getSavedProperties(req: Request, res: Response, next: Next
 
 /** Save a property for the current user's profile */
 export async function saveProperty(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     const { propertyId, notes, folderId } = req.body;
@@ -42,7 +38,7 @@ export async function saveProperty(req: Request, res: Response, next: NextFuncti
 
 /** Unsave a property for the current user's profile */
 export async function unsaveProperty(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     await unsaveHome(oxyUserId, req.params.propertyId);
@@ -54,7 +50,7 @@ export async function unsaveProperty(req: Request, res: Response, next: NextFunc
 
 /** Update saved property notes for the current user's profile */
 export async function updateSavedPropertyNotes(req: Request, res: Response, next: NextFunction) {
-  const oxyUserId = ownerOf(req);
+  const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
     const updated = await updateSavedHomeNotes(oxyUserId, req.params.propertyId, req.body.notes);

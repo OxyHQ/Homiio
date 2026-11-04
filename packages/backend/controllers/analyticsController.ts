@@ -10,12 +10,13 @@ import type { Request, Response, NextFunction } from 'express';
 import { getAppStats, getOwnerAnalytics } from '../domain/analytics';
 import { AppError, describeErrorForLog, successResponse } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
+import { getOxyUserId } from '@oxy.so/core/server';
 
 class AnalyticsController {
   /** Get analytics for the authenticated owner's listings. */
   async getAnalytics(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const oxyUserId = req.user?.id || req.user?._id || req.userId;
+      const oxyUserId = getOxyUserId(req);
       if (!oxyUserId) {
         next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
         return;
