@@ -58,7 +58,7 @@
     "validator": "^13.15.35",
     "whatsapp-web.js": "^1.34.7",
     "@oxy.so/homiio-contracts": "workspace:*",
-    "@oxy.so/allo-sdk": "0.4.0",
+    "@oxy.so/allo-sdk": "1.0.0",
     "@oxy.so/allo-contracts": "0.2.1",
     "@oxy.so/mcp": "1.4.1",
     "@aws-sdk/credential-provider-node": "3.972.83"
