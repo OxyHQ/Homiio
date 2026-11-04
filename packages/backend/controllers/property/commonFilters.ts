@@ -127,7 +127,7 @@ export function buildCommonPropertyFilters(query: RawQuery): (SQL | undefined)[]
   // ALL must match, the same reading as `/properties/search`. This used to be
   // `getQueryString` + an ANY match: a repeated `amenities=` key kept only its
   // first value, and "wifi AND parking" returned every listing with either.
-  conditions.push(hasAllAmenities(getAmenitiesParam(query.amenities)));
+  conditions.push(hasAllAmenities(getAmenitiesParam(query)));
 
   if (isTrue(query.hasPhotos)) conditions.push(hasPhotos());
   if (isTrue(query.verified)) conditions.push(booleanIs(properties.isVerified, true));

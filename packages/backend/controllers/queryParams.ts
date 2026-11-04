@@ -52,10 +52,19 @@ export function getQueryList(value: unknown): string[] {
 }
 
 /**
+ * `getQueryList` for the param `name` of a parsed query string. Express 5's
+ * query parser keeps `name[]=` as its own key, so both keys are read.
+ */
+export function getQueryListParam(query: object, name: string): string[] {
+  const raw = query as Record<string, unknown>;
+  return getQueryList([raw[name], raw[`${name}[]`]].flat());
+}
+
+/**
  * The amenities a listing must ALL carry — the one reading of `amenities` for
  * every catalogue feed (search, list, proximity, rooms), lower-cased to the
  * canonical slugs listings are stored with.
  */
-export function getAmenitiesParam(value: unknown): string[] {
-  return getQueryList(value).map((amenity) => amenity.toLowerCase());
+export function getAmenitiesParam(query: object): string[] {
+  return getQueryListParam(query, 'amenities').map((amenity) => amenity.toLowerCase());
 }

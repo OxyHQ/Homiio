@@ -12,24 +12,38 @@
  *  - an entry names a tool the catalogue does not have.
  */
 
-import type { Router } from 'express';
+import { Router } from 'express';
 
-import { AUTHENTICATED_ROUTE_COVERAGE } from '../../capabilities/routeCoverage';
 import { HOMIIO_CAPABILITY_CATALOG } from '../../capabilities/homiio.catalog';
-import apiRoutes from '../../routes';
+import { AUTHENTICATED_ROUTE_COVERAGE } from '../../capabilities/routeCoverage';
+import type * as RoutesModule from '../../routes';
 
 interface Layer {
   route?: { path: string; methods: Record<string, boolean> };
   name: string;
-  regexp: RegExp;
   handle: { stack?: Layer[] };
+  /** Set by `recordMountPaths`: the literal path this layer was `use`d at. */
+  mountPath?: string;
 }
 
-/** The literal mount prefix express compiled into a router layer's regexp. */
-function mountPrefix(layer: Layer): string {
-  const match = layer.regexp.source.match(/^\^\\\/(.*?)\\\/\?\(\?=\\\/\|\$\)/);
-  if (!match) return '';
-  return `/${match[1].replace(/\\\//g, '/')}`;
+/**
+ * Express 5's router compiles a mount path into a matcher function and keeps no
+ * string of it, so the walk records each path as `Router#use` receives it. The
+ * route modules build their routers when they are imported, which is why this
+ * runs before anything under `routes/` loads.
+ */
+function recordMountPaths(): void {
+  const proto = Router.prototype as unknown as {
+    use: (this: { stack: Layer[] }, ...args: unknown[]) => unknown;
+  };
+  const use = proto.use;
+  proto.use = function recordingUse(this: { stack: Layer[] }, ...args: unknown[]) {
+    const before = this.stack.length;
+    const result = use.apply(this, args);
+    const path = typeof args[0] === 'string' ? args[0] : '';
+    for (const layer of this.stack.slice(before)) layer.mountPath = path === '/' ? '' : path;
+    return result;
+  };
 }
 
 function walk(stack: Layer[], base: string, out: Set<string>): void {
@@ -40,20 +54,21 @@ function walk(stack: Layer[], base: string, out: Set<string>): void {
         out.add(`${method.toUpperCase()} ${path}`);
       }
     } else if (layer.name === 'router' && layer.handle.stack) {
-      walk(layer.handle.stack, base + mountPrefix(layer), out);
+      walk(layer.handle.stack, base + (layer.mountPath ?? ''), out);
     }
   }
 }
 
-function authenticatedRoutes(): Set<string> {
-  const routes = new Set<string>();
-  walk((apiRoutes() as unknown as Router & { stack: Layer[] }).stack, '/api', routes);
-  return routes;
-}
-
 describe('authenticated route ↔ catalogue parity', () => {
-  const routes = authenticatedRoutes();
+  const routes = new Set<string>();
   const toolNames = new Set(HOMIIO_CAPABILITY_CATALOG.tools.map((tool) => tool.name));
+
+  beforeAll(() => {
+    recordMountPaths();
+    // biome-ignore lint/style/noCommonJs: the routers must be built after recordMountPaths patches Router#use
+    const apiRoutes = (require('../../routes') as typeof RoutesModule).default;
+    walk((apiRoutes() as unknown as { stack: Layer[] }).stack, '/api', routes);
+  });
 
   it('finds the router (the walk itself works)', () => {
     expect(routes.has('POST /api/properties/:propertyId/viewings')).toBe(true);

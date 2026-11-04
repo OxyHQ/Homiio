@@ -62,7 +62,7 @@ import {
   typeIn,
 } from '../../db/properties/propertyFilters';
 import { nullsLast } from '../../db/properties/propertyReads';
-import { getAmenitiesParam, getQueryList } from '../queryParams';
+import { getAmenitiesParam, getQueryListParam } from '../queryParams';
 
 // ---- Per-offering price columns ----
 
@@ -368,9 +368,6 @@ export function parseCenterRadius(query: Record<string, RawQueryValue>): CenterR
 
 // ---- Non-geo filter parsing ----
 
-/** Split a comma-separated or repeated query param into a unique, trimmed list. */
-const parseList = (value: RawQueryValue): string[] => getQueryList(value);
-
 const PROPERTY_TYPE_VALUES: ReadonlySet<string> = new Set(Object.values(PropertyType));
 const PROPERTY_STATUS_VALUES: ReadonlySet<string> = new Set(Object.values(PropertyStatus));
 
@@ -477,8 +474,11 @@ export function buildSearchPlan(query: Record<string, RawQueryValue>): {
   conditions.push(...statusConditions(asString(query.status)));
 
   // --- Property type (one or many) ---
+  const propertyTypes = getQueryListParam(query, 'propertyType');
   const typeCondition = typeIn(
-    parseList(query.propertyType ?? query.type).filter((t) => PROPERTY_TYPE_VALUES.has(t)),
+    (propertyTypes.length > 0 ? propertyTypes : getQueryListParam(query, 'type')).filter((t) =>
+      PROPERTY_TYPE_VALUES.has(t),
+    ),
   );
   if (typeCondition) conditions.push(typeCondition);
 
@@ -589,7 +589,7 @@ export function buildSearchPlan(query: Record<string, RawQueryValue>): {
   // The slug half joins the caller's OWN amenities, because both mean ALL of
   // them: asking for a pool and a terrace is one question with two answers,
   // not two filters.
-  const features = parseList(query.features)
+  const features = getQueryListParam(query, 'features')
     .map(parseHousingFeature)
     .filter((feature): feature is HousingFeature => feature !== undefined);
   for (const feature of columnFeatures(features)) {
@@ -598,7 +598,7 @@ export function buildSearchPlan(query: Record<string, RawQueryValue>): {
   }
 
   const amenities = hasAllAmenities([
-    ...getAmenitiesParam(query.amenities),
+    ...getAmenitiesParam(query),
     ...amenitySlugsForFeatures(features),
   ]);
   if (amenities) conditions.push(amenities);
@@ -655,7 +655,7 @@ export function buildSearchPlan(query: Record<string, RawQueryValue>): {
 
   // --- Exclude ids ---
   // No id-SHAPE filter: see `db/properties/propertyFilters.idNotIn`.
-  const excludeIds = idNotIn(parseList(query.excludeIds));
+  const excludeIds = idNotIn(getQueryListParam(query, 'excludeIds'));
   if (excludeIds) conditions.push(excludeIds);
 
   // --- Pagination ---
