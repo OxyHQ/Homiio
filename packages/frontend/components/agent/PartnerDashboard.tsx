@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Card } from '@oxy.so/bloom/card';
 import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
+import { formatPercent } from '@oxy.so/bloom/locale';
 import { Divider } from '@oxy.so/bloom/divider';
 import { RiBuilding2Line } from '@oxy.so/bloom/icons/RiBuilding2Line';
 import { RiCoinsLine } from '@oxy.so/bloom/icons/RiCoinsLine';
@@ -189,7 +190,6 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   // derived, copy-free companion figure: points earned, the live share of
   // referrals, the pending share of all earnings, and the current tier.
   const summaryCards = useMemo<StatCardsItem[]>(() => {
-    const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 });
     const liveShare = stats.referredCount > 0 ? stats.activeListings / stats.referredCount : 0;
     const totalEarnings = stats.pendingEarnings + stats.paidEarnings;
     const pendingShare = totalEarnings > 0 ? stats.pendingEarnings / totalEarnings : 0;
@@ -205,14 +205,14 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
         icon: RiBuilding2Line,
         label: t('agent.dashboard.listings'),
         value: String(stats.activeListings),
-        delta: percent.format(liveShare),
+        delta: formatPercent(liveShare, locale),
         deltaColor: 'neutral',
       },
       {
         icon: RiHandCoinLine,
         label: t('agent.dashboard.pending'),
         value: formatMoney(stats.pendingEarnings, stats.currency, locale, WHOLE_CURRENCY),
-        delta: percent.format(pendingShare),
+        delta: formatPercent(pendingShare, locale),
         deltaColor: 'neutral',
       },
       {
