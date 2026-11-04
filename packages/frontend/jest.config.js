@@ -57,6 +57,8 @@ module.exports = {
         'react-native-css-interop',
         // ESM-only transitive deps that surface through the above packages.
         'nanoid',
+        // @oxy.so/protocol (via core) signs with @noble/curves, ESM only.
+        '@noble',
         // `@oxy.so/services` prices in the display currency through Peable's
         // SDK, whose `display` entry ships ESM only.
         '@peable\\.to',

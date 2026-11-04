@@ -42,13 +42,13 @@
     "ajv-keywords": "^5.1.0",
     "tailwindcss": "4.3.3",
     "typescript": "^6.0.3",
-    "@oxy.so/protocol": "1.5.1"
+    "@oxy.so/protocol": "1.6.1"
   },
   "engines": {
     "node": "22.x"
   },
   "overrides": {
-    "@oxy.so/bloom": "16.5.0",
+    "@oxy.so/bloom": "17.0.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -57,8 +57,8 @@
     "react-native-worklets": "0.13.0",
     "expo-modules-core": "58.0.26",
     "react-native-svg": "15.16.0",
-    "@oxy.so/services": "14.1.2",
-    "@oxy.so/mcp": "1.4.0",
+    "@oxy.so/services": "14.3.3",
+    "@oxy.so/mcp": "1.4.1",
     "react-native-keyboard-controller": "1.22.7",
     "@types/express": "^4.17.25",
     "react-native-css": "3.1.0-rc.0",
@@ -70,8 +70,8 @@
   },
   "cacheDirectories": [],
   "dependencies": {
-    "@oxy.so/core": "7.13.0",
-    "@oxy.so/bloom": "16.5.0",
+    "@oxy.so/core": "7.16.0",
+    "@oxy.so/bloom": "17.0.0",
     "zod": "3.25.76"
   }
 }

@@ -20,7 +20,7 @@
   ],
   "author": "Homiio Team",
   "dependencies": {
-    "@oxy.so/utils": "^1.5.1"
+    "@oxy.so/utils": "^1.5.2"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
