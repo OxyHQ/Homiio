@@ -6,8 +6,9 @@
  *
  * Two properties this has to hold that a naive `String(req.query.q)` does not.
  *
- * **Express query values are not strings.** `?q=a&q=b` arrives as an array and
- * `?q[x]=1` as an object (Express's `extended` query parser builds both). A
+ * **Express query values are not strings.** `?q=a&q=b` arrives as an array, and
+ * under a nested parser (qs's `extended`, Express 4's default) `?q[x]=1` as an
+ * object. A
  * cast turns those into `"a,b"` and `"[object Object]"` and sends them to a
  * provider as a query, which is a non-textual payload reaching the network —
  * exactly what the issue says to reject. Each reader below therefore proves the

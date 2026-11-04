@@ -242,9 +242,9 @@ export default function () {
   // photo's Oxy file, or answers 404 — Homiio's bucket is retired
   // (`services/files/legacyImages.ts`). Public, because render-time photos
   // load without a token. The wildcard captures the full key, e.g.
-  // GET /api/images/file/city/<uuid>-medium.webp.
+  // GET /api/images/file/city/<uuid>-medium.webp. Express 5 names a wildcard.
   router.get(
-    '/images/file/*',
+    '/images/file/*key',
     asyncHandler(imageController.serveLegacyImage.bind(imageController)),
   );
 

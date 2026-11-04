@@ -46,7 +46,8 @@
  *  - **There is no `DELETE`.** See the note where the handler used to be.
  */
 
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 import { getOxyUserId } from '@oxy.so/core/server';
 
 import {
@@ -67,17 +68,18 @@ import { logger as appLogger } from '../middlewares/logging';
  * The session id a write needs, or `null`.
  *
  * `getOxyUserId` plus an explicit 401 rather than `requireSessionOxyUserId`,
- * which throws: these handlers are mounted WITHOUT `asyncHandler`, so a throw
- * from an async handler never reaches `errorHandler` on Express 4 — it becomes
- * an unhandled rejection and the caller sees a 500.
+ * which throws: these handlers are mounted WITHOUT `asyncHandler`. On Express 4
+ * a throw from an async handler never reached `errorHandler` — it became an
+ * unhandled rejection and the caller saw a 500. Express 5 forwards it, but the
+ * explicit 401 stays the answer.
  */
-function sessionWriterOf(req: Request): string | null {
+function sessionWriterOf(req: ControllerRequest): string | null {
   const oxyUserId = getOxyUserId(req);
   return typeof oxyUserId === 'string' && oxyUserId.length > 0 ? oxyUserId : null;
 }
 
 /** The viewer whose relation to a place decides its precision (ADR 0003). */
-function viewerOf(req: Request): string | undefined {
+function viewerOf(req: ControllerRequest): string | undefined {
   return sessionWriterOf(req) ?? undefined;
 }
 
@@ -119,21 +121,21 @@ async function answer(
 }
 
 /** GET /api/addresses/:id */
-export const getAddressById = (req: Request, res: Response) =>
+export const getAddressById = (req: ControllerRequest, res: Response) =>
   answer(res, () => getAddress(viewerOf(req), req.params.id), {
     failure: 'Failed to fetch address',
     log: 'Error fetching address:',
   });
 
 /** GET /api/addresses/search */
-export const searchAddresses = (req: Request, res: Response) =>
+export const searchAddresses = (req: ControllerRequest, res: Response) =>
   answer(res, () => searchAddressRows(req.query), {
     failure: 'Failed to search addresses',
     log: 'Error searching addresses:',
   });
 
 /** POST /api/addresses */
-export const createAddress = (req: Request, res: Response) =>
+export const createAddress = (req: ControllerRequest, res: Response) =>
   answer(res, () => resolveAddress(req.body), {
     status: 201,
     failure: 'Failed to create address',
@@ -142,7 +144,7 @@ export const createAddress = (req: Request, res: Response) =>
   });
 
 /** PUT /api/addresses/:id — non-identity attributes, for a caller related to the place. */
-export const updateAddress = (req: Request, res: Response) =>
+export const updateAddress = (req: ControllerRequest, res: Response) =>
   answer(res, () => correctAddress(viewerOf(req), req.params.id, req.body), {
     failure: 'Failed to update address',
     log: 'Error updating address:',
@@ -155,7 +157,7 @@ export const updateAddress = (req: Request, res: Response) =>
  */
 
 /** POST /api/addresses/:id/corrections — open to any signed-in caller (ADR 0001 §8.1). */
-export const proposeCorrection = (req: Request, res: Response) => {
+export const proposeCorrection = (req: ControllerRequest, res: Response) => {
   const proposedByOxyUserId = sessionWriterOf(req);
   if (proposedByOxyUserId === null) return unauthorized(res);
   return answer(res, () => proposeAddressCorrection(proposedByOxyUserId, req.params.id, req.body), {
@@ -166,14 +168,14 @@ export const proposeCorrection = (req: Request, res: Response) => {
 };
 
 /** GET /api/addresses/:id/corrections */
-export const listCorrections = (req: Request, res: Response) =>
+export const listCorrections = (req: ControllerRequest, res: Response) =>
   answer(res, () => listAddressCorrections(viewerOf(req), req.params.id), {
     failure: 'Failed to list corrections',
     log: 'Error listing address corrections:',
   });
 
 /** DELETE /api/addresses/:id/corrections/:proposalId — one's own proposal only. */
-export const withdrawCorrection = (req: Request, res: Response) => {
+export const withdrawCorrection = (req: ControllerRequest, res: Response) => {
   const proposedByOxyUserId = sessionWriterOf(req);
   if (proposedByOxyUserId === null) return unauthorized(res);
   return answer(
@@ -184,7 +186,7 @@ export const withdrawCorrection = (req: Request, res: Response) => {
 };
 
 /** GET /api/addresses/nearby */
-export const getNearbyAddresses = (req: Request, res: Response) =>
+export const getNearbyAddresses = (req: ControllerRequest, res: Response) =>
   answer(res, () => findNearbyAddresses(req.query), {
     failure: 'Failed to find nearby addresses',
     log: 'Error finding nearby addresses:',

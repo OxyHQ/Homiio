@@ -19,8 +19,9 @@ import {
   getPublicProfile,
   updateMyProfile as writeMyProfile,
 } from '../../domain/profile';
+import type { ControllerRequest } from '../controllerTypes';
 import { errorResponse, successResponse } from './shared';
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Response } from 'express';
 import { getOxyUserId } from '@oxy.so/core/server';
 
 /**
@@ -31,7 +32,11 @@ import { getOxyUserId } from '@oxy.so/core/server';
  * removed — a shipped client still sends it, and a 400 for a parameter that used
  * to be free would be a wire break.
  */
-export async function getOrCreateProfile(req: Request, res: Response, next: NextFunction) {
+export async function getOrCreateProfile(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
@@ -59,7 +64,11 @@ export async function getOrCreateProfile(req: Request, res: Response, next: Next
  * session. A person reading their own profile through the public route gets the
  * public view, which is the honest answer for a route named `public`.
  */
-export async function getPublicProfileByOxyUserId(req: Request, res: Response, next: NextFunction) {
+export async function getPublicProfileByOxyUserId(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const { oxyUserId } = req.params;
     if (!oxyUserId) {
@@ -78,7 +87,11 @@ export async function getPublicProfileByOxyUserId(req: Request, res: Response, n
 }
 
 /** `GET /api/profiles/oxy/:oxyUserId` — the same public read, under its own route. */
-export async function getProfileByOxyUserId(req: Request, res: Response, next: NextFunction) {
+export async function getProfileByOxyUserId(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   return getPublicProfileByOxyUserId(req, res, next);
 }
 
@@ -94,7 +107,7 @@ export async function getProfileByOxyUserId(req: Request, res: Response, next: N
  * and replace up to four child collections, and a partial application of that
  * would leave a person's references belonging to a state that was never saved.
  */
-export async function updateMyProfile(req: Request, res: Response, next: NextFunction) {
+export async function updateMyProfile(req: ControllerRequest, res: Response, next: NextFunction) {
   try {
     const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {

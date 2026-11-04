@@ -24,7 +24,8 @@
  * (`db/schema/CONVENTIONS.md` §"Arrays and objects").
  */
 
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { servableImageCondition } from '../db/images/servableImages';
@@ -280,7 +281,7 @@ class CityController {
    * Get all cities with optional filtering.
    * GET /api/cities
    */
-  async getCities(req: Request, res: Response) {
+  async getCities(req: ControllerRequest, res: Response) {
     try {
       const {
         search,
@@ -369,7 +370,7 @@ class CityController {
    * Get popular cities.
    * GET /api/cities/popular
    */
-  async getPopularCities(req: Request, res: Response) {
+  async getPopularCities(req: ControllerRequest, res: Response) {
     try {
       const { limit = DEFAULT_POPULAR_LIMIT } = req.query;
       const numericLimit = Number(limit);
@@ -408,7 +409,7 @@ class CityController {
    * Get city by ID.
    * GET /api/cities/:id
    */
-  async getCityById(req: Request, res: Response) {
+  async getCityById(req: ControllerRequest, res: Response) {
     try {
       const { id } = req.params;
       const rows = await cityQuery().where(eq(cities.id, id)).limit(1);
@@ -461,7 +462,7 @@ class CityController {
    * genuinely ambiguous it says so instead of quietly resolving to a different
    * city than it did last year, which is the behaviour #295 exists to remove.
    */
-  async lookupCity(req: Request, res: Response) {
+  async lookupCity(req: ControllerRequest, res: Response) {
     try {
       const token = firstString(req.query.name, req.query.slug, req.query.q, req.query.city);
       if (!token) {
@@ -541,7 +542,7 @@ class CityController {
    * of that list. `addresses.city_id` is a column on the row the property read
    * already joins, so the whole middle step is a predicate now.
    */
-  async getPropertiesByCity(req: Request, res: Response) {
+  async getPropertiesByCity(req: ControllerRequest, res: Response) {
     try {
       const { id } = req.params;
       const {
@@ -646,7 +647,7 @@ class CityController {
    * canonical country/region ids before persisting.
    * POST /api/cities
    */
-  async createCity(req: Request, res: Response) {
+  async createCity(req: ControllerRequest, res: Response) {
     try {
       const { name, country, countryId, state, regionId, ...rest } = req.body;
       if (!name) {
@@ -713,7 +714,7 @@ class CityController {
    * writes can legitimately differ from the total the city feed reports, and why
    * that difference is preserved rather than quietly reconciled.
    */
-  async updateCityPropertiesCount(req: Request, res: Response) {
+  async updateCityPropertiesCount(req: ControllerRequest, res: Response) {
     try {
       const { id } = req.params;
       const existing = await getDb()
@@ -753,7 +754,7 @@ class CityController {
    * change that stopped a caller taking `data[0]` from here and calling it an
    * answer.
    */
-  async searchCities(req: Request, res: Response) {
+  async searchCities(req: ControllerRequest, res: Response) {
     try {
       const { q, limit = DEFAULT_SEARCH_LIMIT } = req.query;
       if (!q) {

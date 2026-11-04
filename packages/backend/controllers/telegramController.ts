@@ -3,7 +3,8 @@
  * Handles Telegram bot management and testing operations
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 import { PropertyStatus } from '@homiio/shared-types';
 
 import { telegramService } from '../services';
@@ -80,7 +81,7 @@ class TelegramController {
   /**
    * Get Telegram bot status and configuration
    */
-  async getBotStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getBotStatus(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const status: TelegramBotStatus = {
         enabled: config.telegram.enabled,
@@ -115,7 +116,7 @@ class TelegramController {
   /**
    * Send a test message to a specific group
    */
-  async sendTestMessage(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async sendTestMessage(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { groupId, message, topicId } = req.body;
 
@@ -142,7 +143,11 @@ class TelegramController {
   /**
    * Send property notification to appropriate group (manual trigger)
    */
-  async sendPropertyNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async sendPropertyNotification(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { propertyId } = req.params;
 
@@ -180,7 +185,7 @@ class TelegramController {
    * Send bulk notifications for multiple properties
    */
   async sendBulkNotifications(
-    req: Request,
+    req: ControllerRequest,
     res: Response,
     next: NextFunction,
   ): Promise<void | Response> {
@@ -252,7 +257,7 @@ class TelegramController {
   /**
    * Get group mapping for a specific city
    */
-  async getGroupMapping(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getGroupMapping(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { city } = req.params;
 
@@ -278,7 +283,11 @@ class TelegramController {
   /**
    * Test location support functionality
    */
-  async testLocationSupport(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async testLocationSupport(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const testResults = telegramService.testLocationSupport();
 
@@ -291,7 +300,11 @@ class TelegramController {
   /**
    * Check if a specific location is supported
    */
-  async checkLocationSupport(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async checkLocationSupport(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { city, country } = req.query;
 
@@ -325,7 +338,7 @@ class TelegramController {
    * Test notifications for recent properties
    */
   async testRecentProperties(
-    req: Request,
+    req: ControllerRequest,
     res: Response,
     next: NextFunction,
   ): Promise<void | Response> {
@@ -404,7 +417,7 @@ class TelegramController {
    * Get Telegram webhook info (for debugging)
    * Note: This functionality has been removed due to private property access restrictions
    */
-  async getWebhookInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getWebhookInfo(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       return next(new AppError('Webhook info functionality not available', 501, 'NOT_IMPLEMENTED'));
     } catch (error) {

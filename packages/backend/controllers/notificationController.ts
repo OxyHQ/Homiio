@@ -27,7 +27,8 @@
  * relabelled a 400 the client cannot act on.
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 
 import {
   clearAllNotifications,
@@ -43,7 +44,7 @@ import { AppError, successResponse } from '../middlewares/errorHandler';
 import { getOxyUserId } from '@oxy.so/core/server';
 
 /** The mailbox owner, from the session; `undefined` when there is none. */
-function recipientOf(req: Request): string | undefined {
+function recipientOf(req: ControllerRequest): string | undefined {
   return getOxyUserId(req) ?? undefined;
 }
 
@@ -51,7 +52,7 @@ function unauthenticated(): AppError {
   return new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
 }
 
-function notificationIdOf(req: Request): string {
+function notificationIdOf(req: ControllerRequest): string {
   return req.params.id || req.params.notificationId;
 }
 
@@ -66,7 +67,7 @@ class NotificationController {
    * frontend notificationService, which reads `notifications` and `total`
    * directly off the response body.
    */
-  async getNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getNotifications(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
       if (!oxyUserId) return next(unauthenticated());
@@ -78,7 +79,11 @@ class NotificationController {
   }
 
   /** Create a notification in the authenticated user's own mailbox. */
-  async createNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createNotification(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
       if (!oxyUserId) return next(unauthenticated());
@@ -90,7 +95,11 @@ class NotificationController {
   }
 
   /** A single notification owned by the authenticated user. */
-  async getNotificationById(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getNotificationById(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
       if (!oxyUserId) return next(unauthenticated());
@@ -105,7 +114,11 @@ class NotificationController {
    * Update a notification owned by the authenticated user. Used primarily to
    * toggle read state, but also allows editing presentational fields.
    */
-  async updateNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateNotification(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
       if (!oxyUserId) return next(unauthenticated());
@@ -121,7 +134,7 @@ class NotificationController {
   }
 
   /** Mark a notification as read. */
-  async markAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async markAsRead(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
       if (!oxyUserId) return next(unauthenticated());
@@ -133,7 +146,11 @@ class NotificationController {
   }
 
   /** Delete a notification owned by the authenticated user. */
-  async deleteNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async deleteNotification(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
       if (!oxyUserId) return next(unauthenticated());
@@ -145,7 +162,7 @@ class NotificationController {
   }
 
   /** Mark all of the authenticated user's notifications as read. */
-  async markAllAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async markAllAsRead(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
       if (!oxyUserId) return next(unauthenticated());
@@ -161,7 +178,11 @@ class NotificationController {
   }
 
   /** Permanently delete all of the authenticated user's notifications. */
-  async clearAllNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async clearAllNotifications(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
       if (!oxyUserId) return next(unauthenticated());

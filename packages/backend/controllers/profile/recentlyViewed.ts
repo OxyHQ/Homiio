@@ -6,7 +6,8 @@
  * (`capabilities/routeCoverage/saved.ts`).
  */
 
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Response } from 'express';
+import type { ControllerRequest } from '../controllerTypes';
 
 import {
   clearRecentlyViewedHomes,
@@ -19,7 +20,11 @@ import { successResponse } from './shared';
 import { getOxyUserId } from '@oxy.so/core/server';
 
 /** Get recently viewed properties for the current user's profile */
-export async function getRecentProperties(req: Request, res: Response, next: NextFunction) {
+export async function getRecentProperties(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -34,7 +39,7 @@ export async function getRecentProperties(req: Request, res: Response, next: Nex
 }
 
 /** Track property view for the current user's profile */
-export async function trackPropertyView(req: Request, res: Response, next: NextFunction) {
+export async function trackPropertyView(req: ControllerRequest, res: Response, next: NextFunction) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -46,7 +51,11 @@ export async function trackPropertyView(req: Request, res: Response, next: NextF
 }
 
 /** Clear recently viewed properties for the current user's profile */
-export async function clearRecentProperties(req: Request, res: Response, next: NextFunction) {
+export async function clearRecentProperties(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {

@@ -28,7 +28,7 @@ target contains Playwright/Chromium/X11.
 ```
 packages/
   frontend/           @homiio/frontend           Expo Router / React Native / NativeWind
-  backend/            @homiio/backend            Express 4 / Drizzle (PostgreSQL + PostGIS) / Stripe / Sharp / BullMQ
+  backend/            @homiio/backend            Express 5 / Drizzle (PostgreSQL + PostGIS) / Stripe / Sharp / BullMQ
   listing-providers/  @homiio/listing-providers  Provider plugin contract, FetchRuntime, portal plugins
   shared-types/       @homiio/shared-types       Pure TS DTOs, formatting, observability schema
 ```
@@ -155,12 +155,12 @@ cache rather than from a component.
 
 ## Backend stack
 
-`packages/backend` is a CommonJS Express 4 server (entry `server.ts`, run with
+`packages/backend` is a CommonJS Express 5 server (entry `server.ts`, run with
 `ts-node --transpile-only`).
 
 | Layer | Library |
 |-------|---------|
-| Runtime | Node 22, Express 4 |
+| Runtime | Node 22, Express 5 |
 | Database | `drizzle-orm` + `postgres` (postgres.js) against PostgreSQL with PostGIS |
 | Shared DB helpers | `@oxy.so/db` — migrator, `geography` column, expiry sweep, unique-violation helpers |
 | Identity | `@oxy.so/core/server` — `createOxyAuthMiddleware` gates the authenticated router |

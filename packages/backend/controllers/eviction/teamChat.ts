@@ -1,4 +1,5 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import type { ControllerRequest } from '../controllerTypes';
 import {
   beginTeamOperationSchema,
   teamOperationIdRequestSchema,
@@ -28,7 +29,7 @@ function respondError(res: Response, error: unknown) {
       error: { code: 'service_unavailable', message: 'Team chat is temporarily unavailable.' },
     });
 }
-export async function beginChatOperation(req: Request, res: Response) {
+export async function beginChatOperation(req: ControllerRequest, res: Response) {
   res.set('Cache-Control', 'no-store');
   try {
     const parsed = beginTeamOperationSchema.safeParse(req.body);
@@ -55,7 +56,7 @@ export async function beginChatOperation(req: Request, res: Response) {
     respondError(res, error);
   }
 }
-export async function finalizeChatOperation(req: Request, res: Response) {
+export async function finalizeChatOperation(req: ControllerRequest, res: Response) {
   res.set('Cache-Control', 'no-store');
   try {
     const parsed = teamOperationIdRequestSchema.safeParse(req.body);
@@ -68,7 +69,7 @@ export async function finalizeChatOperation(req: Request, res: Response) {
     respondError(res, error);
   }
 }
-export async function readChatOperation(req: Request, res: Response) {
+export async function readChatOperation(req: ControllerRequest, res: Response) {
   res.set('Cache-Control', 'no-store');
   try {
     const parsed = teamOperationIdRequestSchema.safeParse(req.body);
@@ -83,7 +84,7 @@ export async function readChatOperation(req: Request, res: Response) {
     respondError(res, error);
   }
 }
-export async function getTeamChatUrl(req: Request, res: Response) {
+export async function getTeamChatUrl(req: ControllerRequest, res: Response) {
   res.set('Cache-Control', 'no-store');
   try {
     res.json({ url: await teamChatUrl(req.params.id, requireSessionOxyUserId(req)) });

@@ -7,7 +7,8 @@
  * `domain/rooms.ts`, which the room capability tools call too.
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 
 import {
   createRoom as createRoomForOwner,
@@ -33,7 +34,7 @@ class RoomController {
    * common property filters (rent range, city/state, amenities, furnished,
    * status) plus owner scoping via `oxyUserId`.
    */
-  async getRooms(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getRooms(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const {
         page = 1,
@@ -43,7 +44,6 @@ class RoomController {
         city,
         state,
         furnishedStatus,
-        amenities,
         status,
         oxyUserId: ownerOxyUserId,
         sortBy = 'createdAt',
@@ -58,7 +58,7 @@ class RoomController {
         city: optionalQuery(city),
         state: optionalQuery(state),
         furnishedStatus: optionalQuery(furnishedStatus),
-        amenities: getAmenitiesParam(amenities),
+        amenities: getAmenitiesParam(req.query),
         status: optionalQuery(status),
         ownerOxyUserId: optionalQuery(ownerOxyUserId),
         sortBy: String(sortBy),
@@ -80,7 +80,7 @@ class RoomController {
   }
 
   /** Create a room (a room-type property) owned by the authenticated user. */
-  async createRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createRoom(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const savedRoom = await createRoomForOwner(oxyUserId, req.body ?? {});
@@ -91,7 +91,7 @@ class RoomController {
   }
 
   /** Get a single room by id. */
-  async getRoomById(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getRoomById(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { room, audience } = await getRoom(getOxyUserId(req) ?? undefined, req.params.id);
       if (audience === 'owner') res.set('Cache-Control', 'private, no-store');
@@ -102,7 +102,7 @@ class RoomController {
   }
 
   /** Update a room owned by the authenticated user. */
-  async updateRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateRoom(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const updatedRoom = await updateRoomForOwner(oxyUserId, req.params.id, req.body ?? {});
@@ -113,7 +113,7 @@ class RoomController {
   }
 
   /** Delete (archive) a room owned by the authenticated user. */
-  async deleteRoom(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async deleteRoom(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       await deleteRoomForOwner(oxyUserId, req.params.id);

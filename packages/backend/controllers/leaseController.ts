@@ -1,4 +1,5 @@
 import { sessionFileRequester } from '../services/files/requester';
+import type { ControllerRequest } from './controllerTypes';
 /**
  * Lease Controller — the HTTP adapter over `domain/leases.ts` and the
  * obligation half of `domain/payments.ts`.
@@ -11,7 +12,7 @@ import { sessionFileRequester } from '../services/files/requester';
  * that module and in `domain/leases.ts`.
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
 
 import {
   createLeaseDirect,
@@ -33,7 +34,7 @@ import { requireSessionOxyUserId } from '../utils/sessionUser';
 
 class LeaseController {
   /** Get the session person's leases (as landlord, tenant, or co-tenant). */
-  async getLeases(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getLeases(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { page, limit, status, propertyId } = req.query;
@@ -53,7 +54,7 @@ class LeaseController {
   }
 
   /** Create a new lease. The requester must own the referenced property. */
-  async createLease(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createLease(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const lease = await createLeaseDirect(oxyUserId, req.body ?? {});
@@ -64,7 +65,7 @@ class LeaseController {
   }
 
   /** Get a lease by ID. Only a party (landlord, tenant, or co-tenant) may view it. */
-  async getLeaseById(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getLeaseById(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const lease = await getLease(oxyUserId, req.params.id);
@@ -75,7 +76,7 @@ class LeaseController {
   }
 
   /** Update a lease: the landlord only, while a draft or awaiting signatures. */
-  async updateLease(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateLease(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const lease = await updateLease(oxyUserId, req.params.id, req.body ?? {});
@@ -86,7 +87,7 @@ class LeaseController {
   }
 
   /** Delete a lease: the landlord only, while a draft or awaiting signatures. */
-  async deleteLease(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async deleteLease(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       await deleteLease(oxyUserId, req.params.id);
@@ -101,7 +102,7 @@ class LeaseController {
    * seat the session holds on it. `termsSha256` binds the signature to the
    * terms on screen (409 when they changed).
    */
-  async signLease(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async signLease(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { acceptTerms, termsSha256 } = req.body;
@@ -113,7 +114,7 @@ class LeaseController {
   }
 
   /** Terminate a lease. Only a party may terminate. */
-  async terminateLease(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async terminateLease(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { reason, effectiveDate } = req.body;
@@ -125,7 +126,7 @@ class LeaseController {
   }
 
   /** Renew a lease into a new draft. Only the landlord may renew. */
-  async renewLease(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async renewLease(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { newEndDate, monthlyRent, startDate } = req.body;
@@ -141,7 +142,7 @@ class LeaseController {
   }
 
   /** Get a lease's payment schedule. Only a party may view it. */
-  async getLeasePayments(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getLeasePayments(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { page, limit, status } = req.query;
@@ -161,7 +162,7 @@ class LeaseController {
   }
 
   /** Add a scheduled payment to a lease. Only the landlord may add one. */
-  async createPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createPayment(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { dueDate, amount, type, description } = req.body;
@@ -178,7 +179,11 @@ class LeaseController {
   }
 
   /** Get a lease's documents metadata. Only a party may view them. */
-  async getLeaseDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getLeaseDocuments(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const documents = await listLeaseDocuments(oxyUserId, req.params.id);
@@ -192,7 +197,11 @@ class LeaseController {
    * `POST /api/leases/:id/documents` — attach a tenancy document (#518 §7.4).
    * The FILE arrives here (multer), never a URL.
    */
-  async uploadLeaseDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async uploadLeaseDocument(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const file = (req as unknown as { file?: UploadedLeaseDocumentFile }).file;
@@ -213,7 +222,7 @@ class LeaseController {
    * party and nobody else (404 otherwise). Base64 in the ordinary envelope;
    * `Cache-Control: private, no-store`.
    */
-  async getLeaseDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getLeaseDocument(req: ControllerRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const document = await readLeaseDocument(
