@@ -6,7 +6,8 @@
  * there.
  */
 
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Response } from 'express';
+import type { ControllerRequest } from '../controllerTypes';
 
 import {
   createSavedSearch,
@@ -22,7 +23,7 @@ import { successResponse } from './shared';
 import { getOxyUserId } from '@oxy.so/core/server';
 
 /** Get saved searches for the current user */
-export async function getSavedSearches(req: Request, res: Response, next: NextFunction) {
+export async function getSavedSearches(req: ControllerRequest, res: Response, next: NextFunction) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -35,7 +36,7 @@ export async function getSavedSearches(req: Request, res: Response, next: NextFu
 }
 
 /** Save a search for the current user */
-export async function saveSearch(req: Request, res: Response, next: NextFunction) {
+export async function saveSearch(req: ControllerRequest, res: Response, next: NextFunction) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -47,7 +48,7 @@ export async function saveSearch(req: Request, res: Response, next: NextFunction
 }
 
 /** Delete a saved search for the current user */
-export async function deleteSavedSearch(req: Request, res: Response, next: NextFunction) {
+export async function deleteSavedSearch(req: ControllerRequest, res: Response, next: NextFunction) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -59,7 +60,7 @@ export async function deleteSavedSearch(req: Request, res: Response, next: NextF
 }
 
 /** Update a saved search for the current user */
-export async function updateSavedSearch(req: Request, res: Response, next: NextFunction) {
+export async function updateSavedSearch(req: ControllerRequest, res: Response, next: NextFunction) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -78,7 +79,11 @@ export async function updateSavedSearch(req: Request, res: Response, next: NextF
  * Toggle notifications for a saved search — the legacy switch, kept because
  * several clients call it. It moves `cadence` too.
  */
-export async function toggleSearchNotifications(req: Request, res: Response, next: NextFunction) {
+export async function toggleSearchNotifications(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -94,7 +99,7 @@ export async function toggleSearchNotifications(req: Request, res: Response, nex
 }
 
 /** The alert history — in-app, and the visible source of truth. */
-export async function getHousingAlerts(req: Request, res: Response, next: NextFunction) {
+export async function getHousingAlerts(req: ControllerRequest, res: Response, next: NextFunction) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -120,7 +125,7 @@ export async function getHousingAlerts(req: Request, res: Response, next: NextFu
 }
 
 /** "Why did I get this?" — one alert, with the fact behind it. */
-export async function getHousingAlert(req: Request, res: Response, next: NextFunction) {
+export async function getHousingAlert(req: ControllerRequest, res: Response, next: NextFunction) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {

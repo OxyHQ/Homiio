@@ -87,7 +87,7 @@ function buildApp(oxyUserId: string): Express {
 /** The PUBLIC image route, mounted exactly as `routes/public.ts` mounts it. */
 function publicImages(): Express {
   const app = express();
-  app.get('/images/file/*', (req, res) => imageController.serveLegacyImage(req, res));
+  app.get('/images/file/*key', (req, res) => imageController.serveLegacyImage(req, res));
   app.use(errorHandler);
   return app;
 }

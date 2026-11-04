@@ -3,7 +3,8 @@
  * catalogue's folder tools call too.
  */
 
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Response } from 'express';
+import type { ControllerRequest } from '../controllerTypes';
 
 import {
   createSavedFolder,
@@ -16,7 +17,11 @@ import { successResponse } from './shared';
 import { getOxyUserId } from '@oxy.so/core/server';
 
 /** Get saved property folders for the current user's profile */
-export async function getSavedPropertyFolders(req: Request, res: Response, next: NextFunction) {
+export async function getSavedPropertyFolders(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -32,7 +37,11 @@ export async function getSavedPropertyFolders(req: Request, res: Response, next:
 }
 
 /** Create a new saved property folder */
-export async function createSavedPropertyFolder(req: Request, res: Response, next: NextFunction) {
+export async function createSavedPropertyFolder(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -45,7 +54,11 @@ export async function createSavedPropertyFolder(req: Request, res: Response, nex
 }
 
 /** Update a saved property folder */
-export async function updateSavedPropertyFolder(req: Request, res: Response, next: NextFunction) {
+export async function updateSavedPropertyFolder(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -63,7 +76,11 @@ export async function updateSavedPropertyFolder(req: Request, res: Response, nex
 }
 
 /** Delete a saved property folder */
-export async function deleteSavedPropertyFolder(req: Request, res: Response, next: NextFunction) {
+export async function deleteSavedPropertyFolder(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {

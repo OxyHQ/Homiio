@@ -272,8 +272,10 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
  * Wraps async functions to catch errors and pass to next()
  */
 const asyncHandler =
-  (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
-  (req: Request, res: Response, next: NextFunction): void => {
+  <P = Request['params']>(
+    fn: (req: Request<P>, res: Response, next: NextFunction) => Promise<any>,
+  ) =>
+  (req: Request<P>, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 

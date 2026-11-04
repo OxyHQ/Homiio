@@ -9,7 +9,8 @@
  * reports as a typed `external_listing` outcome.
  */
 
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Response } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 
 import {
   createReservation,
@@ -24,7 +25,11 @@ import { requireSessionOxyUserId } from '../utils/sessionUser';
 
 class ReservationController {
   /** POST /api/reservations — guest creates a reservation (auto-confirms with instant book). */
-  async createReservation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createReservation(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { propertyId, checkIn, checkOut, guestCount, specialRequests } = req.body;
@@ -45,7 +50,11 @@ class ReservationController {
   }
 
   /** GET /api/reservations — as guest, or as host with `?asHost=true`. */
-  async listMyReservations(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listMyReservations(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const result = await listMyReservations(oxyUserId, {
@@ -68,7 +77,11 @@ class ReservationController {
   }
 
   /** GET /api/reservations/:id */
-  async getReservationById(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getReservationById(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const reservation = await getReservation(oxyUserId, { reservationId: req.params.id });
@@ -79,7 +92,11 @@ class ReservationController {
   }
 
   /** PATCH /api/reservations/:id — host approves/declines, guest or host cancels. */
-  async updateReservationStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateReservationStatus(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const outcome = await updateReservationStatus(oxyUserId, {
@@ -104,7 +121,11 @@ class ReservationController {
    * handler on the public router; the projection's privacy rule is in the
    * domain function.
    */
-  async getPropertyAvailability(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getPropertyAvailability(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const data = await getListingAvailability({ propertyId: req.params.id });
       res.json(successResponse(data, 'Availability retrieved'));

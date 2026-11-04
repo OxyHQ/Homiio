@@ -54,7 +54,8 @@ jest.mock('../../services', () => ({
   },
 }));
 
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import type { ControllerRequest } from '../../controllers/controllerTypes';
 import config from '../../config';
 import { stripeWebhook, syncSubscriptionStatus } from '../../controllers/billingController';
 import telegramController from '../../controllers/telegramController';
@@ -74,7 +75,7 @@ const MISSING_SUBSCRIPTION =
 const TELEGRAM_UNAUTHORIZED =
   'ETELEGRAM: 401 Unauthorized. https://api.telegram.org/bot7712345678:AAH-sEcReTtOkEn/getMe';
 
-function mockRequest(overrides: Record<string, unknown> = {}): Request {
+function mockRequest(overrides: Record<string, unknown> = {}): ControllerRequest {
   return {
     method: 'POST',
     baseUrl: '/api/billing',
@@ -87,7 +88,7 @@ function mockRequest(overrides: Record<string, unknown> = {}): Request {
     query: {},
     get: () => undefined,
     ...overrides,
-  } as unknown as Request;
+  } as unknown as ControllerRequest;
 }
 
 function mockResponse() {

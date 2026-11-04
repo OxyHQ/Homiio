@@ -20,6 +20,7 @@
  */
 
 import express, { type Express } from 'express';
+import type { ControllerRequest } from '../../controllers/controllerTypes';
 import multer from 'multer';
 import request from 'supertest';
 import { and, asc, eq } from 'drizzle-orm';
@@ -67,7 +68,7 @@ function buildApp(oxyUserId: string): Express {
   // Multipart, as `routes/leases.ts` mounts it: a lease document is a FILE
   // now, and the endpoint no longer takes a URL from the client at all.
   app.post('/leases/:id/documents', documentUpload.single('document'), (req, res, next) =>
-    leaseController.uploadLeaseDocument(req, res, next),
+    leaseController.uploadLeaseDocument(req as ControllerRequest, res, next),
   );
   app.post('/leases/:id/renew', (req, res, next) => leaseController.renewLease(req, res, next));
   app.use(errorHandler);

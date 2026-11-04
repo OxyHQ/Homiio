@@ -22,7 +22,8 @@
  * module's header.
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 
 import {
   getViewingAvailability,
@@ -35,7 +36,11 @@ import { requireSessionOxyUserId } from '../utils/sessionUser';
 
 class ViewingAvailabilityController {
   /** The slots a listing offers. PUBLIC — see the module header. */
-  async getViewingAvailability(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getViewingAvailability(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const outcome = await getViewingAvailability({
         propertyId: req.params.propertyId,
@@ -57,7 +62,11 @@ class ViewingAvailabilityController {
   }
 
   /** The owner's own schedule, including the zone it is expressed in. */
-  async getViewingWindows(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getViewingWindows(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const schedule = await getViewingWindows(requireSessionOxyUserId(req), {
         propertyId: req.params.propertyId,
@@ -69,7 +78,11 @@ class ViewingAvailabilityController {
   }
 
   /** Replace the schedule, and optionally the zone it is expressed in. */
-  async putViewingWindows(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async putViewingWindows(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const schedule = await setViewingWindows(oxyUserId, {

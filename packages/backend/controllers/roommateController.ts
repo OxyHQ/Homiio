@@ -29,7 +29,8 @@
  *    anybody who had exchanged a request. See `roommate/serialize.ts`.
  */
 
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 
 import {
   endRoommateRelationship as endRelationship,
@@ -54,7 +55,7 @@ import { logger } from '../middlewares/logging';
  */
 
 /** Resolve the Oxy user id from the request in the shape the auth layer sets. */
-function resolveOxyUserId(req: Request): string | undefined {
+function resolveOxyUserId(req: ControllerRequest): string | undefined {
   const authed = req as unknown as { user?: { id?: string; _id?: string }; userId?: string };
   return authed.user?.id || authed.user?._id || authed.userId;
 }
@@ -64,7 +65,7 @@ function resolveOxyUserId(req: Request): string | undefined {
  * router always has.
  */
 async function answer(
-  req: Request,
+  req: ControllerRequest,
   res: Response,
   failure: string,
   run: (oxyUserId: string) => Promise<Record<string, unknown>>,
@@ -86,32 +87,32 @@ async function answer(
   }
 }
 
-const getRoommateProfiles = (req: Request, res: Response) =>
+const getRoommateProfiles = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to fetch roommate profiles', (oxyUserId) =>
     listRoommateProfiles(oxyUserId, req.query),
   );
 
-const getMyRoommatePreferences = (req: Request, res: Response) =>
+const getMyRoommatePreferences = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to fetch roommate preferences', (oxyUserId) =>
     readMyPreferences(oxyUserId),
   );
 
-const updateRoommatePreferences = (req: Request, res: Response) =>
+const updateRoommatePreferences = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to update roommate preferences', (oxyUserId) =>
     updateMyRoommatePreferences(oxyUserId, req.body),
   );
 
-const toggleRoommateMatching = (req: Request, res: Response) =>
+const toggleRoommateMatching = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to toggle roommate matching', (oxyUserId) =>
     setRoommateMatching(oxyUserId, req.body?.enabled),
   );
 
-const getRoommateRequests = (req: Request, res: Response) =>
+const getRoommateRequests = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to fetch roommate requests', (oxyUserId) =>
     listMyRoommateRequests(oxyUserId),
   );
 
-const sendRoommateRequest = (req: Request, res: Response) =>
+const sendRoommateRequest = (req: ControllerRequest, res: Response) =>
   answer(
     req,
     res,
@@ -124,27 +125,27 @@ const sendRoommateRequest = (req: Request, res: Response) =>
     201,
   );
 
-const acceptRoommateRequest = (req: Request, res: Response) =>
+const acceptRoommateRequest = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to accept roommate request', (oxyUserId) =>
     respondToRequest(oxyUserId, req.params.requestId, 'accepted'),
   );
 
-const declineRoommateRequest = (req: Request, res: Response) =>
+const declineRoommateRequest = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to decline roommate request', (oxyUserId) =>
     respondToRequest(oxyUserId, req.params.requestId, 'declined'),
   );
 
-const getRoommateRelationships = (req: Request, res: Response) =>
+const getRoommateRelationships = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to fetch roommate relationships', (oxyUserId) =>
     listMyRoommateRelationships(oxyUserId),
   );
 
-const endRoommateRelationship = (req: Request, res: Response) =>
+const endRoommateRelationship = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to end roommate relationship', (oxyUserId) =>
     endRelationship(oxyUserId, req.params.relationshipId),
   );
 
-const getCurrentUserRoommateStatus = (req: Request, res: Response) =>
+const getCurrentUserRoommateStatus = (req: ControllerRequest, res: Response) =>
   answer(req, res, 'Failed to fetch roommate status', (oxyUserId) =>
     getMyRoommateStatus(oxyUserId),
   );

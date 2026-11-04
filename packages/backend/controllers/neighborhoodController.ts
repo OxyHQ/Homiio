@@ -28,7 +28,8 @@
  * about what an id is.
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 import { and, asc, eq, ilike, sql, inArray, type SQL } from 'drizzle-orm';
 import type {
   NeighborhoodMetrics,
@@ -204,7 +205,7 @@ async function buildMetrics(
  * neighborhood-bearing address is near enough.
  */
 export async function getNeighborhoodByLocation(
-  req: Request,
+  req: ControllerRequest,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
@@ -250,7 +251,7 @@ export async function getNeighborhoodByLocation(
  * city (id or name). 404 when unknown.
  */
 export async function getNeighborhoodByName(
-  req: Request,
+  req: ControllerRequest,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
@@ -301,7 +302,7 @@ export async function getNeighborhoodByName(
  * One statement: listing → address → neighbourhood.
  */
 export async function getNeighborhoodByProperty(
-  req: Request,
+  req: ControllerRequest,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
@@ -342,7 +343,7 @@ export async function getNeighborhoodByProperty(
  * unknown.
  */
 export async function searchNeighborhoods(
-  req: Request,
+  req: ControllerRequest,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
@@ -397,7 +398,7 @@ export async function searchNeighborhoods(
  * listings never appear.
  */
 export async function getPopularNeighborhoods(
-  req: Request,
+  req: ControllerRequest,
   res: Response,
   next: NextFunction,
 ): Promise<void> {

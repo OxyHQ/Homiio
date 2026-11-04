@@ -11,7 +11,8 @@
  * 400 `EXTERNAL_PROPERTY` on the wire.
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 
 import {
   approveViewing,
@@ -28,7 +29,11 @@ import { requireSessionOxyUserId } from '../utils/sessionUser';
 
 class ViewingController {
   /** POST /api/properties/:propertyId/viewings */
-  async createViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createViewingRequest(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { date, time, modality, message } = req.body;
@@ -53,7 +58,11 @@ class ViewingController {
   }
 
   /** GET /api/viewings/me */
-  async listMyViewingRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listMyViewingRequests(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const result = await listMyViewingRequests(oxyUserId, {
@@ -79,7 +88,7 @@ class ViewingController {
    * only the caller's own for anybody else.
    */
   async listPropertyViewingRequests(
-    req: Request,
+    req: ControllerRequest,
     res: Response,
     next: NextFunction,
   ): Promise<void> {
@@ -105,7 +114,11 @@ class ViewingController {
   }
 
   /** POST /api/viewings/:viewingId/approve (owner only) */
-  async approveViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async approveViewingRequest(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const viewing = await approveViewing(oxyUserId, {
@@ -119,7 +132,11 @@ class ViewingController {
   }
 
   /** POST /api/viewings/:viewingId/decline (owner only) */
-  async declineViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async declineViewingRequest(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const viewing = await declineViewing(oxyUserId, {
@@ -133,7 +150,11 @@ class ViewingController {
   }
 
   /** POST /api/viewings/:viewingId/cancel (requester or owner) */
-  async cancelViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async cancelViewingRequest(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const outcome = await cancelViewing(oxyUserId, {
@@ -154,7 +175,11 @@ class ViewingController {
   }
 
   /** PUT /api/viewings/:viewingId — reschedule a pending request (requester only) */
-  async updateViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateViewingRequest(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { date, time, modality, message } = req.body;

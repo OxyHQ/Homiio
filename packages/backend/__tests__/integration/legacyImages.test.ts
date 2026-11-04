@@ -28,7 +28,7 @@ let chain: GeoChain;
 
 function door(): Express {
   const app = express();
-  app.get('/images/file/*', (req, res) => imageController.serveLegacyImage(req, res));
+  app.get('/images/file/*key', (req, res) => imageController.serveLegacyImage(req, res));
   app.use(errorHandler);
   return app;
 }

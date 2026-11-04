@@ -28,7 +28,8 @@
  * ADDRESS id into an uncapped array, and nothing over-fetches and re-sorts.
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import type { ControllerRequest } from '../controllerTypes';
 import type { AreaInsightsBasis, PropertyAreaInsights } from '@homiio/shared-types';
 
 import { AppError, successResponse } from '../../middlewares/errorHandler';
@@ -96,7 +97,7 @@ function buildEmptyInsights(property: ComparableProperty): AreaInsightsResponse 
  * city, and finally to a target-only "not enough data" response.
  */
 export async function getAreaInsights(
-  req: Request,
+  req: ControllerRequest,
   res: Response,
   next: NextFunction,
 ): Promise<void> {

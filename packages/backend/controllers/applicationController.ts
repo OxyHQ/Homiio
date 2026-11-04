@@ -1,4 +1,5 @@
 import { sessionFileRequester } from '../services/files/requester';
+import type { ControllerRequest } from './controllerTypes';
 /**
  * Tenant Application Controller — the HTTP adapter over `domain/applications.ts`.
  *
@@ -11,7 +12,7 @@ import { sessionFileRequester } from '../services/files/requester';
  *                     submitted -> withdrawn (applicant)
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
 
 import {
   addApplicationDocuments,
@@ -44,7 +45,11 @@ class ApplicationController {
    *
    * An external listing answers 400 `EXTERNAL_PROPERTY`, as it always has.
    */
-  async createApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createApplication(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const body = req.body || {};
@@ -83,7 +88,11 @@ class ApplicationController {
    * The applicant's own application, while it is pending; answers the whole
    * application, as the submission does.
    */
-  async addApplicationDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async addApplicationDocuments(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { id } = req.params as { id: string };
@@ -105,7 +114,11 @@ class ApplicationController {
    * GET /api/applications
    * List mine. Filter by role with ?asLandlord=true.
    */
-  async listMyApplications(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listMyApplications(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { page, limit, status, asLandlord } = req.query;
@@ -133,7 +146,11 @@ class ApplicationController {
    * Base64 in the ordinary envelope because the Oxy linked client owns auth and
    * is JSON-only; `Cache-Control: private, no-store` so no proxy keeps a copy.
    */
-  async getApplicationDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getApplicationDocument(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id, documentId } = req.params as { id: string; documentId: string };
       const oxyUserId = requireSessionOxyUserId(req);
@@ -149,7 +166,11 @@ class ApplicationController {
    * `POST /api/applications/:id/documents/:documentId/verification` — the
    * landlord says whether a document is what they asked for.
    */
-  async verifyApplicationDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async verifyApplicationDocument(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { id, documentId } = req.params as { id: string; documentId: string };
@@ -167,7 +188,11 @@ class ApplicationController {
   }
 
   /** GET /api/applications/:id */
-  async getApplicationById(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getApplicationById(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const application = await getApplication(oxyUserId, req.params.id);
@@ -182,7 +207,11 @@ class ApplicationController {
    *  - Landlord: approves / rejects / moves to reviewing
    *  - Applicant: withdraws (must be in submitted/reviewing)
    */
-  async updateApplicationStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateApplicationStatus(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const { status, notes } = req.body;
@@ -201,7 +230,11 @@ class ApplicationController {
    *
    * Landlord-only bridge: turn an APPROVED application into a DRAFT lease.
    */
-  async createLeaseFromApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createLeaseFromApplication(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
       const lease = await createLeaseFromApplication(oxyUserId, req.params.id);

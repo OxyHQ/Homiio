@@ -43,6 +43,7 @@
  */
 
 import type { Request, Response } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 import { getRequiredOxyUserId, getOxyUserId } from '@oxy.so/core/server';
 import { oxyService } from '../services/oxy';
 import { getAgencySummaries } from '../services/organizations/directory';
@@ -138,7 +139,7 @@ function refuse(
 // Hierarchical address reads (public, community-visible) — `domain/reviews.ts`.
 // ---------------------------------------------------------------------------
 
-export const getReviewsByAddress = async (req: Request, res: Response) => {
+export const getReviewsByAddress = async (req: ControllerRequest, res: Response) => {
   try {
     return ok(res, await listAddressReviews(getOxyUserId(req), req.params.addressId, req.query));
   } catch (error) {
@@ -146,7 +147,7 @@ export const getReviewsByAddress = async (req: Request, res: Response) => {
   }
 };
 
-export const getAddressReviewStats = async (req: Request, res: Response) => {
+export const getAddressReviewStats = async (req: ControllerRequest, res: Response) => {
   try {
     return ok(res, await readAddressReviewStats(req.params.addressId));
   } catch (error) {
@@ -163,7 +164,7 @@ export const getAddressReviewStats = async (req: Request, res: Response) => {
 // Create / read / update / delete — `domain/reviews.ts`.
 // ---------------------------------------------------------------------------
 
-export const createReview = async (req: Request, res: Response) => {
+export const createReview = async (req: ControllerRequest, res: Response) => {
   try {
     const oxyUserId = getRequiredOxyUserId(req);
     return created(res, await writeReview(oxyUserId, req.body));
@@ -174,7 +175,7 @@ export const createReview = async (req: Request, res: Response) => {
   }
 };
 
-export const getReviewById = async (req: Request, res: Response) => {
+export const getReviewById = async (req: ControllerRequest, res: Response) => {
   try {
     return ok(res, await getReview(getOxyUserId(req), req.params.reviewId));
   } catch (error) {
@@ -182,7 +183,7 @@ export const getReviewById = async (req: Request, res: Response) => {
   }
 };
 
-export const updateReview = async (req: Request, res: Response) => {
+export const updateReview = async (req: ControllerRequest, res: Response) => {
   try {
     const oxyUserId = getRequiredOxyUserId(req);
     return ok(res, await editReview(oxyUserId, req.params.reviewId, req.body));
@@ -193,7 +194,7 @@ export const updateReview = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteReview = async (req: Request, res: Response) => {
+export const deleteReview = async (req: ControllerRequest, res: Response) => {
   try {
     const oxyUserId = getRequiredOxyUserId(req);
     await removeReview(oxyUserId, req.params.reviewId);
@@ -203,7 +204,7 @@ export const deleteReview = async (req: Request, res: Response) => {
   }
 };
 
-export const getUserReviews = async (req: Request, res: Response) => {
+export const getUserReviews = async (req: ControllerRequest, res: Response) => {
   try {
     return ok(res, await listUserReviews(getOxyUserId(req), req.params.oxyUserId, req.query));
   } catch (error) {
@@ -215,7 +216,7 @@ export const getUserReviews = async (req: Request, res: Response) => {
 // Helpful votes + reports — `domain/reviews.ts`.
 // ---------------------------------------------------------------------------
 
-export const toggleHelpful = async (req: Request, res: Response) => {
+export const toggleHelpful = async (req: ControllerRequest, res: Response) => {
   try {
     const oxyUserId = getRequiredOxyUserId(req);
     return ok(res, await toggleReviewHelpful(oxyUserId, req.params.reviewId));
@@ -224,7 +225,7 @@ export const toggleHelpful = async (req: Request, res: Response) => {
   }
 };
 
-export const reportReview = async (req: Request, res: Response) => {
+export const reportReview = async (req: ControllerRequest, res: Response) => {
   try {
     const oxyUserId = getRequiredOxyUserId(req);
     const outcome = await fileReviewReport(oxyUserId, req.params.reviewId, req.body || {});
@@ -261,7 +262,7 @@ async function toAgencySummary(agency: AgencyRow) {
   return (await getAgencySummaries([agency.id])).get(agency.id);
 }
 
-export const searchAgencies = async (req: Request, res: Response) => {
+export const searchAgencies = async (req: ControllerRequest, res: Response) => {
   try {
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     if (!q) {
@@ -284,7 +285,7 @@ export const searchAgencies = async (req: Request, res: Response) => {
   }
 };
 
-export const getAgencyBySlug = async (req: Request, res: Response) => {
+export const getAgencyBySlug = async (req: ControllerRequest, res: Response) => {
   try {
     const agency = await findAgencyBySlug(req.params.slug);
     if (!agency) {
@@ -314,7 +315,7 @@ export const getAgencyBySlug = async (req: Request, res: Response) => {
   }
 };
 
-export const getAgencyReviews = async (req: Request, res: Response) => {
+export const getAgencyReviews = async (req: ControllerRequest, res: Response) => {
   try {
     const viewer = getOxyUserId(req);
     const { page, limit } = parsePageLimit(req.query);
@@ -354,7 +355,7 @@ export const getAgencyReviews = async (req: Request, res: Response) => {
   }
 };
 
-export const getAgencyProperties = async (req: Request, res: Response) => {
+export const getAgencyProperties = async (req: ControllerRequest, res: Response) => {
   try {
     const { page, limit } = parsePageLimit(req.query);
 
@@ -411,7 +412,7 @@ export const getExploreCities = async (_req: Request, res: Response) => {
   }
 };
 
-export const getExploreCity = async (req: Request, res: Response) => {
+export const getExploreCity = async (req: ControllerRequest, res: Response) => {
   try {
     const { cityId } = req.params;
     if (!isPossibleId(cityId)) {
@@ -425,7 +426,7 @@ export const getExploreCity = async (req: Request, res: Response) => {
   }
 };
 
-export const getExploreNeighborhood = async (req: Request, res: Response) => {
+export const getExploreNeighborhood = async (req: ControllerRequest, res: Response) => {
   try {
     const { neighborhoodId } = req.params;
     const { page, limit } = parsePageLimit(req.query);

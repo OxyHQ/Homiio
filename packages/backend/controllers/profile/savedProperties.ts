@@ -3,7 +3,8 @@
  * catalogue's saved-home tools call too.
  */
 
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Response } from 'express';
+import type { ControllerRequest } from '../controllerTypes';
 
 import { listSavedHomes, saveHome, unsaveHome, updateSavedHomeNotes } from '../../domain/saved';
 import { sendAuthenticationRequired, sendSavedError } from './savedErrors';
@@ -11,7 +12,11 @@ import { successResponse } from './shared';
 import { getOxyUserId } from '@oxy.so/core/server';
 
 /** Get saved properties for the current user's profile */
-export async function getSavedProperties(req: Request, res: Response, next: NextFunction) {
+export async function getSavedProperties(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -24,7 +29,7 @@ export async function getSavedProperties(req: Request, res: Response, next: Next
 }
 
 /** Save a property for the current user's profile */
-export async function saveProperty(req: Request, res: Response, next: NextFunction) {
+export async function saveProperty(req: ControllerRequest, res: Response, next: NextFunction) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -37,7 +42,7 @@ export async function saveProperty(req: Request, res: Response, next: NextFuncti
 }
 
 /** Unsave a property for the current user's profile */
-export async function unsaveProperty(req: Request, res: Response, next: NextFunction) {
+export async function unsaveProperty(req: ControllerRequest, res: Response, next: NextFunction) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {
@@ -49,7 +54,11 @@ export async function unsaveProperty(req: Request, res: Response, next: NextFunc
 }
 
 /** Update saved property notes for the current user's profile */
-export async function updateSavedPropertyNotes(req: Request, res: Response, next: NextFunction) {
+export async function updateSavedPropertyNotes(
+  req: ControllerRequest,
+  res: Response,
+  next: NextFunction,
+) {
   const oxyUserId = getOxyUserId(req);
   if (!oxyUserId) return sendAuthenticationRequired(res);
   try {

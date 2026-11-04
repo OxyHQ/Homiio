@@ -31,6 +31,7 @@
  */
 
 import type { Request, Response } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 import { IMAGE_UPLOAD_MAX_FILE_BYTES } from '@homiio/shared-types';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import { AppError, logUnexpectedError } from '../middlewares/errorHandler';
@@ -210,7 +211,7 @@ export class ImageController {
    * Removing a photo from the picker. Deletes nothing — see the module header
    * — and answers the shape an app build already in use expects.
    */
-  async forgetUpload(req: Request, res: Response): Promise<void> {
+  async forgetUpload(req: ControllerRequest, res: Response): Promise<void> {
     const { imageKey } = req.params;
     if (!imageKey) {
       res.status(400).json({ success: false, message: 'Image key is required' });
@@ -225,16 +226,17 @@ export class ImageController {
   }
 
   /**
-   * `GET /api/images/file/*` — the legacy door (`services/files/legacyImages`).
+   * `GET /api/images/file/*key` — the legacy door (`services/files/legacyImages`).
    *
-   * The key is the wildcard tail, already URL-decoded by Express, and is
-   * untrusted: `validateImageStoreKey` refuses traversal, absolute paths,
+   * The key is the wildcard tail: Express 5 hands it over as its URL-decoded
+   * path segments, joined back here. It is untrusted: `validateImageStoreKey` refuses traversal, absolute paths,
    * private prefixes and non-image extensions before anything is looked up.
    * A missing photo is a flat 404 that says nothing about why.
    */
   async serveLegacyImage(req: Request, res: Response): Promise<void> {
     try {
-      const rawKey = req.params[0];
+      const tail = req.params.key;
+      const rawKey = Array.isArray(tail) ? tail.join('/') : tail;
       if (typeof rawKey !== 'string' || rawKey.length === 0) {
         res.status(400).json({ success: false, message: 'Image key is required' });
         return;

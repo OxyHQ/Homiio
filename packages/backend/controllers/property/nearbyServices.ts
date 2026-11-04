@@ -21,7 +21,8 @@
  * reserved for genuinely unexpected bugs (e.g. a database fault).
  */
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import type { ControllerRequest } from '../controllerTypes';
 import {
   getNearbyServices,
   emptyNearbyServices,
@@ -60,7 +61,7 @@ function resolveCoordinates(property: Record<string, unknown>): [number, number]
  * 5xx for those expected cases.
  */
 export async function getPropertyNearbyServices(
-  req: Request,
+  req: ControllerRequest,
   res: Response,
   next: NextFunction,
 ): Promise<void> {

@@ -37,6 +37,7 @@
 import path from 'node:path';
 
 import express, { type Express } from 'express';
+import type { ControllerRequest } from '../../controllers/controllerTypes';
 import multer from 'multer';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
@@ -89,7 +90,7 @@ function authed(oxyUserId: string): Express {
     leaseController.getLeaseDocument(req, res, next),
   );
   app.post('/leases/:id/documents', documentUpload.single('document'), (req, res, next) =>
-    leaseController.uploadLeaseDocument(req, res, next),
+    leaseController.uploadLeaseDocument(req as ControllerRequest, res, next),
   );
   app.use(errorHandler);
   return app;
@@ -98,7 +99,7 @@ function authed(oxyUserId: string): Express {
 /** The PUBLIC image route, mounted exactly as `routes/public.ts` mounts it. */
 function publicImages(): Express {
   const app = express();
-  app.get('/images/file/*', (req, res) => imageController.serveLegacyImage(req, res));
+  app.get('/images/file/*key', (req, res) => imageController.serveLegacyImage(req, res));
   app.use(errorHandler);
   return app;
 }

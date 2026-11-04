@@ -8,6 +8,7 @@
  */
 
 import type { NextFunction, Request, Response } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 
 import {
   exchangePage,
@@ -17,7 +18,7 @@ import {
 } from '../domain/exchanges';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 
-function requireCaller(req: Request): string {
+function requireCaller(req: ControllerRequest): string {
   const user = req as Request & { user?: { id?: string; _id?: string }; userId?: string };
   const oxyUserId = user.user?.id || user.user?._id || user.userId;
   if (!oxyUserId) throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
@@ -26,7 +27,11 @@ function requireCaller(req: Request): string {
 
 class ExchangeReviewController {
   /** POST /api/exchanges/:id/reviews — only after completion, only by a party, once. */
-  async createExchangeReview(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createExchangeReview(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireCaller(req);
       const { rating, comment, categories } = req.body ?? {};
@@ -43,7 +48,11 @@ class ExchangeReviewController {
   }
 
   /** GET /api/exchanges/:id/reviews — readable by the requester or the host. */
-  async getExchangeReviews(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getExchangeReviews(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireCaller(req);
       const reviews = await listExchangeReviews(oxyUserId, { exchangeRequestId: req.params.id });
@@ -57,7 +66,11 @@ class ExchangeReviewController {
    * GET /api/profiles/oxy/:oxyUserId/exchange-reviews — reviews where a person
    * is the SUBJECT, newest first, with an aggregate. Any signed-in person.
    */
-  async getProfileExchangeReviews(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getProfileExchangeReviews(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const result = await listUserExchangeReviews({
         subjectOxyUserId: req.params.oxyUserId,

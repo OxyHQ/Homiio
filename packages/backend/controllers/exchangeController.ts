@@ -10,6 +10,7 @@
  */
 
 import type { NextFunction, Request, Response } from 'express';
+import type { ControllerRequest } from './controllerTypes';
 import type { CreateExchangeRequestData, UpdateExchangeRequestData } from '@homiio/shared-types';
 
 import {
@@ -21,7 +22,7 @@ import {
 } from '../domain/exchanges';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 
-function requireCaller(req: Request): string {
+function requireCaller(req: ControllerRequest): string {
   const user = req as Request & { user?: { id?: string; _id?: string }; userId?: string };
   const oxyUserId = user.user?.id || user.user?._id || user.userId;
   if (!oxyUserId) throw new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
@@ -30,7 +31,11 @@ function requireCaller(req: Request): string {
 
 class ExchangeController {
   /** POST /api/exchanges — requester proposes a swap or hosting stay. */
-  async createExchangeRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createExchangeRequest(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireCaller(req);
       const outcome = await requestExchange(oxyUserId, req.body as CreateExchangeRequestData);
@@ -48,7 +53,11 @@ class ExchangeController {
   }
 
   /** GET /api/exchanges — the guest view, or the host view with `?asHost=true`. */
-  async listMyExchangeRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listMyExchangeRequests(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireCaller(req);
       const result = await listMyExchangeRequests(oxyUserId, {
@@ -71,7 +80,11 @@ class ExchangeController {
   }
 
   /** GET /api/exchanges/:id — only the requester or the host. */
-  async getExchangeRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getExchangeRequest(
+    req: ControllerRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const oxyUserId = requireCaller(req);
       const exchangeRequest = await getExchangeRequest(oxyUserId, {
@@ -85,7 +98,7 @@ class ExchangeController {
 
   /** PATCH /api/exchanges/:id — host confirms/declines, requester cancels, either completes. */
   async updateExchangeRequestStatus(
-    req: Request,
+    req: ControllerRequest,
     res: Response,
     next: NextFunction,
   ): Promise<void> {
