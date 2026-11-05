@@ -1,5 +1,8 @@
+import { handleWellKnown } from './appAssociation.js';
+
 export default {
   fetch(request, env) {
-    return env.ASSETS.fetch(request);
+    // `/.well-known/` is answered here (App Links); everything else is the app.
+    return handleWellKnown(request) ?? env.ASSETS.fetch(request);
   },
 };

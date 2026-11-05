@@ -64,12 +64,24 @@ describe.each(PRODUCTION_BUILDS)('production app config (%j)', (env) => {
 
   it('is the production app', () => {
     expect(config.name).toBe('Homiio');
-    expect(config.android.package).toBe('com.homiio.android');
-    expect(config.ios.bundleIdentifier).toBe('com.homiio.android');
+    expect(config.android.package).toBe('com.homiio.app');
+    expect(config.ios.bundleIdentifier).toBe('com.homiio.app');
   });
 
   it('names no localhost or other development host anywhere', () => {
     expect(JSON.stringify(config)).not.toMatch(LOCAL_HOST);
+  });
+
+  it('verifies exactly homiio.com, the host whose Worker serves assetlinks.json', () => {
+    const verified = config.android.intentFilters.filter((filter) => filter.autoVerify);
+    const hosts = verified.flatMap((filter) =>
+      filter.data.flatMap((entry) => (entry && entry.host ? [entry.host] : [])),
+    );
+    expect(hosts).toEqual(['homiio.com']);
+  });
+
+  it('claims no oxy.so link, which publishes no assetlinks for Homiio', () => {
+    expect(JSON.stringify(config.android.intentFilters)).not.toMatch(/oxy\.so/);
   });
 
   it('has only https entries, and no `false` holes, in its link filters', () => {
@@ -84,7 +96,8 @@ describe('development variant', () => {
 
   it('is a separate app', () => {
     expect(config.name).toBe('Homiio (Dev)');
-    expect(config.android.package).toBe('com.homiio.android.dev');
+    expect(config.android.package).toBe('com.homiio.app.dev');
+    expect(config.ios.bundleIdentifier).toBe('com.homiio.app.dev');
   });
 
   it('opens the local server from its own filter, outside the verified one', () => {
