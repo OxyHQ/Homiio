@@ -428,6 +428,42 @@ describe("in the uploader's Oxy account (stage 4c)", () => {
     expect(await rowsOf(requestId)).toHaveLength(1);
   });
 
+  it('answers the attachment already there when the same photo is attached again', async () => {
+    const { requestId } = await seedRequest();
+    const photo = await photoWithLocation();
+    const first = await attach(requestId, TENANT, photo);
+
+    // The same bytes from the same person: Oxy answers the file they hold.
+    const again = await attach(requestId, TENANT, photo);
+
+    expect(first.status).toBe(201);
+    expect(again.status).toBe(201);
+    expect(again.body.data.id).toBe(first.body.data.id);
+    expect(await rowsOf(requestId)).toHaveLength(1);
+  });
+
+  it('lets the same photo belong to two repairs', async () => {
+    const one = await seedRequest();
+    const two = await seedRequest();
+    const photo = await photoWithLocation();
+
+    expect((await attach(one.requestId, TENANT, photo)).status).toBe(201);
+    expect((await attach(two.requestId, TENANT, photo)).status).toBe(201);
+
+    const [a] = await rowsOf(one.requestId);
+    const [b] = await rowsOf(two.requestId);
+    expect(a.storageKey).toMatch(/^oxy:/);
+    expect(b.storageKey).toBe(a.storageKey);
+    // Each repair's use of the file was marked for the drain.
+    const marks = await getDb()
+      .select()
+      .from(fileReferenceChanges)
+      .where(eq(fileReferenceChanges.oxyFileId, a.storageKey.slice(4)));
+    expect(marks.map((mark) => mark.entityId).sort()).toEqual(
+      [one.requestId, two.requestId].sort(),
+    );
+  });
+
   it('answers 404 once the owner revokes Homiio, and nothing else', async () => {
     const { requestId } = await seedRequest();
     const attachmentId = (await attach(requestId, TENANT)).body.data.id;

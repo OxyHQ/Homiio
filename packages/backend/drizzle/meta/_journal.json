@@ -281,6 +281,20 @@
       "when": 1792590647417,
       "tag": "0039_retire_legacy_bucket",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792600000000,
+      "tag": "0040_maintenance_attachment_per_request_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792600010000,
+      "tag": "0041_maintenance_attachment_drop_global_key",
+      "breakpoints": true
     }
   ]
 }
