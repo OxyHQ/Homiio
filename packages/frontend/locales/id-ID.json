@@ -1115,6 +1115,9 @@
       "following": "{{count}} following"
     },
     "preferencesPage": {
+      "remoteConflict": "Preferensi berubah di tempat lain. Perubahan Anda tersimpan di sini; buang untuk memuat nilai terbaru.",
+      "discardAndReload": "Buang perubahan dan muat ulang",
+      "refreshToSave": "Perbarui preferensi sebelum menyimpan. Periksa koneksi Anda dan coba lagi.",
       "title": "Roommate preferences",
       "eyebrow": "Sharing a place",
       "subtitle": "Let other Homiio users find you when their preferences and yours line up.",

@@ -1654,6 +1654,9 @@
       "following": "{{count}} following"
     },
     "preferencesPage": {
+      "remoteConflict": "Le preferenze sono cambiate altrove. Le modifiche sono conservate; scartale per caricare i valori attuali.",
+      "discardAndReload": "Scarta modifiche e aggiorna",
+      "refreshToSave": "Aggiorna le preferenze prima di salvare. Controlla la connessione e riprova.",
       "title": "Preferenze coinquilino",
       "eyebrow": "Sharing a place",
       "subtitle": "Let other Homiio users find you when their preferences and yours line up.",
