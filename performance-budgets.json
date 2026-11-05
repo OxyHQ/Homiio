@@ -1,7 +1,8 @@
 {
   "frontendWeb": {
     "maxTotalBytes": 24300000,
-    "maxJavaScriptGzipBytes": 3650000,
+    "maxJavaScriptGzipBytes": 3660000,
     "maxFontBytes": 2050000
-  }
+  },
+  "note": "2026-11-05: main (31f4add5) measured 3,643,629 JS gzip bytes; the Bloom 17.5.0 -> 17.9.0 bump measured 3,653,978 (+10,349, +0.28%, total +20,785 raw bytes, fonts unchanged), all Bloom's own added components, locale formatter cache and translation tables. Ceiling raised 3,650,000 -> 3,660,000 (about 6 KB jitter headroom)."
 }
