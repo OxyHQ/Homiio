@@ -40,21 +40,18 @@ async function main() {
   const reviewedMappings = values['reviewed-mappings']
     ? z
         .array(
-          z
-            .object({
-              agencyId: z.string().min(1),
-              accountId: z.string().min(1),
-              evidenceReference: z.string().trim().min(1),
-              sourceIdentity: z
-                .object({
-                  source: z.string().min(1),
-                  agencySourceId: z.string().trim().min(1),
-                  propertyIds: z.array(z.string().min(1)).min(1),
-                })
-                .strict()
-                .optional(),
-            })
-            .strict(),
+          z.strictObject({
+            agencyId: z.string().min(1),
+            accountId: z.string().min(1),
+            evidenceReference: z.string().trim().min(1),
+            sourceIdentity: z
+              .strictObject({
+                source: z.string().min(1),
+                agencySourceId: z.string().trim().min(1),
+                propertyIds: z.array(z.string().min(1)).min(1),
+              })
+              .optional(),
+          }),
         )
         .parse(JSON.parse(await readFile(values['reviewed-mappings'], 'utf8')))
     : [];
