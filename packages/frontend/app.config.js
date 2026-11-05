@@ -54,7 +54,7 @@ module.exports = (config) => {
       slug: 'homiio',
       version: VERSION,
       orientation: 'portrait',
-      icon: './assets/images/mention-icon.png',
+      icon: './assets/images/homiio-icon.png',
       scheme: 'homiio',
       userInterfaceStyle: 'automatic',
       newArchEnabled: true,
@@ -78,9 +78,9 @@ module.exports = (config) => {
       },
       android: {
         adaptiveIcon: {
-          foregroundImage: './assets/images/mention-icon_foreground.png',
-          backgroundImage: './assets/images/mention-icon_background.png',
-          monochromeImage: './assets/images/mention-icon_monochrome.png',
+          foregroundImage: './assets/images/homiio-icon_foreground.png',
+          backgroundImage: './assets/images/homiio-icon_background.png',
+          monochromeImage: './assets/images/homiio-icon_monochrome.png',
         },
         permissions: ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO'],
         package: APP_ID,
