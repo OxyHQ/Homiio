@@ -41,8 +41,12 @@ module.exports = (config) => {
   // `http://localhost:4130`. `__tests__/appConfig.test.ts` asserts a production
   // config names no local host.
   const IS_DEV_VARIANT = process.env.APP_VARIANT === 'development';
-  const APP_ID = IS_DEV_VARIANT ? 'com.homiio.android.dev' : 'com.homiio.android';
+  // One id on both platforms: homiio.com reversed, plus `.app`.
+  const APP_ID = IS_DEV_VARIANT ? 'com.homiio.app.dev' : 'com.homiio.app';
   const APP_NAME = IS_DEV_VARIANT ? 'Homiio (Dev)' : 'Homiio';
+
+  // The host whose https links open the app: the web app's own origin.
+  const APP_LINK_HOST = 'homiio.com';
 
   return {
     expo: {
@@ -80,6 +84,14 @@ module.exports = (config) => {
         },
         permissions: ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO'],
         package: APP_ID,
+        // App Links. Every https host in an autoVerify filter is VERIFIED, so
+        // each must serve an assetlinks.json naming this package and its
+        // signing key: `homiio.com` is the web app's Worker (`wrangler.toml`),
+        // and `worker/appAssociation.js` serves that file. `oxy.so` was listed
+        // too: Homiio opens no oxy.so URL, oxy.so publishes no assetlinks for
+        // Homiio, and on Android 11 and below one unverifiable host fails
+        // verification for the WHOLE filter. `__tests__/appConfig.test.ts`
+        // keeps it out.
         intentFilters: [
           {
             action: 'VIEW',
@@ -87,11 +99,7 @@ module.exports = (config) => {
             data: [
               {
                 scheme: 'https',
-                host: 'homiio.com',
-              },
-              {
-                scheme: 'https',
-                host: 'oxy.so',
+                host: APP_LINK_HOST,
               },
             ],
             category: ['BROWSABLE', 'DEFAULT'],
