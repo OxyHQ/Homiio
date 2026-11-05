@@ -430,10 +430,11 @@ describe("in the uploader's Oxy account (stage 4c)", () => {
 
   it('answers the attachment already there when the same photo is attached again', async () => {
     const { requestId } = await seedRequest();
-    const first = await attach(requestId, TENANT);
+    const photo = await photoWithLocation();
+    const first = await attach(requestId, TENANT, photo);
 
     // The same bytes from the same person: Oxy answers the file they hold.
-    const again = await attach(requestId, TENANT);
+    const again = await attach(requestId, TENANT, photo);
 
     expect(first.status).toBe(201);
     expect(again.status).toBe(201);
@@ -444,9 +445,10 @@ describe("in the uploader's Oxy account (stage 4c)", () => {
   it('lets the same photo belong to two repairs', async () => {
     const one = await seedRequest();
     const two = await seedRequest();
+    const photo = await photoWithLocation();
 
-    expect((await attach(one.requestId, TENANT)).status).toBe(201);
-    expect((await attach(two.requestId, TENANT)).status).toBe(201);
+    expect((await attach(one.requestId, TENANT, photo)).status).toBe(201);
+    expect((await attach(two.requestId, TENANT, photo)).status).toBe(201);
 
     const [a] = await rowsOf(one.requestId);
     const [b] = await rowsOf(two.requestId);
