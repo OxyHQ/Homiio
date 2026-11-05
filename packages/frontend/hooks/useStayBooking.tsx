@@ -31,6 +31,7 @@ import {
 } from '@/components/AvailabilityCalendar';
 import { useStayQuoteBreakdown } from '@/components/PriceBreakdown';
 import { useCreateReservation, usePropertyAvailabilityQuery } from '@/hooks/useReservationQueries';
+import { useAccountOwnerGuard } from '@/hooks/useAccountOwner';
 import { formatLocalized } from '@/utils/dateLocale';
 import { useFormatting } from '@/utils/format';
 import { isShortTermRentable } from '@/utils/propertyUtils';
@@ -88,6 +89,7 @@ export function useStayBooking(
   const formatting = useFormatting();
   const router = useRouter();
   const { oxyServices, activeSessionId, openAccountDialog } = useOxy();
+  const { owner, isCurrent } = useAccountOwnerGuard();
 
   const shortTerm = property?.shortTermRent;
   const nightlyRate = shortTerm?.nightlyRate ?? 0;
@@ -143,6 +145,11 @@ export function useStayBooking(
       openAccountDialog();
       return;
     }
+    if (!owner) {
+      openAccountDialog();
+      return;
+    }
+    if (!isCurrent(owner)) return;
     if (!range || nights === 0) {
       openDates('checkIn');
       return;
@@ -163,13 +170,16 @@ export function useStayBooking(
         checkOut: range.checkOut.toISOString(),
         guestCount: guests.adults + guests.children,
       });
-      router.push(`/reservations/${reservation.id}`);
+      if (isCurrent(owner)) router.push(`/reservations/${reservation.id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('booking.toast.failed'));
+      if (isCurrent(owner))
+        toast.error(error instanceof Error ? error.message : t('booking.toast.failed'));
     }
   }, [
     oxyServices,
     activeSessionId,
+    owner,
+    isCurrent,
     range,
     nights,
     minStay,

@@ -20,6 +20,21 @@ import { ReservationStatus } from '@homiio/shared-types';
 import { api } from '@/utils/api';
 import { useUpcomingBookings } from '@/hooks/useUpcomingBookings';
 
+jest.mock('@oxy.so/services/ui/client', () => {
+  const oxyServices = {
+    session: { userId: 'test-account', accessToken: 'test-bearer', onChange: () => () => {} },
+    http: { getSessionEpoch: () => 1 },
+  };
+  return {
+    useOxy: () => ({
+      isAuthenticated: true,
+      user: { id: 'test-account' },
+      activeSessionId: 'test-session',
+      oxyServices,
+    }),
+  };
+});
+
 jest.mock('@/utils/api', () => ({
   api: { get: jest.fn() },
 }));
