@@ -1,0 +1,23 @@
+name: Android release
+
+# Homiio's signed Android release (AAB + APK), built on Oxy's build
+# machine by OxyHQ/oxy's shared workflow and published as the GitHub release
+# `android-v<version>`. Only a new `version` builds: a push that keeps it ends at
+# "Is this version released?" and ships through publish-update.yml as an OTA
+# update. OxyHQ/oxy docs/engineering/build-and-deploy.md#native-android-releases.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    uses: OxyHQ/oxy/.github/workflows/android-release.yml@main
+    with:
+      app-dir: packages/frontend
