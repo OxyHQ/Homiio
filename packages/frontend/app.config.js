@@ -1,9 +1,24 @@
 const pkg = require('./package.json');
 const { oxySplashScreenPlugin } = require('@oxy.so/expo-splash/config');
 
+/**
+ * Homiio's PRODUCTION Oxy client id: the ApplicationCredential publicKey
+ * (`oxy_dk_…`), public by construction. The binary's Oxy Updates manifest URL is
+ * baked from it, so it is the id the production build signs in with
+ * (`EXPO_PUBLIC_OXY_CLIENT_ID` in eas.json's `production` env, the web deploy's
+ * repository variable) and the one `.github/workflows/publish-update.yml`
+ * publishes under.
+ */
+const OXY_CLIENT_ID = 'oxy_dk_7d7b4924dcbfe16a245fb9c826b86d7bd43f0c5259c76ea1';
+
 module.exports = (config) => {
   /**
-   * App version number. Should be incremented as part of a release cycle.
+   * App version, MAJOR.MINOR.PATCH. The store build number is derived from it
+   * (@oxy.so/app-preset: 1.2.3 → 1002003) and it is the OTA compatibility
+   * boundary (withOxyUpdates, runtime policy `appVersion`): bump it for any
+   * native change, and the next push to main releases a new Android binary
+   * (`.github/workflows/android-release.yml`). A JS-only change keeps it and
+   * ships as an OTA update.
    */
   const VERSION = pkg.version;
 
@@ -218,6 +233,10 @@ module.exports = (config) => {
         // build passes them. Production passes nothing and the module's own
         // `res/values/config.xml` defaults stand.
         './modules/homiio-widgets/app.plugin',
+        // OTA updates from Oxy Updates (oxy-api), verified against the ecosystem
+        // code-signing certificate; also derives the store build number from
+        // `version`. Published by `.github/workflows/publish-update.yml`.
+        ['@oxy.so/app-preset/plugin/withOxyUpdates', { clientId: OXY_CLIENT_ID }],
       ],
       extra: {
         eas: {

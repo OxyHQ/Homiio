@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 16.18.0",
-    "appVersionSource": "remote"
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -15,7 +15,9 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "env": {
+        "EXPO_PUBLIC_OXY_CLIENT_ID": "oxy_dk_7d7b4924dcbfe16a245fb9c826b86d7bd43f0c5259c76ea1"
+      }
     }
   },
   "submit": {
