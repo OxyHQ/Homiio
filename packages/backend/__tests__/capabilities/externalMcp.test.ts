@@ -120,6 +120,12 @@ describe('mcp.homiio.com/mcp', () => {
     expect(res.status).toBe(421);
   });
 
+  it('answers the bare resource URL with the OAuth challenge, not an unauthenticated 200', async () => {
+    const res = await request(buildApp()).get('/').set('Host', HOST);
+    expect(res.status).toBe(401);
+    expect(String(res.headers['www-authenticate'])).toContain('resource_metadata=');
+  });
+
   it('serves its protected-resource metadata on its own host only', async () => {
     const app = buildApp();
     const res = await request(app).get('/.well-known/oauth-protected-resource').set('Host', HOST);
