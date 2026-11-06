@@ -30,7 +30,7 @@
         "@homiio/shared-types": "workspace:*",
         "@oxy.so/allo-contracts": "0.2.1",
         "@oxy.so/allo-sdk": "1.0.0",
-        "@oxy.so/contracts": "6.9.0",
+        "@oxy.so/contracts": "6.14.0",
         "@oxy.so/core": "7.23.1",
         "@oxy.so/db": "^1.4.0",
         "@oxy.so/homiio-contracts": "workspace:*",
@@ -894,7 +894,7 @@
 
     "@oxy.so/bloom": ["@oxy.so/bloom@17.11.0", "", { "dependencies": { "@tanstack/react-virtual": "^3.14.23", "react-native-css": "3.1.0-rc.0", "react-remove-scroll-bar": "^2.3.8" }, "peerDependencies": { "@lottiefiles/dotlottie-react": ">=0.13.0", "@oxy.so/bloom-avatar-native": "0.1.2", "@react-native-community/netinfo": ">=11.1.0", "@shopify/flash-list": ">=2.0.0", "expo": "*", "expo-blur": "*", "expo-clipboard": "*", "expo-font": "*", "expo-haptics": "*", "expo-image": "*", "expo-router": ">=3.0.0", "expo-video": "*", "expo-web-browser": "*", "lottie-react-native": ">=7.0.0", "nativewind": ">=5.0.0 || 5.0.0-rc.0", "react": ">=18.0.0", "react-dom": ">=18.0.0", "react-native": ">=0.73.0", "react-native-gesture-handler": ">=2.16.1", "react-native-keyboard-controller": ">=1.11.4", "react-native-pager-view": ">=6.0.0", "react-native-reanimated": ">=3.13.0", "react-native-safe-area-context": ">=5.0.0", "react-native-screens": ">=3.16.0", "react-native-svg": ">=13.0.0", "react-native-webview": ">=13.0.0" }, "optionalPeers": ["@lottiefiles/dotlottie-react", "@oxy.so/bloom-avatar-native", "@react-native-community/netinfo", "@shopify/flash-list", "expo", "expo-clipboard", "expo-font", "expo-haptics", "expo-router", "expo-video", "expo-web-browser", "lottie-react-native", "nativewind", "react-dom", "react-native-keyboard-controller", "react-native-pager-view", "react-native-webview"] }, "sha512-0PgYwbALOy6SNk1l4xsEu0l8KnMPqkSyQvNs1zCW/m461auxMH+exz/FOSf3SYTBL4Tt7X6NkzaelQSSWaZAOQ=="],
 
-    "@oxy.so/contracts": ["@oxy.so/contracts@6.9.0", "", { "dependencies": { "zod": "^4.6.7" } }, "sha512-X7Iu0E/Y5LH8TEMq197er5J9CE0tkXSTBi09gxAD7AssdjDoof1+NJOYQMjadcdDHsx9lXxQGhVq8u6t+LZfbw=="],
+    "@oxy.so/contracts": ["@oxy.so/contracts@6.14.0", "", { "dependencies": { "zod": "^4.6.7" } }, "sha512-U5sjeeJVzOv0udQub0BHJ/D9ROO+cAunJgbJ5NYDawHXQNUnBtEzV0Y/ZG9IwvX9zaaF1a4PScFEmzVDPWNKAg=="],
 
     "@oxy.so/core": ["@oxy.so/core@7.23.1", "", { "dependencies": { "@noble/ciphers": "^2.4.0", "@noble/hashes": "^2.4.0", "@oxy.so/contracts": "^6.9.0", "@oxy.so/protocol": "^1.6.1", "@oxy.so/telemetry": "^2.1.0", "@scure/bip39": "^2.4.0", "buffer": "^6.0.3", "express-rate-limit": "^8.6.0", "helmet": "^8.3.0", "invariant": "^2.2.4", "jwt-decode": "^4.0.0", "socket.io-client": "^4.8.4", "tldts": "^7.4.19", "zod": "^4.6.7" }, "peerDependencies": { "@aws-sdk/credential-provider-ini": ">=3.973.16 <4", "@aws-sdk/credential-provider-node": ">=3.972.83 <4", "@react-native-async-storage/async-storage": "<4.0.0", "expo-crypto": "<59.0.0", "expo-secure-store": "<59.0.0", "express": "^4.0.0 || ^5.0.0" }, "optionalPeers": ["@aws-sdk/credential-provider-ini", "@aws-sdk/credential-provider-node", "@react-native-async-storage/async-storage", "expo-crypto", "expo-secure-store", "express"] }, "sha512-yFjWlFHsAP6vAg5m5saQ4lKbquZPy8si0tqFBDCo6/aWAOrZIuGMzG6UJg37kikPeyV7M+lXhyogqS9qY/rt2Q=="],
 
@@ -3271,8 +3271,6 @@
     "@jest/snapshot-utils/@jest/types": ["@jest/types@30.5.1", "", { "dependencies": { "@jest/pattern": "30.5.0", "@jest/schemas": "30.5.0", "@types/istanbul-lib-coverage": "^2.0.6", "@types/istanbul-reports": "^3.0.4", "@types/node": "*", "@types/yargs": "^17.0.33", "chalk": "^4.1.2" } }, "sha512-LvVYn83nnXPl+Rg98nvcFgjx6nRMTArhSn6RAX/w3ELn54S8A42TYZvsCMdGUqTM8S0wyXbtlQdU6Hi6dykj9g=="],
 
     "@modelcontextprotocol/sdk/raw-body": ["raw-body@3.0.2", "", { "dependencies": { "bytes": "~3.1.2", "http-errors": "~2.0.1", "iconv-lite": "~0.7.0", "unpipe": "~1.0.0" } }, "sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA=="],
-
-    "@oxy.so/mcp/@oxy.so/contracts": ["@oxy.so/contracts@6.14.0", "", { "dependencies": { "zod": "^4.6.7" } }, "sha512-U5sjeeJVzOv0udQub0BHJ/D9ROO+cAunJgbJ5NYDawHXQNUnBtEzV0Y/ZG9IwvX9zaaF1a4PScFEmzVDPWNKAg=="],
 
     "@paralleldrive/cuid2/@noble/hashes": ["@noble/hashes@1.8.0", "", {}, "sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A=="],
 
