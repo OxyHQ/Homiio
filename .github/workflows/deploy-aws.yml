@@ -365,7 +365,12 @@ jobs:
         run: |
           TASK_ENV_OVERRIDES_JSON=$(jq -cn '{ OXY_API_URL: "https://api.oxy.so" }')
           export TASK_ENV_OVERRIDES_JSON
-          STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
+          # A FAILED query is not an absent service (#608): a throttled or unavailable
+          # AWS call must fail this job, not skip the deploy and report green.
+          if ! STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text); then
+            echo "::error title=ECS query failed::aws ecs describe-services failed for $APP. This is NOT the service-existence guard; re-run the deploy."
+            exit 1
+          fi
           if [ "$STATUS" != "ACTIVE" ]; then
             echo "ECS service $APP not created yet - image is in ECR, skipping deploy"
             exit 0
@@ -453,7 +458,12 @@ jobs:
           export APP="${APP}-worker"
           # CONTAINER_NAME is left to default to APP, which is what the
           # oxy-homiio-worker family actually calls its container.
-          STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
+          # A FAILED query is not an absent service (#608): a throttled or unavailable
+          # AWS call must fail this job, not skip the deploy and report green.
+          if ! STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text); then
+            echo "::error title=ECS query failed::aws ecs describe-services failed for $APP. This is NOT the service-existence guard; re-run the deploy."
+            exit 1
+          fi
           if [ "$STATUS" != "ACTIVE" ]; then
             # Not silent, because this branch now skips the post migration too.
             # It self-corrects loudly rather than quietly: the next release's
