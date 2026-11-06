@@ -60,7 +60,7 @@
     "@oxy.so/homiio-contracts": "workspace:*",
     "@oxy.so/allo-sdk": "1.0.0",
     "@oxy.so/allo-contracts": "0.2.1",
-    "@oxy.so/mcp": "1.4.1",
+    "@oxy.so/mcp": "1.4.2",
     "@aws-sdk/credential-provider-node": "3.972.92",
     "zod": "^4.6.7"
   },
