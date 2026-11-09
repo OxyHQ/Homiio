@@ -37,13 +37,13 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@oxy.so/doctor": "1.7.0",
+    "@oxy.so/doctor": "1.8.0",
     "@types/node": "^26.6.6",
     "ajv": "^8.20.0",
     "ajv-keywords": "^5.1.0",
     "tailwindcss": "4.3.3",
     "typescript": "^6.0.3",
-    "@oxy.so/protocol": "1.6.1"
+    "@oxy.so/protocol": "1.7.0"
   },
   "engines": {
     "node": "22.x"
@@ -72,7 +72,7 @@
   },
   "cacheDirectories": [],
   "dependencies": {
-    "@oxy.so/core": "7.23.1",
-    "@oxy.so/bloom": "17.11.0"
+    "@oxy.so/core": "7.27.0",
+    "@oxy.so/bloom": "17.14.1"
   }
 }
