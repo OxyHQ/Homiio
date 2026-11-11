@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { LOCALE_FILES, type LocaleCode, type LocaleResource } from './localeFiles';
 
 /**
@@ -15,7 +16,9 @@ import { LOCALE_FILES, type LocaleCode, type LocaleResource } from './localeFile
 export async function loadLocaleResource(
   code: Exclude<LocaleCode, 'en-US'>,
 ): Promise<LocaleResource> {
-  const response = await fetch(`/locales/${LOCALE_FILES[code]}.json`, { cache: 'no-cache' });
+  const response = await fetchWithTimeout(`/locales/${LOCALE_FILES[code]}.json`, {
+    cache: 'no-cache',
+  });
   if (!response.ok) {
     throw new Error(`Locale ${code} failed to load (${response.status})`);
   }
