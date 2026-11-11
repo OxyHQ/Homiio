@@ -11,7 +11,7 @@ backend. Agent: `homiio`.
 >
 > **This file carries only RULES — things that break silently if you get them
 > wrong.** Design notes, subsystem walkthroughs and per-issue write-ups go in
-> `docs/`, never here. Org-wide standards are in `~/AGENTS.md` and
+> `docs/`, never here. Org-wide standards are in
 > `~/Oxy/AGENTS.md`; do not repeat them. Versions live in `package.json`.
 >
 > **Budget: under 12 KB**, enforced by `scripts/check-agents-md-size.mjs`. An
