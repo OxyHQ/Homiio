@@ -1,8 +1,8 @@
 {
   "frontendWeb": {
     "maxTotalBytes": 24300000,
-    "maxJavaScriptGzipBytes": 3660000,
+    "maxJavaScriptGzipBytes": 3730000,
     "maxFontBytes": 2050000
   },
-  "note": "2026-11-05: main (31f4add5) measured 3,643,629 JS gzip bytes; the Bloom 17.5.0 -> 17.9.0 bump measured 3,653,978 (+10,349, +0.28%, total +20,785 raw bytes, fonts unchanged), all Bloom's own added components, locale formatter cache and translation tables. Ceiling raised 3,650,000 -> 3,660,000 (about 6 KB jitter headroom)."
+  "note": "2026-11-11: the newest Oxy packages (core 7.48, services 14.19, Bloom 17.9.0 -> 17.21.0) measured 3,718,039 JS gzip bytes (+74,410 over main's 3,643,629, +2.0%), total and fonts within budget. Ceiling raised 3,660,000 -> 3,730,000 (about 12 KB jitter headroom). Bloom >=17.22 is pinned out: it statically bundles the avatar vector templates (~58 MB raw)."
 }
