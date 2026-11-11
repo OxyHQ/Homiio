@@ -1,7 +1,7 @@
 # Frontend conventions: layout shell, tokens and the primitives
 
 > Moved out of `AGENTS.md` unchanged. Bloom's own rules live in
-> `~/Oxy/Bloom/AGENTS.md`; this is what is true of Homiio's use of them.
+> [Bloom's app conventions](https://github.com/OxyHQ/Bloom/blob/main/docs/app-conventions.mdx); this is what is true of Homiio's use of them.
 
 ## Layout shell and design tokens (CRITICAL)
 

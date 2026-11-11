@@ -6,7 +6,7 @@ order: 10
 
 # Deployment
 
-The backend deploys to **AWS ECS Fargate** and the frontend web export deploys to a **Cloudflare Worker** with Static Assets. Both are driven by GitHub Actions on push to `main`. ECS task definitions, ALB routing, ECR and SSM secrets are owned by `~/Oxy/oxy-infra/terraform-uswest2/`.
+The backend deploys to **AWS ECS Fargate** and the frontend web export deploys to a **Cloudflare Worker** with Static Assets. Both are driven by GitHub Actions on push to `main`. ECS task definitions, ALB routing, ECR and SSM secrets are owned by the private oxy-infra repo (`terraform-uswest2/`).
 
 ## Backend (AWS ECS Fargate)
 
