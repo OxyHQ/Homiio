@@ -101,7 +101,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
-    "@oxy.so/ship": "2.0.0",
+    "@oxy.so/ship": "2.0.1",
     "@react-native/jest-preset": "^0.88.0",
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/react-native": "^13.3.3",
