@@ -12,6 +12,9 @@
 
 name: Publish OTA update
 
+# The export and publish are OxyHQ/oxy's shared .github/workflows/publish-ota-update.yml;
+# `workflow_ref` in the OIDC token still names THIS file, so keep its path.
+
 on:
   push:
     branches: [main]
@@ -24,9 +27,7 @@ on:
       - .github/workflows/publish-update.yml
   workflow_dispatch:
 
-permissions:
-  contents: read
-  id-token: write
+permissions: {}
 
 concurrency:
   group: oxy-updates-${{ github.ref }}
@@ -34,66 +35,12 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      APP_DIR: packages/frontend
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version-file: package.json
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22'
-          package-manager-cache: false
-
-      # The root postinstall builds @oxy.so/homiio-contracts and
-      # @homiio/shared-types, which the app imports from their dist.
-      - run: bun install --frozen-lockfile --minimum-release-age=0
-
-      # The update must be exported with the env the binary was built with: the
-      # eas.json `production` profile's `env` (following `extends`), exactly as
-      # OxyHQ/oxy's android-release.yml exports it for the native build.
-      - name: Build environment from eas.json
-        run: |
-          node - <<'EOF' >> "$GITHUB_ENV"
-          const { readFileSync } = require('node:fs');
-          const { join } = require('node:path');
-          const eas = JSON.parse(readFileSync(join(process.env.APP_DIR, 'eas.json'), 'utf8'));
-          const resolve = (name, seen = new Set()) => {
-            const profile = eas.build?.[name];
-            if (!profile) throw new Error(`eas.json has no build profile "${name}"`);
-            if (seen.has(name)) throw new Error(`eas.json profile "${name}" extends itself`);
-            seen.add(name);
-            const base = profile.extends ? resolve(profile.extends, seen) : {};
-            return { ...base, ...profile.env };
-          };
-          for (const [key, value] of Object.entries(resolve('production'))) {
-            if (!/^[A-Z_][A-Z0-9_]*$/.test(key) || /[\r\n]/.test(String(value))) {
-              throw new Error(`eas.json env ${key} cannot be exported`);
-            }
-            console.log(`${key}=${value}`);
-          }
-          console.log('NODE_ENV=production');
-          EOF
-
-      - name: Publish to channel production
-        working-directory: ${{ env.APP_DIR }}
-        env:
-          # Homiio's PUBLIC production client id, the one withOxyUpdates bakes into
-          # the binary's manifest URL (app.config.js). Not a secret.
-          OXY_SHIP_CLIENT_ID: oxy_dk_7d7b4924dcbfe16a245fb9c826b86d7bd43f0c5259c76ea1
-          OXY_API_URL: https://api.oxy.so
-          SHIP_MESSAGE: ${{ github.event.head_commit.message }}
-        run: |
-          # The commit's subject line only: Oxy Updates keeps a message of at
-          # most 500 characters, and a squash merge's body is routinely longer.
-          message="$(printf '%s\n' "$SHIP_MESSAGE" | head -n 1 | cut -c 1-500)"
-          bunx --no-install oxy-ship publish \
-            --channel production \
-            --platform all \
-            --git-commit "$GITHUB_SHA" \
-            --message "$message"
+    permissions:
+      contents: read
+      id-token: write
+    uses: OxyHQ/oxy/.github/workflows/publish-ota-update.yml@main
+    with:
+      app_dir: packages/frontend
+      # The application's PUBLIC client id (not a secret): the one in the manifest URL.
+      client_id: oxy_dk_7d7b4924dcbfe16a245fb9c826b86d7bd43f0c5259c76ea1
+      node_version: '22'

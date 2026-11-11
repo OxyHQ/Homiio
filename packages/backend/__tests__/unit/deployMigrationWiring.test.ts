@@ -171,8 +171,12 @@ describe('the deploy applies migrations', () => {
     expect(buildStep).toContain('WORKER_TARGET: ${{ steps.reviewed_worker.outputs.target }}');
     expect(buildStep).toContain('--target "$API_TARGET"');
     expect(buildStep).toContain('--target "$WORKER_TARGET"');
-    expect(workflow).toContain('reviewed-image.py guard --recipe homiio\n');
-    expect(workflow).toContain('reviewed-image.py guard --recipe homiio-worker\n');
+    expect(workflow).toMatch(
+      /OxyHQ\/oxy\/\.github\/actions\/reviewed-image@[^\n]*\n\s+with:\n\s+phase: guard\n\s+recipe: homiio\n/,
+    );
+    expect(workflow).toMatch(
+      /OxyHQ\/oxy\/\.github\/actions\/reviewed-image@[^\n]*\n\s+with:\n\s+phase: guard\n\s+recipe: homiio-worker\n/,
+    );
     expect(reviewedRecipes.find((recipe) => recipe.name === 'homiio')?.target).toBe('api');
     expect(reviewedRecipes.find((recipe) => recipe.name === 'homiio-worker')?.target).toBe(
       'worker',

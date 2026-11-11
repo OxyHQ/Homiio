@@ -227,12 +227,16 @@ jobs:
       # before it can merge.
       - name: Refuse unreviewed API image build inputs
         id: reviewed_api
-        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio
-
+        uses: OxyHQ/oxy/.github/actions/reviewed-image@main
+        with:
+          phase: guard
+          recipe: homiio
       - name: Refuse unreviewed listing worker image build inputs
         id: reviewed_worker
-        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio-worker
-
+        uses: OxyHQ/oxy/.github/actions/reviewed-image@main
+        with:
+          phase: guard
+          recipe: homiio-worker
       - name: Build and push API + listing worker (linux/arm64)
         id: build
         env:

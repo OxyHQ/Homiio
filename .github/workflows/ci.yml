@@ -532,13 +532,10 @@ jobs:
       # undeployable. In this job because it is the one that runs on every pull
       # request (no `if:`), inside `CI complete` and the deploy's `needs`. The
       # fixture tests run first so a green check means the gate can fail.
-      - name: Prove the reviewed-image gate can fail
-        run: python3 -B -m unittest discover -s .github/scripts -p test_reviewed_image.py
-      - name: Prove the base-image digest bump works on fixtures
-        run: python3 -B -m unittest discover -s .github/scripts -p test_bump_base_digests.py
       - name: Verify the production image's build inputs are reviewed
-        run: python3 -B .github/scripts/reviewed-image.py check
-
+        uses: OxyHQ/oxy/.github/actions/reviewed-image@main
+        with:
+          phase: check
   frontend-bundle:
     needs: changes
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true') }}
@@ -744,12 +741,16 @@ jobs:
       # changed them without a re-pin stops here as it would in the deploy.
       - name: Refuse unreviewed API image build inputs
         id: reviewed_api
-        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio
-
+        uses: OxyHQ/oxy/.github/actions/reviewed-image@main
+        with:
+          phase: guard
+          recipe: homiio
       - name: Refuse unreviewed listing worker image build inputs
         id: reviewed_worker
-        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio-worker
-
+        uses: OxyHQ/oxy/.github/actions/reviewed-image@main
+        with:
+          phase: guard
+          recipe: homiio-worker
       # The same pinned BuildKit as deploy-aws.yml (see the comment there).
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -890,12 +891,16 @@ jobs:
 
       - name: Refuse unreviewed API image build inputs
         id: reviewed_api
-        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio
-
+        uses: OxyHQ/oxy/.github/actions/reviewed-image@main
+        with:
+          phase: guard
+          recipe: homiio
       - name: Refuse unreviewed listing worker image build inputs
         id: reviewed_worker
-        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio-worker
-
+        uses: OxyHQ/oxy/.github/actions/reviewed-image@main
+        with:
+          phase: guard
+          recipe: homiio-worker
       # The same pinned BuildKit as deploy-aws.yml (see the comment there).
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
