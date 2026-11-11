@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { WEBSITE_API_URL } from '@/config';
 
 export interface TipArticle {
@@ -118,7 +119,7 @@ class TipsService {
   }
 
   async getTips(params?: TipsQueryParams): Promise<TipsListResult> {
-    const response = await fetch(this.buildListUrl(params));
+    const response = await fetchWithTimeout(this.buildListUrl(params));
     if (!response.ok) {
       throw new Error(`Failed to load tips (${response.status})`);
     }
@@ -136,7 +137,7 @@ class TipsService {
     const url = qs
       ? `${this.baseUrl}/${encodeURIComponent(slug)}?${qs}`
       : `${this.baseUrl}/${encodeURIComponent(slug)}`;
-    const response = await fetch(url);
+    const response = await fetchWithTimeout(url);
     if (!response.ok) {
       if (response.status === 404) {
         throw new Error('Article not found');

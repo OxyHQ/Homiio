@@ -9,6 +9,7 @@
  * Listing prices are never converted (see `components/MoneyText.tsx`); rates
  * only reach the currency picker in settings.
  */
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { useQuery } from '@tanstack/react-query';
 
 export type ExchangeRateTable = Readonly<Record<string, number>>;
@@ -173,7 +174,7 @@ const FRANKFURTER_LATEST_URL = 'https://api.frankfurter.app/latest?from=USD';
 const RATES_STALE_TIME_MS = 12 * 60 * 60 * 1000;
 
 async function fetchLiveRates(): Promise<ExchangeRateTable> {
-  const response = await fetch(FRANKFURTER_LATEST_URL);
+  const response = await fetchWithTimeout(FRANKFURTER_LATEST_URL);
   if (!response.ok) {
     throw new Error(`frankfurter.app responded with status ${response.status}`);
   }
