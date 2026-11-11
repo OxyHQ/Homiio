@@ -10,17 +10,13 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
+# OxyHQ/oxy .github/workflows/automerge-first-party.yml.
 
 jobs:
   automerge:
     if: github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/bun/oxy-platform-')
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - run: gh pr merge --auto --merge "$PR_URL"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: OxyHQ/oxy/.github/workflows/automerge-first-party.yml@main
