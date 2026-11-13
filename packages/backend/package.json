@@ -32,7 +32,7 @@
     "@homiio/listing-providers": "workspace:*",
     "@homiio/shared-types": "workspace:*",
     "@oxy.so/contracts": "7.1.0",
-    "@oxy.so/core": "7.49.0",
+    "@oxy.so/core": "7.50.0",
     "@oxy.so/db": "^1.5.0",
     "@oxy.so/utils": "^1.5.2",
     "@peable.to/sdk": "3.0.0",
