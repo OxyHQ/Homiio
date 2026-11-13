@@ -20,13 +20,11 @@
  */
 
 import {
-  ALIA_CHARACTER_RUNTIME_URL,
   type AliaAsk,
   AliaAskProvider,
   AliaRuntimeProvider,
   type AliaSuggestion,
 } from '@alia.onl/sdk';
-import { AgentAvatarProvider } from '@oxy.so/bloom/agent-avatar';
 import type React from 'react';
 import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -67,10 +65,7 @@ export function AskAgentProvider({ children }: { children: React.ReactNode }) {
         onShare={chat.onShare}
         welcomeSuggestions={welcomeSuggestions}
       >
-        {/* Sindi's face outside the sheet (`SindiAvatar`) draws with the sheet's runtime. */}
-        <AgentAvatarProvider runtimeUrl={ALIA_CHARACTER_RUNTIME_URL}>
-          {children}
-        </AgentAvatarProvider>
+        {children}
       </AliaAskProvider>
     </AliaRuntimeProvider>
   );

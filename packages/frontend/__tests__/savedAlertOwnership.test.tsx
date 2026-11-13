@@ -251,7 +251,8 @@ it.each([false, true])(
     );
     const persister = createAccountQueryPersistence(
       client,
-      memoryOnly ? { memoryOnlyRoots: ['savedSearches'] } : undefined,
+      // The app's own config (`app/_layout.tsx`): `roots` is required.
+      memoryOnly ? { roots: [], memoryOnlyRoots: ['savedSearches'] } : undefined,
     );
     const writes: string[] = [];
     persister.setStorage({
