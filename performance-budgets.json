@@ -1,8 +1,10 @@
 {
   "frontendWeb": {
     "maxTotalBytes": 24300000,
-    "maxJavaScriptGzipBytes": 3730000,
-    "maxFontBytes": 2050000
+    "maxJavaScriptGzipBytes": 3935000,
+    "maxFontBytes": 2050000,
+    "maxAvatarCatalogBytes": 30500000,
+    "maxAvatarCatalogGzipBytes": 7080000
   },
-  "note": "2026-11-11: the newest Oxy packages (core 7.48, services 14.19, Bloom 17.9.0 -> 17.21.0) measured 3,718,039 JS gzip bytes (+74,410 over main's 3,643,629, +2.0%), total and fonts within budget. Ceiling raised 3,660,000 -> 3,730,000 (about 12 KB jitter headroom). Bloom >=17.22 is pinned out: it statically bundles the avatar vector templates (~58 MB raw)."
+  "note": "2026-11-11: the newest Oxy packages (core 7.48, services 14.19, Bloom 17.9.0 -> 17.21.0) measured 3,718,039 JS gzip bytes (+74,410 over main's 3,643,629, +2.0%), total and fonts within budget. Ceiling raised 3,660,000 -> 3,730,000 (about 12 KB jitter headroom). Bloom >=17.22 is pinned out: it statically bundles the avatar vector templates (~58 MB raw). 2026-11-13, Bloom 17.21.0 -> 21.0.0 (with contracts 7.0.0, core 7.49.0, services 14.21.0): Bloom's agent-avatar catalogue is 636 on-demand chunks, one packed vector payload each, fetched only when an agent's avatar is drawn and never by the first page (the gate fails if one is). It is measured on its own line (30,484,489 B, 7,062,203 B gzip) and the other budgets measure the rest of the export. The rest measured 23,822,808 B total (within budget) and 3,919,193 B JS gzip (+200,881 over main's 3,718,312); the first page's three scripts grew +113,665 B gzip. A per-module attribution from source maps over every non-catalogue chunk puts all of it in Bloom 17.21 -> 21 (+207,541 B, summed per-module gzip; services +992 B, everything else under 100 B). Ceiling raised 3,730,000 -> 3,935,000."
 }
