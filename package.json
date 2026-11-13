@@ -23,7 +23,7 @@
     "doctor:oxy": "oxy-doctor --ci",
     "i18n:check": "oxy-doctor-i18n --ci",
     "check:bundle-imports": "bun ./scripts/check-frontend-bundle-imports.mjs && bun ./scripts/test-check-frontend-bundle-imports.mjs",
-    "check:web-bundle-budget": "bun ./scripts/check-web-export-budget.mjs",
+    "check:web-bundle-budget": "oxy-doctor-web-budget",
     "check:lockfile": "bun ./scripts/check-lockfile-sync.mjs",
     "validate:agents-md": "bun ./scripts/check-agents-md-size.mjs && bun ./scripts/test-check-agents-md-size.mjs",
     "check:docs": "bun ./scripts/check-docs.mjs",
@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@oxy.so/doctor": "1.8.0",
+    "@oxy.so/doctor": "1.9.0",
     "@types/node": "^26.6.6",
     "ajv": "^8.20.0",
     "ajv-keywords": "^5.1.0",
