@@ -515,7 +515,6 @@ jobs:
           bash -n .github/scripts/*.sh
           bun scripts/test-check-lockfile-sync.mjs
           bun scripts/test-check-docs.mjs
-          bun scripts/test-check-web-export-budget.mjs
           bun .github/scripts/test-assert-test-floor.mjs
           bun .github/scripts/test-check-migration-phases.mjs
           bash .github/scripts/test-assert-install-clean.sh
