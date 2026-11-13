@@ -17,7 +17,7 @@
  */
 
 import { act, renderHook } from '@testing-library/react-native';
-import { type AliaHostAction, useConversationStore } from '@alia.onl/sdk/runtime';
+import { type GemieHostAction, useConversationStore } from '@gemies/sdk/runtime';
 
 import { SINDI_HOST_APP } from '@/components/sindi/sindiHostTools';
 import { DESTINATION_ROUTES, useSindiActions } from '@/hooks/useSindiActions';
@@ -36,7 +36,7 @@ jest.mock('expo-router', () => ({
 }));
 
 let calls = 0;
-const call = (name: string, input: Record<string, unknown>): AliaHostAction => {
+const call = (name: string, input: Record<string, unknown>): GemieHostAction => {
   calls += 1;
   return { toolCallId: `call_${calls}`, app: SINDI_HOST_APP, name, input };
 };
@@ -44,7 +44,7 @@ const toExplore = () => call('navigate', { destination: 'explore' });
 
 function executor() {
   const hook = renderHook(() => useSindiActions(mockCloseSheet));
-  const run = async (action: AliaHostAction) => {
+  const run = async (action: GemieHostAction) => {
     let outcome: string | undefined;
     await act(async () => {
       outcome = (await hook.result.current.hostTools.execute(action)).outcome;

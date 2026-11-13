@@ -54,12 +54,12 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import {
-  type AliaHostAction,
-  type AliaHostOutcome,
-  type AliaHostTools,
-  type AliaRuntimeHost,
+  type GemieHostAction,
+  type GemieHostOutcome,
+  type GemieHostTools,
+  type GemieRuntimeHost,
   useConversationStore,
-} from '@alia.onl/sdk/runtime';
+} from '@gemies/sdk/runtime';
 import type { SindiAction, SindiActionOutcome } from '@homiio/shared-types';
 
 import {
@@ -86,14 +86,14 @@ export const DESTINATION_ROUTES = {
 
 export interface UseSindiActions {
   /** What the surface declares to Alia: the tools, and the executor behind them. */
-  readonly hostTools: AliaHostTools;
+  readonly hostTools: GemieHostTools;
   /** The runtime callbacks the executor needs: the moment a turn is sent, and the moment it ends. */
-  readonly runtime: AliaRuntimeHost;
+  readonly runtime: GemieRuntimeHost;
 }
 
 /**
  * The executor of the sheet. `closeSheet` is the sheet's own dismiss
- * (`useAskAgent().dismiss`, through the provider's ref): it runs once the turn
+ * (`useAskGemie().dismiss`, through the provider's ref): it runs once the turn
  * that acted has been written.
  */
 export function useSindiActions(closeSheet: () => void): UseSindiActions {
@@ -105,7 +105,7 @@ export function useSindiActions(closeSheet: () => void): UseSindiActions {
   const deferred = useRef<(() => void)[]>([]);
 
   const execute = useCallback(
-    async (call: AliaHostAction): Promise<AliaHostOutcome> => {
+    async (call: GemieHostAction): Promise<GemieHostOutcome> => {
       const action = actionOfHostCall(call);
       if (!action) return hostOutcomeOf('rejected');
 

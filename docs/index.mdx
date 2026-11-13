@@ -6,7 +6,7 @@ order: 0
 
 # Homiio
 
-Homiio is the housing trust and transparency layer: find a place, research its history, learn what it really costs, understand what living there was like, and manage or defend the tenancy. The frontend is a single Expo / React Native codebase targeting iOS, Android and Web. The backend is a Node + Express API on PostgreSQL with PostGIS, plus Stripe for subscriptions, Oxy Files for photos and private documents ([Oxy Files](./oxy-files)), and **Sindi**, the housing agent on Alia that the app opens through `@alia.onl/sdk`.
+Homiio is the housing trust and transparency layer: find a place, research its history, learn what it really costs, understand what living there was like, and manage or defend the tenancy. The frontend is a single Expo / React Native codebase targeting iOS, Android and Web. The backend is a Node + Express API on PostgreSQL with PostGIS, plus Stripe for subscriptions, Oxy Files for photos and private documents ([Oxy Files](./oxy-files)), and **Sindi**, the housing agent on Alia that the app opens through `@gemies/sdk`.
 
 <Badge variant="success">App</Badge> <Badge>iOS / Android / Web</Badge>
 
@@ -46,7 +46,7 @@ Inside the repo:
    └──────────────────────┘                  └──────────────────────┘
        │            │                             ▲          │
        ▼            ▼                             │          ▼
- @oxy.so/services  @alia.onl/sdk ──▶ Alia ── capability   Stripe + Oxy Files
+ @oxy.so/services  @gemies/sdk ──▶ Alia ── capability   Stripe + Oxy Files
  (auth, account    (Sindi, Ask Alia;       tickets (MCP)  + Oxy API (identity)
   switcher)         person's session)                        │
                                                              ▼
@@ -152,9 +152,9 @@ The frontend's `ProfileProvider` loads profiles immediately after `useOxy()` rep
 
 ### Sindi and Alia
 
-Alia is Homiio's main AI ("Ask Alia"); Sindi, the housing agent, is an ordinary public Alia agent owned by the Homiio project account, and "Ask Sindi" opens the same dialog with Sindi's character (Alia ADR 0020). **Sindi and Alia are reached from the frontend through `@alia.onl/sdk` under the person's Oxy session; Homiio's backend never calls Alia.** The person present pays for the turn with their own Alia credits.
+Alia is Homiio's main AI ("Ask Alia"); Sindi, the housing agent, is an ordinary public Alia agent owned by the Homiio project account, and "Ask Sindi" opens the same dialog with Sindi's character (Alia ADR 0020). **Sindi and Alia are reached from the frontend through `@gemies/sdk` under the person's Oxy session; Homiio's backend never calls Alia.** The person present pays for the turn with their own Alia credits.
 
-The app mounts the SDK's one sheet (`AliaAskProvider`, `context/AskAgentProvider.tsx`) and nothing else: Sindi has no Homiio-made page, panel or settings. It declares **host tools** — the five things Sindi may do to the screen (`apply_search`, `show_saved`, `open_listing`, `set_results_view`, `navigate`), executed by `hooks/useSindiActions.ts` — sends what the screen shows as the turn's `clientContext`, and draws the catalogue's results with its own **renderers** (`PropertyCard`, saved homes, "which Barcelona?"). Conversations, titles, share links, files and voice are Alia's.
+The app mounts the SDK's one sheet (`GemieAskProvider`, `context/AskAgentProvider.tsx`) and nothing else: Sindi has no Homiio-made page, panel or settings. It declares **host tools** — the five things Sindi may do to the screen (`apply_search`, `show_saved`, `open_listing`, `set_results_view`, `navigate`), executed by `hooks/useSindiActions.ts` — sends what the screen shows as the turn's `clientContext`, and draws the catalogue's results with its own **renderers** (`PropertyCard`, saved homes, "which Barcelona?"). Conversations, titles, share links, files and voice are Alia's.
 
 What Sindi can do to the person's Homiio data is the **capability catalogue** (`packages/backend/capabilities/`): 167 tools Alia calls with Oxy capability tickets, bounded by Sindi's published ceiling (Oxy ADR 0042), and the same catalogue serves Homiio's public MCP. Homiio+ unlocks documents through the `sindi.files` feature gate. Homiio never calls Kaana or an inference provider, and holds no provider key.
 

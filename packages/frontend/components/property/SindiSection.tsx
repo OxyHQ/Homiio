@@ -8,7 +8,7 @@
  *  - folds in the verification trust signal when the listing is verified
  *    (Sindi reviewed it for authenticity), and
  *  - offers quick prompt chips + ONE primary CTA, all of which ask Sindi in
- *    the SDK's one sheet (`useAskAgent().ask('sindi', turn)`), the turn naming
+ *    the SDK's one sheet (`useAskGemie().ask('sindi', turn)`), the turn naming
  *    this listing so Sindi reads it with `getListing`.
  *
  * This deliberately replaces the prior pair of stacked gold banners
@@ -24,7 +24,7 @@
  */
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useAskAgent } from '@alia.onl/sdk';
+import { useAskGemie } from '@gemies/sdk/ask';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
@@ -53,7 +53,7 @@ const PROMPT_KEYS = [
 
 export function SindiSection({ property }: SindiSectionProps) {
   const { t } = useTranslation();
-  const { ask } = useAskAgent();
+  const { ask } = useAskGemie();
   const { colors } = useTheme();
 
   // The listing travels IN the turn, by id, so the question reads "this home"

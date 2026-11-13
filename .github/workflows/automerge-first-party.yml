@@ -1,6 +1,6 @@
 name: Auto-merge first-party bumps
 
-# The Oxy SDKs (Bloom, services, core, contracts, Alia) should always be on their
+# The Oxy SDKs (Bloom, services, core, contracts) and the Gemies SDK should always be on their
 # latest release. Dependabot opens the `oxy-platform` group PR weekly; this turns on
 # auto-merge for it, and GitHub merges once the required check
 # (`CI complete`) is green. A red check

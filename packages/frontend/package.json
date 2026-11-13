@@ -23,10 +23,10 @@
     "clean": "rm -rf dist .expo"
   },
   "dependencies": {
-    "@alia.onl/sdk": "22.10.1",
     "@bitdrift/react-native": "^0.15.0",
     "@expo/app-integrity": "~58.0.2",
     "@expo/vector-icons": "^15.1.1",
+    "@gemies/sdk": "3.0.0",
     "@goway.to/maps": "^0.1.2",
     "@goway.to/sdk": "^0.7.1",
     "@homiio/shared-types": "workspace:*",

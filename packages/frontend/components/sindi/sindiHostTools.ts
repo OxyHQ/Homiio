@@ -10,7 +10,7 @@
  * back.
  */
 
-import type { AliaHostAction, AliaHostOutcome, AliaHostToolDefinition } from '@alia.onl/sdk';
+import type { GemieHostAction, GemieHostOutcome, GemieHostToolDefinition } from '@gemies/sdk';
 import { parseSindiHostCall, SINDI_HOST_TOOLS } from '@homiio/shared-types/sindiAction';
 import type { SindiAction, SindiActionOutcome } from '@homiio/shared-types';
 
@@ -18,12 +18,12 @@ import type { SindiAction, SindiActionOutcome } from '@homiio/shared-types';
 export const SINDI_HOST_APP = 'homiio';
 
 /** What Homiio declares with every turn. */
-export const SINDI_HOST_TOOL_DEFINITIONS: readonly AliaHostToolDefinition[] = SINDI_HOST_TOOLS.map(
+export const SINDI_HOST_TOOL_DEFINITIONS: readonly GemieHostToolDefinition[] = SINDI_HOST_TOOLS.map(
   ({ name, description, inputSchema }) => ({ name, description, inputSchema: { ...inputSchema } }),
 );
 
 /** The action an `alia.host_action` asks for, or `null` when it is not Homiio's or not in the contract. */
-export function actionOfHostCall(call: AliaHostAction): SindiAction | null {
+export function actionOfHostCall(call: GemieHostAction): SindiAction | null {
   if (call.app !== SINDI_HOST_APP) return null;
   return parseSindiHostCall(call.name, call.input);
 }
@@ -43,6 +43,6 @@ const OUTCOME_DETAIL: Readonly<Record<SindiActionOutcome, string>> = {
 };
 
 /** The outcome as the SDK sends it with the next request. */
-export function hostOutcomeOf(outcome: SindiActionOutcome): AliaHostOutcome {
+export function hostOutcomeOf(outcome: SindiActionOutcome): GemieHostOutcome {
   return { outcome, detail: OUTCOME_DETAIL[outcome] };
 }

@@ -12,7 +12,7 @@ export const SINDI_AGENT_ID = '01a0646a-078f-7514-9800-9f43ceed7df8';
 export const SINDI_AGENT = { id: SINDI_AGENT_ID } as const;
 
 /**
- * The agents `useAskAgent().ask(key)` opens, in the one sheet: `alia` (no id —
+ * The agents `useAskGemie().ask(key)` opens, in the one sheet: `alia` (no id —
  * Homiio's main AI) and `sindi`.
  */
 export const HOMIIO_AGENTS = { alia: {}, sindi: SINDI_AGENT } as const;

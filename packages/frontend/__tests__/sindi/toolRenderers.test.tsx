@@ -10,7 +10,7 @@
  */
 
 import { render } from '@testing-library/react-native';
-import type { AliaToolResult } from '@alia.onl/sdk';
+import type { GemieToolResult } from '@gemies/sdk';
 import { BloomThemeProvider } from '@oxy.so/bloom/theme';
 
 import {
@@ -45,7 +45,7 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-const result = (tool: string, output: unknown): AliaToolResult => ({
+const result = (tool: string, output: unknown): GemieToolResult => ({
   app: 'homiio',
   tool,
   toolCallId: 'call_1',
