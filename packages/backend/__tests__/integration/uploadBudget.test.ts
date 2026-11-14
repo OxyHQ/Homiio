@@ -219,7 +219,6 @@ function appAs(oxyUserId: string): Express {
     const withUser = req as unknown as { user: { id: string }; userId: string };
     withUser.user = { id: oxyUserId };
     withUser.userId = oxyUserId;
-    req.accessToken = `fixture-session-${oxyUserId}`;
     next();
   });
   app.use('/applications', createApplicationRoutes());

@@ -22,7 +22,7 @@
  */
 
 import type { CatalogTool, InvocationPrincipal } from '@oxy.so/contracts';
-import { type ExternalMcpDocumentProof, readCapabilityAuthorization } from '@oxy.so/core/server';
+import type { ExternalMcpDocumentProof } from '@oxy.so/core/server';
 import { extractBearerToken, type InvocationContext, type InvocationHandlers } from '@oxy.so/mcp';
 
 import { AppError } from '../middlewares/errorHandler';
@@ -71,19 +71,28 @@ export function authorizationOf(context: InvocationContext): string | undefined 
 }
 
 /**
- * The proof Oxy Files needs to store a document in the person's account, in the
- * credential each lane really carries: the internal lane's
- * `Authorization: Capability <ticket>` (the ticket is the requester proof), the
- * OAuth lane's `Bearer <connection token>` for the document tools Oxy accepts it
- * on. The transport verified both before the handler ran.
+ * How a tool stores a document in the person's Oxy files. On the internal lane
+ * Homiio acts for the ticket's effective account, and for the person the ticket
+ * names when they operate it, on its own declared authority (oxy ADR 0066): the
+ * ticket is verified by the transport and never forwarded. On the OAuth lane the
+ * connection's `Bearer <token>` goes with the document tools Oxy accepts it on,
+ * because that lane is a third party's grant.
  */
 function fileRequesterOf(
   context: InvocationContext,
   tool: CatalogTool,
 ): DocumentRequester | undefined {
-  if (context.principal.kind === 'capability') {
-    const ticket = readCapabilityAuthorization(authorizationOf(context));
-    return ticket ? { kind: 'own', proof: { capabilityTicket: ticket } } : undefined;
+  const { principal } = context;
+  if (principal.kind === 'capability') {
+    const accountId = principal.claims.resource.effectiveAccountId;
+    const requesterAccountId = principal.claims.requesterAccountId;
+    return {
+      kind: 'own',
+      actingFor:
+        requesterAccountId && requesterAccountId !== accountId
+          ? { accountId, requesterAccountId }
+          : { accountId },
+    };
   }
   const name = tool.name;
   if (!isExternalDocumentTool(name)) return undefined;

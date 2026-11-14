@@ -81,7 +81,6 @@ function authed(oxyUserId: string): Express {
     const withUser = req as unknown as { user: { id: string }; userId: string };
     withUser.user = { id: oxyUserId };
     withUser.userId = oxyUserId;
-    req.accessToken = `fixture-session-${oxyUserId}`;
     next();
   });
   app.post('/leases', (req, res, next) => leaseController.createLease(req, res, next));
@@ -108,7 +107,7 @@ function publicImages(): Express {
 async function storeDocument(leaseId: string, bytes: Buffer): Promise<string> {
   const stored = await storePrivateFile(
     {
-      requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+      requester: { kind: 'own', actingFor: { accountId: LANDLORD } },
       ownerOxyUserId: LANDLORD,
       kind: 'lease',
       entityId: leaseId,

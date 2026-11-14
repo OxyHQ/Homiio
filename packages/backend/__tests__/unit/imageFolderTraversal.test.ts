@@ -54,7 +54,7 @@ describe('private documents', () => {
     ]) {
       const stored = await storePrivateFile(
         {
-          requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+          requester: { kind: 'own', actingFor: { accountId: 'user-1' } },
           ownerOxyUserId: 'user-1',
           kind: 'maintenance_request',
           entityId: hostile,
@@ -78,7 +78,7 @@ describe('private documents', () => {
   it('record the digest of what was stored', async () => {
     const stored = await storePrivateFile(
       {
-        requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+        requester: { kind: 'own', actingFor: { accountId: 'user-1' } },
         ownerOxyUserId: 'user-1',
         kind: 'tenant_application',
       },
@@ -95,7 +95,7 @@ describe('private documents', () => {
 
     const failure = await storePrivateFile(
       {
-        requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+        requester: { kind: 'own', actingFor: { accountId: 'user-1' } },
         ownerOxyUserId: 'user-1',
         kind: 'lease',
         entityId: '0192f4a2-aaaa-7bbb-8ccc-1234567890ab',

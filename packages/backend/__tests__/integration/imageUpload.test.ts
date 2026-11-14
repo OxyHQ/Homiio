@@ -44,7 +44,6 @@ function buildApp(oxyUserId: string): Express {
     const authed = req as unknown as { user: { id: string }; userId: string };
     authed.user = { id: oxyUserId };
     authed.userId = oxyUserId;
-    req.accessToken = `fixture-session-${oxyUserId}`;
     next();
   });
   app.post('/images/upload', upload.single('image'), imageController.uploadImage);
@@ -84,9 +83,7 @@ async function uploadAs(
       contentType: 'image/jpeg',
     });
   expect(res.status).toBe(200);
-  expect(fakeOxyFiles.callsOf('withRequester')).toContainEqual([
-    { requesterToken: `fixture-session-${oxyUserId}`, accountId: oxyUserId },
-  ]);
+  expect(fakeOxyFiles.callsOf('actingFor')).toContainEqual([{ accountId: oxyUserId }]);
   return { fileId: res.body.data.fileId as string, body: res.body.data as Record<string, unknown> };
 }
 

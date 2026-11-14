@@ -58,7 +58,6 @@ function authed(oxyUserId: string): Express {
     const withUser = req as unknown as { user: { id: string }; userId: string };
     withUser.user = { id: oxyUserId };
     withUser.userId = oxyUserId;
-    req.accessToken = `fixture-session-${oxyUserId}`;
     next();
   });
   app.get('/applications/:id/documents/:documentId', (req, res, next) =>
@@ -83,7 +82,7 @@ function publicImages(): Express {
 async function storeDocument(bytes: Buffer): Promise<string> {
   const stored = await storePrivateFile(
     {
-      requester: { kind: 'own', proof: { requesterToken: 'fixture-session' } },
+      requester: { kind: 'own', actingFor: { accountId: APPLICANT } },
       ownerOxyUserId: APPLICANT,
       kind: 'tenant_application',
     },

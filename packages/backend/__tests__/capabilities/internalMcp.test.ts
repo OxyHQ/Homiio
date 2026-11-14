@@ -360,7 +360,7 @@ describe('/_oxy/mcp stores an agent document upload', () => {
       })
       .returning({ id: leases.id });
     const ticket = ticketFor(tenant, { tool: 'uploadLeaseDocument' });
-    const before = fakeOxyFiles.callsOf('withRequester').length;
+    const before = fakeOxyFiles.callsOf('actingFor').length;
 
     const res = await callTool(
       buildApp(),
@@ -379,9 +379,7 @@ describe('/_oxy/mcp stores an agent document upload', () => {
     // lane, and every agent upload answered 403 REQUESTER_REQUIRED.
     expect(res.status).toBe(200);
     expect(res.body.result.isError).toBeFalsy();
-    expect(fakeOxyFiles.callsOf('withRequester').slice(before)).toEqual([
-      [{ capabilityTicket: ticket, accountId: tenant }],
-    ]);
+    expect(fakeOxyFiles.callsOf('actingFor').slice(before)).toEqual([[{ accountId: tenant }]]);
     expect(
       await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, lease.id)),
     ).toHaveLength(1);

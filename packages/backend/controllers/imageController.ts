@@ -38,6 +38,7 @@ import { AppError, logUnexpectedError } from '../middlewares/errorHandler';
 import { fileIdFromOxyKey, OXY_KEY_PREFIX, oxyImageUrls } from '../services/files/imageUrls';
 import { resolveLegacyImage } from '../services/files/legacyImages';
 import { type StoredPublicImage, uploadAccountImage } from '../services/files/publicImages';
+import { sessionActingFor } from '../services/files/requester';
 import { OxyApiError } from '@oxy.so/core';
 
 // Minimal shape for an uploaded file to avoid relying on Express.Multer types
@@ -130,7 +131,7 @@ export class ImageController {
         return;
       }
       const stored = await uploadAccountImage(oxyUserId, {
-        requester: req.accessToken ? { requesterToken: req.accessToken } : undefined,
+        actingFor: sessionActingFor(req),
         buffer: req.file.buffer,
         originalName: req.file.originalname,
       });
@@ -180,7 +181,7 @@ export class ImageController {
       const uploaded = [];
       for (const file of files) {
         const stored = await uploadAccountImage(oxyUserId, {
-          requester: req.accessToken ? { requesterToken: req.accessToken } : undefined,
+          actingFor: sessionActingFor(req),
           buffer: file.buffer,
           originalName: file.originalname,
         });

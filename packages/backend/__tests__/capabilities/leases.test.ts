@@ -267,7 +267,7 @@ describe('documents', () => {
   });
 });
 
-test('forwards an own execution ticket to Files without substituting the account owner', async () => {
+test('acts for the effective account of the ticket in Files and forwards no ticket', async () => {
   const leaseId = await seedLease();
   const result = await callTool(
     'uploadLeaseDocument',
@@ -281,7 +281,5 @@ test('forwards an own execution ticket to Files without substituting the account
     { lane: 'capability' },
   );
   expect(result.isError).toBe(false);
-  expect(fakeOxyFiles.callsOf('withRequester')).toContainEqual([
-    { capabilityTicket: `fixture-capability-${TENANT}`, accountId: TENANT },
-  ]);
+  expect(fakeOxyFiles.callsOf('actingFor')).toContainEqual([{ accountId: TENANT }]);
 });
