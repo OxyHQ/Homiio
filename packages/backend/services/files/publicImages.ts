@@ -1,4 +1,4 @@
-import type { RequesterProof } from '@oxy.so/core/server';
+import type { ActingFor } from '@oxy.so/core/server';
 /**
  * Public photos in Oxy Files (ADR 0043) — every way one enters Homiio.
  *
@@ -69,12 +69,16 @@ function formatOfMime(mime: string): string {
  *
  * The SHA-256 Oxy reports is compared with the one computed here — the bytes
  * Homiio meant to store and the bytes Oxy says it stored must be the same.
+ *
+ * `actingFor` is the signed-in account (and the person operating it): Homiio
+ * stores it there on its own declared authority (oxy ADR 0066), never on an
+ * owner id alone.
  */
 export async function uploadAccountImage(
   ownerOxyUserId: string,
-  input: { buffer: Buffer; originalName?: string; requester?: RequesterProof },
+  input: { buffer: Buffer; originalName?: string; actingFor?: ActingFor },
 ): Promise<StoredPublicImage> {
-  if (!input.requester)
+  if (input.actingFor?.accountId !== ownerOxyUserId)
     throw new AppError('The upload requires its original requester', 403, 'REQUESTER_REQUIRED');
   const source = sharp(input.buffer, SHARP_DECODE_OPTIONS);
   const metadata = await source.metadata();
@@ -85,7 +89,7 @@ export async function uploadAccountImage(
   const sha256 = createHash('sha256').update(stripped).digest('hex');
 
   const file = await oxyFiles()
-    .withRequester({ ...input.requester, accountId: ownerOxyUserId })
+    .actingFor(input.actingFor)
     .uploadUserMedia(ownerOxyUserId, stripped, 'image/jpeg', {
       ...(input.originalName ? { originalName: input.originalName } : {}),
       timeout: 120_000,

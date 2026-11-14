@@ -10,7 +10,7 @@ import type { ServerAssetsApi } from '@oxy.so/core/server';
 /** What Homiio calls on Oxy Files; see `oxyFilesClient.ts`. */
 export type OxyFilesApi = Pick<
   ServerAssetsApi,
-  | 'withRequester'
+  | 'actingFor'
   | 'withMcpDocumentRequester'
   | 'uploadAppFile'
   | 'importAppFile'

@@ -35,6 +35,7 @@ Full rules and reasons: [docs/agent-rules.md](docs/agent-rules.md).
 - Public vs authenticated is decided by which router mounts a handler; a public handler never reads `req.user` for authorization.
 - Auth is owned by the Oxy linked client (`bindApiToOxy`); no local token providers, interceptors or manual `Authorization` headers.
 - Every photo and document is an Oxy file; Homiio stores no bytes and has no bucket.
+- First-party never asks people for permissions: this service acts for a person with `actingFor` on what oxy's first-party registry declares (oxy ADR 0066); permissions, scopes and consent are only for third parties.
 - A table whose rows expire needs an entry in `EXPIRY_SWEEP_TARGETS` (`db/expiry.ts`); otherwise it grows forever silently.
 - Notifications are written only through `services/notificationDispatchService.ts` (`createForUser`).
 - `/explore` is the discovery surface; `/search` is a redirect only.

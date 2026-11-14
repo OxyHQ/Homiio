@@ -235,14 +235,9 @@ export class FakeOxyFiles {
   /** The `OxyFilesApi` the code under test receives. */
   api(): OxyFilesApi {
     const api = {
-      withRequester: (proof: {
-        accountId?: string;
-        requesterToken?: string;
-        capabilityTicket?: string;
-      }) => {
-        this.calls.push({ method: 'withRequester', args: [proof] });
-        if (!proof.requesterToken && !proof.capabilityTicket)
-          throw oxyError(403, 'REQUESTER_REQUIRED');
+      actingFor: (actingFor: { accountId: string; requesterAccountId?: string }) => {
+        this.calls.push({ method: 'actingFor', args: [actingFor] });
+        if (!actingFor.accountId) throw new Error('An exact account id is required');
         return api;
       },
       withMcpDocumentRequester: (proof: {
