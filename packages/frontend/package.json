@@ -33,7 +33,7 @@
     "@maplibre/maplibre-react-native": "^11.4.0",
     "@oxy.so/app-preset": "6.6.0",
     "@oxy.so/bloom": "21.4.0",
-    "@oxy.so/core": "7.50.0",
+    "@oxy.so/core": "7.51.0",
     "@oxy.so/expo-splash": "^1.1.0",
     "@oxy.so/homiio-contracts": "workspace:*",
     "@oxy.so/services": "14.21.0",
