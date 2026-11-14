@@ -1,6 +1,5 @@
 // Load environment variables first
 import 'dotenv/config';
-import { startPlatformActivity } from './services/platformActivity';
 
 import express from 'express';
 import type { Request, Response } from 'express';
@@ -22,6 +21,7 @@ import {
   createOxyRateLimit,
   createOxySecurityHeaders,
   oxyTrustProxy,
+  startEcosystemTraffic,
   type OxyAuthRefusal,
 } from '@oxy.so/core/server';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
@@ -39,7 +39,7 @@ interface RawBodyRequest extends Request {
   rawBody?: Buffer;
 }
 
-import { oxyService as oxy } from './services/oxy';
+import { oxyService as oxy, workloadCredentials } from './services/oxy';
 
 const healthService = new HealthService();
 
@@ -107,7 +107,11 @@ async function initializeDatabase() {
 
 // Express setup
 let activityReady = false;
-const activity = startPlatformActivity(() => activityReady);
+const activity = startEcosystemTraffic({
+  service: 'homiio',
+  ready: () => activityReady,
+  workloadCredentials,
+});
 const app = express();
 
 // Which forwarding hops to believe, before anything reads `req.ip`: the socket
@@ -118,7 +122,7 @@ const app = express();
 // believed. Every limiter key (`createOxyRateLimit`) and the GeoIP
 // lookup (`services/geoip/clientIp.ts`) read `req.ip` and nothing else.
 app.set('trust proxy', oxyTrustProxy);
-if (activity) app.use(activity.observeHttp);
+app.use(activity.observeHttp);
 
 /**
  * The capability catalogue's two MCP lanes — `/_oxy/mcp` (Alia, capability
@@ -332,7 +336,7 @@ async function startServer() {
         fileReferenceSyncLoop.stop(),
         stopLegacyReadCounter(),
       ]);
-      await activity?.stop();
+      await activity.stop();
       clearTimeout(timeout);
       process.exit(0);
     };

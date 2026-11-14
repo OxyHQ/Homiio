@@ -13,7 +13,8 @@
  */
 
 import 'dotenv/config';
-import { startPlatformActivity } from './services/platformActivity';
+import { startEcosystemTraffic } from '@oxy.so/core/server';
+import { workloadCredentials } from './services/oxy';
 
 import { Queue, Worker, UnrecoverableError, type Job, type Queue as BullQueue } from 'bullmq';
 import {
@@ -808,7 +809,11 @@ async function startBullMq(): Promise<() => Promise<void>> {
 
 async function main(): Promise<void> {
   let activityReady = false;
-  const activity = startPlatformActivity(() => activityReady, 'homiio-worker');
+  const activity = startEcosystemTraffic({
+    service: 'homiio-worker',
+    ready: () => activityReady,
+    workloadCredentials,
+  });
   // The ingest path resolves geo and addresses through Postgres, so the worker
   // needs a pool for the same reason the API does — see `server.ts`.
   await connectPostgres();
@@ -840,7 +845,7 @@ async function main(): Promise<void> {
     logger.info('Inline pass complete; no Redis configured, exiting');
     stopProxyChecks();
     activityReady = false;
-    await activity?.stop();
+    await activity.stop();
     await runtimeHandle.shutdown();
     await closePostgres();
     return;
@@ -855,7 +860,7 @@ async function main(): Promise<void> {
     stopProxyChecks();
     activityReady = false;
     if (closer) await closer();
-    await activity?.stop();
+    await activity.stop();
     await runtimeHandle.shutdown();
     await closePostgres();
     process.exit(0);
