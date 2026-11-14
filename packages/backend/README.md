@@ -105,7 +105,7 @@ Never spread `req.body` into a write. Owner ids come from the session and lifecy
 
 Copy `.env.example` → `.env`. Core vars: `PORT`, `DATABASE_URL`, Oxy auth config, optional `REDIS_URL` (BullMQ worker), provider feature flags (`PROVIDER_*_ENABLED`), listing fetch tiers (`LISTING_BROWSER_ENABLED`, `LISTING_MANAGED_FETCH_URL`).
 
-Application and product secrets for production are injected through the exact SSM bindings under `/oxy/homiio/*`; the Oxy service identity (the attested ECS task role) is not an AI provider key. The backend makes no inference calls and never calls Alia: Sindi and Alia are reached from the frontend through `@alia.onl/sdk` under the person's own Oxy session, and Alia calls back into Homiio only through the capability catalogue (`capabilities/`). AI provider credentials never enter this repository or task. See `~/Oxy/oxy-infra`.
+Application and product secrets for production are injected through the exact SSM bindings under `/oxy/homiio/*`; the Oxy service identity (the attested ECS task role) is not an AI provider key. The backend makes no inference calls and never calls Alia: Sindi and Alia are reached from the frontend through `@gemies/sdk` under the person's own Oxy session, and Alia calls back into Homiio only through the capability catalogue (`capabilities/`). AI provider credentials never enter this repository or task. See `~/Oxy/oxy-infra`.
 
 ## Deployment
 

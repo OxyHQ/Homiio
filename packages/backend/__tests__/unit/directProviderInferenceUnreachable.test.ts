@@ -82,15 +82,15 @@ describe('Homiio never reaches an inference provider directly', () => {
   });
 
   it('never calls Alia or Oxy inference from the backend', () => {
-    // Sindi and Alia are reached from the FRONTEND through `@alia.onl/sdk`,
+    // Sindi and Alia are reached from the FRONTEND through `@gemies/sdk`,
     // under the person's own Oxy session (Alia ADR 0020). The backend's only
     // part in a Sindi turn is the capability catalogue Alia calls back into,
-    // so a backend module that imports an Alia client, names Alia's API or
+    // so a backend module that imports a Gemies client, names the Gemies API or
     // opens an Oxy inference session is a second chat path coming back.
     const backend = runtimeSources('packages/backend');
     const violations = backend.filter((file) => {
       const source = readFileSync(join(REPOSITORY_ROOT, file), 'utf8');
-      return /['"]@alia\.onl\/|['"]@oxy\.so\/core\/inference['"]|https:\/\/api\.alia\.onl/.test(
+      return /['"]@gemies\/|['"]@oxy\.so\/core\/inference['"]|https:\/\/api\.gemies\.ai/.test(
         source,
       );
     });

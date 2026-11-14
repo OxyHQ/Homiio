@@ -37,7 +37,7 @@ they do not prohibit the case-team integration already documented above.
   landlord" to it would produce a button that sends nothing, which is what §7.3
   names in its own sentence.
 - **Sindi is not person-to-person.** It is an Alia agent the app reaches through
-  `@alia.onl/sdk` under the person's own Oxy session; no other Homiio user is
+  `@gemies/sdk` under the person's own Oxy session; no other Homiio user is
   ever on the other end.
 - **There is no realtime socket client** (`AGENTS.md`), so any "typing…" or live
   delivery would need a transport this app does not have.

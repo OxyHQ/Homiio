@@ -51,8 +51,8 @@ module.exports = {
         'native-base',
         // App-specific ESM / raw-source packages:
         '@oxy\\.so',
-        // `@alia.onl/sdk` ships its TypeScript source (`main: src/index.ts`).
-        '@alia\\.onl',
+        // `@gemies/sdk` ships its TypeScript source (`main: src/index.ts`).
+        '@gemies',
         'nativewind',
         'react-native-css-interop',
         // ESM-only transitive deps that surface through the above packages.

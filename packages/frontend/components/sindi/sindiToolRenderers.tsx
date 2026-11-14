@@ -12,7 +12,7 @@
  * an Alia conversation in Homiio shows the same cards.
  */
 
-import type { AliaToolRenderers, AliaToolResult } from '@alia.onl/sdk';
+import type { GemieToolRenderers, GemieToolResult } from '@gemies/sdk';
 import type { Property } from '@homiio/shared-types';
 import { useRouter } from 'expo-router';
 import type React from 'react';
@@ -58,7 +58,7 @@ export function listingOfOutput(output: unknown): Property | null {
  * is drawn from the tool's own answer, so it appears whatever the model writes.
  */
 export function placeClarificationOf(
-  result: Pick<AliaToolResult, 'input' | 'output'>,
+  result: Pick<GemieToolResult, 'input' | 'output'>,
 ): { requested: string; reason: 'ambiguous' | 'not_found' } | null {
   const { input, output } = result;
   if (!isRecord(output)) return null;
@@ -112,11 +112,11 @@ export function SindiPlaceClarification({
   );
 }
 
-const searchResults = (result: AliaToolResult): React.ReactNode => (
+const searchResults = (result: GemieToolResult): React.ReactNode => (
   <ListingCards {...listingsOfOutput(result.output)} />
 );
 
-export const SINDI_TOOL_RENDERERS: AliaToolRenderers = {
+export const SINDI_TOOL_RENDERERS: GemieToolRenderers = {
   'homiio:searchListings': searchResults,
   'homiio:findNearbyListings': searchResults,
   'homiio:getListing': (result) => {

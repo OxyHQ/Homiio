@@ -351,7 +351,7 @@ jobs:
           # (a task naming a missing parameter fails to start).
           # ALIA_API_URL, SINDI_ALIA_AGENT_ID, OXY_INFERENCE_ROUTING_PROFILE_ID:
           # the Sindi relay and its Oxy inference calls are gone (Alia ADR 0020).
-          # Sindi and Alia are reached from the frontend through `@alia.onl/sdk`;
+          # Sindi and Alia are reached from the frontend through `@gemies/sdk`;
           # the backend never calls Alia, so the running revision's copies of
           # these three come off here rather than lingering on every render.
           # AWS_S3_BUCKET, PUBLIC_API_URL: Homiio's bucket is retired (docs/oxy-files.md)

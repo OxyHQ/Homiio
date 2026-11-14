@@ -17,7 +17,7 @@ Bound by Alia ADR 0020 ("Every agent is the same agent") and Oxy ADR 0042
 ## The shape
 
 ```text
-Homiio app ──@alia.onl/sdk (person's Oxy session, person's credits)──▶ Alia
+Homiio app ──@gemies/sdk (person's Oxy session, person's credits)──▶ Alia
    ▲  host tools (host_homiio__apply_search, …)                       │
    │  tool renderers (PropertyCard, saved homes, place clarification) │ oxy_homiio__* tools
    └──────────────────────────────────────────────────────────────────┤ capability tickets
@@ -26,7 +26,7 @@ Homiio app ──@alia.onl/sdk (person's Oxy session, person's credits)──▶
 ```
 
 - **Homiio's backend never calls Alia.** Sindi and Alia are reached from the
-  frontend through `@alia.onl/sdk` under the person's Oxy session. The backend
+  frontend through `@gemies/sdk` under the person's Oxy session. The backend
   has no chat route, no conversation table and no inference client; it serves
   the catalogue.
 - **Sindi is an ordinary public Alia agent** owned by the Homiio project account.
@@ -40,7 +40,7 @@ Homiio app ──@alia.onl/sdk (person's Oxy session, person's credits)──▶
 ## Where it is in the app
 
 **One surface: the SDK's sheet.** Sindi, like Alia, exists in Homiio only as
-`AliaAskProvider`'s one sheet (`context/AskAgentProvider.tsx`), with Sindi's
+`GemieAskProvider`'s one sheet (`context/AskAgentProvider.tsx`), with Sindi's
 Oxy character, name, greeting and starters from her Alia profile. Homiio draws
 no chat, no conversation list and no Sindi page of its own.
 
@@ -49,14 +49,14 @@ no chat, no conversation list and no Sindi page of its own.
 | Sidebar "Sindi" row | `components/SideBar/index.tsx` | `ask('sindi')` |
 | Sidebar "Ask Alia", phone bottom bar | `components/SideBar/index.tsx`, `components/HomiioBottomBar.tsx` | `ask('alia')` |
 | "Ask Sindi about this home" | `components/property/SindiSection.tsx` | `ask('sindi', turn)`, the listing named in the turn |
-| Shared conversation | `app/(pages)/(tabs)/sindi/shared/[token].tsx` | `AliaSharedConversation`, read-only, no session — the one page, because a link needs an address and Alia's own app serves none |
+| Shared conversation | `app/(pages)/(tabs)/sindi/shared/[token].tsx` | `GemieSharedConversation`, read-only, no session — the one page, because a link needs an address and Alia's own app serves none |
 
 Sindi's face outside the sheet (the sidebar row, the listing section) is
 `components/sindi/SindiAvatar.tsx`: her character from `useAgentProfile`, the
 same one the sheet draws; signed out, a neutral glyph.
 
 The sheet lists the person's latest conversations with its lead under the
-greeting and resumes them (SDK 20.1, `AliaRecentConversations`); every
+greeting and resumes them (SDK 20.1, `GemieRecentConversations`); every
 conversation is also in the Alia app. Deleting conversations is the Alia app's.
 
 `hooks/useSindiChat.ts` builds what the sheet is handed: the host tools and the
@@ -109,7 +109,7 @@ the executor changes the page UNDER the sheet as soon as a call arrives. A call
 arrives MID-STREAM, though — the model asks for the effect and keeps writing —
 so the sheet itself closes only when the SDK says the turn stopped streaming
 (`runtime.onTurnEnd`), after Stop or a failure as much as after the last word,
-through the provider's ref (`useAskAgent().dismiss`). A conversation that
+through the provider's ref (`useAskGemie().dismiss`). A conversation that
 unmounts mid-turn is never called back, and the next turn starts with nothing
 held.
 
@@ -291,7 +291,7 @@ native binaries get 404 from the removed `/api/ai` until they update).
 
 | Before | Now |
 |---|---|
-| `/api/ai/stream` relay, Vercel data stream | `AliaChatContent agent={sindi}` / `AliaAskProvider` → Alia `/v1/chat/completions` |
+| `/api/ai/stream` relay, Vercel data stream | `GemieChatContent agent={sindi}` / `GemieAskProvider` → Alia `/v1/chat/completions` |
 | `extractFiltersWithAI` + internal HTTP to `/api/properties/*` | the model calls `resolvePlace` → `searchListings` / `findNearbyListings` / `getListing` |
 | `<PROPERTIES_HINTS>` / `<PROPERTIES_CONTEXT>` system text | structured tool output |
 | `<PROPERTIES_JSON>` + `PropertiesFromIds` | renderers `homiio:searchListings`, `homiio:findNearbyListings`, `homiio:getListing` → `PropertyCard` |
@@ -306,7 +306,7 @@ native binaries get 404 from the removed `/api/ai` until they update).
 | Homiio conversation tables, titles, 24 h share links | Alia conversations (`useConversations({ agentId })`), titles and share links; Homiio's tables dropped |
 | `/api/ai/suggestions` | Sindi's starters (Alia) on an empty chat; fixed i18n prompts on a listing |
 | docked/overlay panel, `/sindi` and `/sindi/:id` screens, Homiio's conversation list | the SDK's one sheet, with its recent conversations and resume; all conversations also in the Alia app |
-| in-property bottom sheet | `useAskAgent().ask('sindi', turn)`: one sheet for Alia and Sindi |
+| in-property bottom sheet | `useAskGemie().ask('sindi', turn)`: one sheet for Alia and Sindi |
 | sidebar "Ask Alia", bottom-bar Alia button | `ask('alia')` |
 | voice dictation (`expo-speech-recognition`) | the SDK's dictation and calls |
 | Settings → Sindi (tips toggle, reset) | gone: starters are the agent's (Alia's editor); deleting conversations is the Alia app's |
@@ -324,7 +324,7 @@ cards; Alia consulting Sindi from any app; Homiio's public MCP.
 | `frontend __tests__/sindi/clarifyLocation.test.tsx` | the clarification sentence from the shipped strings; no host tool for it |
 | `frontend __tests__/sindi/toolRenderers.test.tsx` | which tools are drawn and what each draws |
 | `backend __tests__/capabilities/*` | the catalogue, `resolvePlace`'s refusals, route parity |
-| `backend __tests__/unit/directProviderInferenceUnreachable.test.ts` | no backend source imports `@alia.onl/*` or `@oxy.so/core/inference`, or names Alia's API |
+| `backend __tests__/unit/directProviderInferenceUnreachable.test.ts` | no backend source imports `@gemies/*` or `@oxy.so/core/inference`, or names the Gemies API |
 
 ## Still open
 

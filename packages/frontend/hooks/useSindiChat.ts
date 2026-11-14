@@ -11,8 +11,8 @@
  *  - `onShare` — hands on the minted link, Alia's one shared page.
  */
 
-import type { AliaChatLabels, AliaConversationShare } from '@alia.onl/sdk';
-import { VOICE_ERROR_MESSAGES, type VoiceErrorCode } from '@alia.onl/sdk';
+import type { GemieChatLabels, GemieConversationShare } from '@gemies/sdk';
+import { VOICE_ERROR_MESSAGES, type VoiceErrorCode } from '@gemies/sdk/voice/messages';
 import { toast } from '@oxy.so/bloom/toast';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +26,7 @@ import { shareContent } from '@/utils/share';
 
 /** Hand a minted share to the platform's share sheet, falling back to the clipboard. */
 export async function shareSindiConversation(
-  share: AliaConversationShare,
+  share: GemieConversationShare,
   t: TFunction,
 ): Promise<void> {
   const { url } = share;
@@ -56,9 +56,9 @@ const VOICE_ERROR_KEYS: Partial<Record<VoiceErrorCode, string>> = {
 };
 
 /** The chat's own words, in the reader's language where Homiio has them. */
-export function useSindiChatLabels(): Partial<AliaChatLabels> {
+export function useSindiChatLabels(): Partial<GemieChatLabels> {
   const { t, i18n } = useTranslation();
-  return useMemo<Partial<AliaChatLabels>>(
+  return useMemo<Partial<GemieChatLabels>>(
     () => ({
       locale: i18n.language,
       placeholder: (leadName) => t('sindi.chat.placeholder', { name: leadName }),
@@ -100,7 +100,7 @@ export function useSindiChat(closeSheet: () => void) {
   // feature is its upsell.
   const onFeatureLocked = useCallback(() => openUpsell(), [openUpsell]);
   const onShare = useCallback(
-    (share: AliaConversationShare) => void shareSindiConversation(share, t),
+    (share: GemieConversationShare) => void shareSindiConversation(share, t),
     [t],
   );
 

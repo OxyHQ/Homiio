@@ -35,9 +35,9 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { getAccountDisplayName, getAccountFallbackHandle } from '@oxy.so/core';
 import { useAuth, useOxy } from '@oxy.so/services/ui/client';
 
-import { AliaAvatarIcon } from '@alia.onl/sdk/avatar';
+import { GemieAvatarIcon } from '@gemies/sdk/avatar';
 import { LogoIcon } from '@/assets/logo';
-import { useAskAgent } from '@alia.onl/sdk';
+import { useAskGemie } from '@gemies/sdk/ask';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
@@ -123,7 +123,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   const { isHost } = useHostStatus();
   const { user, isAuthenticated, isAuthResolved, signIn } = useAuth();
   const { oxyServices, openAccountDialog } = useOxy();
-  const { ask } = useAskAgent();
+  const { ask } = useAskGemie();
 
   const { folders } = useSavedPropertiesContext();
   const { properties: recentProperties } = useRecentlyViewed();
@@ -459,7 +459,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     surface: 'plain',
     primaryAction: {
       label: t('sidebar.navigation.askAlia'),
-      icon: AliaAvatarIcon,
+      icon: GemieAvatarIcon,
       onPress: handleAskAlia,
     },
   };

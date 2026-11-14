@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useAskAgent } from '@alia.onl/sdk';
-import { AliaAvatarIcon } from '@alia.onl/sdk/avatar';
+import { useAskGemie } from '@gemies/sdk/ask';
+import { GemieAvatarIcon } from '@gemies/sdk/avatar';
 import { BottomBar } from '@oxy.so/bloom/bottom-bar';
 import { Fab } from '@oxy.so/bloom/fab';
 import { RiBookmarkLine } from '@oxy.so/bloom/icons/RiBookmarkLine';
@@ -26,7 +26,7 @@ export function HomiioBottomBar() {
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname() || '/';
-  const { ask } = useAskAgent();
+  const { ask } = useAskGemie();
 
   const items = useMemo(
     () => [
@@ -45,7 +45,7 @@ export function HomiioBottomBar() {
       onValueChange={(href) => router.navigate(href as Href)}
       action={
         <Fab
-          icon={AliaAvatarIcon}
+          icon={GemieAvatarIcon}
           accessibilityLabel={t('sidebar.navigation.askAlia')}
           onPress={() => ask('alia')}
         />

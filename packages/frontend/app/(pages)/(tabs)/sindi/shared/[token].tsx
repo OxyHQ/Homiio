@@ -1,12 +1,12 @@
 /**
  * `/sindi/shared/<token>` — an old share link, sent on to the conversation's one
- * public page, Alia's (`aliaSharedConversationUrl`, Alia `docs/agent-embedding.md`
- * §6). Homiio minted links to this address before Alia had that page; they live on
- * in chats and e-mails, so the address stays and answers with the move. A link
- * minted now is Alia's from the start (`hooks/useSindiChat.ts`).
+ * public page on `gemies.ai` (`gemiesSharedConversationUrl`, `@gemies/sdk`). Homiio
+ * minted links to this address before that page existed; they live on in chats and
+ * e-mails, so the address stays and answers with the move. A link minted now is the
+ * Gemies page from the start (`hooks/useSindiChat.ts`).
  */
 
-import { aliaSharedConversationUrl } from '@alia.onl/sdk';
+import { gemiesSharedConversationUrl } from '@gemies/sdk/runtime';
 import { Loading } from '@oxy.so/bloom/loading';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Head from 'expo-router/head';
@@ -16,7 +16,7 @@ import { Linking, Platform, StyleSheet, View } from 'react-native';
 export default function SharedConversationRedirect() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const router = useRouter();
-  const target = token ? aliaSharedConversationUrl(token) : null;
+  const target = token ? gemiesSharedConversationUrl(token) : null;
 
   useEffect(() => {
     if (target === null) {

@@ -9,7 +9,7 @@
  * dropping it from this workflow leaves it on every future revision.
  *
  * The Sindi relay is gone (Alia ADR 0020): Sindi and Alia are reached from the
- * frontend through `@alia.onl/sdk`, and the backend never calls Alia. Its three
+ * frontend through `@gemies/sdk`, and the backend never calls Alia. Its three
  * runtime values — `ALIA_API_URL`, `SINDI_ALIA_AGENT_ID` and
  * `OXY_INFERENCE_ROUTING_PROFILE_ID` — are therefore removed, never supplied.
  */
