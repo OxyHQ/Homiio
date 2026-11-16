@@ -349,3 +349,12 @@ without loading its complete glyph catalogue. The former popup-menu provider
 had no remaining menu consumers and has been removed; Bloom owns menus and
 portals. The web budget remains in `performance-budgets.json` and is checked
 against the exported artifact.
+
+## Bloom 22 control ownership
+
+Settings, profile, application and notification rows compose `GroupedSection` and
+`GroupedSectionItem` from `@oxy.so/bloom/grouped-section`. Controls use `Button`;
+related property-header actions use `Button.Group`, and selected actions declare
+`pressed`. Keep labels, actions and domain state in Homiio, with row geometry and
+control behavior owned by Bloom. Removed settings-list and button aliases are
+not application compatibility components.

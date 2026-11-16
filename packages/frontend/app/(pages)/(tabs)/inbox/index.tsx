@@ -1,3 +1,4 @@
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
 /**
  * Inbox — the user's notification feed.
  *
@@ -11,7 +12,7 @@
  *   PageHeader (title + mark-all-read / settings icon buttons)
  *   Search + All/Unread SegmentedControl   (flat controls strip)
  *   [permission Admonition]   (only when notifications are disabled)
- *   [scheduled reminders]     (a SettingsListGroup, only when present)
+ *   [scheduled reminders]     (a GroupedSection, only when present)
  *   Notification list  →  skeleton / error / empty / `NotificationItem` rows
  *
  * Bloom's `NotificationCenter` was considered and not used: it is a fixed-size
@@ -37,7 +38,7 @@ import {
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
-import { Button, CloseButton } from '@oxy.so/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { RiCheckboxCircleLine } from '@oxy.so/bloom/icons/RiCheckboxCircleLine';
 import { RiFilterLine } from '@oxy.so/bloom/icons/RiFilterLine';
 import { RiSettings3Line } from '@oxy.so/bloom/icons/RiSettings3Line';
@@ -50,7 +51,7 @@ import {
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Search } from '@oxy.so/bloom/search';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
@@ -227,7 +228,7 @@ export default function InboxScreen() {
       ) : null}
 
       {scheduledNotifications.length > 0 ? (
-        <SettingsListGroup title={t('notification.scheduled.title')}>
+        <GroupedSection title={t('notification.scheduled.title')}>
           {scheduledNotifications.map((item) => (
             <ScheduledRow
               key={item.identifier}
@@ -237,13 +238,13 @@ export default function InboxScreen() {
               cancelLabel={t('common.cancel')}
             />
           ))}
-          <SettingsListItem
+          <GroupedSectionItem
             title={t('notification.scheduled.clearAll')}
             destructive
             showChevron={false}
             onPress={() => void cancelAllLocalNotifications()}
           />
-        </SettingsListGroup>
+        </GroupedSection>
       ) : null}
     </View>
   );
@@ -390,11 +391,21 @@ const ScheduledRow: React.FC<ScheduledRowProps> = ({
   const when = triggerDate ? formatRelativeTime(new Date(triggerDate)) : scheduledLabel;
 
   return (
-    <SettingsListItem
+    <GroupedSectionItem
       icon={<RiTimeLine width={20} height={20} fill={theme.textSecondary} />}
       title={request.content.title ?? scheduledLabel}
       description={request.content.body ? `${request.content.body} · ${when}` : when}
-      rightElement={<CloseButton size="xs" accessibilityLabel={cancelLabel} onPress={onCancel} />}
+      rightElement={
+        <Button
+          appearance="outline"
+          tone="neutral"
+          iconOnly
+          icon={RiCloseLine}
+          size={20}
+          accessibilityLabel={cancelLabel}
+          onPress={onCancel}
+        />
+      }
     />
   );
 };

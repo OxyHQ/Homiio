@@ -31,7 +31,7 @@ import { useRouter } from 'expo-router';
 import { useOxy } from '@oxy.so/services/ui/client';
 
 import { BookingCard as BloomBookingCard } from '@oxy.so/bloom/booking';
-import { LinkButton } from '@oxy.so/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { RiFlagLine } from '@oxy.so/bloom/icons/RiFlagLine';
 import {
@@ -113,9 +113,15 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
   };
 
   const reportLink = (
-    <LinkButton linkTone="secondary" size="sm" leadingIcon={RiFlagLine} onPress={handleReport}>
+    <Button
+      appearance="plain"
+      linkTone="secondary"
+      size="sm"
+      leadingIcon={RiFlagLine}
+      onPress={handleReport}
+    >
       {t('property.report.title')}
-    </LinkButton>
+    </Button>
   );
 
   if (bookingMode === 'vacation' && booking.bookable) {

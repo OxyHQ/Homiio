@@ -87,9 +87,9 @@ jest.mock('@oxy.so/bloom/button', () => ({
     );
   },
 }));
-jest.mock('@oxy.so/bloom/settings-list', () => ({
-  SettingsListGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SettingsListItem: ({ title, onPress }: { title: string; onPress?: () => void }) => {
+jest.mock('@oxy.so/bloom/grouped-section', () => ({
+  GroupedSection: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  GroupedSectionItem: ({ title, onPress }: { title: string; onPress?: () => void }) => {
     const { Pressable, Text } = require('react-native');
     if (title === 'Cancel Immediately') mockRetainedCancel = onPress;
     return (

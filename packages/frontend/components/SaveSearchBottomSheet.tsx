@@ -1,9 +1,10 @@
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
 import type React from 'react';
 import { useState, useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Button, CloseButton } from '@oxy.so/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { Item } from '@oxy.so/bloom/item';
 import { Switch } from '@oxy.so/bloom/switch';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
@@ -84,7 +85,15 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
     <View style={styles.container}>
       <View style={styles.header}>
         <H3>{t('search.save.title')}</H3>
-        <CloseButton onPress={onClose} accessibilityLabel={t('common.close')} />
+        <Button
+          appearance="outline"
+          tone="neutral"
+          iconOnly
+          icon={RiCloseLine}
+          size={20}
+          onPress={onClose}
+          accessibilityLabel={t('common.close')}
+        />
       </View>
 
       <TextFieldInput

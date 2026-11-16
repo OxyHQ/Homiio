@@ -20,7 +20,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { TenantApplicationStatus } from '@homiio/shared-types/application';
@@ -145,16 +145,16 @@ export default function NewContractScreen() {
           </BloomText>
         </Card>
 
-        <SettingsListGroup title={t('contracts.new.seededTerms')}>
-          <SettingsListItem
+        <GroupedSection title={t('contracts.new.seededTerms')}>
+          <GroupedSectionItem
             title={t('contracts.new.moveIn')}
             value={formatDate(application.moveInDate)}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             title={t('contracts.new.leaseTerm')}
             value={t('contracts.new.leaseTermMonths', { count: application.leaseTermMonths })}
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
         {!isApproved ? (
           <Admonition type="warning">{t('contracts.new.notApprovedWarning')}</Admonition>

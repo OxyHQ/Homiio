@@ -1,7 +1,7 @@
 /**
  * The profile edit form is only reachable signed in, so no web export check
  * sees it. This renders every section through the Bloom controls it is built
- * from (Select, DatePicker, PhoneInput, Checkbox, SettingsList) and pins the
+ * from (Select, DatePicker, PhoneInput, Checkbox, GroupedSection) and pins the
  * string adapters that sit between those controls and the form's storage
  * shape: `+<dial> <number>` phones and `YYYY-MM-DD` dates.
  */

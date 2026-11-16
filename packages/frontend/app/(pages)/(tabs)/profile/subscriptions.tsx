@@ -25,7 +25,7 @@ import { RiHeartLine } from '@oxy.so/bloom/icons/RiHeartLine';
 import { RiStarLine } from '@oxy.so/bloom/icons/RiStarLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
@@ -472,41 +472,41 @@ export default function SubscriptionsScreen() {
         {/* Developer tooling — only in development builds. */}
         {__DEV__ ? (
           <View style={styles.debug}>
-            <SettingsListGroup title="Debug Info">
-              <SettingsListItem title="Plus Active" value={plusActive ? 'Yes' : 'No'} />
-              <SettingsListItem
+            <GroupedSection title="Debug Info">
+              <GroupedSectionItem title="Plus Active" value={plusActive ? 'Yes' : 'No'} />
+              <GroupedSectionItem
                 title="Subscription ID"
                 value={entitlements?.plusStripeSubscriptionId || 'None'}
               />
-              <SettingsListItem title="File Credits" value={String(fileCredits)} />
-              <SettingsListItem title="Last Payment" value={formatDate(lastPayment)} />
-              <SettingsListItem title="Plus Since" value={formatDate(plusSince)} />
-              <SettingsListItem title="Plus Canceled" value={formatDate(plusCanceledAt)} />
-            </SettingsListGroup>
-            <SettingsListGroup title="Actions">
+              <GroupedSectionItem title="File Credits" value={String(fileCredits)} />
+              <GroupedSectionItem title="Last Payment" value={formatDate(lastPayment)} />
+              <GroupedSectionItem title="Plus Since" value={formatDate(plusSince)} />
+              <GroupedSectionItem title="Plus Canceled" value={formatDate(plusCanceledAt)} />
+            </GroupedSection>
+            <GroupedSection title="Actions">
               {plusActive ? (
-                <SettingsListItem
+                <GroupedSectionItem
                   title="Cancel at Period End"
                   destructive
                   onPress={() => void handleCancelSubscription(false)}
                 />
               ) : null}
               {plusActive ? (
-                <SettingsListItem
+                <GroupedSectionItem
                   title="Cancel Immediately"
                   destructive
                   onPress={() => void handleCancelSubscription(true)}
                 />
               ) : null}
-              <SettingsListItem
+              <GroupedSectionItem
                 title="Sync from Stripe"
                 onPress={() => void handleSyncSubscription()}
               />
-              <SettingsListItem
+              <GroupedSectionItem
                 title="Debug Subscription"
                 onPress={() => void handleDebugSubscription()}
               />
-            </SettingsListGroup>
+            </GroupedSection>
           </View>
         ) : null}
       </ScreenScrollView>

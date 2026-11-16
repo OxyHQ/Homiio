@@ -1,6 +1,6 @@
 /**
  * Settings → Currency. Mirrors the Language screen pattern: Bloom
- * SettingsList primitives with a row per currency and an active-state
+ * GroupedSection primitives with a row per currency and an active-state
  * checkmark on the right.
  */
 import { StyleSheet } from 'react-native';
@@ -14,7 +14,7 @@ import { RiCheckLine } from '@oxy.so/bloom/icons/RiCheckLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 
 import { useCurrency } from '@/hooks/useCurrency';
 import { currencyName } from '@oxy.so/utils/currency';
@@ -57,7 +57,7 @@ export default function CurrencySettingsScreen() {
       }
     >
       <ScreenScrollView contentContainerStyle={settingsScreenStyles.content}>
-        <SettingsListGroup
+        <GroupedSection
           title={t('settings.currency.selectCurrency')}
           footer={t('settings.currency.description')}
         >
@@ -69,7 +69,7 @@ export default function CurrencySettingsScreen() {
                 : getExchangeRateDisplay(currentCurrency, currency.code, locale, rates);
             const description = exchangeRate ? `${currency.code} · ${exchangeRate}` : currency.code;
             return (
-              <SettingsListItem
+              <GroupedSectionItem
                 key={currency.code}
                 icon={<Text style={styles.flag}>{currency.flag}</Text>}
                 title={currency.name ?? currencyName(currency.code, locale)}
@@ -83,7 +83,7 @@ export default function CurrencySettingsScreen() {
               />
             );
           })}
-        </SettingsListGroup>
+        </GroupedSection>
       </ScreenScrollView>
     </Screen>
   );

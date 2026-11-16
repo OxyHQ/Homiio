@@ -9,7 +9,7 @@
  * Documents are linked via signed S3 URLs returned by the API.
  *
  * The property is an outlined Bloom `Card`; terms, finances, references and
- * documents are Bloom `SettingsListGroup`s shared with the landlord's view
+ * documents are Bloom `GroupedSection`s shared with the landlord's view
  * (`components/applications/ApplicationDetailGroups`); status is the
  * Chip-based `ApplicationStatusBadge`. Loading is Bloom `Loading`, errors the
  * shared ErrorState component.

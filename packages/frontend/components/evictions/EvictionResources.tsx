@@ -16,7 +16,7 @@
  * your area yet" is true; showing a neighbouring country's tenant union to
  * somebody about to lose their home is not.
  *
- * The links are a `filled` Bloom `SettingsListGroup`: the block sits inside the
+ * The links are a `filled` Bloom `GroupedSection`: the block sits inside the
  * detail screen's card, which already paints the `card` colour.
  */
 
@@ -25,7 +25,7 @@ import { Linking, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Loading } from '@oxy.so/bloom/loading';
 import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { JurisdictionResourceWithId } from '@homiio/shared-types';
 import { SettingsRowIcon } from '@/components/profile/SettingsRowIcon';
@@ -67,9 +67,9 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
           {t('evictions.resources.empty')}
         </BloomText>
       ) : (
-        <SettingsListGroup variant="filled">
+        <GroupedSection variant="filled">
           {resources.map((resource) => (
-            <SettingsListItem
+            <GroupedSectionItem
               key={resource.id}
               icon={<SettingsRowIcon icon={RiFileTextLine} />}
               title={resource.title}
@@ -88,7 +88,7 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
               }}
             />
           ))}
-        </SettingsListGroup>
+        </GroupedSection>
       )}
       {/* Rendered even when the list is empty: the reason there is nothing here
           is as much a part of the disclaimer as the links would be. */}

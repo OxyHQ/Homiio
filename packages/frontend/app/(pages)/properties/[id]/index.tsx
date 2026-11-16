@@ -27,7 +27,7 @@ import * as Linking from 'expo-linking';
 
 import { useOxy } from '@oxy.so/services/ui/client';
 import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
-import { ButtonGroup, ButtonGroupItem } from '@oxy.so/bloom/button-group';
+import { Button } from '@oxy.so/bloom/button';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useTheme } from '@oxy.so/bloom/theme';
@@ -626,23 +626,23 @@ export default function PropertyDetailPage() {
           onBack={router.canGoBack() ? router.back : undefined}
           backLabel={t('common.goBack')}
           actions={
-            <ButtonGroup>
+            <Button.Group>
               {landlordOxyUserId ? (
-                <ButtonGroupItem
+                <Button
                   iconOnly
                   leadingIcon={RiAccountCircleLine}
                   onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
                   accessibilityLabel={t('property.host.openProfile')}
                 />
               ) : null}
-              <ButtonGroupItem
+              <Button
                 iconOnly
                 leadingIcon={RiCalendarLine}
-                selected={hasActiveViewing}
+                pressed={hasActiveViewing}
                 onPress={() => router.push('/viewings')}
                 accessibilityLabel={t('viewings.title')}
               />
-            </ButtonGroup>
+            </Button.Group>
           }
           placement="overlap"
           titleReveal="onScroll"

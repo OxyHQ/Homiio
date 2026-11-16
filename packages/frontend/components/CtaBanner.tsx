@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { InverseButton } from '@oxy.so/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { Text } from '@oxy.so/bloom/typography';
 
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
@@ -65,9 +65,9 @@ export function CtaBanner({
           {subtitle}
         </Text>
         <View className="mt-2">
-          <InverseButton size="md" onPress={onPress}>
+          <Button inverted size="md" onPress={onPress}>
             {ctaLabel}
-          </InverseButton>
+          </Button>
         </View>
         {trustLine ? (
           <Text className="text-caption-1-regular text-white/80">{trustLine}</Text>

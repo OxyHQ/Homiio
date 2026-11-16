@@ -1,5 +1,5 @@
 /**
- * The leading glyph for a Bloom `SettingsListItem` on the account screens
+ * The leading glyph for a Bloom `GroupedSectionItem` on the account screens
  * (profile, settings and their sub-screens).
  *
  * Remix icons do not inherit a colour, so the fill comes from the theme here:
@@ -29,7 +29,7 @@ export function SettingsRowIcon({
 }
 
 /**
- * Content container for a screen made of `SettingsListGroup`s. Bloom 2's group
+ * Content container for a screen made of `GroupedSection`s. Bloom 2's group
  * draws no horizontal inset of its own, so the screen supplies the gutter, and
  * clamps the width so rows do not run edge to edge on wide web.
  */

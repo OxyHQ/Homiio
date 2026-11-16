@@ -1,3 +1,4 @@
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
 /**
  * HomeSearch — the search composer, on Bloom's `home-search` family.
  *
@@ -62,7 +63,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
-import { Button, CloseButton, LinkButton } from '@oxy.so/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { Dialog } from '@oxy.so/bloom/dialog';
 import { HomeSearchBar, SearchModeTabs, type HomeSearchSegment } from '@oxy.so/bloom/home-search';
 import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
@@ -794,7 +795,15 @@ export function HomeSearch({
           <View className="gap-3 px-4 pb-3 pt-2">
             <View className="flex-row items-center justify-between">
               <H3>{t('search.panel.title')}</H3>
-              <CloseButton onPress={handleCloseSheet} accessibilityLabel={t('common.close')} />
+              <Button
+                appearance="outline"
+                tone="neutral"
+                iconOnly
+                icon={RiCloseLine}
+                size={20}
+                onPress={handleCloseSheet}
+                accessibilityLabel={t('common.close')}
+              />
             </View>
             {renderModeTabs(browseModeFromOffering(draft.offering), handleBrowseMode, 'segmented')}
           </View>
@@ -826,9 +835,14 @@ export function HomeSearch({
             // The home indicator's inset is the device's, read at run time.
             style={{ paddingBottom: SHEET_FOOTER_END + insets.bottom }}
           >
-            <LinkButton onPress={handleClear} accessibilityLabel={t('search.actions.clearAll')}>
+            <Button
+              appearance="plain"
+              linkTone="primary"
+              onPress={handleClear}
+              accessibilityLabel={t('search.actions.clearAll')}
+            >
               {t('search.actions.clearAll')}
-            </LinkButton>
+            </Button>
             <Button
               size="lg"
               icon={RiSearchLine}

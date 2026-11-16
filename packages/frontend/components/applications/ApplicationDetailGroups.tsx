@@ -1,7 +1,7 @@
 /**
  * The read-only blocks of a tenant application, shared by the applicant's view
  * (`/applications/[id]`) and the landlord's (`/landlord/applications/[id]`):
- * Bloom `SettingsListGroup`s on the page background, one per block, replacing
+ * Bloom `GroupedSection`s on the page background, one per block, replacing
  * the hand-rolled label/value rows each screen used to carry.
  */
 import type React from 'react';
@@ -12,7 +12,7 @@ import { RiFileTextLine } from '@oxy.so/bloom/icons/RiFileTextLine';
 import { RiMailLine } from '@oxy.so/bloom/icons/RiMailLine';
 import { RiUserLine } from '@oxy.so/bloom/icons/RiUserLine';
 import { RiWallet3Line } from '@oxy.so/bloom/icons/RiWallet3Line';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { Button } from '@oxy.so/bloom/button';
 import { toast } from '@oxy.so/bloom/toast';
 import { applicationChecklist } from '@homiio/shared-types/applicationChecklist';
@@ -78,26 +78,26 @@ interface GroupProps {
 export const ApplicationTermsGroup: React.FC<GroupProps> = ({ application }) => {
   const { t } = useTranslation();
   return (
-    <SettingsListGroup title={t('applications.landlord.sectionTenancy')}>
-      <SettingsListItem
+    <GroupedSection title={t('applications.landlord.sectionTenancy')}>
+      <GroupedSectionItem
         title={t('applications.card.moveIn')}
         value={formatApplicationDate(application.moveInDate)}
       />
-      <SettingsListItem
+      <GroupedSectionItem
         title={t('applications.field.leaseTerm')}
         value={t('applications.field.leaseTermMonths', { count: application.leaseTermMonths })}
       />
-      <SettingsListItem
+      <GroupedSectionItem
         title={t('applications.landlord.submittedLabel')}
         value={formatApplicationDate(application.submittedAt)}
       />
       {application.decidedAt ? (
-        <SettingsListItem
+        <GroupedSectionItem
           title={t('applications.landlord.decidedLabel')}
           value={formatApplicationDate(application.decidedAt)}
         />
       ) : null}
-    </SettingsListGroup>
+    </GroupedSection>
   );
 };
 
@@ -106,16 +106,16 @@ export const ApplicationFinancesGroup: React.FC<GroupProps> = ({ application }) 
   const { t } = useTranslation();
   const { locale } = useFormatting();
   return (
-    <SettingsListGroup title={t('applications.section.finances')}>
-      <SettingsListItem
+    <GroupedSection title={t('applications.section.finances')}>
+      <GroupedSectionItem
         title={t('applications.field.monthlyIncome')}
         value={formatApplicationIncome(application, locale)}
       />
-      <SettingsListItem
+      <GroupedSectionItem
         title={t('applications.field.employment')}
         value={t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)}
       />
-    </SettingsListGroup>
+    </GroupedSection>
   );
 };
 
@@ -123,12 +123,12 @@ export const ApplicationFinancesGroup: React.FC<GroupProps> = ({ application }) 
 export const ApplicationReferencesGroup: React.FC<GroupProps> = ({ application }) => {
   const { t } = useTranslation();
   return (
-    <SettingsListGroup title={t('applications.section.references')}>
+    <GroupedSection title={t('applications.section.references')}>
       {application.referenceContacts.length === 0 ? (
-        <SettingsListItem title={t('applications.landlord.noReferences')} />
+        <GroupedSectionItem title={t('applications.landlord.noReferences')} />
       ) : (
         application.referenceContacts.map((reference, index) => (
-          <SettingsListItem
+          <GroupedSectionItem
             key={`${reference.email}-${index}`}
             title={reference.name}
             description={[
@@ -145,7 +145,7 @@ export const ApplicationReferencesGroup: React.FC<GroupProps> = ({ application }
           />
         ))
       )}
-    </SettingsListGroup>
+    </GroupedSection>
   );
 };
 
@@ -221,17 +221,17 @@ export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({
 
   if (items.length === 0) {
     return (
-      <SettingsListGroup title={t('applications.landlord.sectionDocuments')}>
-        <SettingsListItem title={t('applications.landlord.noDocuments')} />
-      </SettingsListGroup>
+      <GroupedSection title={t('applications.landlord.sectionDocuments')}>
+        <GroupedSectionItem title={t('applications.landlord.noDocuments')} />
+      </GroupedSection>
     );
   }
 
   return (
-    <SettingsListGroup title={t('applications.landlord.sectionDocuments')}>
+    <GroupedSection title={t('applications.landlord.sectionDocuments')}>
       {items.map((item) => (
         <View key={item.type}>
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={DOCUMENT_ICON[item.type] ?? RiFileTextLine} />}
             title={t(`applications.documentType.${item.type}`)}
             /* The status is the SERVER's word, including "nobody has opened
@@ -242,7 +242,7 @@ export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({
           />
           {item.documents.map((document) => (
             <View key={document.id}>
-              <SettingsListItem
+              <GroupedSectionItem
                 title={document.filename}
                 description={
                   document.rejectionReason
@@ -293,7 +293,7 @@ export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({
           ))}
         </View>
       ))}
-    </SettingsListGroup>
+    </GroupedSection>
   );
 };
 

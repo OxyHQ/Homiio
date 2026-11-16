@@ -3,7 +3,7 @@
  *
  * Stream Q polish:
  *   - Bloom Typography and Avatar; the property is a Card, and the terms,
- *     references and documents are Bloom `SettingsListGroup`s shared with the
+ *     references and documents are Bloom `GroupedSection`s shared with the
  *     applicant's view (`components/applications/ApplicationDetailGroups`).
  *   - The applicant is their Oxy display name, never a raw account id.
  *   - Review decisions go through a Bloom Dialog holding a Textarea for notes.

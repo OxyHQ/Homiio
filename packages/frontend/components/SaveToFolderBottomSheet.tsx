@@ -1,3 +1,4 @@
+import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
 /**
  * Save-to-folder sheet content, opened from `SaveButton`'s long press inside
  * the app's `BottomSheetContext` host.
@@ -13,7 +14,7 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Button, CloseButton } from '@oxy.so/bloom/button';
+import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
 import { Field } from '@oxy.so/bloom/field';
 import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
@@ -229,7 +230,15 @@ function SaveToFolderBottomSheetContent({
     <View style={styles.container}>
       <View style={styles.header}>
         <H3>{t('saved.folder.title')}</H3>
-        <CloseButton accessibilityLabel={t('common.close')} onPress={onClose} size="sm" />
+        <Button
+          appearance="outline"
+          tone="neutral"
+          iconOnly
+          icon={RiCloseLine}
+          size={24}
+          accessibilityLabel={t('common.close')}
+          onPress={onClose}
+        />
       </View>
 
       {property ? (
