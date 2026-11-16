@@ -4,7 +4,7 @@
  * Every control is a Bloom family: `TextFieldInput` / `Textarea` inside
  * `Field`, `Select` for single choices, `Checkbox` for multi-choice lists,
  * `DatePicker` for dates, `PhoneInput` for phone numbers, `Card` for each
- * reference / rental entry and `SettingsListGroup` + `Switch` for the boolean
+ * reference / rental entry and `GroupedSection` + `Switch` for the boolean
  * settings. The value adapters live in `./fields`.
  */
 import React from 'react';
@@ -17,7 +17,7 @@ import { Checkbox } from '@oxy.so/bloom/checkbox';
 import { Field } from '@oxy.so/bloom/field';
 import { RiAddLine } from '@oxy.so/bloom/icons/RiAddLine';
 import { RiDeleteBinLine } from '@oxy.so/bloom/icons/RiDeleteBinLine';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { Switch } from '@oxy.so/bloom/switch';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
@@ -514,8 +514,8 @@ export function PersonalProfileSections({
         <View style={styles.section}>
           <SectionHeader title={t('profile.edit.sections.settings')} />
 
-          <SettingsListGroup title={t('profile.edit.labels.notifications')}>
-            <SettingsListItem
+          <GroupedSection title={t('profile.edit.labels.notifications')}>
+            <GroupedSectionItem
               title={t('profile.edit.toggles.emailNotifications')}
               rightElement={
                 <Switch
@@ -527,7 +527,7 @@ export function PersonalProfileSections({
                 />
               }
             />
-            <SettingsListItem
+            <GroupedSectionItem
               title={t('profile.edit.toggles.pushNotifications')}
               rightElement={
                 <Switch
@@ -539,11 +539,11 @@ export function PersonalProfileSections({
                 />
               }
             />
-          </SettingsListGroup>
+          </GroupedSection>
 
-          <SettingsListGroup title={t('profile.edit.labels.privacy')}>
+          <GroupedSection title={t('profile.edit.labels.privacy')}>
             {PRIVACY_TOGGLES.map(({ key, label }) => (
-              <SettingsListItem
+              <GroupedSectionItem
                 key={key}
                 title={t(label)}
                 rightElement={
@@ -557,7 +557,7 @@ export function PersonalProfileSections({
                 }
               />
             ))}
-          </SettingsListGroup>
+          </GroupedSection>
         </View>
       );
 

@@ -18,7 +18,7 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { RiGlobalLine } from '@oxy.so/bloom/icons/RiGlobalLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 
 import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
 
@@ -54,14 +54,14 @@ export default function LanguageSettingsScreen() {
       }
     >
       <ScreenScrollView contentContainerStyle={settingsScreenStyles.content}>
-        <SettingsListGroup title={t('settings.language.choose')}>
-          <SettingsListItem
+        <GroupedSection title={t('settings.language.choose')}>
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiGlobalLine} />}
             title={t('settings.language.title')}
             description={languageDescription}
             onPress={openLanguageSelector}
           />
-        </SettingsListGroup>
+        </GroupedSection>
       </ScreenScrollView>
     </Screen>
   );

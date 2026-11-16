@@ -1,5 +1,5 @@
 /**
- * Settings → Notifications. Bloom SettingsList primitives for category
+ * Settings → Notifications. Bloom GroupedSection primitives for category
  * toggles, Bloom Switch for booleans, a Bloom `Admonition` (with its enable
  * button) while permission is missing, and `confirm()` for clear-all.
  */
@@ -35,7 +35,7 @@ import { RiVolumeUpLine } from '@oxy.so/bloom/icons/RiVolumeUpLine';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { Switch } from '@oxy.so/bloom/switch';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import { confirm } from '@oxy.so/bloom/surfaces';
@@ -265,13 +265,13 @@ export default function NotificationSettingsScreen() {
     >
       <ScreenScrollView contentContainerStyle={settingsScreenStyles.content}>
         {hasPermission ? (
-          <SettingsListGroup>
-            <SettingsListItem
+          <GroupedSection>
+            <GroupedSectionItem
               icon={<RiCheckboxCircleFill width={20} height={20} fill={theme.success} />}
               title={t('notification.permissions.enabled.title')}
               description={t('notification.permissions.enabled.description')}
             />
-          </SettingsListGroup>
+          </GroupedSection>
         ) : (
           <AdmonitionRoot type="warning" style={styles.permission}>
             <AdmonitionRow>
@@ -291,9 +291,9 @@ export default function NotificationSettingsScreen() {
           </AdmonitionRoot>
         )}
 
-        <SettingsListGroup title={t('notification.settings.categories')}>
+        <GroupedSection title={t('notification.settings.categories')}>
           {categoryRows.map((row) => (
-            <SettingsListItem
+            <GroupedSectionItem
               key={row.key}
               icon={<SettingsRowIcon icon={row.icon} />}
               title={row.title}
@@ -307,11 +307,11 @@ export default function NotificationSettingsScreen() {
               }
             />
           ))}
-        </SettingsListGroup>
+        </GroupedSection>
 
-        <SettingsListGroup title={t('notification.settings.behavior')}>
+        <GroupedSection title={t('notification.settings.behavior')}>
           {behaviorRows.map((row) => (
-            <SettingsListItem
+            <GroupedSectionItem
               key={row.key}
               icon={<SettingsRowIcon icon={row.icon} />}
               title={row.title}
@@ -325,39 +325,39 @@ export default function NotificationSettingsScreen() {
               }
             />
           ))}
-        </SettingsListGroup>
+        </GroupedSection>
 
         {__DEV__ && hasPermission ? (
-          <SettingsListGroup
+          <GroupedSection
             title={t('notification.settings.test.title')}
             footer={t('notification.settings.test.description')}
           >
             {testActions.map((action) => (
-              <SettingsListItem
+              <GroupedSectionItem
                 key={action.label}
                 icon={<SettingsRowIcon icon={action.icon} />}
                 title={action.label}
                 onPress={() => runTest(action.run)}
               />
             ))}
-          </SettingsListGroup>
+          </GroupedSection>
         ) : null}
 
-        <SettingsListGroup title={t('notification.settings.manage')}>
-          <SettingsListItem
+        <GroupedSection title={t('notification.settings.manage')}>
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiDeleteBinLine} destructive />}
             title={t('notification.settings.clearAll')}
             destructive
             onPress={() => void handleClearAll()}
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
         {Platform.OS === 'ios' ? (
-          <SettingsListGroup
+          <GroupedSection
             title={t('notification.settings.ios.title')}
             footer={t('notification.settings.ios.description')}
           >
-            <SettingsListItem
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiInformationLine} />}
               title={t('notification.settings.ios.openSettings')}
               onPress={() => {
@@ -365,15 +365,15 @@ export default function NotificationSettingsScreen() {
               }}
               showChevron={false}
             />
-          </SettingsListGroup>
+          </GroupedSection>
         ) : null}
 
         {Platform.OS === 'android' ? (
-          <SettingsListGroup
+          <GroupedSection
             title={t('notification.settings.android.title')}
             footer={t('notification.settings.android.description')}
           >
-            <SettingsListItem
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiInformationLine} />}
               title={t('notification.settings.android.openSettings')}
               onPress={() => {
@@ -381,7 +381,7 @@ export default function NotificationSettingsScreen() {
               }}
               showChevron={false}
             />
-          </SettingsListGroup>
+          </GroupedSection>
         ) : null}
       </ScreenScrollView>
     </Screen>

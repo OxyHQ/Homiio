@@ -34,7 +34,7 @@ import { Loading } from '@oxy.so/bloom/loading';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { RadioGroup } from '@oxy.so/bloom/radio';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { Switch } from '@oxy.so/bloom/switch';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { useTheme } from '@oxy.so/bloom/theme';
@@ -192,13 +192,13 @@ export default function WatchAlertSettingsScreen() {
           />
         </Card>
 
-        <SettingsListGroup title={t('alerts.settings.rules')}>
+        <GroupedSection title={t('alerts.settings.rules')}>
           {HOUSING_ALERT_RULE_TYPES.map((type) => {
             const usable = available.has(type);
             const rule = rulesByType.get(type);
             const name = t(`alerts.rules.${type}.name`);
             return (
-              <SettingsListItem
+              <GroupedSectionItem
                 key={type}
                 title={name}
                 description={
@@ -222,13 +222,10 @@ export default function WatchAlertSettingsScreen() {
               />
             );
           })}
-        </SettingsListGroup>
+        </GroupedSection>
 
-        <SettingsListGroup
-          title={t('alerts.settings.pause')}
-          footer={t('alerts.settings.pauseHint')}
-        >
-          <SettingsListItem
+        <GroupedSection title={t('alerts.settings.pause')} footer={t('alerts.settings.pauseHint')}>
+          <GroupedSectionItem
             title={t('alerts.settings.pauseAction')}
             rightElement={
               <Switch
@@ -238,13 +235,13 @@ export default function WatchAlertSettingsScreen() {
               />
             }
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
-        <SettingsListGroup
+        <GroupedSection
           title={t('alerts.settings.primaryArea')}
           footer={t('alerts.settings.primaryAreaHint')}
         >
-          <SettingsListItem
+          <GroupedSectionItem
             title={
               watch.isPrimaryArea
                 ? t('alerts.settings.primaryAreaCurrent')
@@ -261,7 +258,7 @@ export default function WatchAlertSettingsScreen() {
               watch.isPrimaryArea ? undefined : () => watchId && void setPrimaryArea(watchId)
             }
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
         <Button
           onPress={() => router.push(`/saved/alerts?watchId=${watch.id}`)}

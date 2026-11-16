@@ -42,7 +42,7 @@ Domain events (lease signed, viewing approved, roommate request received, …) p
 
 1. **Inbox** (`app/(pages)/(tabs)/inbox/index.tsx`, route `/inbox`)
    - The notifications list: Bloom `Search` plus an All/Unread `SegmentedControl`
-   - Server mailbox rows plus locally scheduled reminders (a Bloom `SettingsListGroup`)
+   - Server mailbox rows plus locally scheduled reminders (a Bloom `GroupedSection`)
    - A Bloom `Admonition` with an enable button while permission is missing
    - Row press marks read and follows the deep link (`data.screen`, else a type fallback)
    - Mark all read from the header; delete from a row's delete button or a long
@@ -54,7 +54,7 @@ Domain events (lease signed, viewing approved, roommate request received, …) p
      search or delete
 
 2. **Notification Settings** (`app/(pages)/settings/notifications.tsx`)
-   - Bloom `SettingsListGroup` + `Switch` rows for categories and behaviour
+   - Bloom `GroupedSection` + `Switch` rows for categories and behaviour
    - Permission state (a Bloom `Admonition` with an enable button when missing)
    - Test notification functionality (development builds only)
 

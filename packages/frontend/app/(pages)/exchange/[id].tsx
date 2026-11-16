@@ -26,7 +26,7 @@ import { RiCloseCircleLine } from '@oxy.so/bloom/icons/RiCloseCircleLine';
 import { RiCloseLine } from '@oxy.so/bloom/icons/RiCloseLine';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { ExchangeMode, ExchangeRequestStatus } from '@homiio/shared-types/common';
 import type { ExchangeWindow } from '@homiio/shared-types';
@@ -254,25 +254,25 @@ export default function ExchangeRequestDetailScreen() {
           ) : null}
         </Card>
 
-        <SettingsListGroup title={t('listing.exchange.detailsLabel')}>
-          <SettingsListItem title={t('listing.exchange.modeLabelShort')} value={modeLabel} />
-          <SettingsListItem
+        <GroupedSection title={t('listing.exchange.detailsLabel')}>
+          <GroupedSectionItem title={t('listing.exchange.modeLabelShort')} value={modeLabel} />
+          <GroupedSectionItem
             title={t('listing.exchange.requestedStay')}
             value={formatWindow(request.requestedWindow)}
           />
           {isSwap && request.offeredWindow ? (
-            <SettingsListItem
+            <GroupedSectionItem
               title={t('listing.exchange.offeredStay')}
               value={formatWindow(request.offeredWindow)}
             />
           ) : null}
           {isSwap && offeredProperty ? (
-            <SettingsListItem
+            <GroupedSectionItem
               title={t('listing.exchange.offeredHome')}
               value={getPropertyTitle(offeredProperty)}
             />
           ) : null}
-        </SettingsListGroup>
+        </GroupedSection>
 
         {request.message ? (
           <Card radius="radius-16" className="p-5" appearance="outline">

@@ -21,7 +21,7 @@ import { Badge } from '@oxy.so/bloom/badge';
 import { Button } from '@oxy.so/bloom/button';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { H1, H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services/ui/client';
 import { TenantApplicationStatus } from '@homiio/shared-types/application';
@@ -235,64 +235,64 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.groups}>
-          <SettingsListGroup title={t('profile.sections.activity')}>
-            <SettingsListItem
+          <GroupedSection title={t('profile.sections.activity')}>
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiBookmarkLine} />}
               title={t('saved.header')}
               value={String(totalSaved)}
               onPress={() => router.push('/saved')}
             />
-            <SettingsListItem
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiFileTextLine} />}
               title={t('profile.applications')}
               value={String(totalApplications)}
               onPress={() => router.push('/applications')}
             />
-            <SettingsListItem
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiHotelBedLine} />}
               title={t('profile.stays')}
               value={String(totalReservations)}
               onPress={() => router.push('/stays')}
             />
-            <SettingsListItem
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiArrowLeftRightLine} />}
               title={t('profile.exchanges')}
               description={t('profile.exchangesDescription')}
               onPress={() => router.push('/exchange/requests')}
             />
-          </SettingsListGroup>
+          </GroupedSection>
 
-          <SettingsListGroup title={t('agent.menu.section')}>
-            <SettingsListItem
+          <GroupedSection title={t('agent.menu.section')}>
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiCoinsLine} />}
               title={t('agent.menu.title')}
               description={t('agent.menu.description')}
               onPress={() => router.push('/agent')}
             />
-          </SettingsListGroup>
+          </GroupedSection>
 
-          <SettingsListGroup title={t('profile.sections.account')}>
-            <SettingsListItem
+          <GroupedSection title={t('profile.sections.account')}>
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiStarLine} />}
               title={t('profile.subscriptions')}
               description={t('profile.subscriptionsDescription')}
               onPress={() => router.push('/profile/subscriptions')}
             />
-            <SettingsListItem
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiSettings3Line} />}
               title={t('settings.title')}
               onPress={() => router.push('/settings')}
             />
-          </SettingsListGroup>
+          </GroupedSection>
 
-          <SettingsListGroup>
-            <SettingsListItem
+          <GroupedSection>
+            <GroupedSectionItem
               icon={<SettingsRowIcon icon={RiLogoutBoxRLine} destructive />}
               title={t('settings.signOut')}
               destructive
               onPress={() => void handleLogout()}
             />
-          </SettingsListGroup>
+          </GroupedSection>
         </View>
       </ScreenScrollView>
     </Screen>
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  // Bloom 2's SettingsListGroup draws no horizontal inset of its own, so the
+  // Bloom 2's GroupedSection draws no horizontal inset of its own, so the
   // screen supplies the gutter.
   groups: {
     paddingHorizontal: spacing.lg,

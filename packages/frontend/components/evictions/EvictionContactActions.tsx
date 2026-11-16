@@ -3,13 +3,13 @@
  * phone / WhatsApp / Telegram / email actions (only the fields the reporter
  * provided — contacts are never invented) plus the free-text instructions.
  *
- * The actions are a Bloom `SettingsListGroup` in its `filled` variant: the
+ * The actions are a Bloom `GroupedSection` in its `filled` variant: the
  * block sits inside the detail screen's "How to help" card, which already
  * paints the `card` colour, so a `plain` group would lose its edge there.
  */
 import type React from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { RiChat3Line } from '@oxy.so/bloom/icons/RiChat3Line';
 import { RiMailLine } from '@oxy.so/bloom/icons/RiMailLine';
@@ -52,9 +52,9 @@ export const EvictionContactActions: React.FC<EvictionContactActionsProps> = ({
   return (
     <View style={styles.wrap}>
       {actions.length > 0 ? (
-        <SettingsListGroup variant="filled">
+        <GroupedSection variant="filled">
           {actions.map((action) => (
-            <SettingsListItem
+            <GroupedSectionItem
               key={action.kind}
               icon={<SettingsRowIcon icon={ICON_BY_KIND[action.kind]} />}
               title={labels[action.kind]}
@@ -66,7 +66,7 @@ export const EvictionContactActions: React.FC<EvictionContactActionsProps> = ({
               }}
             />
           ))}
-        </SettingsListGroup>
+        </GroupedSection>
       ) : null}
       {instructions ? (
         <View style={styles.instructions}>

@@ -1,7 +1,7 @@
 /**
  * Settings — top-level personal preferences screen.
  *
- * Bloom `SettingsListGroup` + `SettingsListItem` rows with Remix leading
+ * Bloom `GroupedSection` + `GroupedSectionItem` rows with Remix leading
  * icons (`SettingsRowIcon`), Bloom `Switch` toggles and `confirm()` before
  * destructive actions. Sections: Account → Preferences → Notifications →
  * Data → Support → About → Sign out.
@@ -42,7 +42,7 @@ import {
   SegmentedControlItem,
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
-import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { GroupedSection, GroupedSectionItem } from '@oxy.so/bloom/grouped-section';
 
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -127,35 +127,35 @@ export default function SettingsScreen() {
       }
     >
       <ScreenScrollView contentContainerStyle={settingsScreenStyles.content}>
-        <SettingsListGroup title={t('settings.sections.account')}>
-          <SettingsListItem
+        <GroupedSection title={t('settings.sections.account')}>
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiUserLine} />}
             title={userDisplayName}
             description={user?.username ?? ''}
             onPress={() => showBottomSheet?.('ManageAccount')}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiFolderLine} />}
             title={t('settings.account.files')}
             description={t('settings.account.filesDescription')}
             onPress={() => showBottomSheet?.('FileManagement')}
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
-        <SettingsListGroup title={t('settings.sections.preferences')}>
-          <SettingsListItem
+        <GroupedSection title={t('settings.sections.preferences')}>
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiGlobalLine} />}
             title={t('settings.language.title')}
             value={t('settings.language.subtitle')}
             onPress={() => router.push('/settings/language')}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiCoinsLine} />}
             title={t('settings.preferences.currency')}
             value={`${currentCurrencyInfo.symbol} ${currentCurrencyInfo.code}`}
             onPress={() => router.push('/settings/currency')}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiPaletteLine} />}
             title={t('settings.appearance.title')}
             rightElement={
@@ -176,87 +176,87 @@ export default function SettingsScreen() {
               </SegmentedControl>
             }
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiSmartphoneLine} />}
             title={haptics.label}
             description={haptics.description}
             rightElement={haptics.control}
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
-        <SettingsListGroup title={t('settings.sections.notifications')}>
-          <SettingsListItem
+        <GroupedSection title={t('settings.sections.notifications')}>
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiNotification3Line} />}
             title={t('settings.preferences.notifications')}
             description={t('settings.preferences.notificationsDesc')}
             rightElement={<Switch checked={notifications} onCheckedChange={setNotifications} />}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiEqualizerLine} />}
             title={t('settings.notifications.detail')}
             description={t('settings.notifications.detailDesc')}
             onPress={() => router.push('/settings/notifications')}
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
-        <SettingsListGroup title={t('settings.sections.data')}>
-          <SettingsListItem
+        <GroupedSection title={t('settings.sections.data')}>
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiRefreshLine} />}
             title={t('settings.preferences.autoSync')}
             description={t('settings.preferences.autoSyncDesc')}
             rightElement={<Switch checked={autoSync} onCheckedChange={setAutoSync} />}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiEyeOffLine} />}
             title={t('settings.preferences.offlineMode')}
             description={t('settings.preferences.offlineModeDesc')}
             rightElement={<Switch checked={offlineMode} onCheckedChange={setOfflineMode} />}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiDownloadLine} />}
             title={t('settings.data.exportData')}
             description={t('settings.data.exportDataDesc')}
             onPress={() => void handleExportData()}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiDeleteBinLine} destructive />}
             title={t('settings.data.clearCache')}
             description={t('settings.data.clearCacheDesc')}
             destructive
             onPress={() => void handleClearCache()}
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
-        <SettingsListGroup title={t('settings.sections.supportFeedback')}>
-          <SettingsListItem
+        <GroupedSection title={t('settings.sections.supportFeedback')}>
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiQuestionLine} />}
             title={t('settings.supportFeedback.helpSupport')}
             description={t('settings.supportFeedback.helpSupportDesc')}
             onPress={() => toast(t('settings.supportFeedback.helpSupportMessage'))}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiChat3Line} />}
             title={t('settings.supportFeedback.sendFeedback')}
             description={t('settings.supportFeedback.sendFeedbackDesc')}
             onPress={() => toast(t('settings.supportFeedback.sendFeedbackMessage'))}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiStarLine} />}
             title={t('settings.supportFeedback.rateApp')}
             description={t('settings.supportFeedback.rateAppDesc')}
             onPress={() => toast(t('settings.supportFeedback.rateAppMessage'))}
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
-        <SettingsListGroup title={t('settings.sections.aboutHomiio')}>
-          <SettingsListItem
+        <GroupedSection title={t('settings.sections.aboutHomiio')}>
+          <GroupedSectionItem
             icon={<LogoIcon size={20} color={theme.primary} />}
             title={t('settings.aboutHomiio.appName')}
             value={t('settings.aboutHomiio.version', {
               version: Constants.expoConfig?.version || '1.0.0',
             })}
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiWrenchLine} />}
             title={t('settings.aboutHomiio.build')}
             value={
@@ -265,30 +265,30 @@ export default function SettingsScreen() {
                 : t('settings.aboutHomiio.buildVersion')
             }
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiSmartphoneLine} />}
             title={t('settings.aboutHomiio.platform')}
             value={
               Constants.platform?.ios ? 'iOS' : Constants.platform?.android ? 'Android' : 'Web'
             }
           />
-          <SettingsListItem
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiCodeSSlashLine} />}
             title={t('settings.aboutHomiio.oxySDK')}
             value={(Constants as unknown as { oxyVersion?: string }).oxyVersion || 'Unknown'}
             onPress={() => showBottomSheet?.('AppInfo')}
           />
-        </SettingsListGroup>
+        </GroupedSection>
 
-        <SettingsListGroup>
-          <SettingsListItem
+        <GroupedSection>
+          <GroupedSectionItem
             icon={<SettingsRowIcon icon={RiLogoutBoxRLine} destructive />}
             title={t('settings.signOut')}
             description={t('settings.signOutDesc')}
             destructive
             onPress={() => void handleSignOut()}
           />
-        </SettingsListGroup>
+        </GroupedSection>
       </ScreenScrollView>
     </Screen>
   );
