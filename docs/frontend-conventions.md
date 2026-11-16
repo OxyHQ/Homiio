@@ -11,11 +11,17 @@
 as its content, and nothing else as the frame:
 
 ```tsx
-<AppShell variant="feed" panels scroll="page" header={null}
+<AppShell layout="catalog" presentation="framed" panels scroll="page" header={null}
   sidebar={…} drawer="reveal" aside={…} bottomBar={<HomiioBottomBar />}>
   <Slot />
 </AppShell>
 ```
+
+The catalog family declares the centered discovery structure; the framed
+presentation keeps Homiio's existing surfaces. Its explicit 8px navigation gap,
+8px frame and 1800px catalog measure remain product constraints. These values
+are resolved by Bloom against its container rather than by application window
+measurement. Non-map routes retain their existing route and Screen owners.
 
 **Do not hand-roll a sidebar column, drawer, scrim, bottom bar, right rail,
 `ContentPanel`, safe-area padding or breakpoint logic** — the shell owns all of
@@ -85,12 +91,16 @@ stays in document flow); on native the shell adds no scroll view and the route's
 `ScreenScrollView` is the scroller. A page that renders its content outside a
 `ScreenScrollView` does not scroll on native. Horizontal rows and scrollers inside
 sheets are fine. `/explore` is TWO panels, results and the map — Bloom's
-`AppShellPanels`, outside the `(pages)` group: side by side with a draggable
+  `AppShellPanels`, outside the `(pages)` group: side by side with a draggable
 divider once the group's own box fits both, one at a time below that, switched
 by the Map / List toggle each panel shows while `useAppShellPanel().alone`. The
-group is one viewport tall, so explore needs no scroll mode of its own; each
-panel scrolls itself. Its error states are one `AppShellPanel`. Explore has no
-right rail.
+group declares `family: 'map-browser'` and `presentation: 'framed'`, with stable
+`results` and `map` descriptor IDs and `collection` / `canvas` roles. The
+collection's `Screen` owns its search header and `ScreenScrollView`; the canvas
+Screen reserves its compact header without creating a vertical scroller. The
+existing result/map selection remains application state, and the compositor
+changes visibility without recreating the search query or map camera. Its
+error states are one `AppShellPanel`. Explore has no right rail.
 
 ### Breakpoints are NativeWind classes
 
@@ -308,9 +318,11 @@ A paginated page passes its guarded loader
 `ScreenScrollView onEndReached`. Bloom fires it from the scroll view on native and
 from the window in a web `Screen documentScroll`, and re-arms when the content
 grows. Never hand-roll scroll distance math or an end-of-list sentinel in a page.
-`/explore`'s results list, which scrolls in its own split pane beside the map,
-is the one surface with its own `ScrollView`; it pages through `hooks/useInfiniteScroll`, whose
-scroll, layout and content-size handlers work the same on web and native.
+`/explore`'s results list also uses this contract inside its collection Screen.
+It supplies the same guarded loader to `ScreenScrollView.onEndReached` and lets
+the Screen reserve bottom chrome once. It does not add the bottom navigation's
+height to its own content padding. Its separate map Screen keeps the map's pan
+and zoom owner intact.
 
 - Canonical data hooks, to reuse rather than writing a new pagination engine:
   `hooks/usePropertySearch.ts` (search, browse, home feed) and

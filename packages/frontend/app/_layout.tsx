@@ -237,7 +237,8 @@ function AppFrame() {
 
   return (
     <AppShell
-      variant="feed"
+      layout="catalog"
+      presentation="framed"
       panels
       scroll="page"
       sidebar={sidebar}

@@ -20,11 +20,12 @@
  */
 import type React from 'react';
 import { useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AppShellPanel, AppShellPanels, useAppShellPanel } from '@oxy.so/bloom/app-shell';
+import { AppShellPanels, useAppShellPanel } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
+import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
 import { useBottomEdgeInset } from '@oxy.so/bloom/layout';
 import { RiBookmarkFill } from '@oxy.so/bloom/icons/RiBookmarkFill';
 import { RiBookmarkLine } from '@oxy.so/bloom/icons/RiBookmarkLine';
@@ -36,7 +37,6 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useSavedSearches } from '@/hooks/useSavedSearches';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import type { MapCameraTarget, MapMarkerData, MapViewRef } from '@goway.to/maps';
 
 import { DEVICE_ZOOM, HOMIIO_OPENING_VIEW } from '@/components/map/mapDefaults';
@@ -454,18 +454,12 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     );
   }, [bottomSheet, canSaveSearch, onRequireAuth, query, savedName, t]);
 
-  // The list is its own scroller on every platform (the map beside it is
-  // pinned), so its own end detection pages it — on web as on native.
+  // Bloom binds pagination to this collection's viewport on every platform.
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  const bottomEdge = useBottomEdgeInset();
-  const listEnd = useInfiniteScroll({
-    onEndReached: handleEndReached,
-    enabled: hasNextPage,
-  });
 
   /**
    * The heading describes the COMMITTED query, never the pending viewport.
@@ -663,7 +657,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   };
 
   const listScroll = (
-    <ScrollView
+    <ScreenScrollView
       // The list and the map below carry the SAME query id, which is what makes
       // "these two surfaces are showing one search" observable in the rendered
       // tree rather than merely asserted in a comment. Both come from one
@@ -671,14 +665,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       // browser-level check, or a person with the inspector open, can see that.
       nativeID={`search-list-${queryId}`}
       className="flex-1"
-      // The bounded panel leaves the bottom bar's clearance to this list: the
-      // bar's measured height, published by Bloom, on top of the list's own end.
-      contentContainerStyle={{ paddingBottom: LIST_END + bottomEdge }}
-      onScroll={listEnd.onScroll}
-      onLayout={listEnd.onLayout}
-      onContentSizeChange={listEnd.onContentSizeChange}
-      scrollEventThrottle={16}
-      showsVerticalScrollIndicator={false}
+      onEndReached={handleEndReached}
     >
       {/* `accessibilityLiveRegion` is what announces a result set changing
           under a screen reader: committing a new area replaces the heading and
@@ -696,7 +683,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       {isFetchingNextPage ? (
         <PropertyResultsGridSkeleton count={NEXT_PAGE_SKELETON_COUNT} className={GRID_GUTTER} />
       ) : null}
-    </ScrollView>
+    </ScreenScrollView>
   );
 
   const mapPanel = (
@@ -780,24 +767,41 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const toList = t('search.fab.list', 'List') || 'List';
   const toMap = t('search.fab.map', 'Map') || 'Map';
   return (
-    <AppShellPanels collapseBelow={SPLIT_FROM} show={showMobileMap ? 'map' : 'results'}>
-      <AppShellPanel
-        id="results"
-        width={LIST_WIDTH}
-        minWidth={LIST_MIN_WIDTH}
-        maxWidth={LIST_MAX_WIDTH}
-        resizable
-      >
-        {topBar}
-        {listScroll}
-        <PaneToggle label={toMap} icon="map" onPress={toggleResultsView} />
-      </AppShellPanel>
-      <AppShellPanel id="map" minWidth={MAP_MIN_WIDTH}>
-        <WhenAlone>{topBar}</WhenAlone>
-        {mapPanel}
-        <PaneToggle label={toList} icon="list" onPress={toggleResultsView} />
-      </AppShellPanel>
-    </AppShellPanels>
+    <AppShellPanels
+      layout={{
+        family: 'map-browser',
+        presentation: 'framed',
+        collapseBelow: SPLIT_FROM,
+        activePanel: showMobileMap ? 'map' : 'results',
+        panels: [
+          {
+            id: 'results',
+            role: 'collection',
+            width: LIST_WIDTH,
+            minWidth: LIST_MIN_WIDTH,
+            maxWidth: LIST_MAX_WIDTH,
+            resizable: true,
+            content: (
+              <Screen kind="collection" header={topBar} contentClearance={LIST_END}>
+                {listScroll}
+                <PaneToggle label={toMap} icon="map" onPress={toggleResultsView} />
+              </Screen>
+            ),
+          },
+          {
+            id: 'map',
+            role: 'canvas',
+            minWidth: MAP_MIN_WIDTH,
+            content: (
+              <Screen kind="canvas" header={<WhenAlone>{topBar}</WhenAlone>}>
+                {mapPanel}
+                <PaneToggle label={toList} icon="list" onPress={toggleResultsView} />
+              </Screen>
+            ),
+          },
+        ],
+      }}
+    />
   );
 };
 
