@@ -25,11 +25,13 @@ import { useTranslation } from 'react-i18next';
 
 import { AppShellPanels, useAppShellPanel } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
+import { Fab } from '@oxy.so/bloom/fab';
 import { Screen, ScreenScrollView } from '@oxy.so/bloom/screen';
-import { useBottomEdgeInset } from '@oxy.so/bloom/layout';
 import { RiBookmarkFill } from '@oxy.so/bloom/icons/RiBookmarkFill';
 import { RiBookmarkLine } from '@oxy.so/bloom/icons/RiBookmarkLine';
 import { RiHomeLine } from '@oxy.so/bloom/icons/RiHomeLine';
+import { RiListUnordered } from '@oxy.so/bloom/icons/RiListUnordered';
+import { RiMapPinLine } from '@oxy.so/bloom/icons/RiMapPinLine';
 import { RiRefreshLine } from '@oxy.so/bloom/icons/RiRefreshLine';
 import { RiSearchLine } from '@oxy.so/bloom/icons/RiSearchLine';
 import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
@@ -45,7 +47,6 @@ import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { MapFab } from '@/components/ui/MapFab';
 import { MapMarkerPopover } from '@/components/ui/MapMarkerPopover';
 import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 
@@ -782,9 +783,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             maxWidth: LIST_MAX_WIDTH,
             resizable: true,
             content: (
-              <Screen kind="collection" header={topBar} contentClearance={LIST_END}>
+              <Screen
+                kind="collection"
+                header={topBar}
+                contentClearance={LIST_END}
+                primaryAction={<PaneToggle label={toMap} icon="map" onPress={toggleResultsView} />}
+                primaryActionPlacement="center"
+              >
                 {listScroll}
-                <PaneToggle label={toMap} icon="map" onPress={toggleResultsView} />
               </Screen>
             ),
           },
@@ -793,9 +799,15 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             role: 'canvas',
             minWidth: MAP_MIN_WIDTH,
             content: (
-              <Screen kind="canvas" header={<WhenAlone>{topBar}</WhenAlone>}>
+              <Screen
+                kind="canvas"
+                header={<WhenAlone>{topBar}</WhenAlone>}
+                primaryAction={
+                  <PaneToggle label={toList} icon="list" onPress={toggleResultsView} />
+                }
+                primaryActionPlacement="center"
+              >
                 {mapPanel}
-                <PaneToggle label={toList} icon="list" onPress={toggleResultsView} />
               </Screen>
             ),
           },
@@ -821,12 +833,15 @@ function PaneToggle({
   onPress: () => void;
 }) {
   const { alone } = useAppShellPanel();
-  const bottomEdge = useBottomEdgeInset();
   if (!alone) return null;
   return (
-    // Zero-height strip on the bottom bar's top edge: the FAB anchors above it.
-    <View className="absolute inset-x-0" style={{ bottom: bottomEdge }}>
-      <MapFab onPress={onPress} label={label} icon={icon} />
-    </View>
+    <Fab
+      onPress={onPress}
+      label={label}
+      accessibilityLabel={label}
+      icon={icon === 'list' ? RiListUnordered : RiMapPinLine}
+      appearance="solid"
+      tone="accent"
+    />
   );
 }
