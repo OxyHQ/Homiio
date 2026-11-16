@@ -759,12 +759,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     </View>
   );
 
-  // Two panels, results and map, laid out by Bloom's `AppShellPanels`: each its
-  // own surface with the shell's gutter between them and a divider that drags
-  // the results' width, once the group's own box fits both (`SPLIT_FROM`, the
-  // sidebar beside it counted). Below that ONE panel at a time, switched by the
-  // Map / List toggle each panel shows while it is alone; the map panel then
-  // carries the search bar itself.
+  // Bloom owns the map-browser frame, adaptation, scroll edge and action
+  // placement. Product constraints keep the established results/map widths;
+  // below SPLIT_FROM the active panel owns the search bar and Map / List action.
   const toList = t('search.fab.list', 'List') || 'List';
   const toMap = t('search.fab.map', 'Map') || 'Map';
   return (
@@ -789,6 +786,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
                 contentClearance={LIST_END}
                 primaryAction={<PaneToggle label={toMap} icon="map" onPress={toggleResultsView} />}
                 primaryActionPlacement="center"
+                primaryActionVisibility="alone"
               >
                 {listScroll}
               </Screen>
@@ -806,6 +804,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
                   <PaneToggle label={toList} icon="list" onPress={toggleResultsView} />
                 }
                 primaryActionPlacement="center"
+                primaryActionVisibility="alone"
               >
                 {mapPanel}
               </Screen>
@@ -822,7 +821,7 @@ function WhenAlone({ children }: { children: React.ReactNode }) {
   return useAppShellPanel().alone ? <>{children}</> : null;
 }
 
-/** The Map / List toggle, shown only while its panel is drawn alone. */
+/** Screen decides when the Map / List action is visible and reserves its space. */
 function PaneToggle({
   label,
   icon,
@@ -832,8 +831,6 @@ function PaneToggle({
   icon: 'map' | 'list';
   onPress: () => void;
 }) {
-  const { alone } = useAppShellPanel();
-  if (!alone) return null;
   return (
     <Fab
       onPress={onPress}
@@ -842,6 +839,7 @@ function PaneToggle({
       icon={icon === 'list' ? RiListUnordered : RiMapPinLine}
       appearance="solid"
       tone="accent"
+      size="md"
     />
   );
 }
