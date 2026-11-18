@@ -49,7 +49,7 @@
     "node": "22.x"
   },
   "overrides": {
-    "@oxy.so/bloom": "22.1.6",
+    "@oxy.so/bloom": "22.1.9",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -58,7 +58,7 @@
     "react-native-worklets": "0.13.1",
     "expo-modules-core": "58.0.26",
     "react-native-svg": "15.16.0",
-    "@oxy.so/services": "14.23.0",
+    "@oxy.so/services": "14.24.0",
     "@oxy.so/mcp": "1.4.3",
     "react-native-keyboard-controller": "1.22.9",
     "@types/express": "^5.0.6",
@@ -72,7 +72,7 @@
   },
   "cacheDirectories": [],
   "dependencies": {
-    "@oxy.so/core": "7.52.0",
-    "@oxy.so/bloom": "22.1.6"
+    "@oxy.so/core": "7.55.0",
+    "@oxy.so/bloom": "22.1.9"
   }
 }
