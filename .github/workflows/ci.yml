@@ -635,6 +635,10 @@ jobs:
         run: bun run validate:agents-md
 
       - name: Verify the CI and deploy gates can still fail
+        # The default registry, for the same reason as the worker runtime's
+        # lockfile check above: its self-test regenerates that lock too.
+        env:
+          BUN_CONFIG_REGISTRY: https://registry.npmjs.org/
         run: |
           bash -n .github/scripts/*.sh
           bun scripts/test-check-lockfile-sync.mjs
