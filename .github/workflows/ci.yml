@@ -210,18 +210,69 @@ jobs:
               - 'tailwind.config.js'
               - 'performance-budgets.json'
 
+  # The Seldon race (OxyHQ/oxy docs/engineering/build-and-deploy.md, CI on
+  # Seldon), opt-in with the repository variable CI_SELDON_RACE=true, on
+  # same-repository pull_request and merge_group runs only. Push and dispatch
+  # runs stay hosted: main deploys from its push run (`deploy-backend` below,
+  # and deploy-frontends.yml reads a push run's `success`). Unset, every job
+  # runs hosted as before and none of these takes a runner. Set, the heavy jobs
+  # (backend, frontend, frontend-bundle, frontend-typecheck, image-smoke) run on
+  # seldon-ci and `lockfile` on seldon-ci-light; a lane still queued 3 minutes
+  # after it was created gets its hosted twin (the `-hosted` jobs), the lane
+  # that starts first wins and the finish job cancels the other through its
+  # job-level concurrency group. A Seldon lane that fails, whatever the reason
+  # (the house network drops new connections in bursts), reruns hosted in its
+  # `-rescue` job, which fails again on a genuine failure. CI complete takes
+  # the raced jobs' verdict from the race.
+  race:
+    needs: [changes]
+    if: ${{ !cancelled() && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork }}
+    uses: OxyHQ/oxy/.github/workflows/seldon-race-start.yml@main
+    permissions:
+      actions: read
+    with:
+      names: |
+        backend
+        frontend
+        lockfile
+        frontend-bundle
+        frontend-typecheck
+        image-smoke
+
+  race-finish:
+    needs: race
+    # `!cancelled()`: an ancestor skipped on this event must not skip it.
+    if: ${{ !cancelled() && needs.race.outputs.race == 'true' }}
+    uses: OxyHQ/oxy/.github/workflows/seldon-race-finish.yml@main
+    permissions:
+      actions: read
+    with:
+      names: |
+        backend
+        frontend
+        lockfile
+        frontend-bundle
+        frontend-typecheck
+        image-smoke
+
   backend:
+    name: backend
     needs: changes
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
-    runs-on: ubuntu-24.04
+    runs-on: &seldon-lane ${{ vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && 'seldon-ci' || 'ubuntu-24.04' }}
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-seldon-backend
+    permissions: &race-lane-permissions
+      contents: read
+      actions: read # the Seldon race guard reads this run's jobs
     timeout-minutes: 30
-    env:
+    env: &backend-env
       # The Postgres server `jest.globalSetup.ts` creates one throwaway,
       # fully-migrated database per worker on. Separate from DATABASE_URL so the
       # harness never has to guess which server it may create databases on.
       TEST_DATABASE_URL: postgres://homiio:homiio@127.0.0.1:5434/postgres
     # Postgres is the only store the suite needs.
-    services:
+    services: &backend-services
       postgres:
         # The SAME pin as docker-compose.postgres.yml, on BOTH versions. A
         # floating PostGIS minor is a floating set of function volatilities, and
@@ -246,7 +297,14 @@ jobs:
           --health-timeout 5s
           --health-retries 10
           --health-start-period 10s
-    steps:
+    steps: &backend-steps
+      # A lane that starts after its hosted twin waits here to be cancelled (the Seldon race).
+      - &race-guard
+        name: Seldon race guard
+        if: vars.CI_SELDON_RACE == 'true' && !endsWith(github.job, '-rescue')
+        uses: OxyHQ/oxy/.github/actions/seldon-race@main
+        with:
+          mode: guard
       - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
@@ -382,12 +440,44 @@ jobs:
             exit 1
           fi
 
+  # backend's hosted twin in the Seldon race: the same name and steps.
+  backend-hosted:
+    name: backend
+    needs: [changes, race]
+    if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-hosted-backend
+    permissions: *race-lane-permissions
+    timeout-minutes: 30
+    env: *backend-env
+    services: *backend-services
+    steps: *backend-steps
+
+  # backend's rescue: reruns it hosted when its Seldon lane failed (the house
+  # network drops connections); a genuine failure fails again.
+  backend-rescue:
+    name: backend
+    needs: [changes, backend]
+    if: ${{ !cancelled() && needs.backend.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
+    runs-on: ubuntu-24.04
+    permissions: *race-lane-permissions
+    timeout-minutes: 30
+    env: *backend-env
+    services: *backend-services
+    steps: *backend-steps
+
   frontend:
+    name: frontend
     needs: changes
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
-    runs-on: ubuntu-24.04
+    runs-on: *seldon-lane
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-seldon-frontend
+    permissions: *race-lane-permissions
     timeout-minutes: 20
-    steps:
+    steps: &frontend-steps
+      - *race-guard
       - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
@@ -433,6 +523,29 @@ jobs:
           bun .github/scripts/assert-test-floor.mjs
           "$RUNNER_TEMP/frontend-tests.json" packages/frontend 110
 
+  # frontend's hosted twin in the Seldon race: the same name and steps.
+  frontend-hosted:
+    name: frontend
+    needs: [changes, race]
+    if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-hosted-frontend
+    permissions: *race-lane-permissions
+    timeout-minutes: 20
+    steps: *frontend-steps
+
+  # frontend's rescue: reruns it hosted when its Seldon lane failed (the house
+  # network drops connections); a genuine failure fails again.
+  frontend-rescue:
+    name: frontend
+    needs: [changes, frontend]
+    if: ${{ !cancelled() && needs.frontend.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
+    runs-on: ubuntu-24.04
+    permissions: *race-lane-permissions
+    timeout-minutes: 20
+    steps: *frontend-steps
+
   # Deliberately no job for shared-types or listing-providers. shared-types' `test`
   # script is `echo "No tests specified" && exit 0` — there is no suite. And
   # listing-providers' is `cd ../backend && bun run test -- --testPathPattern=...`:
@@ -441,9 +554,14 @@ jobs:
   # coverage. Give either package a suite of its own and it earns a job with a floor.
 
   lockfile:
-    runs-on: ubuntu-24.04
+    name: lockfile
+    runs-on: &seldon-lane-light ${{ vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && 'seldon-ci-light' || 'ubuntu-24.04' }}
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-seldon-lockfile
+    permissions: *race-lane-permissions
     timeout-minutes: 10
-    steps:
+    steps: &lockfile-steps
+      - *race-guard
       - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
@@ -535,12 +653,41 @@ jobs:
         uses: OxyHQ/oxy/.github/actions/reviewed-image@main
         with:
           phase: check
+
+  # lockfile's hosted twin in the Seldon race: the same name and steps.
+  lockfile-hosted:
+    name: lockfile
+    needs: [race]
+    if: ${{ !cancelled() && !failure() && needs.race.outputs.race == 'true' }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-hosted-lockfile
+    permissions: *race-lane-permissions
+    timeout-minutes: 10
+    steps: *lockfile-steps
+
+  # lockfile's rescue: reruns it hosted when its Seldon lane failed (the house
+  # network drops connections); a genuine failure fails again.
+  lockfile-rescue:
+    name: lockfile
+    needs: [lockfile]
+    if: ${{ !cancelled() && needs.lockfile.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork }}
+    runs-on: ubuntu-24.04
+    permissions: *race-lane-permissions
+    timeout-minutes: 10
+    steps: *lockfile-steps
+
   frontend-bundle:
+    name: frontend-bundle
     needs: changes
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true') }}
-    runs-on: ubuntu-24.04
+    runs-on: *seldon-lane
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-seldon-frontend-bundle
+    permissions: *race-lane-permissions
     timeout-minutes: 70
-    steps:
+    steps: &frontend-bundle-steps
+      - *race-guard
       - uses: actions/checkout@v7
 
       # Expo SDK 58's CLI needs Node 22.13+; the runner image's default Node is
@@ -569,6 +716,29 @@ jobs:
 
       - name: Enforce production web bundle budgets
         run: bun run check:web-bundle-budget
+
+  # frontend-bundle's hosted twin in the Seldon race: the same name and steps.
+  frontend-bundle-hosted:
+    name: frontend-bundle
+    needs: [changes, race]
+    if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true')) }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-hosted-frontend-bundle
+    permissions: *race-lane-permissions
+    timeout-minutes: 70
+    steps: *frontend-bundle-steps
+
+  # frontend-bundle's rescue: reruns it hosted when its Seldon lane failed (the house
+  # network drops connections); a genuine failure fails again.
+  frontend-bundle-rescue:
+    name: frontend-bundle
+    needs: [changes, frontend-bundle]
+    if: ${{ !cancelled() && needs.frontend-bundle.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true')) }}
+    runs-on: ubuntu-24.04
+    permissions: *race-lane-permissions
+    timeout-minutes: 70
+    steps: *frontend-bundle-steps
 
   lint:
     needs: changes
@@ -614,6 +784,7 @@ jobs:
         run: bun run --cwd packages/frontend lint
 
   frontend-typecheck:
+    name: frontend-typecheck
     needs: changes
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true') }}
     # ARMED. Nothing else typechecks the frontend: `expo export` compiles
@@ -633,9 +804,13 @@ jobs:
     # The install runs postinstall so shared-types is built — this project
     # resolves it through a path mapping to ../shared-types/src, but its
     # references still expect the built project.
-    runs-on: ubuntu-24.04
+    runs-on: *seldon-lane
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-seldon-frontend-typecheck
+    permissions: *race-lane-permissions
     timeout-minutes: 15
-    steps:
+    steps: &frontend-typecheck-steps
+      - *race-guard
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
@@ -644,6 +819,29 @@ jobs:
         run: bash .github/scripts/bun-install.sh --frozen-lockfile
       - name: Typecheck frontend
         run: bun run --cwd packages/frontend typecheck
+
+  # frontend-typecheck's hosted twin in the Seldon race: the same name and steps.
+  frontend-typecheck-hosted:
+    name: frontend-typecheck
+    needs: [changes, race]
+    if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true')) }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-hosted-frontend-typecheck
+    permissions: *race-lane-permissions
+    timeout-minutes: 15
+    steps: *frontend-typecheck-steps
+
+  # frontend-typecheck's rescue: reruns it hosted when its Seldon lane failed (the house
+  # network drops connections); a genuine failure fails again.
+  frontend-typecheck-rescue:
+    name: frontend-typecheck
+    needs: [changes, frontend-typecheck]
+    if: ${{ !cancelled() && needs.frontend-typecheck.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true')) }}
+    runs-on: ubuntu-24.04
+    permissions: *race-lane-permissions
+    timeout-minutes: 15
+    steps: *frontend-typecheck-steps
 
   # ─────────────────────────────────────────────────────────────────────────
   # The backend deploy runs HERE, as a called workflow, rather than from its own
@@ -702,11 +900,15 @@ jobs:
   # Dockerfile is architecture-neutral (sharp installs its prebuild for the
   # build's own platform), and the deploy still builds and rolls arm64.
   image-smoke:
+    name: image-smoke
     needs: changes
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
-    runs-on: ubuntu-24.04
+    runs-on: *seldon-lane
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-seldon-image-smoke
+    permissions: *race-lane-permissions
     timeout-minutes: 45
-    services:
+    services: &image-smoke-services
       postgres:
         # The same PostGIS pin as the backend job and docker-compose.postgres.yml.
         image: postgis/postgis:17-3.5
@@ -732,7 +934,8 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-    steps:
+    steps: &image-smoke-steps
+      - *race-guard
       - uses: actions/checkout@v7
 
       # The images are built from what the deploy's guards hand out, so the
@@ -871,6 +1074,31 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6385
         run: bash .github/scripts/smoke-worker-image.sh
 
+  # image-smoke's hosted twin in the Seldon race: the same name and steps.
+  image-smoke-hosted:
+    name: image-smoke
+    needs: [changes, race]
+    if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: seldon-race-${{ github.run_id }}-${{ github.run_attempt }}-hosted-image-smoke
+    permissions: *race-lane-permissions
+    timeout-minutes: 45
+    services: *image-smoke-services
+    steps: *image-smoke-steps
+
+  # image-smoke's rescue: reruns it hosted when its Seldon lane failed (the house
+  # network drops connections); a genuine failure fails again.
+  image-smoke-rescue:
+    name: image-smoke
+    needs: [changes, image-smoke]
+    if: ${{ !cancelled() && needs.image-smoke.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
+    runs-on: ubuntu-24.04
+    permissions: *race-lane-permissions
+    timeout-minutes: 45
+    services: *image-smoke-services
+    steps: *image-smoke-steps
+
   # The image smoke above is amd64 (PostGIS publishes no arm64 image), but
   # production runs linux/arm64, and two things in the images are per
   # architecture: the prebuilt native addons the lockfile installs (sharp,
@@ -975,18 +1203,100 @@ jobs:
   ci-complete:
     name: CI complete
     if: always()
-    needs: [changes, backend, frontend, lockfile, frontend-bundle, lint, frontend-typecheck, image-smoke, image-arm64]
+    # Not race-finish: its reapers run on seldon-ci-light and only follow the
+    # cancellation, so needing it would wait on Seldon.
+    needs:
+      - changes
+      - race
+      - backend
+      - backend-hosted
+      - backend-rescue
+      - frontend
+      - frontend-hosted
+      - frontend-rescue
+      - lockfile
+      - lockfile-hosted
+      - lockfile-rescue
+      - frontend-bundle
+      - frontend-bundle-hosted
+      - frontend-bundle-rescue
+      - lint
+      - frontend-typecheck
+      - frontend-typecheck-hosted
+      - frontend-typecheck-rescue
+      - image-smoke
+      - image-smoke-hosted
+      - image-smoke-rescue
+      - image-arm64
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      actions: read # the Seldon race verdict reads this run's jobs
     steps:
+      # Per job name: passed when one of its lanes succeeded and no hosted lane
+      # failed. Whenever the race is on: a rescue can run without the race.
+      - name: Seldon race verdict
+        id: race
+        if: vars.CI_SELDON_RACE == 'true'
+        uses: OxyHQ/oxy/.github/actions/seldon-race@main
+        with:
+          mode: verdict
       - name: Every job that ran passed
         env:
           RESULTS: ${{ toJSON(needs) }}
+          RACE_VERDICT: ${{ steps.race.outputs.outcome }}
         run: |
+          set -euo pipefail
           echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          bad=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result == "failure" or .value.result == "cancelled")] | length')
-          ran=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result == "success")] | length')
-          if [ "$bad" != "0" ]; then echo "::error::$bad job(s) failed or were cancelled"; exit 1; fi
+          failures=()
+          result() { jq -r --arg job "$1" '.[$job].result // "missing"' <<<"$RESULTS"; }
+
+          # The Seldon race (see `race` above). A raced job's family is the job,
+          # its hosted twin and its rescue. When the race ran (and the job was
+          # not skipped by its filter) or the rescue ran, the family's result is
+          # the race's verdict: a cancelled loser is not a failure, and a failed
+          # Seldon lane is excused by its twin's or rescue's success. Otherwise
+          # the job is judged alone and its twin and rescue must have skipped.
+          raced="$(jq -r '.race.outputs.race // ""' <<<"$RESULTS")"
+          family() {
+            local job="$1" own twin rescue
+            own="$(result "$job")"
+            twin="$(result "$job-hosted")"
+            rescue="$(result "$job-rescue")"
+            if [ "$rescue" != skipped ] || { [ "$raced" = true ] && ! { [ "$own" = skipped ] && [ "$twin" = skipped ]; }; }; then
+              family="${RACE_VERDICT:-no verdict}"
+              return
+            fi
+            [ "$twin" = skipped ] || failures+=("$job-hosted ran although the Seldon race did not: $twin")
+            family="$own"
+          }
+
+          # The race's start: skipped when not needed, never failed.
+          case "$(result race)" in
+            success | skipped) ;;
+            *) failures+=("race did not pass: $(result race)") ;;
+          esac
+
+          ran=0
+          judge() {
+            case "$2" in
+              success) ran=$((ran + 1)) ;;
+              skipped) ;;
+              *) failures+=("$1 did not pass: $2") ;;
+            esac
+          }
+          for job in changes lint image-arm64; do
+            judge "$job" "$(result "$job")"
+          done
+          for job in backend frontend lockfile frontend-bundle frontend-typecheck image-smoke; do
+            family "$job"
+            judge "$job" "$family"
+          done
+
+          if [ ${#failures[@]} -gt 0 ]; then
+            for failure in "${failures[@]}"; do echo "::error::$failure"; done
+            exit 1
+          fi
           # Vacuity floor: `lockfile` runs on every event, so zero successes
           # means nothing was checked at all.
           if [ "$ran" = "0" ]; then echo "::error::no job ran"; exit 1; fi
