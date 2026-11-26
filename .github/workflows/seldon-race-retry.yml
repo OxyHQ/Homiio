@@ -18,3 +18,4 @@ jobs:
     permissions:
       actions: write
     uses: OxyHQ/oxy/.github/workflows/seldon-race-retry.yml@main
+# Proof run for the Seldon race (PR #853, not for merge).
