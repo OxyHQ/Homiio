@@ -442,7 +442,7 @@ jobs:
 
   # backend's hosted twin in the Seldon race: the same name and steps.
   backend-hosted:
-    name: backend
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'backend' || 'backend (seldon twin, off)' }}
     needs: [changes, race]
     if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
     runs-on: ubuntu-24.04
@@ -457,7 +457,7 @@ jobs:
   # backend's rescue: reruns it hosted when its Seldon lane failed (the house
   # network drops connections); a genuine failure fails again.
   backend-rescue:
-    name: backend
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'backend' || 'backend (seldon rescue, off)' }}
     needs: [changes, backend]
     if: ${{ !cancelled() && needs.backend.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
     runs-on: ubuntu-24.04
@@ -525,7 +525,7 @@ jobs:
 
   # frontend's hosted twin in the Seldon race: the same name and steps.
   frontend-hosted:
-    name: frontend
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'frontend' || 'frontend (seldon twin, off)' }}
     needs: [changes, race]
     if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
     runs-on: ubuntu-24.04
@@ -538,7 +538,7 @@ jobs:
   # frontend's rescue: reruns it hosted when its Seldon lane failed (the house
   # network drops connections); a genuine failure fails again.
   frontend-rescue:
-    name: frontend
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'frontend' || 'frontend (seldon rescue, off)' }}
     needs: [changes, frontend]
     if: ${{ !cancelled() && needs.frontend.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
     runs-on: ubuntu-24.04
@@ -586,6 +586,12 @@ jobs:
       # The worker image's Playwright comes from its own one-dependency lockfile
       # (see packages/backend/Dockerfile, worker-deps); same two layers.
       - name: Verify the worker runtime's bun.lock matches its manifest
+        # The default registry, not the runner's: on Seldon the image points bun
+        # at the host's npm cache (BUN_CONFIG_REGISTRY), and an install that
+        # re-resolves there writes the cache's URLs into the regenerated lock,
+        # which then differs from the committed one on URLs alone.
+        env:
+          BUN_CONFIG_REGISTRY: https://registry.npmjs.org/
         run: bun .github/scripts/check-worker-runtime-lockfile.mjs
 
       # Every gate in this repository carries a mutation test that breaks what it
@@ -629,6 +635,10 @@ jobs:
         run: bun run validate:agents-md
 
       - name: Verify the CI and deploy gates can still fail
+        # The default registry, for the same reason as the worker runtime's
+        # lockfile check above: its self-test regenerates that lock too.
+        env:
+          BUN_CONFIG_REGISTRY: https://registry.npmjs.org/
         run: |
           bash -n .github/scripts/*.sh
           bun scripts/test-check-lockfile-sync.mjs
@@ -656,7 +666,7 @@ jobs:
 
   # lockfile's hosted twin in the Seldon race: the same name and steps.
   lockfile-hosted:
-    name: lockfile
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'lockfile' || 'lockfile (seldon twin, off)' }}
     needs: [race]
     if: ${{ !cancelled() && !failure() && needs.race.outputs.race == 'true' }}
     runs-on: ubuntu-24.04
@@ -669,7 +679,7 @@ jobs:
   # lockfile's rescue: reruns it hosted when its Seldon lane failed (the house
   # network drops connections); a genuine failure fails again.
   lockfile-rescue:
-    name: lockfile
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'lockfile' || 'lockfile (seldon rescue, off)' }}
     needs: [lockfile]
     if: ${{ !cancelled() && needs.lockfile.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-24.04
@@ -719,7 +729,7 @@ jobs:
 
   # frontend-bundle's hosted twin in the Seldon race: the same name and steps.
   frontend-bundle-hosted:
-    name: frontend-bundle
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'frontend-bundle' || 'frontend-bundle (seldon twin, off)' }}
     needs: [changes, race]
     if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true')) }}
     runs-on: ubuntu-24.04
@@ -732,7 +742,7 @@ jobs:
   # frontend-bundle's rescue: reruns it hosted when its Seldon lane failed (the house
   # network drops connections); a genuine failure fails again.
   frontend-bundle-rescue:
-    name: frontend-bundle
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'frontend-bundle' || 'frontend-bundle (seldon rescue, off)' }}
     needs: [changes, frontend-bundle]
     if: ${{ !cancelled() && needs.frontend-bundle.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true')) }}
     runs-on: ubuntu-24.04
@@ -822,7 +832,7 @@ jobs:
 
   # frontend-typecheck's hosted twin in the Seldon race: the same name and steps.
   frontend-typecheck-hosted:
-    name: frontend-typecheck
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'frontend-typecheck' || 'frontend-typecheck (seldon twin, off)' }}
     needs: [changes, race]
     if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true')) }}
     runs-on: ubuntu-24.04
@@ -835,7 +845,7 @@ jobs:
   # frontend-typecheck's rescue: reruns it hosted when its Seldon lane failed (the house
   # network drops connections); a genuine failure fails again.
   frontend-typecheck-rescue:
-    name: frontend-typecheck
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'frontend-typecheck' || 'frontend-typecheck (seldon rescue, off)' }}
     needs: [changes, frontend-typecheck]
     if: ${{ !cancelled() && needs.frontend-typecheck.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true')) }}
     runs-on: ubuntu-24.04
@@ -1076,7 +1086,7 @@ jobs:
 
   # image-smoke's hosted twin in the Seldon race: the same name and steps.
   image-smoke-hosted:
-    name: image-smoke
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'image-smoke' || 'image-smoke (seldon twin, off)' }}
     needs: [changes, race]
     if: ${{ needs.race.outputs.race == 'true' && (!cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
     runs-on: ubuntu-24.04
@@ -1090,7 +1100,7 @@ jobs:
   # image-smoke's rescue: reruns it hosted when its Seldon lane failed (the house
   # network drops connections); a genuine failure fails again.
   image-smoke-rescue:
-    name: image-smoke
+    name: ${{ vars.CI_SELDON_RACE == 'true' && 'image-smoke' || 'image-smoke (seldon rescue, off)' }}
     needs: [changes, image-smoke]
     if: ${{ !cancelled() && needs.image-smoke.result == 'failure' && vars.CI_SELDON_RACE == 'true' && github.run_attempt == 1 && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && !github.event.pull_request.head.repo.fork && (!cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true')) }}
     runs-on: ubuntu-24.04
