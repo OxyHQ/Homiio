@@ -36,6 +36,7 @@ import {
   updateProperty,
   type PropertyWriteInput,
 } from '../../db/properties/propertyWrites';
+import type { HydratedProperty } from '../../db/properties/propertySerializer';
 import {
   readPropertySnapshot,
   recordPropertyChangeEvents,
@@ -191,10 +192,18 @@ export class IngestionService {
     const before = existing ? await readPropertySnapshot(getDb(), existing.id) : null;
 
     // Persist scalar fields first so the listing has an id for the `images`
-    // rows, whose `entity_id` names it.
-    const propertyId = existing
-      ? ((await updateProperty(existing.id, fields))?.property.id ?? existing.id)
-      : (await insertProperty(fields)).property.id;
+    // rows, whose `entity_id` names it. Both writes hand back the listing as
+    // read straight after the write; the price-ethics scorer below scores from
+    // that read instead of making its own (see `scoreAndPersistProperty`).
+    let written: HydratedProperty | null;
+    let propertyId: string;
+    if (existing) {
+      written = await updateProperty(existing.id, fields);
+      propertyId = written?.property.id ?? existing.id;
+    } else {
+      written = await insertProperty(fields);
+      propertyId = written.property.id;
+    }
 
     // Record what happened, for the watch matcher to pick up on its own
     // schedule. Best effort inside the producer — a failed event must not fail
@@ -230,7 +239,7 @@ export class IngestionService {
       sourceId: listing.sourceId,
       imageCount,
     };
-    schedulePriceEthicsScore(result.propertyId);
+    schedulePriceEthicsScore(result.propertyId, written ?? undefined);
     this.logger.info('Ingested external listing', result);
     return result;
   }

@@ -26,6 +26,7 @@ import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types
 
 import { getDb } from '../../db/postgres';
 import { properties } from '../../db/schema';
+import { findPropertyById } from '../../db/properties/propertyReads';
 import { scoreAndPersistProperty } from '../../services/priceEthicsService';
 import {
   resetGeoTables,
@@ -154,6 +155,36 @@ describe('price ethics scoring', () => {
     expect(stored?.scoredAt).toBeInstanceOf(Date);
     expect(stored?.marketVerdict).toBeNull();
     expect(stored?.percentDiffFromAvg).toBeNull();
+  });
+
+  it('stores the same verdict from a handed read as from its own read', async () => {
+    const chain = await seedGeoChain({ cityName: 'Barcelona', countryCode: 'ES-ph' });
+    for (let index = 1; index <= 6; index += 1) {
+      await seedListing(chain, { monthlyAmount: 900 + index * 40, index });
+    }
+    const targetId = await seedListing(chain, { monthlyAmount: 1100, index: 7 });
+    const otherId = await seedListing(chain, { monthlyAmount: 2500, index: 8 });
+
+    await scoreAndPersistProperty(targetId);
+    const own = await storedPriceEthics(targetId);
+
+    const handed = await findPropertyById(targetId);
+    if (!handed) throw new Error('target listing not found');
+    await scoreAndPersistProperty(targetId, handed);
+    const fromHanded = await storedPriceEthics(targetId);
+
+    const { scoredAt: ownAt, ...ownVerdict } = own ?? {};
+    const { scoredAt: handedAt, ...handedVerdict } = fromHanded ?? {};
+    expect(ownVerdict.marketVerdict).toBeTruthy();
+    expect(handedVerdict).toEqual(ownVerdict);
+    expect(handedAt).toBeInstanceOf(Date);
+    expect(ownAt).toBeInstanceOf(Date);
+
+    // A read of a DIFFERENT listing is never scored in this one's place: the
+    // scorer falls back to reading the id it was given.
+    await scoreAndPersistProperty(otherId, handed);
+    expect((await storedPriceEthics(otherId))?.marketVerdict).toBe('above_average');
+    expect((await storedPriceEthics(targetId))?.marketVerdict).toBe(ownVerdict.marketVerdict);
   });
 
   it('leaves an unknown listing alone rather than throwing', async () => {

@@ -9,7 +9,7 @@ import { OfferingType } from '@homiio/shared-types';
 import type { PropertyPriceEthics } from '@homiio/shared-types';
 import { validateEthicalPricing, type EthicalPricingCharacteristics } from '@homiio/shared-types';
 import { findPropertyById } from '../db/properties/propertyReads';
-import { serializeProperty } from '../db/properties/propertySerializer';
+import { serializeProperty, type HydratedProperty } from '../db/properties/propertySerializer';
 import { setPropertyPriceEthics } from '../db/properties/propertyWrites';
 import { logger } from '../middlewares/logging';
 import {
@@ -189,12 +189,27 @@ export async function computePriceEthics(
   };
 }
 
-export async function scoreAndPersistProperty(propertyId: string): Promise<void> {
+/**
+ * Score one listing and persist the verdict.
+ *
+ * `listing` is the hydrated read the caller ALREADY holds for this id, when it
+ * holds one taken after its own write (`insertProperty` / `updateProperty`
+ * return exactly that). Passing it skips a second `findPropertyById` — four
+ * statements, the `property_images` load among them — that would read the same
+ * row back a moment later. The verdict is computed from the same columns either
+ * way: the scorer reads the listing's price, bedrooms, offerings and address,
+ * none of which anything writes between the caller's read and this one.
+ */
+export async function scoreAndPersistProperty(
+  propertyId: string,
+  listing?: HydratedProperty,
+): Promise<void> {
   // Read through the SAME repository the catalogue reads through: the geo names
   // this scorer needs (`cityName`, `neighborhoodName`) come from the four LEFT
   // JOINs `propertyReads` already makes, so the two-level `populate` chain this
   // replaces has no counterpart to build.
-  const hydrated = await findPropertyById(propertyId);
+  const hydrated =
+    listing?.property.id === propertyId ? listing : await findPropertyById(propertyId);
   if (!hydrated) {
     logger.warn('Price ethics scoring skipped — property not found', { propertyId });
     return;
@@ -211,9 +226,8 @@ export async function scoreAndPersistProperty(propertyId: string): Promise<void>
   await setPropertyPriceEthics(propertyId, priceEthics as unknown as Record<string, unknown>);
 }
 
-/** Fire-and-forget hook for write paths — never throws to callers. */
-export function schedulePriceEthicsScore(propertyId: string): void {
-  void scoreAndPersistProperty(propertyId).catch((error: unknown) => {
+export function schedulePriceEthicsScore(propertyId: string, listing?: HydratedProperty): void {
+  void scoreAndPersistProperty(propertyId, listing).catch((error: unknown) => {
     logger.error('Price ethics scoring failed', {
       propertyId,
       error: describeErrorForLog(error),

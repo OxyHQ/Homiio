@@ -25,7 +25,12 @@ import {
   createFetchRuntime,
 } from '@homiio/listing-providers';
 import type { FetchContext, ListingProvider } from '@homiio/listing-providers';
-import { OfferingType, PropertyType, type NormalizedListing } from '@homiio/shared-types';
+import {
+  OfferingType,
+  PropertyStatus,
+  PropertyType,
+  type NormalizedListing,
+} from '@homiio/shared-types';
 
 import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
@@ -37,7 +42,15 @@ import { getDb } from '../../db/postgres';
 import { images, properties, propertyImages } from '../../db/schema';
 import { findPropertyById } from '../../db/properties/propertyReads';
 import { serializeProperty } from '../../db/properties/propertySerializer';
-import { resetGeoTables } from '../helpers/postgresGeoFixtures';
+import type { HydratedProperty } from '../../db/properties/propertySerializer';
+import * as priceEthicsService from '../../services/priceEthicsService';
+import type { ScorableProperty } from '../../services/priceEthicsService';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 import { assertFound } from '../helpers/assertFound';
 import { installNoNetworkGuard } from '../helpers/noNetwork';
 
@@ -461,5 +474,72 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
       longTermRent: { monthlyAmount: 2400, currency: 'EUR' },
     });
     expect(different.status).toBe('created');
+  });
+
+  it('scores from the listing its own write read back, with the verdict a fresh read gives', async () => {
+    // Six comparables inside the 2 km radius of the first fixture (Eixample,
+    // 1,450 €/month), so the RADIUS scope has a market to compare against and
+    // the verdict under test is a real one, not the empty-market default.
+    const chain = await seedGeoChain({ cityName: 'Barcelona', countryCode: 'ES-pe2' });
+    for (let index = 1; index <= 6; index += 1) {
+      const addressId = await seedAddress({
+        chain,
+        street: `Carrer de Prova ${index}`,
+        longitude: 2.1636 + index * 0.0005,
+        latitude: 41.3947 + index * 0.0005,
+      });
+      await seedProperty({
+        addressId,
+        idShape: 'generated',
+        overrides: {
+          type: PropertyType.APARTMENT,
+          bedrooms: 2,
+          offerings: [OfferingType.LONG_TERM_RENT],
+          longTermRentMonthlyAmount: 1000 + index * 50,
+          longTermRentCurrency: 'EUR',
+          status: PropertyStatus.PUBLISHED,
+          availabilityIsAvailable: true,
+        },
+      });
+    }
+
+    // Capture what ingest hands the scorer instead of letting it run in the
+    // background, so the comparison below is not racing it.
+    const handed: Array<{ propertyId: string; listing?: HydratedProperty }> = [];
+    const schedule = jest
+      .spyOn(priceEthicsService, 'schedulePriceEthicsScore')
+      .mockImplementation((propertyId, listing) => {
+        handed.push({ propertyId, listing });
+      });
+
+    try {
+      const ingestion = buildIngestionService();
+      const [first] = await normalizeAll();
+      // Created (the images are written AFTER the scalar write, so the handed
+      // read predates them), then re-ingested (the update path).
+      await ingestion.ingest(first);
+      await ingestion.ingest(first);
+    } finally {
+      schedule.mockRestore();
+    }
+
+    expect(handed).toHaveLength(2);
+    const verdict = async (listing: HydratedProperty) => {
+      const result = await priceEthicsService.computePriceEthics(
+        serializeProperty(listing, 'system') as ScorableProperty,
+      );
+      if (!result) return null;
+      const { scoredAt: _scoredAt, ...rest } = result;
+      return rest;
+    };
+    for (const { propertyId, listing } of handed) {
+      assertFound(listing, 'handed listing');
+      expect(listing.property.id).toBe(propertyId);
+      const fresh = await findPropertyById(propertyId);
+      assertFound(fresh, 'fresh read');
+      const fromHanded = await verdict(listing);
+      expect(fromHanded?.marketVerdict).toBeDefined();
+      expect(fromHanded).toEqual(await verdict(fresh));
+    }
   });
 });
